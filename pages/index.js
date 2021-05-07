@@ -1,8 +1,51 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import Head from "next/head"
+import Image from "next/image"
+// @ts-ignore
+import styles from "../styles/Home.module.css"
+import { useState } from "react"
+
+const VALUES = [
+  "Creativity",
+  "Ingenuity",
+  "Fun",
+  "Health",
+  "Aesthetics",
+  "Beauty",
+  "Improvement",
+  "Enthusiasm",
+  "Enlightenment",
+  "Friendship",
+  "Gratitude",
+  "Knowledge",
+  "Intelligence",
+  "Equality",
+  "Compassion",
+  "Simplicity",
+]
 
 export default function Home() {
+  const initialValues = new Map()
+  VALUES.forEach((value) => {
+    initialValues.set(value, 0)
+  })
+  const [values, setValues] = useState(initialValues)
+
+  const selectValue = (value) =>
+    setValues((values) => {
+      values.set(value, values.get(value) + 1)
+      // sort Map based on vote count
+      return new Map(
+        Array.from(values).sort(
+          ([value1, count1], [value2, count2]) => count1 - count2
+        )
+      )
+    })
+
+  const pickRandomValue = () =>
+    Array.from(values.keys())[Math.floor(Math.random() * values.size)]
+  const value1 = pickRandomValue()
+  const value2 = pickRandomValue()
+
   return (
     <div className={styles.container}>
       <Head>
@@ -12,43 +55,24 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
+        <h1 className={styles.title}>What are your values?</h1>
 
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
+        <div style={{ display: "flex", flexWrap: "wrap" }}>
+          {Array.from(values).map(([value, count]) => (
+            <p className={styles.description}>
+              {value} <code className={styles.code}>{count}</code>
+            </p>
+          ))}
+        </div>
 
         <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
+          <button onClick={() => selectValue(value1)} className={styles.card}>
+            <h2>{value1}</h2>
+          </button>
 
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+          <button onClick={() => selectValue(value2)} className={styles.card}>
+            <h2>{value2}</h2>
+          </button>
         </div>
       </main>
 
@@ -58,7 +82,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Powered by{' '}
+          Powered by{" "}
           <span className={styles.logo}>
             <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
           </span>
