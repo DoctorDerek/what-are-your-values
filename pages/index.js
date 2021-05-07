@@ -3,6 +3,7 @@ import Image from "next/image"
 // @ts-ignore
 import styles from "../styles/Home.module.css"
 import { useState } from "react"
+const ls = require("local-storage")
 
 const VALUES = [
   "Creativity",
@@ -24,15 +25,62 @@ const VALUES = [
 ]
 
 export default function Home() {
+  // read local state
+  let savedValues
+  let savedCombos
+  if (ls.get("values") && ls.get("combos")) {
+    savedValues = new Map()
+    ls.get("values").forEach(([value, count]) => savedValues.set(value, count))
+    savedCombos = new Map()
+    try {
+      ls.get("combos").forEach(([value1value2, [value1, value2]]) =>
+        savedCombos.set(value1value2, [value1, value2])
+      )
+    } catch (e) {
+      savedCombos.set("greatjob!☯", ["great", "job!☯"])
+    }
+  }
   const initialValues = new Map()
   VALUES.forEach((value) => {
     initialValues.set(value, 0)
   })
-  const [values, setValues] = useState(initialValues)
+  const [values, setValues] = useState(savedValues || initialValues)
 
-  const selectValue = (value) =>
+  const [combos, setCombos] = useState(() => {
+    const initialCombos = new Map()
+    // generate combinations
+    Array.from(values.keys()).forEach((value1) => {
+      Array.from(values.keys()).forEach((value2) => {
+        // remove duplicate, though it may make voting more accurate
+        // since [value1, value2] & [value2, value1] votes may differ
+        if (value1 !== value2 && !initialCombos.has(value2 + value1))
+          initialCombos.set(value1 + value2, [value1, value2])
+      })
+    })
+    return savedCombos || initialCombos
+  })
+
+  const pickRandomValue = () => {
+    try {
+      return Array.from(combos.values())[
+        Math.floor(Math.random() * combos.size)
+      ]
+    } catch (e) {
+      return ["great", "job!☯"]
+    }
+  }
+
+  const [value1, value2] = ["great", "job!☯"]
+
+  const selectValue = (combo, value) => {
+    setCombos((combos) => {
+      combos.delete(combo)
+      ls.set("combos", Array.from(combos))
+      return combos
+    })
     setValues((values) => {
       values.set(value, values.get(value) + 1)
+      ls.set("values", Array.from(values))
       // sort Map based on vote count
       return new Map(
         Array.from(values).sort(
@@ -40,11 +88,7 @@ export default function Home() {
         )
       )
     })
-
-  const pickRandomValue = () =>
-    Array.from(values.keys())[Math.floor(Math.random() * values.size)]
-  const value1 = pickRandomValue()
-  const value2 = pickRandomValue()
+  }
 
   return (
     <div className={styles.container}>
@@ -59,21 +103,29 @@ export default function Home() {
 
         <div style={{ display: "flex", flexWrap: "wrap" }}>
           {Array.from(values).map(([value, count]) => (
-            <p className={styles.description}>
+            <p className={styles.description} key={value}>
               {value} <code className={styles.code}>{count}</code>
             </p>
           ))}
         </div>
 
         <div className={styles.grid}>
-          <button onClick={() => selectValue(value1)} className={styles.card}>
+          <button
+            onClick={() => selectValue(value1 + value2, value1)}
+            className={styles.card}
+          >
             <h2>{value1}</h2>
           </button>
 
-          <button onClick={() => selectValue(value2)} className={styles.card}>
+          <button
+            onClick={() => selectValue(value1 + value2, value2)}
+            className={styles.card}
+          >
             <h2>{value2}</h2>
           </button>
         </div>
+
+        <h3>Remaining combos: {combos.size}</h3>
       </main>
 
       <footer className={styles.footer}>
