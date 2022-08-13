@@ -2,7 +2,7 @@ import Head from "next/head"
 import Image from "next/image"
 // @ts-ignore
 import styles from "../styles/Home.module.css"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 const ls = require("local-storage")
 
 const VALUES = [
@@ -46,19 +46,17 @@ export default function Home() {
   })
   const [values, setValues] = useState(savedValues || initialValues)
 
-  const [combos, setCombos] = useState(() => {
-    const initialCombos = new Map()
-    // generate combinations
-    Array.from(values.keys()).forEach((value1) => {
-      Array.from(values.keys()).forEach((value2) => {
-        // remove duplicate, though it may make voting more accurate
-        // since [value1, value2] & [value2, value1] votes may differ
-        if (value1 !== value2 && !initialCombos.has(value2 + value1))
-          initialCombos.set(value1 + value2, [value1, value2])
-      })
+  const initialCombos = new Map()
+  // generate combinations
+  Array.from(values.keys()).forEach((value1) => {
+    Array.from(values.keys()).forEach((value2) => {
+      // remove duplicate, though it may make voting more accurate
+      // since [value1, value2] & [value2, value1] votes may differ
+      if (value1 !== value2 && !initialCombos.has(value2 + value1))
+        initialCombos.set(value1 + value2, [value1, value2])
     })
-    return savedCombos || initialCombos
   })
+  const [combos, setCombos] = useState(savedCombos || initialCombos)
 
   const pickRandomValue = () => {
     try {
@@ -70,8 +68,19 @@ export default function Home() {
     }
   }
 
-  const [value1, value2] =
-    combos.length >= 1 ? pickRandomValue() : ["great", "job!☯"]
+  const [value1, setValue1] = useState("great")
+  const [value2, setValue2] = useState("job!☯")
+
+  useEffect(() => {
+    if (combos.size === 0) {
+      setValue1("great")
+      setValue2("job!☯")
+      return
+    }
+    const [value1, value2] = pickRandomValue()
+    setValue1(value1)
+    setValue2(value2)
+  }, [])
 
   const selectValue = (combo, value) => {
     setCombos((combos) => {
@@ -110,20 +119,23 @@ export default function Home() {
           ))}
         </div>
 
-        <div className={styles.grid}>
-          <button
-            onClick={() => selectValue(value1 + value2, value1)}
-            className={styles.card}
-          >
-            <h2>{value1}</h2>
-          </button>
-
-          <button
-            onClick={() => selectValue(value1 + value2, value2)}
-            className={styles.card}
-          >
-            <h2>{value2}</h2>
-          </button>
+        <div>
+          <h2>Do you value...</h2>
+          <div className={styles.grid}>
+            <button
+              onClick={() => selectValue(value1 + value2, value1)}
+              className={styles.card}
+            >
+              <h2>{value1}</h2>
+            </button>
+            {combos.size >= 1 && <span className={styles.or}>or</span>}
+            <button
+              onClick={() => selectValue(value1 + value2, value2)}
+              className={styles.card}
+            >
+              <h2>{value2}</h2>
+            </button>
+          </div>
         </div>
 
         <h3>Remaining combos: {combos.size}</h3>

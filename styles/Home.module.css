@@ -47,3 +47,21 @@
   align-items: center;
   background-color: #2f64a3;
 }
+
+.grid {
+  display: flex;
+}
+
+.card {
+  height: 4rem;
+  min-width: 8rem;
+  margin: 0 0.5rem;
+  border-radius: 1rem;
+}
+
+.or {
+  height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
