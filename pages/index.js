@@ -70,7 +70,8 @@ export default function Home() {
     }
   }
 
-  const [value1, value2] = pickRandomValue()
+  const [value1, value2] =
+    combos.length >= 1 ? pickRandomValue() : ["great", "job!☯"]
 
   const selectValue = (combo, value) => {
     setCombos((combos) => {
