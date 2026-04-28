@@ -1,0 +1,11 @@
+.yarn
+.pnp.cjs
+.pnp.loader.mjs
+.next
+node_modules
+out
+dist
+build
+reference
+
+next-env.d.ts
