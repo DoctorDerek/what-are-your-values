@@ -75,9 +75,6 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
-    dependenciesMeta:
-      prettier-plugin-tailwindcss@0.7.2:
-        unplugged: true
 
   packages/shared:
     dependencies:
