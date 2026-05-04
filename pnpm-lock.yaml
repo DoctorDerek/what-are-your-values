@@ -8,6 +8,18 @@ importers:
 
   .:
     devDependencies:
+      '@next/eslint-plugin-next':
+        specifier: ^16
+        version: 16.2.4
+      eslint:
+        specifier: ^9
+        version: 9.39.4(jiti@2.6.1)
+      eslint-config-next:
+        specifier: ^16
+        version: 16.2.4(@typescript-eslint/parser@8.59.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+      eslint-config-prettier:
+        specifier: ^10
+        version: 10.1.8(eslint@9.39.4(jiti@2.6.1))
       prettier:
         specifier: ^3
         version: 3.8.3
@@ -51,24 +63,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.3(@types/react@19.2.14)
-      eslint:
-        specifier: ^9
-        version: 9.39.4(jiti@2.6.1)
-      eslint-config-next:
-        specifier: ^16
-        version: 16.2.4(@typescript-eslint/parser@8.59.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
-      eslint-config-prettier:
-        specifier: ^10
-        version: 10.1.8(eslint@9.39.4(jiti@2.6.1))
       postcss:
         specifier: ^8
         version: 8.5.13
-      prettier:
-        specifier: ^3
-        version: 3.8.3
-      prettier-plugin-tailwindcss:
-        specifier: ^0
-        version: 0.8.0(prettier@3.8.3)
       tailwindcss:
         specifier: ^4
         version: 4.2.4
