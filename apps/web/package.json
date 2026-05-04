@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@what-are-your-values-mapache/data": "workspace:*",
     "@xstate/react": "^6",
     "local-storage": "^2",
     "next": "^16",

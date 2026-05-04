@@ -32,6 +32,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@what-are-your-values-mapache/data':
+        specifier: workspace:*
+        version: link:../../packages/data
       '@xstate/react':
         specifier: ^6
         version: 6.1.0(@types/react@19.2.14)(react@19.2.5)(xstate@5.31.0)
@@ -69,6 +72,12 @@ importers:
       tailwindcss:
         specifier: ^4
         version: 4.2.4
+      typescript:
+        specifier: ^6
+        version: 6.0.3
+
+  packages/data:
+    devDependencies:
       typescript:
         specifier: ^6
         version: 6.0.3
