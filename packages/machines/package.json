@@ -1,0 +1,14 @@
+{
+  "name": "@what-are-your-values-mapache/machines",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+
+  "dependencies": {
+    "@what-are-your-values-mapache/utils": "workspace:*",
+    "xstate": "^5"
+  },
+  "devDependencies": {
+    "typescript": "^6"
+  }
+}

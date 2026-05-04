@@ -9,7 +9,11 @@
   },
   "dependencies": {
     "@what-are-your-values-mapache/data": "workspace:*",
-    "@xstate/react": "^6",
+    "@what-are-your-values-mapache/shared": "workspace:*",
+    "@what-are-your-values-mapache/utils": "workspace:*",
+    "@what-are-your-values-mapache/machines": "workspace:*",
+    "@xstate/react": "^4",
+    "framer-motion": "^12",
     "local-storage": "^2",
     "next": "^16",
     "react": "^19",
