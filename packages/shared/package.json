@@ -7,6 +7,6 @@
     "xstate": "^5"
   },
   "devDependencies": {
-    "typescript": "^5"
+    "typescript": "^6"
   }
 }
