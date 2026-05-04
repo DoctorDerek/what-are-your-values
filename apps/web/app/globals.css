@@ -1,23 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-mapache-vivid-primary-cyan: #008B8B;
-  --color-mapache-vivid-primary-raspberry: #9C0052;
-  --color-mapache-vivid-primary-blue: #008EC1;
-  --color-mapache-vivid-primary-orange: #FF4500;
-  --color-mapache-vivid-secondary-purple: #790FC5;
-  --color-mapache-vivid-secondary-green: #008F39;
-  --color-mapache-vivid-secondary-red: #FF0000;
-  --color-mapache-vivid-secondary-gold: #A77E18;
-  --color-mapache-vivid-dark: #1E1E1E;
+  --color-mapache-vivid-primary-cyan: #008b8b;
+  --color-mapache-vivid-primary-raspberry: #9c0052;
+  --color-mapache-vivid-primary-blue: #008ec1;
+  --color-mapache-vivid-primary-orange: #ff4500;
+  --color-mapache-vivid-secondary-purple: #790fc5;
+  --color-mapache-vivid-secondary-green: #008f39;
+  --color-mapache-vivid-secondary-red: #ff0000;
+  --color-mapache-vivid-secondary-gold: #a77e18;
+  --color-mapache-vivid-dark: #1e1e1e;
 }
 
-html, body {
+html,
+body {
   padding: 0;
   margin: 0;
   background-color: var(--color-mapache-vivid-dark);
   color: white;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
 }
 
 * {
