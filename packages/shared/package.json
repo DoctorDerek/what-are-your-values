@@ -1,0 +1,12 @@
+{
+  "name": "@wayvm/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "dependencies": {
+    "xstate": "^5"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
