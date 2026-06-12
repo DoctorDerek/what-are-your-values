@@ -16,4 +16,4 @@ type repomix-output.xml >> repomix-temp.xml
 
 move /y repomix-temp.xml repomix-output.xml >nul
 
-antigravity .\repomix-output.xml
+antigravity-ide .\repomix-output.xml
