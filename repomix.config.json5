@@ -3,8 +3,8 @@
     maxFileSize: 50000000,
   },
   output: {
-    filePath: "repomix-output.xml",
-    style: "xml",
+    filePath: "repomix-output.txt",
+    style: "plain",
     // Supposedly this makes it "parsable" and more tokens:
     parsableStyle: true,
     compress: false,
@@ -41,9 +41,7 @@
   ignore: {
     useGitignore: true,
     useDefaultPatterns: true,
-    customPatterns: [
-      "public/**/*"
-    ],
+    customPatterns: ["public/**/*"],
   },
   security: {
     enableSecurityCheck: true,

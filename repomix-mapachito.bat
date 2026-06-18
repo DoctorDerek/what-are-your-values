@@ -12,8 +12,8 @@ git ls-files -co --exclude-standard | findstr /V /I /E ".import .uid" >> repomix
 >> repomix-temp.xml echo REPOMIX OUTPUT BEGINS BELOW:
 >> repomix-temp.xml echo ================================================================================
 >> repomix-temp.xml echo.
-type repomix-output.xml >> repomix-temp.xml
+type repomix-output.txt >> repomix-temp.xml
 
-move /y repomix-temp.xml repomix-output.xml >nul
+move /y repomix-temp.xml repomix-output.txt >nul
 
-antigravity-ide .\repomix-output.xml
+antigravity-ide .\repomix-output.txt
