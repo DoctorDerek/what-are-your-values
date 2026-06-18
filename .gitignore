@@ -3,8 +3,12 @@
 # dependencies
 /node_modules
 /.pnp
-.pnp.js
-
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 # testing
 /coverage
 
@@ -31,12 +35,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Turborepo
+.turbo
+
 # Other Next.js
 node_modules
 target
 dist
 logs
-public
 .cache
 .vscode
 .DS_Store
@@ -59,14 +65,16 @@ next-env.d.ts
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+!.yarn/install-state.gz
 
-# Repomix output
+# Repomix output & temporary intermediary files
 repomix-output.*
+repomix-temp.*
 
-# IP Sovereignty & Private Files
+# IP sovereignty & private files
 constitution.txt
+gdd.txt
 reference/
 git_files_list.txt
-vendor/
-gdd.txt
-.turbo
+vendor
+asset
