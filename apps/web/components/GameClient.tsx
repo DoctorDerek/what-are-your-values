@@ -35,7 +35,7 @@ export default function GameClient() {
 
   if (state.matches("Hydrating")) {
     return (
-      <div className="noise-bg flex h-[100dvh] w-[100dvw] items-center justify-center bg-mapache-vivid-dark text-6xl font-black uppercase text-mapache-vivid-primary-cyan drop-shadow-[4px_4px_0px_#000000]">
+      <div className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex h-[100dvh] w-[100dvw] items-center justify-center text-6xl font-black uppercase drop-shadow-[4px_4px_0px_#000000]">
         Booting Machine...
       </div>
     )
