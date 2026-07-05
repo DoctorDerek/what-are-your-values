@@ -1,7 +1,12 @@
 "use client"
+
 import { useState } from "react"
 
-export default function Splash({ onComplete }: { onComplete: (optIn: boolean) => void }) {
+export default function Splash({
+  onComplete,
+}: {
+  onComplete: (optIn: boolean) => void
+}) {
   const [optIn, setOptIn] = useState(true)
 
   return (
@@ -11,17 +16,25 @@ export default function Splash({ onComplete }: { onComplete: (optIn: boolean) =>
           What Are Your Values, Mapache?
         </h1>
         <p className="mb-6 text-2xl font-bold text-black">
-          A high-speed autobattler designed to help you find your values in life, as recommended by Acceptance &amp; Commitment Therapy (ACT) and the free WHO publication &ldquo;Doing What Matters In Times of Stress&rdquo;.
+          A high-speed autobattler designed to help you find your values in
+          life, as recommended by Acceptance &amp; Commitment Therapy (ACT) and
+          the free WHO publication &ldquo;Doing What Matters In Times of
+          Stress&rdquo;.
         </p>
         <p className="mb-12 text-xl font-medium text-gray-800">
-          Knowing your own values can help you find meaning in life, reduce stress, and know yourself better. This tool will sort your priorities in 10-15 minutes for a quick result, and under an hour for a thorough profile. Plus, it&apos;s fun!
+          Knowing your own values can help you find meaning in life, reduce
+          stress, and know yourself better. This tool will sort your priorities
+          in 10-15 minutes for a quick result, and under an hour for a thorough
+          profile. Plus, it&apos;s fun!
         </p>
 
-        <div 
+        <div
           className="mb-12 flex cursor-pointer items-center justify-center gap-6 border-4 border-black bg-gray-100 p-6 hover:bg-gray-200 transition-colors"
           onClick={() => setOptIn(!optIn)}
         >
-          <div className={`flex h-12 w-12 items-center justify-center border-4 border-black ${optIn ? "bg-mapache-vivid-primary-cyan" : "bg-white"}`}>
+          <div
+            className={`flex h-12 w-12 items-center justify-center border-4 border-black ${optIn ? "bg-mapache-vivid-primary-cyan" : "bg-white"}`}
+          >
             {optIn && <div className="h-6 w-6 bg-black" />}
           </div>
           <span className="text-left text-2xl font-black uppercase text-black">

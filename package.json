@@ -14,12 +14,12 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,css,json}\""
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@next/eslint-plugin-next": "^16",
     "eslint": "^9",
     "eslint-config-next": "^16",
     "eslint-config-prettier": "^10",
     "prettier": "^3",
-    "prettier-plugin-tailwindcss": "^0",
     "turbo": "^2"
   }
 }

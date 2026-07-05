@@ -1,17 +1,24 @@
 "use client"
+
 import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
 import { getLevelFromXP } from "@what-are-your-values-mapache/utils/src/math"
 
-export default function Hub({ valuesXp, onStartBattle }: { valuesXp: Record<number, number>, onStartBattle: () => void }) {
+export default function Hub({
+  valuesXp,
+  onStartBattle,
+}: {
+  valuesXp: Record<number, number>
+  onStartBattle: () => void
+}) {
   const rankedValues = Object.entries(valuesXp)
     .map(([idStr, xp]) => {
       const id = parseInt(idStr, 10)
-      const valObj = LIST_OF_VALUES.find(v => v.id === id)
+      const valObj = LIST_OF_VALUES.find((v) => v.id === id)
       return {
         id,
         name: valObj?.value || "UNKNOWN",
         xp,
-        level: getLevelFromXP(xp)
+        level: getLevelFromXP(xp),
       }
     })
     .sort((a, b) => b.xp - a.xp)
@@ -25,8 +32,12 @@ export default function Hub({ valuesXp, onStartBattle }: { valuesXp: Record<numb
 
       <div className="flex w-full max-w-7xl flex-col gap-12 lg:flex-row">
         <div className="flex flex-1 flex-col items-center justify-center border-4 border-black bg-mapache-vivid-primary-blue p-12 shadow-[12px_12px_0px_0px_#000000]">
-          <div className="mb-8 text-[14rem] leading-none drop-shadow-[8px_8px_0px_#000000]">🦝</div>
-          <h2 className="text-4xl font-black uppercase text-white drop-shadow-[4px_4px_0px_#000000] border-4 border-black bg-mapache-vivid-dark px-8 py-4">Avatar (Phase C)</h2>
+          <div className="mb-8 text-[14rem] leading-none drop-shadow-[8px_8px_0px_#000000]">
+            🦝
+          </div>
+          <h2 className="text-4xl font-black uppercase text-white drop-shadow-[4px_4px_0px_#000000] border-4 border-black bg-mapache-vivid-dark px-8 py-4">
+            Avatar (Phase C)
+          </h2>
         </div>
 
         <div className="flex flex-1 flex-col border-4 border-black bg-white p-10 shadow-[12px_12px_0px_0px_#000000]">
@@ -35,7 +46,10 @@ export default function Hub({ valuesXp, onStartBattle }: { valuesXp: Record<numb
           </h2>
           <div className="flex flex-col gap-6">
             {rankedValues.map((v, idx) => (
-              <div key={v.id} className="flex items-center justify-between border-4 border-black bg-mapache-vivid-secondary-purple p-6 shadow-[6px_6px_0px_0px_#000000]">
+              <div
+                key={v.id}
+                className="flex items-center justify-between border-4 border-black bg-mapache-vivid-secondary-purple p-6 shadow-[6px_6px_0px_0px_#000000]"
+              >
                 <span className="text-3xl font-black uppercase text-white drop-shadow-[2px_2px_0px_#000000]">
                   #{idx + 1} {v.name}
                 </span>

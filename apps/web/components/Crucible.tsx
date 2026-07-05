@@ -1,18 +1,30 @@
 "use client"
-import { useEffect } from "react"
-import { useMachine } from "@xstate/react"
-import { combatMachine } from "@what-are-your-values-mapache/machines/src/combatMachine"
-import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
-import { getLevelFromXP, calculateXPPayout } from "@what-are-your-values-mapache/utils/src/math"
-import { motion, AnimatePresence } from "framer-motion"
 
-export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valuesXp: Record<number, number>, onExit: () => void, onBattleCompleted: (w: number, l: number, xp: number) => void }) {
+import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
+import { combatMachine } from "@what-are-your-values-mapache/machines/src/combatMachine"
+import {
+  calculateXPPayout,
+  getLevelFromXP,
+} from "@what-are-your-values-mapache/utils/src/math"
+import { useMachine } from "@xstate/react"
+import { AnimatePresence, motion } from "framer-motion"
+import { useEffect } from "react"
+
+export default function Crucible({
+  valuesXp,
+  onExit,
+  onBattleCompleted,
+}: {
+  valuesXp: Record<number, number>
+  onExit: () => void
+  onBattleCompleted: (w: number, l: number, xp: number) => void
+}) {
   const [state, send] = useMachine(combatMachine)
 
   useEffect(() => {
     const queueStr = window.localStorage.getItem("wayvm_queue")
     const queue = queueStr ? JSON.parse(queueStr) : []
-    const valueIds = LIST_OF_VALUES.map(v => v.id)
+    const valueIds = LIST_OF_VALUES.map((v) => v.id)
     send({ type: "INITIALIZE", queue, valueIds })
   }, [send])
 
@@ -31,7 +43,7 @@ export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valu
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isAwaiting || !currentPair) return
-      
+
       if (e.key === "1" || e.key.toLowerCase() === "a") {
         handleSelect(currentPair[0], currentPair[1])
       } else if (e.key === "2" || e.key.toLowerCase() === "d") {
@@ -40,7 +52,8 @@ export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valu
         onExit()
       } else if (e.key === "Enter" || e.key === " ") {
         if (focusedId) {
-          const loserId = currentPair[0] === focusedId ? currentPair[1] : currentPair[0]
+          const loserId =
+            currentPair[0] === focusedId ? currentPair[1] : currentPair[0]
           handleSelect(focusedId, loserId)
         }
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
@@ -56,7 +69,7 @@ export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valu
 
   const handleCardClick = (clickedId: number, opponentId: number) => {
     if (!isAwaiting) return
-    
+
     if (focusedId === clickedId) {
       handleSelect(clickedId, opponentId)
     } else {
@@ -65,12 +78,16 @@ export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valu
   }
 
   if (!currentPair) {
-    return <div className="flex h-[100dvh] w-[100dvw] items-center justify-center bg-mapache-vivid-dark text-6xl font-black uppercase text-white noise-bg">Forging Matrix...</div>
+    return (
+      <div className="flex h-[100dvh] w-[100dvw] items-center justify-center bg-mapache-vivid-dark text-6xl font-black uppercase text-white noise-bg">
+        Forging Matrix...
+      </div>
+    )
   }
 
   const [idA, idB] = currentPair
-  const valA = LIST_OF_VALUES.find(v => v.id === idA)
-  const valB = LIST_OF_VALUES.find(v => v.id === idB)
+  const valA = LIST_OF_VALUES.find((v) => v.id === idA)
+  const valB = LIST_OF_VALUES.find((v) => v.id === idB)
   const levelA = getLevelFromXP(valuesXp[idA] || 0)
   const levelB = getLevelFromXP(valuesXp[idB] || 0)
   const isAnimating = state.matches("Animating")
@@ -78,7 +95,10 @@ export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valu
 
   return (
     <div className="noise-bg relative flex h-[100dvh] w-[100dvw] flex-col overflow-hidden bg-mapache-vivid-dark lg:flex-row touch-none">
-      <button onClick={onExit} className="absolute left-1/2 top-6 z-50 -translate-x-1/2 cursor-pointer border-4 border-black bg-mapache-vivid-secondary-red px-10 py-4 text-3xl font-black uppercase text-white shadow-[6px_6px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000]">
+      <button
+        onClick={onExit}
+        className="absolute left-1/2 top-6 z-50 -translate-x-1/2 cursor-pointer border-4 border-black bg-mapache-vivid-secondary-red px-10 py-4 text-3xl font-black uppercase text-white shadow-[6px_6px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000]"
+      >
         Stop [ESC]
       </button>
 
@@ -87,12 +107,16 @@ export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valu
           key={idA}
           layout
           initial={{ x: "-100%", opacity: 0 }}
-          animate={{ 
-            x: 0, 
-            opacity: isAnimating && winnerId === idB ? 0.3 : 1, 
-            scale: isAnimating && winnerId === idA ? 1.05 : (isAnimating ? 0.9 : 1),
-            filter: isAnimating && winnerId === idB ? "grayscale(100%)" : "grayscale(0%)",
-            y: isAnimating && winnerId === idB ? 100 : 0
+          animate={{
+            x: 0,
+            opacity: isAnimating && winnerId === idB ? 0.3 : 1,
+            scale:
+              isAnimating && winnerId === idA ? 1.05 : isAnimating ? 0.9 : 1,
+            filter:
+              isAnimating && winnerId === idB
+                ? "grayscale(100%)"
+                : "grayscale(0%)",
+            y: isAnimating && winnerId === idB ? 100 : 0,
           }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
@@ -121,12 +145,16 @@ export default function Crucible({ valuesXp, onExit, onBattleCompleted }: { valu
           key={idB}
           layout
           initial={{ x: "100%", opacity: 0 }}
-          animate={{ 
-            x: 0, 
-            opacity: isAnimating && winnerId === idA ? 0.3 : 1, 
-            scale: isAnimating && winnerId === idB ? 1.05 : (isAnimating ? 0.9 : 1),
-            filter: isAnimating && winnerId === idA ? "grayscale(100%)" : "grayscale(0%)",
-            y: isAnimating && winnerId === idA ? 100 : 0
+          animate={{
+            x: 0,
+            opacity: isAnimating && winnerId === idA ? 0.3 : 1,
+            scale:
+              isAnimating && winnerId === idB ? 1.05 : isAnimating ? 0.9 : 1,
+            filter:
+              isAnimating && winnerId === idA
+                ? "grayscale(100%)"
+                : "grayscale(0%)",
+            y: isAnimating && winnerId === idA ? 100 : 0,
           }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
