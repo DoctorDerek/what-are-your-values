@@ -1,4 +1,4 @@
-import { setup, assign } from "xstate"
+import { assign, setup } from "xstate"
 
 export const rootMachine = setup({
   types: {
@@ -8,28 +8,43 @@ export const rootMachine = setup({
       valuesXp: Record<number, number>
     },
     events: {} as
-      | { type: "HYDRATE"; uuid: string | null; optIn: boolean | null; valuesXp: Record<number, number> }
+      | {
+          type: "HYDRATE"
+          uuid: string | null
+          optIn: boolean | null
+          valuesXp: Record<number, number>
+        }
       | { type: "SUBMIT_OPT_IN"; optIn: boolean; uuid: string }
       | { type: "START_BATTLE" }
-      | { type: "BATTLE_COMPLETED"; winnerId: number; loserId: number; xpGained: number }
-      | { type: "EXIT_BATTLE" }
+      | {
+          type: "BATTLE_COMPLETED"
+          winnerId: number
+          loserId: number
+          xpGained: number
+        }
+      | { type: "EXIT_BATTLE" },
   },
   actions: {
     saveRootState: ({ context }) => {
       if (typeof window !== "undefined") {
-        if (context.uuid) window.localStorage.setItem("wayvm_uuid", context.uuid)
-        if (context.optIn !== null) window.localStorage.setItem("wayvm_opt_in", String(context.optIn))
-        window.localStorage.setItem("wayvm_values_xp", JSON.stringify(context.valuesXp))
+        if (context.uuid)
+          window.localStorage.setItem("wayvm_uuid", context.uuid)
+        if (context.optIn !== null)
+          window.localStorage.setItem("wayvm_opt_in", String(context.optIn))
+        window.localStorage.setItem(
+          "wayvm_values_xp",
+          JSON.stringify(context.valuesXp),
+        )
       }
-    }
-  }
+    },
+  },
 }).createMachine({
   id: "root",
   initial: "Hydrating",
   context: {
     uuid: null,
     optIn: null,
-    valuesXp: {}
+    valuesXp: {},
   },
   states: {
     Hydrating: {
@@ -41,19 +56,19 @@ export const rootMachine = setup({
             actions: assign({
               uuid: ({ event }) => event.uuid,
               optIn: ({ event }) => event.optIn,
-              valuesXp: ({ event }) => event.valuesXp
-            })
+              valuesXp: ({ event }) => event.valuesXp,
+            }),
           },
           {
             target: "Splash",
             actions: assign({
               uuid: ({ event }) => event.uuid,
               optIn: ({ event }) => event.optIn,
-              valuesXp: ({ event }) => event.valuesXp
-            })
-          }
-        ]
-      }
+              valuesXp: ({ event }) => event.valuesXp,
+            }),
+          },
+        ],
+      },
     },
     Splash: {
       on: {
@@ -62,17 +77,17 @@ export const rootMachine = setup({
           actions: [
             assign({
               optIn: ({ event }) => event.optIn,
-              uuid: ({ event }) => event.uuid
+              uuid: ({ event }) => event.uuid,
             }),
-            "saveRootState"
-          ]
-        }
-      }
+            "saveRootState",
+          ],
+        },
+      },
     },
     Hub: {
       on: {
-        START_BATTLE: { target: "Crucible" }
-      }
+        START_BATTLE: { target: "Crucible" },
+      },
     },
     Crucible: {
       on: {
@@ -82,14 +97,15 @@ export const rootMachine = setup({
             assign({
               valuesXp: ({ context, event }) => {
                 const newXp = { ...context.valuesXp }
-                newXp[event.winnerId] = (newXp[event.winnerId] || 0) + event.xpGained
+                newXp[event.winnerId] =
+                  (newXp[event.winnerId] || 0) + event.xpGained
                 return newXp
-              }
+              },
             }),
-            "saveRootState"
-          ]
-        }
-      }
-    }
-  }
+            "saveRootState",
+          ],
+        },
+      },
+    },
+  },
 })

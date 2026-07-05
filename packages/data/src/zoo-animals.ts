@@ -1,141 +1,141 @@
 export interface ZooAnimal {
-  id: string;
+  id: string
 }
 
 export const ZOO_ANIMALS: ZooAnimal[] = [
   {
-    "id": "batpack"
+    id: "batpack",
   },
   {
-    "id": "bunnypack"
+    id: "bunnypack",
   },
   {
-    "id": "cat01_brown"
+    id: "cat01_brown",
   },
   {
-    "id": "cat02_dark_gray"
+    id: "cat02_dark_gray",
   },
   {
-    "id": "cat03_orange"
+    id: "cat03_orange",
   },
   {
-    "id": "cat04_light_gray"
+    id: "cat04_light_gray",
   },
   {
-    "id": "cat05_black"
+    id: "cat05_black",
   },
   {
-    "id": "chickenpack"
+    id: "chickenpack",
   },
   {
-    "id": "cranepack"
+    id: "cranepack",
   },
   {
-    "id": "crowpack"
+    id: "crowpack",
   },
   {
-    "id": "deer_female"
+    id: "deer_female",
   },
   {
-    "id": "dogpack"
+    id: "dogpack",
   },
   {
-    "id": "dragonfly01_blue"
+    id: "dragonfly01_blue",
   },
   {
-    "id": "dragonfly02_yellow"
+    id: "dragonfly02_yellow",
   },
   {
-    "id": "dragonfly03_pink"
+    id: "dragonfly03_pink",
   },
   {
-    "id": "dragonfly04_green"
+    id: "dragonfly04_green",
   },
   {
-    "id": "falconpack"
+    id: "falconpack",
   },
   {
-    "id": "foxpack"
+    id: "foxpack",
   },
   {
-    "id": "frogpack"
+    id: "frogpack",
   },
   {
-    "id": "kitten01_brown"
+    id: "kitten01_brown",
   },
   {
-    "id": "kitten02_dark_gray"
+    id: "kitten02_dark_gray",
   },
   {
-    "id": "kitten03_orange"
+    id: "kitten03_orange",
   },
   {
-    "id": "kitten04_light_gray"
+    id: "kitten04_light_gray",
   },
   {
-    "id": "kitten05_black"
+    id: "kitten05_black",
   },
   {
-    "id": "lilaxolotl"
+    id: "lilaxolotl",
   },
   {
-    "id": "lildoggie01_brown"
+    id: "lildoggie01_brown",
   },
   {
-    "id": "lildoggie02_dark_gray"
+    id: "lildoggie02_dark_gray",
   },
   {
-    "id": "lildoggie03_orange"
+    id: "lildoggie03_orange",
   },
   {
-    "id": "lildoggie04_light_gray"
+    id: "lildoggie04_light_gray",
   },
   {
-    "id": "lildoggie05_black"
+    id: "lildoggie05_black",
   },
   {
-    "id": "lilfox_red"
+    id: "lilfox_red",
   },
   {
-    "id": "lilfox_white"
+    id: "lilfox_white",
   },
   {
-    "id": "lilhedgehog"
+    id: "lilhedgehog",
   },
   {
-    "id": "lilotter"
+    id: "lilotter",
   },
   {
-    "id": "lilpig"
+    id: "lilpig",
   },
   {
-    "id": "mouse01_dark_gray"
+    id: "mouse01_dark_gray",
   },
   {
-    "id": "mouse02_brown"
+    id: "mouse02_brown",
   },
   {
-    "id": "mouse03_light_gray"
+    id: "mouse03_light_gray",
   },
   {
-    "id": "owlpack"
+    id: "owlpack",
   },
   {
-    "id": "pandapack"
+    id: "pandapack",
   },
   {
-    "id": "parrotpack"
+    id: "parrotpack",
   },
   {
-    "id": "pigpack"
+    id: "pigpack",
   },
   {
-    "id": "raccoonpack"
+    id: "raccoonpack",
   },
   {
-    "id": "turtle_spritesheets"
+    id: "turtle_spritesheets",
   },
   {
-    "id": "wolfpack"
-  }
-];
+    id: "wolfpack",
+  },
+]
