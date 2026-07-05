@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       '@ianvs/prettier-plugin-sort-imports':
-        specifier: ^4.7.1
+        specifier: ^4
         version: 4.7.1(prettier@3.8.3)
       '@next/eslint-plugin-next':
         specifier: ^16
