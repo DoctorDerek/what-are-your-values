@@ -8,7 +8,7 @@ import {
 } from "@what-are-your-values-mapache/utils/src/math"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "framer-motion"
-import { useEffect, useCallback } from "react"
+import { useCallback, useEffect } from "react"
 
 export default function Crucible({
   valuesXp,
@@ -36,7 +36,7 @@ export default function Crucible({
       onBattleCompleted(winnerId, loserId, payout)
       send({ type: "SELECT_WINNER", winnerId })
     },
-    [state, valuesXp, onBattleCompleted, send]
+    [state, valuesXp, onBattleCompleted, send],
   )
 
   const focusedId = state.context.focusedId
