@@ -8,7 +8,7 @@ import {
 } from "@what-are-your-values-mapache/utils/src/math"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "framer-motion"
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 
 export default function Crucible({
   valuesXp,
@@ -28,13 +28,16 @@ export default function Crucible({
     send({ type: "INITIALIZE", queue, valueIds })
   }, [send])
 
-  const handleSelect = (winnerId: number, loserId: number) => {
-    if (!state.matches("AwaitingInput")) return
-    const loserXp = valuesXp[loserId] || 0
-    const payout = calculateXPPayout(loserXp)
-    onBattleCompleted(winnerId, loserId, payout)
-    send({ type: "SELECT_WINNER", winnerId })
-  }
+  const handleSelect = useCallback(
+    (winnerId: number, loserId: number) => {
+      if (!state.matches("AwaitingInput")) return
+      const loserXp = valuesXp[loserId] || 0
+      const payout = calculateXPPayout(loserXp)
+      onBattleCompleted(winnerId, loserId, payout)
+      send({ type: "SELECT_WINNER", winnerId })
+    },
+    [state, valuesXp, onBattleCompleted, send]
+  )
 
   const focusedId = state.context.focusedId
   const currentPair = state.context.currentPair
@@ -65,7 +68,7 @@ export default function Crucible({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isAwaiting, currentPair, focusedId, valuesXp, send, onExit])
+  }, [isAwaiting, currentPair, focusedId, valuesXp, send, onExit, handleSelect])
 
   const handleCardClick = (clickedId: number, opponentId: number) => {
     if (!isAwaiting) return
