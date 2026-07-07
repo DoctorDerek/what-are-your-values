@@ -18,3 +18,14 @@ Currently deployed as an offline-first Phase A build featuring the core combat s
 - `0.1.0` Migrate existing codebase to pnpm monorepo and latest Next.js.
 - `0.1.1` Load data including all 83 values and animal + hero animation specs.
 - `0.2.0` Phase A Bare Metal: initial gameplay loop with XState and basic UI.
+
+## Local Development
+
+Use [fnm](https://github.com/Schniz/fnm) for Node version management and [pnpm](https://pnpm.io/) as the package manager:
+
+```bash
+fnm use
+corepack enable pnpm
+pnpm install
+pnpm dev
+```
