@@ -6,6 +6,7 @@ const config: Config = {
     "@ianvs/prettier-plugin-sort-imports",
     "prettier-plugin-tailwindcss",
   ],
+  importOrder: ["^@/(.*)$", "^[./]"],
 }
 
 export default config
