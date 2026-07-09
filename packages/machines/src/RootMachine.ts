@@ -1,5 +1,5 @@
 import { assign, setup } from "xstate"
-import { StorageAdapter } from "./storageAdapter"
+import { StorageAdapter } from "./StorageAdapter"
 
 export const rootMachine = setup({
   types: {

@@ -1,7 +1,7 @@
 "use client"
 
 import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
-import { rootMachine } from "@what-are-your-values-mapache/machines/src/rootMachine"
+import { rootMachine } from "@what-are-your-values-mapache/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import { useEffect } from "react"
 import { webStorage } from "@/lib/webStorage"
