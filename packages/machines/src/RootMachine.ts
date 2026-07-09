@@ -5,7 +5,6 @@ export const rootMachine = setup({
   types: {
     context: {} as {
       uuid: string | null
-      optIn: boolean | null
       valuesXp: Record<number, number>
       storage: StorageAdapter
     },
@@ -13,10 +12,9 @@ export const rootMachine = setup({
       | {
           type: "HYDRATE"
           uuid: string | null
-          optIn: boolean | null
           valuesXp: Record<number, number>
         }
-      | { type: "SUBMIT_OPT_IN"; optIn: boolean; uuid: string }
+      | { type: "SUBMIT_SPLASH"; uuid: string }
       | { type: "START_BATTLE" }
       | {
           type: "BATTLE_COMPLETED"
@@ -31,8 +29,6 @@ export const rootMachine = setup({
     saveRootState: ({ context }) => {
       if (context.uuid)
         context.storage.setItem("wayvm_uuid", context.uuid)
-      if (context.optIn !== null)
-        context.storage.setItem("wayvm_opt_in", String(context.optIn))
       context.storage.setItem(
         "wayvm_values_xp",
         JSON.stringify(context.valuesXp),
@@ -44,7 +40,6 @@ export const rootMachine = setup({
   initial: "Hydrating",
   context: ({ input }) => ({
     uuid: null,
-    optIn: null,
     valuesXp: {},
     storage: input.storage,
   }),
@@ -53,11 +48,10 @@ export const rootMachine = setup({
       on: {
         HYDRATE: [
           {
-            guard: ({ event }) => event.uuid !== null && event.optIn !== null,
+            guard: ({ event }) => event.uuid !== null,
             target: "Hub",
             actions: assign({
               uuid: ({ event }) => event.uuid,
-              optIn: ({ event }) => event.optIn,
               valuesXp: ({ event }) => event.valuesXp,
             }),
           },
@@ -65,7 +59,6 @@ export const rootMachine = setup({
             target: "Splash",
             actions: assign({
               uuid: ({ event }) => event.uuid,
-              optIn: ({ event }) => event.optIn,
               valuesXp: ({ event }) => event.valuesXp,
             }),
           },
@@ -74,11 +67,10 @@ export const rootMachine = setup({
     },
     Splash: {
       on: {
-        SUBMIT_OPT_IN: {
+        SUBMIT_SPLASH: {
           target: "Hub",
           actions: [
             assign({
-              optIn: ({ event }) => event.optIn,
               uuid: ({ event }) => event.uuid,
             }),
             "saveRootState",

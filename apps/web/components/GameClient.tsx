@@ -16,12 +16,7 @@ export default function GameClient() {
 
   useEffect(() => {
     const uuid = webStorage.getItem("wayvm_uuid")
-    const optInStr = webStorage.getItem("wayvm_opt_in")
     const xpStr = webStorage.getItem("wayvm_values_xp")
-
-    let optIn = null
-    if (optInStr === "true") optIn = true
-    if (optInStr === "false") optIn = false
 
     let valuesXp: Record<number, number> = {}
     if (xpStr) {
@@ -34,7 +29,7 @@ export default function GameClient() {
       }
     }
 
-    send({ type: "HYDRATE", uuid, optIn, valuesXp })
+    send({ type: "HYDRATE", uuid, valuesXp })
   }, [send])
 
   if (state.matches("Hydrating")) {
@@ -48,8 +43,8 @@ export default function GameClient() {
   if (state.matches("Splash")) {
     return (
       <Splash
-        onComplete={(optIn: boolean) =>
-          send({ type: "SUBMIT_OPT_IN", optIn, uuid: crypto.randomUUID() })
+        onComplete={() =>
+          send({ type: "SUBMIT_SPLASH", uuid: crypto.randomUUID() })
         }
       />
     )
