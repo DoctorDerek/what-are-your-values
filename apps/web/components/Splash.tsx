@@ -11,7 +11,7 @@ export default function Splash({
         <h1 className="text-mapache-vivid-primary-cyan mb-8 text-5xl leading-tight font-black uppercase lg:text-7xl">
           What Are Your Values, Mapache?
         </h1>
-        <p className="mb-12 text-2xl font-bold text-black">
+        <p className="mb-6 text-2xl font-bold text-black">
           A high-speed autobattler designed to help you find your values in
           life.
         </p>
