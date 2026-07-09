@@ -4,7 +4,7 @@ import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/ListOfVal
 import { rootMachine } from "@what-are-your-values-mapache/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import { useEffect } from "react"
-import { webStorage } from "@/lib/webStorage"
+import { webStorage } from "@/lib/WebStorage"
 import Crucible from "./Crucible"
 import Hub from "./Hub"
 import Splash from "./Splash"
