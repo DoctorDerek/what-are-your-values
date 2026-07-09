@@ -15,17 +15,9 @@ export default function Splash({
         <h1 className="text-mapache-vivid-primary-cyan mb-8 text-5xl leading-tight font-black uppercase lg:text-7xl">
           What Are Your Values, Mapache?
         </h1>
-        <p className="mb-6 text-2xl font-bold text-black">
+        <p className="mb-12 text-2xl font-bold text-black">
           A high-speed autobattler designed to help you find your values in
-          life, as recommended by Acceptance &amp; Commitment Therapy (ACT) and
-          the free WHO publication &ldquo;Doing What Matters In Times of
-          Stress&rdquo;.
-        </p>
-        <p className="mb-12 text-xl font-medium text-gray-800">
-          Knowing your own values can help you find meaning in life, reduce
-          stress, and know yourself better. This tool will sort your priorities
-          in 10-15 minutes for a quick result, and under an hour for a thorough
-          profile. Plus, it&apos;s fun!
+          life.
         </p>
 
         <div
