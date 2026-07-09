@@ -9,11 +9,7 @@ import {
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect } from "react"
-
-const webStorage = {
-  getItem: (key: string) => localStorage.getItem(key),
-  setItem: (key: string, value: string) => localStorage.setItem(key, value),
-}
+import { webStorage } from "../lib/webStorage"
 
 export default function Crucible({
   valuesXp,
