@@ -1,4 +1,4 @@
-import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
+import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/ListOfValues"
 import { generateQueue } from "@what-are-your-values-mapache/utils/src/queue"
 import { assign, setup } from "xstate"
 import { StorageAdapter } from "./StorageAdapter"

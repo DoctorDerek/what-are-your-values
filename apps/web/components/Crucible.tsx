@@ -1,6 +1,6 @@
 "use client"
 
-import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
+import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/ListOfValues"
 import { combatMachine } from "@what-are-your-values-mapache/machines/src/CombatMachine"
 import {
   calculateXPPayout,
