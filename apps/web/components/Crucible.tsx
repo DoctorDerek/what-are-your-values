@@ -5,7 +5,7 @@ import { combatMachine } from "@what-are-your-values-mapache/machines/src/Combat
 import {
   calculateXPPayout,
   getLevelFromXP,
-} from "@what-are-your-values-mapache/utils/src/math"
+} from "@what-are-your-values-mapache/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect } from "react"
