@@ -1,10 +1,13 @@
 {
-  "name": "@what-are-your-values-mapache/machines",
+  "name": "@game/machines",
   "version": "0.1.0",
   "private": true,
+  "exports": {
+    "./*": "./src/*"
+  },
   "dependencies": {
-    "@what-are-your-values-mapache/data": "workspace:*",
-    "@what-are-your-values-mapache/utils": "workspace:*",
+    "@game/data": "workspace:*",
+    "@game/utils": "workspace:*",
     "xstate": "^5"
   },
   "devDependencies": {

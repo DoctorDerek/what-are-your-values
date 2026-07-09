@@ -1,7 +1,10 @@
 {
-  "name": "@what-are-your-values-mapache/utils",
+  "name": "@game/utils",
   "version": "0.1.0",
   "private": true,
+  "exports": {
+    "./*": "./src/*"
+  },
   "devDependencies": {
     "typescript": "^6"
   }

@@ -1,8 +1,10 @@
 {
-  "name": "@what-are-your-values-mapache/data",
+  "name": "@game/data",
   "version": "0.1.0",
   "private": true,
-  "main": "src/list-of-values.ts",
+  "exports": {
+    "./*": "./src/*"
+  },
   "devDependencies": {
     "typescript": "^6"
   }
