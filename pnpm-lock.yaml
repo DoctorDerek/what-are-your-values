@@ -99,6 +99,9 @@ importers:
 
   packages/machines:
     dependencies:
+      '@what-are-your-values-mapache/data':
+        specifier: workspace:*
+        version: link:../data
       '@what-are-your-values-mapache/utils':
         specifier: workspace:*
         version: link:../utils

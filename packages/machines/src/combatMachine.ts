@@ -1,5 +1,7 @@
+import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
 import { generateQueue } from "@what-are-your-values-mapache/utils/src/queue"
 import { assign, setup } from "xstate"
+import { StorageAdapter } from "./storageAdapter"
 
 export const combatMachine = setup({
   types: {
@@ -8,31 +10,32 @@ export const combatMachine = setup({
       currentPair: [number, number] | null
       winnerId: number | null
       focusedId: number | null
+      storage: StorageAdapter
     },
     events: {} as
       | { type: "INITIALIZE"; queue: [number, number][]; valueIds: number[] }
       | { type: "FOCUS_VALUE"; id: number }
       | { type: "SELECT_WINNER"; winnerId: number },
+    input: {} as { storage: StorageAdapter },
   },
   actions: {
     saveQueue: ({ context }) => {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(
-          "wayvm_queue",
-          JSON.stringify(context.matchupQueue),
-        )
-      }
+      context.storage.setItem(
+        "wayvm_queue",
+        JSON.stringify(context.matchupQueue),
+      )
     },
   },
 }).createMachine({
   id: "combat",
   initial: "Initializing",
-  context: {
+  context: ({ input }) => ({
     matchupQueue: [],
     currentPair: null,
     winnerId: null,
     focusedId: null,
-  },
+    storage: input.storage,
+  }),
   states: {
     Initializing: {
       on: {
@@ -73,8 +76,7 @@ export const combatMachine = setup({
         target: "CheckingQueue",
         actions: assign({
           matchupQueue: () => {
-            const ids = []
-            for (let i = 1; i <= 83; i++) ids.push(i)
+            const ids = LIST_OF_VALUES.map((v) => v.id)
             return generateQueue(ids)
           },
         }),

@@ -1,4 +1,4 @@
-export interface AnimalMapping {
+export type AnimalMapping = {
   valueId: number
   mappedAnimal: string
   mappedHue: number

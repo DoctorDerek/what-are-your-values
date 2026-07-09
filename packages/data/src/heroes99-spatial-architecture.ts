@@ -1,4 +1,4 @@
-export interface GridMetrics {
+export type GridMetrics = {
   frame_width_px: number
   frame_height_px: number
   sheet_columns: number
@@ -7,21 +7,21 @@ export interface GridMetrics {
   sheet_height_px: number
 }
 
-export interface AnimationState {
+export type AnimationState = {
   playback: "loop" | "once" | "hold"
   row: number
   cols: [number, number]
 }
 
-export interface SequenceState {
+export type SequenceState = {
   [substate: string]: AnimationState
 }
 
-export interface CompoundStateMachine {
+export type CompoundStateMachine = {
   [state: string]: AnimationState | SequenceState
 }
 
-export interface Heroes99SpatialArchitecture {
+export type Heroes99SpatialArchitecture = {
   grid_metrics: GridMetrics
   z_index_stack_corrected: string[]
   compound_state_machine: CompoundStateMachine

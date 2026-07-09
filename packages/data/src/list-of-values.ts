@@ -1,4 +1,4 @@
-export interface ClinicalValue {
+export type ClinicalValue = {
   id: number
   value: string
   definition: string

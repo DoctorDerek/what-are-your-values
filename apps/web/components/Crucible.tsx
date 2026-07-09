@@ -9,6 +9,7 @@ import {
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect } from "react"
+import { webStorage } from "@/lib/webStorage"
 
 export default function Crucible({
   valuesXp,
@@ -19,10 +20,12 @@ export default function Crucible({
   onExit: () => void
   onBattleCompleted: (w: number, l: number, xp: number) => void
 }) {
-  const [state, send] = useMachine(combatMachine)
+  const [state, send] = useMachine(combatMachine, {
+    input: { storage: webStorage },
+  })
 
   useEffect(() => {
-    const queueStr = window.localStorage.getItem("wayvm_queue")
+    const queueStr = webStorage.getItem("wayvm_queue")
     const queue = queueStr ? JSON.parse(queueStr) : []
     const valueIds = LIST_OF_VALUES.map((v) => v.id)
     send({ type: "INITIALIZE", queue, valueIds })
