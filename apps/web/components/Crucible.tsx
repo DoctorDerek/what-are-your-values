@@ -7,7 +7,7 @@ import {
   getLevelFromXP,
 } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import { useCallback, useEffect } from "react"
 import { webStorage } from "@/lib/WebStorage"
 
