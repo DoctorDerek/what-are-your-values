@@ -1,39 +1,39 @@
-export interface Heroes99Animation {
+export type Heroes99Animation = {
   start: number
   end: number
 }
 
-export interface Heroes99LayerSkin {
+export type Heroes99LayerSkin = {
   path: string
   colors_available: number[]
 }
 
-export interface Heroes99LayerFace {
+export type Heroes99LayerFace = {
   path: string
   colors_available: number[]
 }
 
-export interface Heroes99LayerCloth {
+export type Heroes99LayerCloth = {
   path_top: string
   path_bot: string
   styles_available: number[]
   colors_available: number[]
 }
 
-export interface Heroes99LayerHair {
+export type Heroes99LayerHair = {
   path_top: string
   path_bot: string
   styles_available: number[]
   colors_available: number[]
 }
 
-export interface Heroes99LayerWeapon {
+export type Heroes99LayerWeapon = {
   path_top: string
   path_bot: string
   colors_available: number[]
 }
 
-export interface Heroes99Layers {
+export type Heroes99Layers = {
   base_path: string
   skin: Heroes99LayerSkin
   face: Heroes99LayerFace
@@ -47,7 +47,7 @@ export interface Heroes99Layers {
   weapon_5_dagger: Heroes99LayerWeapon
 }
 
-export interface Heroes99Config {
+export type Heroes99Config = {
   animations: Record<string, Heroes99Animation>
   layers: Heroes99Layers
 }

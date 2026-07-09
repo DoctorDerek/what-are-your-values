@@ -1,5 +1,6 @@
 "use client"
 
+import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
 import { rootMachine } from "@what-are-your-values-mapache/machines/src/rootMachine"
 import { useMachine } from "@xstate/react"
 import { useEffect } from "react"
@@ -7,13 +8,20 @@ import Crucible from "./Crucible"
 import Hub from "./Hub"
 import Splash from "./Splash"
 
+const webStorage = {
+  getItem: (key: string) => localStorage.getItem(key),
+  setItem: (key: string, value: string) => localStorage.setItem(key, value),
+}
+
 export default function GameClient() {
-  const [state, send] = useMachine(rootMachine)
+  const [state, send] = useMachine(rootMachine, {
+    input: { storage: webStorage },
+  })
 
   useEffect(() => {
-    const uuid = window.localStorage.getItem("wayvm_uuid")
-    const optInStr = window.localStorage.getItem("wayvm_opt_in")
-    const xpStr = window.localStorage.getItem("wayvm_values_xp")
+    const uuid = webStorage.getItem("wayvm_uuid")
+    const optInStr = webStorage.getItem("wayvm_opt_in")
+    const xpStr = webStorage.getItem("wayvm_values_xp")
 
     let optIn = null
     if (optInStr === "true") optIn = true
@@ -24,7 +32,7 @@ export default function GameClient() {
       valuesXp = JSON.parse(xpStr)
     }
 
-    for (let i = 1; i <= 83; i++) {
+    for (let i = 1; i <= LIST_OF_VALUES.length; i++) {
       if (typeof valuesXp[i] !== "number") {
         valuesXp[i] = 0
       }

@@ -1,4 +1,4 @@
-export interface ZooAnimal {
+export type ZooAnimal = {
   id: string
 }
 

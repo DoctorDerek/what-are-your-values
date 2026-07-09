@@ -1,4 +1,5 @@
 import { assign, setup } from "xstate"
+import { StorageAdapter } from "./storageAdapter"
 
 export const rootMachine = setup({
   types: {
@@ -6,6 +7,7 @@ export const rootMachine = setup({
       uuid: string | null
       optIn: boolean | null
       valuesXp: Record<number, number>
+      storage: StorageAdapter
     },
     events: {} as
       | {
@@ -23,29 +25,29 @@ export const rootMachine = setup({
           xpGained: number
         }
       | { type: "EXIT_BATTLE" },
+    input: {} as { storage: StorageAdapter },
   },
   actions: {
     saveRootState: ({ context }) => {
-      if (typeof window !== "undefined") {
-        if (context.uuid)
-          window.localStorage.setItem("wayvm_uuid", context.uuid)
-        if (context.optIn !== null)
-          window.localStorage.setItem("wayvm_opt_in", String(context.optIn))
-        window.localStorage.setItem(
-          "wayvm_values_xp",
-          JSON.stringify(context.valuesXp),
-        )
-      }
+      if (context.uuid)
+        context.storage.setItem("wayvm_uuid", context.uuid)
+      if (context.optIn !== null)
+        context.storage.setItem("wayvm_opt_in", String(context.optIn))
+      context.storage.setItem(
+        "wayvm_values_xp",
+        JSON.stringify(context.valuesXp),
+      )
     },
   },
 }).createMachine({
   id: "root",
   initial: "Hydrating",
-  context: {
+  context: ({ input }) => ({
     uuid: null,
     optIn: null,
     valuesXp: {},
-  },
+    storage: input.storage,
+  }),
   states: {
     Hydrating: {
       on: {

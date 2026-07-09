@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@what-are-your-values-mapache/data": "workspace:*",
     "@what-are-your-values-mapache/utils": "workspace:*",
     "xstate": "^5"
   },
