@@ -2,12 +2,9 @@
 
 import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
 import { combatMachine } from "@game/machines/src/CombatMachine"
-import {
-  calculateXPPayout,
-  getLevelFromXP,
-} from "@game/utils/src/LevelMath"
+import { calculateXPPayout, getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import { useCallback, useEffect } from "react"
 import { webStorage } from "@/lib/WebStorage"
 
