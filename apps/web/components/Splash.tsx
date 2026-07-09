@@ -15,6 +15,12 @@ export default function Splash({
           A high-speed autobattler designed to help you find your values in
           life.
         </p>
+        <p className="mb-12 text-xl font-medium text-gray-800">
+          Knowing your own values can help you find meaning in life, reduce
+          stress, and know yourself better. This tool will sort your priorities
+          in 10-15 minutes for a quick result, and under an hour for a thorough
+          profile. Plus, it&apos;s fun!
+        </p>
 
         <button
           onClick={() => onComplete()}
