@@ -2,9 +2,6 @@
   "name": "@game/machines",
   "version": "0.1.0",
   "private": true,
-  "exports": {
-    "./*": "./src/*"
-  },
   "dependencies": {
     "@game/data": "workspace:*",
     "@game/utils": "workspace:*",

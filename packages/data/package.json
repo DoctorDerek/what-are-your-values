@@ -2,9 +2,6 @@
   "name": "@game/data",
   "version": "0.1.0",
   "private": true,
-  "exports": {
-    "./*": "./src/*"
-  },
   "devDependencies": {
     "typescript": "^6"
   }

@@ -1,4 +1,4 @@
-import { StorageAdapter } from "@what-are-your-values-mapache/machines/src/StorageAdapter"
+import { StorageAdapter } from "@game/machines/src/StorageAdapter"
 
 export const webStorage: StorageAdapter = {
   getItem: (key: string) => localStorage.getItem(key),

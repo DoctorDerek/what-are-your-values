@@ -1,7 +1,7 @@
 "use client"
 
-import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/ListOfValues"
-import { getLevelFromXP } from "@what-are-your-values-mapache/utils/src/LevelMath"
+import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
+import { getLevelFromXP } from "@game/utils/src/LevelMath"
 
 export default function Hub({
   valuesXp,
