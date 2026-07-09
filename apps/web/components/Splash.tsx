@@ -1,10 +1,6 @@
 "use client"
 
-export default function Splash({
-  onComplete,
-}: {
-  onComplete: () => void
-}) {
+export default function Splash({ onComplete }: { onComplete: () => void }) {
   return (
     <div className="bg-mapache-vivid-dark noise-bg flex min-h-[100dvh] w-[100dvw] flex-col items-center justify-center p-6 text-center">
       <div className="w-full max-w-4xl border-4 border-black bg-white p-12 shadow-[12px_12px_0px_0px_#000000]">

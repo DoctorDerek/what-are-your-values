@@ -27,8 +27,7 @@ export const rootMachine = setup({
   },
   actions: {
     saveRootState: ({ context }) => {
-      if (context.uuid)
-        context.storage.setItem("wayvm_uuid", context.uuid)
+      if (context.uuid) context.storage.setItem("wayvm_uuid", context.uuid)
       context.storage.setItem(
         "wayvm_values_xp",
         JSON.stringify(context.valuesXp),
