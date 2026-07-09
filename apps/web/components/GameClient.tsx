@@ -1,10 +1,10 @@
 "use client"
 
-import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
-import { rootMachine } from "@what-are-your-values-mapache/machines/src/rootMachine"
+import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
+import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import { useEffect } from "react"
-import { webStorage } from "@/lib/webStorage"
+import { webStorage } from "@/lib/WebStorage"
 import Crucible from "./Crucible"
 import Hub from "./Hub"
 import Splash from "./Splash"
@@ -16,12 +16,7 @@ export default function GameClient() {
 
   useEffect(() => {
     const uuid = webStorage.getItem("wayvm_uuid")
-    const optInStr = webStorage.getItem("wayvm_opt_in")
     const xpStr = webStorage.getItem("wayvm_values_xp")
-
-    let optIn = null
-    if (optInStr === "true") optIn = true
-    if (optInStr === "false") optIn = false
 
     let valuesXp: Record<number, number> = {}
     if (xpStr) {
@@ -34,7 +29,7 @@ export default function GameClient() {
       }
     }
 
-    send({ type: "HYDRATE", uuid, optIn, valuesXp })
+    send({ type: "HYDRATE", uuid, valuesXp })
   }, [send])
 
   if (state.matches("Hydrating")) {
@@ -48,8 +43,8 @@ export default function GameClient() {
   if (state.matches("Splash")) {
     return (
       <Splash
-        onComplete={(optIn: boolean) =>
-          send({ type: "SUBMIT_OPT_IN", optIn, uuid: crypto.randomUUID() })
+        onComplete={() =>
+          send({ type: "SUBMIT_SPLASH", uuid: crypto.randomUUID() })
         }
       />
     )

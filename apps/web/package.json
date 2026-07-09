@@ -1,5 +1,5 @@
 {
-  "name": "@what-are-your-values-mapache/web",
+  "name": "@game/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,9 +8,9 @@
     "start": "next start"
   },
   "dependencies": {
-    "@what-are-your-values-mapache/data": "workspace:*",
-    "@what-are-your-values-mapache/utils": "workspace:*",
-    "@what-are-your-values-mapache/machines": "workspace:*",
+    "@game/data": "workspace:*",
+    "@game/utils": "workspace:*",
+    "@game/machines": "workspace:*",
     "@xstate/react": "^4",
     "framer-motion": "^12",
     "next": "^16",

@@ -41,13 +41,13 @@ importers:
 
   apps/web:
     dependencies:
-      '@what-are-your-values-mapache/data':
+      '@game/data':
         specifier: workspace:*
         version: link:../../packages/data
-      '@what-are-your-values-mapache/machines':
+      '@game/machines':
         specifier: workspace:*
         version: link:../../packages/machines
-      '@what-are-your-values-mapache/utils':
+      '@game/utils':
         specifier: workspace:*
         version: link:../../packages/utils
       '@xstate/react':
@@ -99,10 +99,10 @@ importers:
 
   packages/machines:
     dependencies:
-      '@what-are-your-values-mapache/data':
+      '@game/data':
         specifier: workspace:*
         version: link:../data
-      '@what-are-your-values-mapache/utils':
+      '@game/utils':
         specifier: workspace:*
         version: link:../utils
       xstate:

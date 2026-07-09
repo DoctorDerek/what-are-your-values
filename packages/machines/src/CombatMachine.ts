@@ -1,7 +1,7 @@
-import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
-import { generateQueue } from "@what-are-your-values-mapache/utils/src/queue"
+import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
+import { generateQueue } from "@game/utils/src/Queue"
 import { assign, setup } from "xstate"
-import { StorageAdapter } from "./storageAdapter"
+import { StorageAdapter } from "./StorageAdapter"
 
 export const combatMachine = setup({
   types: {

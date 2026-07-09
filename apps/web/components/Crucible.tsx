@@ -1,15 +1,15 @@
 "use client"
 
-import { LIST_OF_VALUES } from "@what-are-your-values-mapache/data/src/list-of-values"
-import { combatMachine } from "@what-are-your-values-mapache/machines/src/combatMachine"
+import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
+import { combatMachine } from "@game/machines/src/CombatMachine"
 import {
   calculateXPPayout,
   getLevelFromXP,
-} from "@what-are-your-values-mapache/utils/src/math"
+} from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect } from "react"
-import { webStorage } from "@/lib/webStorage"
+import { webStorage } from "@/lib/WebStorage"
 
 export default function Crucible({
   valuesXp,
