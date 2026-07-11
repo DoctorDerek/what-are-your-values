@@ -95,6 +95,7 @@ export default function Crucible({
   const levelB = getLevelFromXP(valuesXp[idB] || 0)
   const isAnimating = state.matches("Animating")
   const winnerId = state.context.winnerId
+  const queueLength = state.context.matchupQueue.length
 
   return (
     <div className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-none flex-col overflow-hidden lg:flex-row">
@@ -105,9 +106,18 @@ export default function Crucible({
         Stop [ESC]
       </button>
 
+      {/*
+       * ONE-TIME EXCEPTION TO NO CODE COMMENT RULE:
+       * The key must bind to the temporal event (queueLength) rather than
+       * the value ID. Reusing identical IDs causes React to mutate props
+       * instead of remounting, dropping the Framer Motion exit/initial
+       * transition. A temporal key forces a sterile remount, fixing the
+       * animation bug and clearing sticky mobile :hover states natively.
+       */}
       <AnimatePresence mode="popLayout">
         <motion.div
-          key={idA}
+          key={`${queueLength}-A`}
+          data-testid={`card-${idA}-turn-${queueLength}`}
           layout
           initial={{ x: "-100%", opacity: 0 }}
           animate={{
@@ -119,7 +129,7 @@ export default function Crucible({
               isAnimating && winnerId === idB
                 ? "grayscale(100%)"
                 : "grayscale(0%)",
-            y: isAnimating && winnerId === idB ? 100 : 0,
+            y: isAnimating && winnerId === idB ? -100 : 0,
           }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
@@ -145,7 +155,8 @@ export default function Crucible({
 
       <AnimatePresence mode="popLayout">
         <motion.div
-          key={idB}
+          key={`${queueLength}-B`}
+          data-testid={`card-${idB}-turn-${queueLength}`}
           layout
           initial={{ x: "100%", opacity: 0 }}
           animate={{
