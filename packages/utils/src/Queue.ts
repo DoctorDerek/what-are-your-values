@@ -1,4 +1,4 @@
-export function generateQueue(ids: number[]): [number, number][] {
+export function generateQueue(ids: number[]) {
   const pairs: [number, number][] = []
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {
