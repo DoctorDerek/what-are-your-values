@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest"
-
 import { calculateXPPayout, getLevelFromXP } from "./LevelMath"
 
 describe("getLevelFromXP", () => {
