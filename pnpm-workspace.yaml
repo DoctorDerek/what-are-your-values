@@ -1,6 +1,11 @@
 packages:
   - "apps/*"
   - "packages/*"
+
 allowBuilds:
+  core-js: true
   sharp: true
   unrs-resolver: true
+  "@expo/spawn-async": true
+  esbuild: true
+  expo: true
