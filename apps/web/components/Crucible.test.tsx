@@ -9,12 +9,15 @@ import { describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
 describe("Crucible Component Integration", () => {
-  it("forces a node remount on consecutive turns to guarantee animation resets", async () => {
+  it("prevents animation regression by forcing remount when the same value appears consecutively on the same side", async () => {
     const onExitMock = vi.fn()
     const onBattleCompletedMock = vi.fn()
     const mockValuesXp = {}
+    
+    // Explicitly set the queue to [ [1, 3], [1, 2] ] 
+    // This means ID 1 will be on the left ("Card A") for two consecutive turns
     const mockStorageAdapter = {
-      getItem: vi.fn(() => null),
+      getItem: vi.fn(() => JSON.stringify([[1, 3], [1, 2]])),
       setItem: vi.fn(),
       removeItem: vi.fn(),
       clear: vi.fn(),
@@ -38,17 +41,21 @@ describe("Crucible Component Integration", () => {
     expect(initialCardA).toBeInTheDocument()
     expect(initialCardB).toBeInTheDocument()
 
+    // Complete the first battle (selecting Card A)
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "1" }))
     })
 
     expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
 
+    // Wait for the old node to be unmounted due to the key prop change
     await waitForElementToBeRemoved(initialCardA, { timeout: 1500 })
 
+    // Find the newly rendered Card A (which still represents ID 1)
     const newCardAIndicator = await screen.findByText("[1 / A]")
     const newCardA = newCardAIndicator.closest("div")
 
+    // The core regression test: it MUST be a new DOM node, forcing a sterile animation remount
     expect(newCardA).not.toBe(initialCardA)
   })
 
