@@ -1,8 +1,8 @@
 # What Are Your Values, Mapache?
 
-[![Vercel](https://therealsujitk-vercel-badge.vercel.app/?app=what-are-your-values)](https://what-are-your-values.vercel.app)
+[![Vercel](https://therealsujitk-vercel-badge.vercel.app/?app=what-are-your-values)](https://what-are-your-values-mapache.DoctorDerek.com)
 
-## Play the game free now to find out what your values are: [https://what-are-your-values.vercel.app](https://what-are-your-values.vercel.app)
+## Play the game free now to find out what your values are: [https://what-are-your-values-mapache.DoctorDerek.com](https://what-are-your-values-mapache.DoctorDerek.com)
 
 _What Are Your Values, Mapache?_ is a high-speed, zero-friction autobattler designed to gamify Acceptance and Commitment Therapy (ACT) value-sorting by pitting 83 fundamental human values against each other in rapid-fire 1v1 matchups.
 
