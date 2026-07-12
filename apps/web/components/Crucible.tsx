@@ -2,31 +2,33 @@
 
 import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
 import { combatMachine } from "@game/machines/src/CombatMachine"
+import { StorageAdapter } from "@game/machines/src/StorageAdapter"
 import { calculateXPPayout, getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "motion/react"
 import { useCallback, useEffect } from "react"
-import { webStorage } from "@/lib/WebStorage"
 
 export default function Crucible({
   valuesXp,
   onExit,
   onBattleCompleted,
+  storageAdapter,
 }: {
   valuesXp: Record<number, number>
   onExit: () => void
   onBattleCompleted: (w: number, l: number, xp: number) => void
+  storageAdapter: StorageAdapter
 }) {
   const [state, send] = useMachine(combatMachine, {
-    input: { storage: webStorage },
+    input: { storage: storageAdapter },
   })
 
   useEffect(() => {
-    const queueStr = webStorage.getItem("wayvm_queue")
+    const queueStr = storageAdapter.getItem("wayvm_queue")
     const queue = queueStr ? JSON.parse(queueStr) : []
     const valueIds = LIST_OF_VALUES.map((v) => v.id)
     send({ type: "INITIALIZE", queue, valueIds })
-  }, [send])
+  }, [send, storageAdapter])
 
   const handleSelect = useCallback(
     (winnerId: number, loserId: number) => {
@@ -105,9 +107,16 @@ export default function Crucible({
         Stop [ESC]
       </button>
 
+      {/*
+       * ONE-TIME EXCEPTION TO NO CODE COMMENT RULE:
+       * The key must bind to the unique matchup itself (idA-vs-idB).
+       * Reusing identical IDs across consecutive turns causes React to mutate
+       * props instead of remounting, dropping the Framer Motion transition.
+       * Binding to the matchup pair forces a sterile remount natively.
+       */}
       <AnimatePresence mode="popLayout">
         <motion.div
-          key={idA}
+          key={`${idA}-vs-${idB}-A`}
           layout
           initial={{ x: "-100%", opacity: 0 }}
           animate={{
@@ -119,7 +128,7 @@ export default function Crucible({
               isAnimating && winnerId === idB
                 ? "grayscale(100%)"
                 : "grayscale(0%)",
-            y: isAnimating && winnerId === idB ? 100 : 0,
+            y: isAnimating && winnerId === idB ? -100 : 0,
           }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
@@ -145,7 +154,7 @@ export default function Crucible({
 
       <AnimatePresence mode="popLayout">
         <motion.div
-          key={idB}
+          key={`${idB}-vs-${idA}`}
           layout
           initial={{ x: "100%", opacity: 0 }}
           animate={{
