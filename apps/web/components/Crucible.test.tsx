@@ -51,4 +51,43 @@ describe("Crucible Component Integration", () => {
 
     expect(newCardA).not.toBe(initialCardA)
   })
+
+  it("focuses a card on first click and selects it as winner on second click", async () => {
+    const onExitMock = vi.fn()
+    const onBattleCompletedMock = vi.fn()
+    const mockValuesXp = { 1: 50, 2: 25 }
+    const mockStorageAdapter = {
+      getItem: vi.fn(() => JSON.stringify([[1, 2]])),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    }
+
+    render(
+      <Crucible
+        valuesXp={mockValuesXp}
+        storageAdapter={mockStorageAdapter}
+        onExit={onExitMock}
+        onBattleCompleted={onBattleCompletedMock}
+      />,
+    )
+
+    const cardAIndicator = await screen.findByText("[1 / A]")
+    const cardA = cardAIndicator.closest("div")
+    if (!cardA) throw new Error("Card A not found")
+
+    act(() => {
+      cardA.click()
+    })
+    
+    expect(cardA.className).toContain("ring-8")
+    expect(onBattleCompletedMock).not.toHaveBeenCalled()
+
+    act(() => {
+      cardA.click()
+    })
+
+    expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
+    expect(onBattleCompletedMock).toHaveBeenCalledWith(1, 2, expect.any(Number))
+  })
 })
