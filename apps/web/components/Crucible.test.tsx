@@ -90,4 +90,57 @@ describe("Crucible Component Integration", () => {
     expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
     expect(onBattleCompletedMock).toHaveBeenCalledWith(1, 2, expect.any(Number))
   })
+
+  it("navigates via arrow keys and selects via enter/space", async () => {
+    const onExitMock = vi.fn()
+    const onBattleCompletedMock = vi.fn()
+    const mockValuesXp = { 1: 50, 2: 25 }
+    const mockStorageAdapter = {
+      getItem: vi.fn(() => JSON.stringify([[1, 2]])),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    }
+
+    render(
+      <Crucible
+        valuesXp={mockValuesXp}
+        storageAdapter={mockStorageAdapter}
+        onExit={onExitMock}
+        onBattleCompleted={onBattleCompletedMock}
+      />,
+    )
+
+    const cardAIndicator = await screen.findByText("[1 / A]")
+    const cardBIndicator = await screen.findByText("[2 / D]")
+    const cardA = cardAIndicator.closest("div")
+    const cardB = cardBIndicator.closest("div")
+    
+    if (!cardA || !cardB) throw new Error("Cards not found")
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }))
+    })
+    
+    expect(cardB.className).toContain("ring-8")
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }))
+    })
+
+    expect(cardA.className).toContain("ring-8")
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
+    })
+    
+    expect(onExitMock).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }))
+    })
+
+    expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
+    expect(onBattleCompletedMock).toHaveBeenCalledWith(1, 2, expect.any(Number))
+  })
 })
