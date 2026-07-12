@@ -116,7 +116,7 @@ export default function Crucible({
        */}
       <AnimatePresence mode="popLayout">
         <motion.div
-          key={`${idA}-vs-${idB}-A`}
+          key={`Card A: ${idA} vs. ${idB}`}
           layout
           initial={{ x: "-100%", opacity: 0 }}
           animate={{
@@ -154,7 +154,7 @@ export default function Crucible({
 
       <AnimatePresence mode="popLayout">
         <motion.div
-          key={`${idB}-vs-${idA}`}
+          key={`Card B: ${idB} vs. ${idA}`}
           layout
           initial={{ x: "100%", opacity: 0 }}
           animate={{
