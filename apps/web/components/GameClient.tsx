@@ -63,6 +63,7 @@ export default function GameClient() {
     return (
       <Crucible
         valuesXp={state.context.valuesXp}
+        storageAdapter={webStorage}
         onExit={() => send({ type: "EXIT_BATTLE" })}
         onBattleCompleted={(
           winnerId: number,
