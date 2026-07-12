@@ -1,58 +1,65 @@
-import { act, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+} from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
 describe("Crucible Component Integration", () => {
-  it("updates temporal identity (data-testid) after a battle to guarantee animation resets", async () => {
+  it("forces a node remount on consecutive turns to guarantee animation resets", async () => {
     const onExitMock = vi.fn()
     const onBattleCompletedMock = vi.fn()
     const mockValuesXp = {}
+    const mockStorageAdapter = {
+      getItem: vi.fn(() => null), // Returns null so it generates a fresh queue
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    }
 
     render(
       <Crucible
         valuesXp={mockValuesXp}
+        storageAdapter={mockStorageAdapter}
         onExit={onExitMock}
         onBattleCompleted={onBattleCompletedMock}
       />,
     )
 
-    // Wait for the Crucible to initialize and display cards
-    const initialCards = await screen.findAllByTestId(/card-\d+-turn-\d+/)
-    expect(initialCards).toHaveLength(2)
+    // Wait for the game to initialize and render the combat interface
+    const cardAIndicator = await screen.findByText("[1 / A]")
+    const cardBIndicator = await screen.findByText("[2 / D]")
 
-    const initialTestIdA = initialCards[0].getAttribute("data-testid")
-    const initialTestIdB = initialCards[1].getAttribute("data-testid")
+    // We capture the specific DOM nodes wrapping the cards.
+    // By testing trophy principles, we just find the closest button or generic container,
+    // but these are just divs with onClick handlers (role="button" ideally, but for now we find closest div).
+    const initialCardA = cardAIndicator.closest("div")
+    const initialCardB = cardBIndicator.closest("div")
 
-    expect(initialTestIdA).toBeTruthy()
-    expect(initialTestIdB).toBeTruthy()
+    expect(initialCardA).toBeInTheDocument()
+    expect(initialCardB).toBeInTheDocument()
 
-    // Simulate clicking Card A twice via keyboard
+    // Simulate the user selecting Card A instantly via keyboard
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "1" }))
     })
 
-    // Assert that the battle completed callback was called
+    // Assert the domain logic executes
     expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
 
-    // Wait for the next pair to render (wait for the 500ms animation to resolve)
-    // We use waitFor which polls the DOM
-    await waitFor(
-      () => {
-        const currentCards = screen.getAllByTestId(/card-\d+-turn-\d+/)
-        // We know the DOM updated when the IDs change
-        const currentTestIdA = currentCards[0].getAttribute("data-testid")
-        if (currentTestIdA === initialTestIdA)
-          throw new Error("Still animating")
-      },
-      { timeout: 1500 },
-    )
+    // The First-Principles core assertion:
+    // The previous nodes MUST be destroyed and removed from the DOM to force Framer Motion
+    // to play the exit and enter animations. If the keys mutated, these nodes are gone natively.
+    await waitForElementToBeRemoved(initialCardA, { timeout: 1500 })
 
-    const nextCards = screen.getAllByTestId(/card-\d+-turn-\d+/)
-    const nextTestIdA = nextCards[0].getAttribute("data-testid")
-    const nextTestIdB = nextCards[1].getAttribute("data-testid")
+    // Verify the new cards have rendered and are distinct DOM nodes
+    const newCardAIndicator = await screen.findByText("[1 / A]")
+    const newCardA = newCardAIndicator.closest("div")
 
-    // The core first-principles assertion: The temporal identity MUST have mutated
-    expect(nextTestIdA).not.toEqual(initialTestIdA)
-    expect(nextTestIdB).not.toEqual(initialTestIdB)
+    // Mathematically proves React Reconciliation unmounted and remounted the nodes
+    expect(newCardA).not.toBe(initialCardA)
   })
 })
