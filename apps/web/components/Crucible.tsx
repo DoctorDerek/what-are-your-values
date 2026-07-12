@@ -109,10 +109,12 @@ export default function Crucible({
 
       {/*
        * ONE-TIME EXCEPTION TO NO CODE COMMENT RULE:
-       * The key must bind to the unique matchup itself (idA-vs-idB).
-       * Reusing identical IDs across consecutive turns causes React to mutate
-       * props instead of remounting, dropping the Framer Motion transition.
-       * Binding to the matchup pair forces a sterile remount natively.
+       * Animation (React Key Prop) Note: To ensure that Motion or other animations fire correctly — 
+       * and that the cards have truly unique key props — the cards use the React key props 
+       * key={`Card A: ${idA} vs. ${idB}`} and key={`Card B: ${idB} vs. ${idA}`}; this prevents a 
+       * fixed regression (bug) where animations wouldn’t fire if the same value appeared twice 
+       * on one side (“Card A” or “Card B”), which created an edge case of an extremely confusing UX 
+       * because the repeat card didn’t animate correctly.
        */}
       <AnimatePresence mode="popLayout">
         <motion.div
