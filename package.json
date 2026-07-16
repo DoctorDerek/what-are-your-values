@@ -33,6 +33,7 @@
     "eslint-plugin-only-warn": "^1",
     "expo": "^57",
     "happy-dom": "^20",
+    "jiti": "^2",
     "prettier": "^3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "turbo": "^2",

@@ -53,6 +53,9 @@ importers:
       happy-dom:
         specifier: ^20
         version: 20.10.6
+      jiti:
+        specifier: ^2
+        version: 2.7.0
       prettier:
         specifier: ^3
         version: 3.9.4
