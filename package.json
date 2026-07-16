@@ -8,6 +8,7 @@
   "packageManager": "pnpm@11.10.0",
   "scripts": {
     "dev": "turbo dev",
+    "prebuild": "node --import jiti/register scripts/decrypt-assets.ts",
     "build": "turbo build",
     "start": "turbo start",
     "lint": "eslint .",
