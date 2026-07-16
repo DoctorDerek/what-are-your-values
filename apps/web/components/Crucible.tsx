@@ -109,11 +109,11 @@ export default function Crucible({
 
       {/*
        * ONE-TIME EXCEPTION TO NO CODE COMMENT RULE:
-       * Animation (React Key Prop) Note: To ensure that Motion or other animations fire correctly — 
-       * and that the cards have truly unique key props — the cards use the React key props 
-       * key={`Card A: ${idA} vs. ${idB}`} and key={`Card B: ${idB} vs. ${idA}`}; this prevents a 
-       * fixed regression (bug) where animations wouldn’t fire if the same value appeared twice 
-       * on one side (“Card A” or “Card B”), which created an edge case of an extremely confusing UX 
+       * Animation (React Key Prop) Note: To ensure that Motion or other animations fire correctly —
+       * and that the cards have truly unique key props — the cards use the React key props
+       * key={`Card A: ${idA} vs. ${idB}`} and key={`Card B: ${idB} vs. ${idA}`}; this prevents a
+       * fixed regression (bug) where animations wouldn’t fire if the same value appeared twice
+       * on one side (“Card A” or “Card B”), which created an edge case of an extremely confusing UX
        * because the repeat card didn’t animate correctly.
        */}
       <AnimatePresence mode="popLayout">
