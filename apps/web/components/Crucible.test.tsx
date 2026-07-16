@@ -13,9 +13,14 @@ describe("Crucible Component Integration", () => {
     const onExitMock = vi.fn()
     const onBattleCompletedMock = vi.fn()
     const mockValuesXp = {}
-    
+
     const mockStorageAdapter = {
-      getItem: vi.fn(() => JSON.stringify([[1, 3], [1, 2]])),
+      getItem: vi.fn(() =>
+        JSON.stringify([
+          [1, 3],
+          [1, 2],
+        ]),
+      ),
       setItem: vi.fn(),
       removeItem: vi.fn(),
       clear: vi.fn(),
@@ -80,7 +85,7 @@ describe("Crucible Component Integration", () => {
     act(() => {
       cardA.click()
     })
-    
+
     expect(cardA.className).toContain("ring-8")
     expect(onBattleCompletedMock).not.toHaveBeenCalled()
 
@@ -116,13 +121,13 @@ describe("Crucible Component Integration", () => {
     const cardBIndicator = await screen.findByText("[2 / D]")
     const cardA = cardAIndicator.closest("div")
     const cardB = cardBIndicator.closest("div")
-    
+
     if (!cardA || !cardB) throw new Error("Cards not found")
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }))
     })
-    
+
     expect(cardB.className).toContain("ring-8")
 
     act(() => {
@@ -134,7 +139,7 @@ describe("Crucible Component Integration", () => {
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
     })
-    
+
     expect(onExitMock).toHaveBeenCalledTimes(1)
 
     act(() => {
