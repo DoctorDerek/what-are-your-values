@@ -92,19 +92,4 @@ You will strictly adhere to these 40 architectural pillars when writing or revie
 39. **First-Principles Time Estimation:** Decompose complex tasks logically and sequentially before execution, focusing entirely on the immediate unblocker.
 40. **The Testing Trophy Approach:** Prioritize high-value Static Types and UI Integration tests (focusing on real functionality) over brittle Unit tests, utilizing Playwright for robust E2E testing.
 
-## 6. THE ASSET PROTECTION DOCTRINE
-
-The Operator uses commercially licensed third-party assets whose licenses or EULAs may restrict redistribution. Before applying this protocol to any asset, verify that its governing agreement permits the intended packaging, build, and deployment use. Encryption does not override or replace any applicable license or EULA.
-
-- Store authorized, decrypted proprietary assets in the dedicated `vendor/` directory. This directory must remain excluded from Git.
-- Store password-encrypted `.zip` archives in the `ghost_assets/` directory.
-- Make encrypted archives available to Vercel or Electron build environments. If the archives are committed with the repository, `ghost_assets/` must remain tracked. If `ghost_assets/` is excluded from Git, inject the archives through a separate secure build mechanism.
-- Commit `ghost_assets/LICENSE.txt` alongside any tracked encrypted archives. The notice supplements the root `LICENSE.txt`, grants no rights in the archives or their contents, remains generic and terse, and does not replace or modify the original licenses or EULAs.
-- Never commit decrypted vendor assets, decryption secrets, or unencrypted proprietary archives.
-- Keep authorized decrypted files in `vendor/` during local development so compilation can proceed without running the asset-decryption step.
-- Use `scripts/decrypt-assets.ts` to decrypt and extract archives only when the repository-specific environment variable is available through `process.env`.
-- Name each repository secret with the `GHOST_ASSET_KEY_{NAME_OF_REPO}` convention. This repository uses `GHOST_ASSET_KEY_WHAT_ARE_YOUR_VALUES_MAPACHE`. Mapachito stores these secrets in a secure vault.
-- Execute the TypeScript decryption script through the package lifecycle with `"prebuild": "node --import jiti/register scripts/decrypt-assets.ts"`.
-- Treat `Q:/dev/DoctorDerek.com` as the reference implementation while preserving this repository’s own asset inventory, secret name, and build requirements.
-
 Copyright (c) 2026 Dr. Derek Austin, all rights reserved.
