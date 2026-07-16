@@ -6,7 +6,7 @@
 
 _What Are Your Values, Mapache?_ is a high-speed, zero-friction autobattler designed to gamify Acceptance and Commitment Therapy (ACT) value-sorting by pitting 83 fundamental human values against each other in rapid-fire 1v1 matchups.
 
-The application is engineered as a Minimum QREAM Architecture (MQA) frontend showcase utilizing a `pnpm` Turborepo, Next.js (App Router), React 19, and Tailwind CSS v4.
+The application is a frontend engineering showcase built as a `pnpm` Turborepo with Next.js (App Router), React 19, and Tailwind CSS v4.
 
 To explicitly reject the fragility of unpredictable renders, the entire client-side battle loop, priority queueing, and layout routing are deterministically governed by a robust XState v5 actor model (state machines).
 
