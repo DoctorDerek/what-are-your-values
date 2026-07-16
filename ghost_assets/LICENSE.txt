@@ -1,0 +1,9 @@
+PROPRIETARY THIRD-PARTY ASSETS
+
+The encrypted archives in this directory contain proprietary third-party assets used under license. The archives and their contents are not covered by the software license in the repository root.
+
+These archives are included solely to support authorized builds. No license or permission is granted by this repository to copy, decrypt, extract, modify, redistribute, sublicense, sell, publish, or reuse the contained assets, whether publicly or privately and whether for commercial or non-commercial purposes.
+
+Neither possession of this repository, access to its source code, nor access to any compiled deployment grants rights in these assets. All use remains subject to the applicable original licenses and end-user license agreements.
+
+All rights not expressly granted by the applicable rights holders are reserved.
