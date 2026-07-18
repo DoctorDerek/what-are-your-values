@@ -1,7 +1,7 @@
 import { createActiveDeck, getPairCount } from "@game/data/src/ActiveDeck"
 import {
-  createOtherValueId,
-  type OtherValueDefinition,
+  createCustomValueId,
+  type CustomValueDefinition,
   type ValueId,
   type ValuePair,
 } from "@game/data/src/Value"
@@ -16,13 +16,13 @@ import {
   type SchedulerRestorePoint,
 } from "./PairScheduler"
 
-function createOtherValue(creationOrdinal: number): OtherValueDefinition {
+function createCustomValue(creationOrdinal: number): CustomValueDefinition {
   const uuidSuffix = creationOrdinal.toString().padStart(12, "0")
 
   return {
-    kind: "other",
-    id: createOtherValueId(`custom:00000000-0000-4000-8000-${uuidSuffix}`),
-    name: `Other Value ${creationOrdinal}`,
+    kind: "custom",
+    id: createCustomValueId(`custom:00000000-0000-4000-8000-${uuidSuffix}`),
+    name: `Custom Value ${creationOrdinal}`,
     definition: `Definition ${creationOrdinal}`,
     creationOrdinal,
     createdAt: "2026-07-17T00:00:00.000Z",
@@ -30,10 +30,10 @@ function createOtherValue(creationOrdinal: number): OtherValueDefinition {
   }
 }
 
-function createDeck(otherValueCount: number) {
+function createDeck(customValueCount: number) {
   return createActiveDeck(
-    Array.from({ length: otherValueCount }, (_, index) =>
-      createOtherValue(index + 1),
+    Array.from({ length: customValueCount }, (_, index) =>
+      createCustomValue(index + 1),
     ),
   )
 }
@@ -126,8 +126,8 @@ describe("pair scheduler shape", () => {
 describe("pair scheduler coverage", () => {
   it.each([0, 1, 2, 3])(
     "covers every K=%i Active Deck pair exactly once",
-    (otherValueCount) => {
-      const activeDeck = createDeck(otherValueCount)
+    (customValueCount) => {
+      const activeDeck = createDeck(customValueCount)
       const pairs = collectCyclePairs(activeDeck)
       const uniquePairs = new Set(pairs.map(createUnorderedPairKey))
       const appearances = countAppearances(pairs)
@@ -143,8 +143,8 @@ describe("pair scheduler coverage", () => {
 
   it.each([0, 1])(
     "uses each active value at most once per round when K=%i",
-    (otherValueCount) => {
-      const activeDeck = createDeck(otherValueCount)
+    (customValueCount) => {
+      const activeDeck = createDeck(customValueCount)
       const pairs = collectCyclePairs(activeDeck)
       const { matchesPerRound, roundCount } = getScheduleShape(
         activeDeck.valueIds.length,
@@ -162,8 +162,8 @@ describe("pair scheduler coverage", () => {
 
   it.each([0, 1])(
     "avoids immediate value repetition at every K=%i round boundary",
-    (otherValueCount) => {
-      const activeDeck = createDeck(otherValueCount)
+    (customValueCount) => {
+      const activeDeck = createDeck(customValueCount)
       const pairs = collectCyclePairs(activeDeck)
       const { matchesPerRound } = getScheduleShape(activeDeck.valueIds.length)
 

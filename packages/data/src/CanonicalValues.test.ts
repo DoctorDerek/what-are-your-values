@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest"
 import { CANONICAL_VALUES, getCanonicalValueById } from "./CanonicalValues"
 import {
   createCanonicalValueId,
-  createOtherValueId,
+  createCustomValueId,
   isCanonicalValueId,
-  isOtherValueId,
+  isCustomValueId,
 } from "./Value"
 
 const canonicalCatalogContentHash =
@@ -92,13 +92,13 @@ describe("value identity construction", () => {
     )
   })
 
-  it("accepts only namespaced UUID identities for Other Values", () => {
+  it("accepts only namespaced UUID identities for Custom Values", () => {
     const id = "custom:123e4567-e89b-42d3-a456-426614174000"
 
-    expect(isOtherValueId(id)).toBe(true)
-    expect(createOtherValueId(id)).toBe(id)
-    expect(() => createOtherValueId("custom:ingenuity")).toThrow(
-      "Invalid Other Value ID",
+    expect(isCustomValueId(id)).toBe(true)
+    expect(createCustomValueId(id)).toBe(id)
+    expect(() => createCustomValueId("custom:ingenuity")).toThrow(
+      "Invalid Custom Value ID",
     )
   })
 })

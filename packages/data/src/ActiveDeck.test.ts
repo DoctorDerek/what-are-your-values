@@ -2,20 +2,20 @@ import { describe, expect, it } from "vitest"
 import { createActiveDeck, getPairCount } from "./ActiveDeck"
 import {
   CANONICAL_CATALOG_VERSION,
-  createOtherValueId,
-  type OtherValueDefinition,
+  createCustomValueId,
+  type CustomValueDefinition,
 } from "./Value"
 
-function createOtherValue(
+function createCustomValue(
   creationOrdinal: number,
-  overrides: Partial<OtherValueDefinition> = {},
-): OtherValueDefinition {
+  overrides: Partial<CustomValueDefinition> = {},
+): CustomValueDefinition {
   const uuidSuffix = creationOrdinal.toString().padStart(12, "0")
 
   return {
-    kind: "other",
-    id: createOtherValueId(`custom:00000000-0000-4000-8000-${uuidSuffix}`),
-    name: `Other Value ${creationOrdinal}`,
+    kind: "custom",
+    id: createCustomValueId(`custom:00000000-0000-4000-8000-${uuidSuffix}`),
+    name: `Custom Value ${creationOrdinal}`,
     definition: `Definition ${creationOrdinal}`,
     creationOrdinal,
     createdAt: "2026-07-17T00:00:00.000Z",
@@ -31,7 +31,7 @@ describe("Active Deck", () => {
     expect(activeDeck.catalogVersion).toBe(CANONICAL_CATALOG_VERSION)
     expect(activeDeck.values).toHaveLength(100)
     expect(activeDeck.valueIds).toHaveLength(100)
-    expect(activeDeck.otherValues).toEqual([])
+    expect(activeDeck.customValues).toEqual([])
   })
 
   it.each([
@@ -41,23 +41,23 @@ describe("Active Deck", () => {
     [3, 103, 5_253],
   ])(
     "derives the permanent K=%i pair-count fixture",
-    (otherValueCount, activeValueCount, expectedPairCount) => {
-      const otherValues = Array.from({ length: otherValueCount }, (_, index) =>
-        createOtherValue(index + 1),
+    (customValueCount, activeValueCount, expectedPairCount) => {
+      const customValues = Array.from({ length: customValueCount }, (_, index) =>
+        createCustomValue(index + 1),
       )
-      const activeDeck = createActiveDeck(otherValues)
+      const activeDeck = createActiveDeck(customValues)
 
       expect(activeDeck.values).toHaveLength(activeValueCount)
       expect(getPairCount(activeDeck.values.length)).toBe(expectedPairCount)
     },
   )
 
-  it("orders Other Values by immutable creation ordinal", () => {
-    const second = createOtherValue(2)
-    const first = createOtherValue(1)
+  it("orders Custom Values by immutable creation ordinal", () => {
+    const second = createCustomValue(2)
+    const first = createCustomValue(1)
     const activeDeck = createActiveDeck([second, first])
 
-    expect(activeDeck.otherValues.map(({ id }) => id)).toEqual([
+    expect(activeDeck.customValues.map(({ id }) => id)).toEqual([
       first.id,
       second.id,
     ])
@@ -66,14 +66,14 @@ describe("Active Deck", () => {
   })
 
   it("fingerprints deck meaning independently from timestamps and input order", () => {
-    const first = createOtherValue(1)
-    const second = createOtherValue(2)
+    const first = createCustomValue(1)
+    const second = createCustomValue(2)
     const sameMeaningWithNewTimestamps = [
-      createOtherValue(2, {
+      createCustomValue(2, {
         createdAt: "2026-08-01T00:00:00.000Z",
         updatedAt: "2026-08-02T00:00:00.000Z",
       }),
-      createOtherValue(1, {
+      createCustomValue(1, {
         createdAt: "2026-08-01T00:00:00.000Z",
         updatedAt: "2026-08-02T00:00:00.000Z",
       }),
@@ -84,57 +84,57 @@ describe("Active Deck", () => {
     )
     expect(createActiveDeck([first]).fingerprint).not.toBe(
       createActiveDeck([
-        createOtherValue(1, { definition: "Changed definition" }),
+        createCustomValue(1, { definition: "Changed definition" }),
       ]).fingerprint,
     )
   })
 
   it("defensively freezes the complete deck definition", () => {
-    const candidate = createOtherValue(1)
+    const candidate = createCustomValue(1)
     const activeDeck = createActiveDeck([candidate])
 
     expect(Object.isFrozen(activeDeck)).toBe(true)
-    expect(Object.isFrozen(activeDeck.otherValues)).toBe(true)
+    expect(Object.isFrozen(activeDeck.customValues)).toBe(true)
     expect(Object.isFrozen(activeDeck.values)).toBe(true)
     expect(Object.isFrozen(activeDeck.valueIds)).toBe(true)
-    expect(Object.isFrozen(activeDeck.otherValues[0])).toBe(true)
-    expect(activeDeck.otherValues[0]).not.toBe(candidate)
+    expect(Object.isFrozen(activeDeck.customValues[0])).toBe(true)
+    expect(activeDeck.customValues[0]).not.toBe(candidate)
   })
 
   it("supports finite decks beyond the paper template examples", () => {
-    const otherValues = Array.from({ length: 1_000 }, (_, index) =>
-      createOtherValue(index + 1),
+    const customValues = Array.from({ length: 1_000 }, (_, index) =>
+      createCustomValue(index + 1),
     )
-    const activeDeck = createActiveDeck(otherValues)
+    const activeDeck = createActiveDeck(customValues)
 
     expect(activeDeck.values).toHaveLength(1_100)
     expect(getPairCount(activeDeck.values.length)).toBe(604_450)
   })
 
   it("rejects duplicate identities and creation ordinals", () => {
-    const first = createOtherValue(1)
+    const first = createCustomValue(1)
 
     expect(() => createActiveDeck([first, first])).toThrow(
-      "duplicate Other Value IDs",
+      "duplicate Custom Value IDs",
     )
     expect(() =>
       createActiveDeck([
         first,
-        createOtherValue(2, { creationOrdinal: first.creationOrdinal }),
+        createCustomValue(2, { creationOrdinal: first.creationOrdinal }),
       ]),
-    ).toThrow("duplicate Other Value creation ordinals")
+    ).toThrow("duplicate Custom Value creation ordinals")
   })
 
-  it("rejects malformed Other Value records", () => {
+  it("rejects malformed Custom Value records", () => {
     expect(() =>
-      createActiveDeck([createOtherValue(1, { creationOrdinal: 0 })]),
-    ).toThrow("Invalid Other Value creation ordinal")
+      createActiveDeck([createCustomValue(1, { creationOrdinal: 0 })]),
+    ).toThrow("Invalid Custom Value creation ordinal")
     expect(() =>
-      createActiveDeck([createOtherValue(1, { name: "   " })]),
-    ).toThrow("Other Value name is required")
+      createActiveDeck([createCustomValue(1, { name: "   " })]),
+    ).toThrow("Custom Value name is required")
     expect(() =>
-      createActiveDeck([createOtherValue(1, { definition: "" })]),
-    ).toThrow("Other Value definition is required")
+      createActiveDeck([createCustomValue(1, { definition: "" })]),
+    ).toThrow("Custom Value definition is required")
   })
 })
 
