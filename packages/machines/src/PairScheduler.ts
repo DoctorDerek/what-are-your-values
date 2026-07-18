@@ -8,6 +8,7 @@ import type { ValueId, ValuePair } from "@game/data/src/Value"
 declare const schedulerCursorBrand: unique symbol
 
 export const PAIR_SCHEDULER_ALGORITHM_VERSION = 1 as const
+export const FULL_CYCLE_SCHEDULE_KIND = "full-cycle" as const
 
 export type SchedulerCursor = number & {
   readonly [schedulerCursorBrand]: "scheduler-cursor"
@@ -16,7 +17,9 @@ export type SchedulerCursor = number & {
 export type SchedulerRestorePoint = {
   readonly algorithmVersion: typeof PAIR_SCHEDULER_ALGORITHM_VERSION
   readonly activeDeckFingerprint: ActiveDeckFingerprint
-  readonly rankingEpoch: number
+  readonly progressGeneration: number
+  readonly deckRevision: number
+  readonly scheduleKind: typeof FULL_CYCLE_SCHEDULE_KIND
   readonly seed: string
   readonly cycleIndex: number
   readonly cursor: SchedulerCursor
@@ -99,7 +102,9 @@ function createCycleIdentity(restorePoint: SchedulerRestorePoint) {
   return JSON.stringify([
     restorePoint.algorithmVersion,
     restorePoint.activeDeckFingerprint,
-    restorePoint.rankingEpoch,
+    restorePoint.progressGeneration,
+    restorePoint.deckRevision,
+    restorePoint.scheduleKind,
     restorePoint.seed,
     restorePoint.cycleIndex,
   ])
@@ -262,11 +267,24 @@ function assertSchedulerRestorePoint(
     throw new Error("Scheduler Active Deck fingerprint does not match")
   }
 
+  if (restorePoint.scheduleKind !== FULL_CYCLE_SCHEDULE_KIND) {
+    throw new Error(`Unsupported schedule kind: ${restorePoint.scheduleKind}`)
+  }
+
   if (
-    !Number.isSafeInteger(restorePoint.rankingEpoch) ||
-    restorePoint.rankingEpoch < 1
+    !Number.isSafeInteger(restorePoint.progressGeneration) ||
+    restorePoint.progressGeneration < 0
   ) {
-    throw new Error(`Invalid ranking epoch: ${restorePoint.rankingEpoch}`)
+    throw new Error(
+      `Invalid progress generation: ${restorePoint.progressGeneration}`,
+    )
+  }
+
+  if (
+    !Number.isSafeInteger(restorePoint.deckRevision) ||
+    restorePoint.deckRevision < 0
+  ) {
+    throw new Error(`Invalid deck revision: ${restorePoint.deckRevision}`)
   }
 
   if (restorePoint.seed.length === 0) {
@@ -301,13 +319,15 @@ export function getScheduleShape(activeValueCount: number): ScheduleShape {
 
 export function createSchedulerRestorePoint({
   activeDeck,
-  rankingEpoch,
+  progressGeneration,
+  deckRevision,
   seed,
   cycleIndex,
   cursor = 0,
 }: {
   readonly activeDeck: ActiveDeck
-  readonly rankingEpoch: number
+  readonly progressGeneration: number
+  readonly deckRevision: number
   readonly seed: string
   readonly cycleIndex: number
   readonly cursor?: number
@@ -315,7 +335,9 @@ export function createSchedulerRestorePoint({
   const restorePoint = Object.freeze({
     algorithmVersion: PAIR_SCHEDULER_ALGORITHM_VERSION,
     activeDeckFingerprint: activeDeck.fingerprint,
-    rankingEpoch,
+    progressGeneration,
+    deckRevision,
+    scheduleKind: FULL_CYCLE_SCHEDULE_KIND,
     seed,
     cycleIndex,
     cursor: cursor as SchedulerCursor,
@@ -403,7 +425,8 @@ export function advanceSchedulerCursor(
 
   return createSchedulerRestorePoint({
     activeDeck,
-    rankingEpoch: restorePoint.rankingEpoch,
+    progressGeneration: restorePoint.progressGeneration,
+    deckRevision: restorePoint.deckRevision,
     seed: restorePoint.seed,
     cycleIndex: restorePoint.cycleIndex,
     cursor: nextCursor,

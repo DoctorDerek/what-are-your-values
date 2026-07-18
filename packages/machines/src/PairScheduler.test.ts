@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest"
 import {
   advanceSchedulerCursor,
   createSchedulerRestorePoint,
+  FULL_CYCLE_SCHEDULE_KIND,
   getScheduleShape,
   PAIR_SCHEDULER_ALGORITHM_VERSION,
   projectScheduledPair,
@@ -50,7 +51,8 @@ function collectCyclePairs(
         activeDeck,
         createSchedulerRestorePoint({
           activeDeck,
-          rankingEpoch: 1,
+          progressGeneration: 0,
+          deckRevision: 0,
           seed,
           cycleIndex,
           cursor,
@@ -110,7 +112,8 @@ describe("pair scheduler shape", () => {
     const activeDeck = createDeck(1_000)
     const restorePoint = createSchedulerRestorePoint({
       activeDeck,
-      rankingEpoch: 7,
+      progressGeneration: 7,
+      deckRevision: 11,
       seed: "large-deck-seed",
       cycleIndex: 3,
       cursor: 300_000,
@@ -210,7 +213,8 @@ describe("pair scheduler reconstruction", () => {
     const activeDeck = createDeck(2)
     const restorePoint = createSchedulerRestorePoint({
       activeDeck,
-      rankingEpoch: 4,
+      progressGeneration: 4,
+      deckRevision: 9,
       seed: "reconstruction-seed",
       cycleIndex: 2,
       cursor: 2_024,
@@ -221,24 +225,32 @@ describe("pair scheduler reconstruction", () => {
     )
   })
 
-  it("uses seed and epoch as deterministic schedule inputs", () => {
+  it("uses seed, progress generation, and deck revision as deterministic inputs", () => {
     const activeDeck = createDeck(0)
-    const createFirstRound = (rankingEpoch: number, seed: string) =>
+    const createFirstRound = (
+      progressGeneration: number,
+      deckRevision: number,
+      seed: string,
+    ) =>
       projectScheduledRound(
         activeDeck,
         createSchedulerRestorePoint({
           activeDeck,
-          rankingEpoch,
+          progressGeneration,
+          deckRevision,
           seed,
           cycleIndex: 0,
         }),
       ).pairs
 
-    expect(createFirstRound(1, "seed-one")).not.toEqual(
-      createFirstRound(1, "seed-two"),
+    expect(createFirstRound(0, 0, "seed-one")).not.toEqual(
+      createFirstRound(0, 0, "seed-two"),
     )
-    expect(createFirstRound(1, "seed-one")).not.toEqual(
-      createFirstRound(2, "seed-one"),
+    expect(createFirstRound(0, 0, "seed-one")).not.toEqual(
+      createFirstRound(1, 0, "seed-one"),
+    )
+    expect(createFirstRound(0, 0, "seed-one")).not.toEqual(
+      createFirstRound(0, 1, "seed-one"),
     )
   })
 
@@ -246,7 +258,8 @@ describe("pair scheduler reconstruction", () => {
     const activeDeck = createDeck(0)
     const initialRestorePoint = createSchedulerRestorePoint({
       activeDeck,
-      rankingEpoch: 1,
+      progressGeneration: 0,
+      deckRevision: 0,
       seed: "advance-seed",
       cycleIndex: 0,
     })
@@ -256,12 +269,14 @@ describe("pair scheduler reconstruction", () => {
     )
     const finalRestorePoint = createSchedulerRestorePoint({
       activeDeck,
-      rankingEpoch: 1,
+      progressGeneration: 0,
+      deckRevision: 0,
       seed: "advance-seed",
       cycleIndex: 0,
       cursor: getPairCount(activeDeck.valueIds.length) - 1,
     })
 
+    expect(initialRestorePoint.scheduleKind).toBe(FULL_CYCLE_SCHEDULE_KIND)
     expect(advancedRestorePoint?.cursor).toBe(1)
     expect(advanceSchedulerCursor(activeDeck, finalRestorePoint)).toBeNull()
   })
@@ -270,7 +285,8 @@ describe("pair scheduler reconstruction", () => {
     const activeDeck = createDeck(0)
     const restorePoint = createSchedulerRestorePoint({
       activeDeck,
-      rankingEpoch: 1,
+      progressGeneration: 0,
+      deckRevision: 0,
       seed: "validation-seed",
       cycleIndex: 0,
     })
@@ -283,6 +299,10 @@ describe("pair scheduler reconstruction", () => {
       ...restorePoint,
       algorithmVersion: PAIR_SCHEDULER_ALGORITHM_VERSION + 1,
     } as unknown as SchedulerRestorePoint
+    const unsupportedScheduleKind = {
+      ...restorePoint,
+      scheduleKind: "join-pass",
+    } as unknown as SchedulerRestorePoint
 
     expect(() =>
       projectScheduledPair(activeDeck, mismatchedRestorePoint),
@@ -291,13 +311,35 @@ describe("pair scheduler reconstruction", () => {
       projectScheduledPair(activeDeck, unsupportedRestorePoint),
     ).toThrow("Unsupported pair scheduler algorithm")
     expect(() =>
+      projectScheduledPair(activeDeck, unsupportedScheduleKind),
+    ).toThrow("Unsupported schedule kind")
+    expect(() =>
       createSchedulerRestorePoint({
         activeDeck,
-        rankingEpoch: 1,
+        progressGeneration: 0,
+        deckRevision: 0,
         seed: "validation-seed",
         cycleIndex: 0,
         cursor: getPairCount(activeDeck.valueIds.length),
       }),
     ).toThrow("Invalid scheduler cursor")
+    expect(() =>
+      createSchedulerRestorePoint({
+        activeDeck,
+        progressGeneration: -1,
+        deckRevision: 0,
+        seed: "validation-seed",
+        cycleIndex: 0,
+      }),
+    ).toThrow("Invalid progress generation")
+    expect(() =>
+      createSchedulerRestorePoint({
+        activeDeck,
+        progressGeneration: 0,
+        deckRevision: -1,
+        seed: "validation-seed",
+        cycleIndex: 0,
+      }),
+    ).toThrow("Invalid deck revision")
   })
 })
