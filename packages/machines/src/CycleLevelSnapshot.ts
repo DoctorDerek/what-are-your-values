@@ -14,7 +14,7 @@ function validateSnapshotLevel(valueId: ValueId, level: number) {
 export function validateCycleLevelSnapshot(
   activeDeck: ActiveDeck,
   candidateSnapshot: CycleLevelSnapshot,
-) {
+): CycleLevelSnapshot {
   if (candidateSnapshot.size !== activeDeck.valueIds.length) {
     throw new Error("Cycle Level Snapshot does not cover the complete Active Deck")
   }
@@ -44,7 +44,7 @@ export function validateCycleLevelSnapshot(
 export function createCycleLevelSnapshot(
   activeDeck: ActiveDeck,
   progressById: ValueProgressById,
-) {
+): CycleLevelSnapshot {
   return validateCycleLevelSnapshot(
     activeDeck,
     new Map(
