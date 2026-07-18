@@ -8,6 +8,7 @@ import {
   createPairOrientationContext,
   type PairOrientationContext,
 } from "./PairOrientation"
+import { avoidImmediateBoundaryRepeat } from "./PairSpacing"
 import { deriveRoundRobinPairs } from "./RoundRobinPairs"
 
 import {
@@ -102,43 +103,6 @@ function deriveBaseRoundPairs(
     cycleIndex,
     matchOrderSeed: `${context.cycleIdentity}:matches:${sourceRoundIndex}`,
   })
-}
-
-function pairsShareValue(first: ValuePair, second: ValuePair) {
-  return (
-    first[0] === second[0] ||
-    first[0] === second[1] ||
-    first[1] === second[0] ||
-    first[1] === second[1]
-  )
-}
-
-function avoidImmediateBoundaryRepeat(
-  pairs: readonly ValuePair[],
-  previousRoundLastPair: ValuePair,
-) {
-  if (!pairsShareValue(pairs[0], previousRoundLastPair)) {
-    return pairs
-  }
-
-  const replacementIndex = pairs.findIndex(
-    (pair, index) =>
-      index > 0 &&
-      index < pairs.length - 1 &&
-      !pairsShareValue(pair, previousRoundLastPair),
-  )
-
-  if (replacementIndex === -1) {
-    throw new Error(
-      "Active Deck cannot avoid an immediate round-boundary repeat",
-    )
-  }
-
-  const reorderedPairs = [...pairs]
-  const firstPair = reorderedPairs[0]
-  reorderedPairs[0] = reorderedPairs[replacementIndex]
-  reorderedPairs[replacementIndex] = firstPair
-  return reorderedPairs
 }
 
 function assertSchedulerRestorePoint(
