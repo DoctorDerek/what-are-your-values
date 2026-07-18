@@ -245,5 +245,18 @@ describe("Battle Progress", () => {
         maximumProgressById,
       ),
     ).toThrow("Total XP cannot be incremented safely")
+
+    const maximumComparisonProgressById = setProgress(
+      initialProgressById,
+      secondValueId,
+      createProgress(0, 0, Number.MAX_SAFE_INTEGER, 0),
+    )
+    expect(() =>
+      createCandidate(
+        [firstValueId, secondValueId],
+        firstValueId,
+        maximumComparisonProgressById,
+      ),
+    ).toThrow("Profile comparisons cannot be incremented safely")
   })
 })
