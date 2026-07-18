@@ -137,16 +137,16 @@ describe("Deck Revision", () => {
 
   it("preserves identity through edits and starts a fresh full cycle", () => {
     const ingenuity = createCustomValue(1, { name: "Ingenuity" })
+    const editedIngenuity = createCustomValue(1, {
+      name: "Ingenuity",
+      definition: "My edited definition",
+      updatedAt: "2026-07-18T00:00:00.000Z",
+    })
     const priorActiveDeck = createActiveDeck([ingenuity])
     const ingenuityProgress = createProgress(28, 8, 14, 4)
     const candidate = createDeckRevisionCandidate({
       priorActiveDeck,
-      revisedCustomValues: [
-        createCustomValue(1, {
-          name: "Ingenuity",
-          definition: "My edited definition",
-        }),
-      ],
+      revisedCustomValues: [editedIngenuity],
       progressById: setProgress(
         createInitialValueProgress(priorActiveDeck),
         ingenuity.id,
@@ -166,6 +166,33 @@ describe("Deck Revision", () => {
     expect(candidate.activeDeck.fingerprint).not.toBe(
       priorActiveDeck.fingerprint,
     )
+    expect(candidate.activeDeck.customValues[0]).toEqual(editedIngenuity)
+  })
+
+  it("rejects attempts to rewrite retained Custom Value creation identity", () => {
+    const ingenuity = createCustomValue(1, { name: "Ingenuity" })
+    const priorActiveDeck = createActiveDeck([ingenuity])
+    const progressById = createInitialValueProgress(priorActiveDeck)
+    const createCandidate = (revisedCustomValue: CustomValueDefinition) =>
+      createDeckRevisionCandidate({
+        priorActiveDeck,
+        revisedCustomValues: [revisedCustomValue],
+        progressById,
+        deckRevision: 0,
+        progressGeneration: 0,
+        seed: "immutable-custom-identity",
+      })
+
+    expect(() =>
+      createCandidate(createCustomValue(1, { creationOrdinal: 2 })),
+    ).toThrow("creation ordinal is immutable")
+    expect(() =>
+      createCandidate(
+        createCustomValue(1, {
+          createdAt: "2026-07-18T00:00:00.000Z",
+        }),
+      ),
+    ).toThrow("creation timestamp is immutable")
   })
 
   it("removes only deleted progress and starts a fresh full cycle", () => {
