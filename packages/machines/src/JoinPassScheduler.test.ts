@@ -319,6 +319,53 @@ describe("Join Pass reconstruction", () => {
 })
 
 describe("Join Pass restore validation", () => {
+  it("rejects corrupted imported membership and identity state", () => {
+    const activeDeck = createDeck(2)
+    const joinedValueIds = getCustomValueIds(activeDeck)
+    const restorePoint = createRestorePoint(activeDeck, joinedValueIds)
+    const projectCorrupted = (overrides: Partial<JoinPassRestorePoint>) =>
+      projectJoinPassPair(activeDeck, {
+        ...restorePoint,
+        ...overrides,
+      } as JoinPassRestorePoint)
+
+    expect(() => projectCorrupted({ joinedValueIds: [] })).toThrow(
+      "requires at least one joined Custom Value",
+    )
+    expect(() =>
+      projectCorrupted({
+        joinedValueIds: [joinedValueIds[0], joinedValueIds[0]],
+      }),
+    ).toThrow("duplicate joined Value IDs")
+    expect(() =>
+      projectCorrupted({
+        joinedValueIds: [activeDeck.valueIds[0] as CustomValueId],
+      }),
+    ).toThrow("joined IDs must be Custom Value IDs")
+
+    const duplicatedRetainedValueIds = [...restorePoint.retainedValueIds]
+    duplicatedRetainedValueIds[1] = duplicatedRetainedValueIds[0]
+    expect(() =>
+      projectCorrupted({ retainedValueIds: duplicatedRetainedValueIds }),
+    ).toThrow("duplicate retained Value IDs")
+
+    const overlappingRetainedValueIds = [...restorePoint.retainedValueIds]
+    overlappingRetainedValueIds[0] = joinedValueIds[0]
+    expect(() =>
+      projectCorrupted({ retainedValueIds: overlappingRetainedValueIds }),
+    ).toThrow("retained and joined Value IDs overlap")
+
+    expect(() => projectCorrupted({ seed: "" })).toThrow(
+      "Scheduler seed is required",
+    )
+    expect(() => projectCorrupted({ cycleIndex: -1 })).toThrow(
+      "Invalid cycle index",
+    )
+    expect(() =>
+      createRestorePoint(activeDeck, [createCustomValue(9).id]),
+    ).toThrow("joined Value IDs do not match the Active Deck")
+  })
+
   it("rejects mismatched membership, counts, fingerprints, and cursors", () => {
     const activeDeck = createDeck(2)
     const joinedValueIds = getCustomValueIds(activeDeck)
