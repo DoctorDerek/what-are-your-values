@@ -43,6 +43,34 @@ function incrementDeckRevision(deckRevision: number) {
   return deckRevision + 1
 }
 
+function validateRetainedCustomValueIdentity(
+  priorActiveDeck: ActiveDeck,
+  revisedCustomValues: readonly CustomValueDefinition[],
+) {
+  const priorCustomValuesById = new Map(
+    priorActiveDeck.customValues.map((value) => [value.id, value]),
+  )
+
+  for (const revisedValue of revisedCustomValues) {
+    const priorValue = priorCustomValuesById.get(revisedValue.id)
+    if (!priorValue) {
+      continue
+    }
+
+    if (revisedValue.creationOrdinal !== priorValue.creationOrdinal) {
+      throw new Error(
+        `Custom Value creation ordinal is immutable: ${revisedValue.id}`,
+      )
+    }
+
+    if (revisedValue.createdAt !== priorValue.createdAt) {
+      throw new Error(
+        `Custom Value creation timestamp is immutable: ${revisedValue.id}`,
+      )
+    }
+  }
+}
+
 export function createDeckRevisionCandidate({
   priorActiveDeck,
   revisedCustomValues,
@@ -59,6 +87,7 @@ export function createDeckRevisionCandidate({
   readonly seed: string
 }) {
   validateGeneration(progressGeneration, "progress generation")
+  validateRetainedCustomValueIdentity(priorActiveDeck, revisedCustomValues)
 
   const activeDeck = createActiveDeck(revisedCustomValues)
   if (activeDeck.fingerprint === priorActiveDeck.fingerprint) {
