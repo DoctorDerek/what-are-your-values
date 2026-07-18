@@ -1,37 +1,68 @@
+import type { ValueId } from "@game/data/src/Value"
 import { assign, setup } from "xstate"
-import { StorageAdapter } from "./StorageAdapter"
+import {
+  createBattleCycleCandidate,
+  createInitialBattleCycle,
+  type BattleCycleState,
+} from "./BattleCycle"
+import {
+  projectScheduledPair,
+  type SchedulerRestorePoint,
+} from "./PairScheduler"
+import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
+import type { StorageAdapter } from "./StorageAdapter"
 
 export const rootMachine = setup({
   types: {
     context: {} as {
       uuid: string | null
-      valuesXp: Record<number, number>
+      battleCycle: BattleCycleState | null
       storage: StorageAdapter
     },
     events: {} as
       | {
-          type: "HYDRATE"
+          type: "APP.HYDRATED"
           uuid: string | null
-          valuesXp: Record<number, number>
+          schedulerSeed: string
         }
-      | { type: "SUBMIT_SPLASH"; uuid: string }
-      | { type: "START_BATTLE" }
+      | { type: "INTRODUCTION.COMPLETED"; uuid: string }
+      | { type: "BATTLE.START_REQUESTED" }
       | {
-          type: "BATTLE_COMPLETED"
-          winnerId: number
-          loserId: number
-          xpGained: number
+          type: "BATTLE.WINNER_SELECTED"
+          winnerId: ValueId
+          expectedScheduler: SchedulerRestorePoint
         }
-      | { type: "EXIT_BATTLE" },
+      | { type: "BATTLE.EXIT_REQUESTED" },
     input: {} as { storage: StorageAdapter },
   },
+  guards: {
+    isCurrentBattleSelection: ({ context, event }) => {
+      if (event.type !== "BATTLE.WINNER_SELECTED" || !context.battleCycle) {
+        return false
+      }
+
+      if (
+        !areSchedulerIdentitiesEqual(
+          context.battleCycle.scheduler,
+          event.expectedScheduler,
+        )
+      ) {
+        return false
+      }
+
+      return projectScheduledPair(
+        context.battleCycle.activeDeck,
+        context.battleCycle.scheduler,
+      ).pair.includes(event.winnerId)
+    },
+  },
   actions: {
-    saveRootState: ({ context }) => {
-      if (context.uuid) context.storage.setItem("wayvm_uuid", context.uuid)
-      context.storage.setItem(
-        "wayvm_values_xp",
-        JSON.stringify(context.valuesXp),
-      )
+    saveIntroductionId: ({ context }) => {
+      if (!context.uuid) {
+        throw new Error("Introduction completion is missing a UUID")
+      }
+
+      context.storage.setItem("wayvm_uuid", context.uuid)
     },
   },
 }).createMachine({
@@ -39,26 +70,28 @@ export const rootMachine = setup({
   initial: "Hydrating",
   context: ({ input }) => ({
     uuid: null,
-    valuesXp: {},
+    battleCycle: null,
     storage: input.storage,
   }),
   states: {
     Hydrating: {
       on: {
-        HYDRATE: [
+        "APP.HYDRATED": [
           {
             guard: ({ event }) => event.uuid !== null,
             target: "Hub",
             actions: assign({
               uuid: ({ event }) => event.uuid,
-              valuesXp: ({ event }) => event.valuesXp,
+              battleCycle: ({ event }) =>
+                createInitialBattleCycle(event.schedulerSeed),
             }),
           },
           {
             target: "Splash",
             actions: assign({
               uuid: ({ event }) => event.uuid,
-              valuesXp: ({ event }) => event.valuesXp,
+              battleCycle: ({ event }) =>
+                createInitialBattleCycle(event.schedulerSeed),
             }),
           },
         ],
@@ -66,37 +99,40 @@ export const rootMachine = setup({
     },
     Splash: {
       on: {
-        SUBMIT_SPLASH: {
+        "INTRODUCTION.COMPLETED": {
           target: "Hub",
           actions: [
             assign({
               uuid: ({ event }) => event.uuid,
             }),
-            "saveRootState",
+            "saveIntroductionId",
           ],
         },
       },
     },
     Hub: {
       on: {
-        START_BATTLE: { target: "Crucible" },
+        "BATTLE.START_REQUESTED": { target: "Crucible" },
       },
     },
     Crucible: {
       on: {
-        EXIT_BATTLE: { target: "Hub" },
-        BATTLE_COMPLETED: {
-          actions: [
-            assign({
-              valuesXp: ({ context, event }) => {
-                const newXp = { ...context.valuesXp }
-                newXp[event.winnerId] =
-                  (newXp[event.winnerId] || 0) + event.xpGained
-                return newXp
-              },
-            }),
-            "saveRootState",
-          ],
+        "BATTLE.EXIT_REQUESTED": { target: "Hub" },
+        "BATTLE.WINNER_SELECTED": {
+          guard: "isCurrentBattleSelection",
+          actions: assign({
+            battleCycle: ({ context, event }) => {
+              if (!context.battleCycle) {
+                throw new Error("Battle profile is not initialized")
+              }
+
+              return createBattleCycleCandidate({
+                battleCycle: context.battleCycle,
+                winnerId: event.winnerId,
+                expectedScheduler: event.expectedScheduler,
+              })
+            },
+          }),
         },
       },
     },
