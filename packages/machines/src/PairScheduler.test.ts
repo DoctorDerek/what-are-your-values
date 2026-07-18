@@ -129,7 +129,7 @@ describe("pair scheduler shape", () => {
 })
 
 describe("pair scheduler coverage", () => {
-  it.each([0, 1, 2, 3])(
+  it.each([0, 1, 2, 3, 4, 5])(
     "covers every K=%i Active Deck pair exactly once",
     (customValueCount) => {
       const activeDeck = createDeck(customValueCount)
@@ -211,8 +211,8 @@ describe("pair scheduler orientation", () => {
 })
 
 describe("pair scheduler reconstruction", () => {
-  it("reconstructs the same pair from the same durable identity and cursor", () => {
-    const activeDeck = createDeck(2)
+  it("pins algorithm version 1 reconstruction to an exact durable fixture", () => {
+    const activeDeck = createDeck(0)
     const restorePoint = createSchedulerRestorePoint({
       activeDeck,
       progressGeneration: 4,
@@ -222,9 +222,14 @@ describe("pair scheduler reconstruction", () => {
       cursor: 2_024,
     })
 
-    expect(projectScheduledPair(activeDeck, restorePoint)).toEqual(
-      projectScheduledPair(activeDeck, { ...restorePoint }),
-    )
+    expect(PAIR_SCHEDULER_ALGORITHM_VERSION).toBe(1)
+    expect(projectScheduledPair(activeDeck, restorePoint)).toEqual({
+      cursor: 2_024,
+      presentationRoundIndex: 40,
+      sourceRoundIndex: 29,
+      matchIndex: 24,
+      pair: ["pvcs-2011:responsibility", "pvcs-2011:diligence"],
+    })
   })
 
   it("uses seed, progress generation, and deck revision as deterministic inputs", () => {
