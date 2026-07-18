@@ -1,55 +1,95 @@
-import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { createActor } from "xstate"
-import { combatMachine } from "./CombatMachine"
+import {
+  createBattleCycleCandidate,
+  createInitialBattleCycle,
+} from "./BattleCycle"
+import { combatMachine, type PresentedBattle } from "./CombatMachine"
+import { projectScheduledPair } from "./PairScheduler"
 
-describe("Combat Machine Integration", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
+function projectBattle(
+  battleCycle: ReturnType<typeof createInitialBattleCycle>,
+): PresentedBattle {
+  return Object.freeze({
+    pair: projectScheduledPair(battleCycle.activeDeck, battleCycle.scheduler)
+      .pair,
+    scheduler: battleCycle.scheduler,
   })
+}
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it("automatically regenerates queue when completely empty", () => {
-    const mockStorage = {
-      getItem: vi.fn(),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    }
-
+describe("Combat Machine", () => {
+  it("accepts one semantic winner while rejecting rapid duplicate input", () => {
+    const onWinnerSelected = vi.fn()
+    const battleCycle = createInitialBattleCycle("combat-selection-seed")
+    const battle = projectBattle(battleCycle)
+    const [winnerId] = battle.pair
     const actor = createActor(combatMachine, {
-      input: { storage: mockStorage },
+      input: { onWinnerSelected },
     })
-
     actor.start()
+    actor.send({ type: "BATTLE.PROJECTED", battle })
 
-    actor.send({
-      type: "INITIALIZE",
-      queue: [[1, 2]],
-      valueIds: [1, 2],
+    expect(actor.getSnapshot().matches("AwaitingInput")).toBe(true)
+    actor.send({ type: "VALUE.FOCUS_REQUESTED", valueId: winnerId })
+    expect(actor.getSnapshot().context.focusedId).toBe(winnerId)
+
+    actor.send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
+    actor.send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
+
+    expect(actor.getSnapshot().matches("AnimatingResult")).toBe(true)
+    expect(actor.getSnapshot().context.winnerId).toBe(winnerId)
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+    expect(onWinnerSelected).toHaveBeenCalledWith(
+      winnerId,
+      battleCycle.scheduler,
+    )
+  })
+
+  it("holds the next projection until result animation completes", () => {
+    const onWinnerSelected = vi.fn()
+    const battleCycle = createInitialBattleCycle("combat-animation-seed")
+    const currentBattle = projectBattle(battleCycle)
+    const [winnerId] = currentBattle.pair
+    const nextBattleCycle = createBattleCycleCandidate({
+      battleCycle,
+      winnerId,
+      expectedScheduler: battleCycle.scheduler,
     })
+    const nextBattle = projectBattle(nextBattleCycle)
+    const actor = createActor(combatMachine, {
+      input: { onWinnerSelected },
+    })
+    actor.start()
+    actor.send({ type: "BATTLE.PROJECTED", battle: currentBattle })
+    actor.send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
+    actor.send({ type: "BATTLE.PROJECTED", battle: nextBattle })
 
-    let state = actor.getSnapshot()
+    expect(actor.getSnapshot().context.currentBattle).toBe(currentBattle)
+    expect(actor.getSnapshot().context.pendingBattle).toBe(nextBattle)
 
-    expect(state.matches("AwaitingInput")).toBe(true)
-    expect(state.context.currentPair).toEqual([1, 2])
-    expect(state.context.matchupQueue.length).toBe(0)
+    actor.send({ type: "ANIMATION.RESULT_FINISHED" })
 
-    actor.send({ type: "SELECT_WINNER", winnerId: 1 })
+    expect(actor.getSnapshot().matches("AwaitingInput")).toBe(true)
+    expect(actor.getSnapshot().context.currentBattle).toBe(nextBattle)
+    expect(actor.getSnapshot().context.pendingBattle).toBeNull()
+    expect(actor.getSnapshot().context.winnerId).toBeNull()
+  })
 
-    state = actor.getSnapshot()
-    expect(state.matches("Animating")).toBe(true)
+  it("waits for a projection when animation finishes before Root advances", () => {
+    const battleCycle = createInitialBattleCycle("delayed-projection-seed")
+    const battle = projectBattle(battleCycle)
+    const actor = createActor(combatMachine, {
+      input: { onWinnerSelected: vi.fn() },
+    })
+    actor.start()
+    actor.send({ type: "BATTLE.PROJECTED", battle })
+    actor.send({
+      type: "VALUE.WINNER_SELECTED",
+      valueId: battle.pair[0],
+    })
+    actor.send({ type: "ANIMATION.RESULT_FINISHED" })
 
-    vi.advanceTimersByTime(500)
-
-    state = actor.getSnapshot()
-
-    expect(state.matches("AwaitingInput")).toBe(true)
-
-    expect(state.context.currentPair).not.toBeNull()
-    expect(state.context.matchupQueue.length).toBeGreaterThan(10)
+    expect(actor.getSnapshot().matches("Preparing")).toBe(true)
+    expect(actor.getSnapshot().context.currentBattle).toBeNull()
   })
 })

@@ -1,106 +1,137 @@
-import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
-import { generateQueue } from "@game/utils/src/Queue"
+import type { ValueId, ValuePair } from "@game/data/src/Value"
 import { assign, setup } from "xstate"
-import { StorageAdapter } from "./StorageAdapter"
+import type { SchedulerRestorePoint } from "./PairScheduler"
+
+export type PresentedBattle = {
+  readonly pair: ValuePair
+  readonly scheduler: SchedulerRestorePoint
+}
 
 export const combatMachine = setup({
   types: {
     context: {} as {
-      matchupQueue: [number, number][]
-      currentPair: [number, number] | null
-      winnerId: number | null
-      focusedId: number | null
-      storage: StorageAdapter
+      currentBattle: PresentedBattle | null
+      pendingBattle: PresentedBattle | null
+      winnerId: ValueId | null
+      focusedId: ValueId | null
+      onWinnerSelected: (
+        winnerId: ValueId,
+        expectedScheduler: SchedulerRestorePoint,
+      ) => void
     },
     events: {} as
-      | { type: "INITIALIZE"; queue: [number, number][]; valueIds: number[] }
-      | { type: "FOCUS_VALUE"; id: number }
-      | { type: "SELECT_WINNER"; winnerId: number },
-    input: {} as { storage: StorageAdapter },
+      | { type: "BATTLE.PROJECTED"; battle: PresentedBattle }
+      | { type: "VALUE.FOCUS_REQUESTED"; valueId: ValueId }
+      | { type: "VALUE.WINNER_SELECTED"; valueId: ValueId }
+      | { type: "ANIMATION.RESULT_FINISHED" },
+    input: {} as {
+      onWinnerSelected: (
+        winnerId: ValueId,
+        expectedScheduler: SchedulerRestorePoint,
+      ) => void
+    },
+  },
+  guards: {
+    isPresentedValue: ({ context, event }) => {
+      if (
+        (event.type !== "VALUE.FOCUS_REQUESTED" &&
+          event.type !== "VALUE.WINNER_SELECTED") ||
+        !context.currentBattle
+      ) {
+        return false
+      }
+
+      return context.currentBattle.pair.includes(event.valueId)
+    },
+    hasPendingBattle: ({ context }) => context.pendingBattle !== null,
   },
   actions: {
-    saveQueue: ({ context }) => {
-      context.storage.setItem(
-        "wayvm_queue",
-        JSON.stringify(context.matchupQueue),
-      )
+    notifyWinnerSelected: ({ context, event }) => {
+      if (event.type !== "VALUE.WINNER_SELECTED" || !context.currentBattle) {
+        throw new Error("Winner selection is missing its projected battle")
+      }
+
+      context.onWinnerSelected(event.valueId, context.currentBattle.scheduler)
     },
   },
 }).createMachine({
   id: "combat",
-  initial: "Initializing",
+  initial: "Preparing",
   context: ({ input }) => ({
-    matchupQueue: [],
-    currentPair: null,
+    currentBattle: null,
+    pendingBattle: null,
     winnerId: null,
     focusedId: null,
-    storage: input.storage,
+    onWinnerSelected: input.onWinnerSelected,
   }),
   states: {
-    Initializing: {
+    Preparing: {
       on: {
-        INITIALIZE: {
-          target: "CheckingQueue",
-          actions: assign({
-            matchupQueue: ({ event }) => {
-              if (event.queue.length > 0) return event.queue
-              return generateQueue(event.valueIds)
-            },
-          }),
-        },
-      },
-    },
-    CheckingQueue: {
-      always: [
-        {
-          guard: ({ context }) => context.matchupQueue.length === 0,
-          target: "Regenerating",
-        },
-        {
+        "BATTLE.PROJECTED": {
           target: "AwaitingInput",
-          actions: [
-            assign({
-              currentPair: ({ context }) =>
-                context.matchupQueue[context.matchupQueue.length - 1],
-              matchupQueue: ({ context }) => context.matchupQueue.slice(0, -1),
-              focusedId: null,
-              winnerId: null,
-            }),
-            "saveQueue",
-          ],
-        },
-      ],
-    },
-    Regenerating: {
-      always: {
-        target: "CheckingQueue",
-        actions: assign({
-          matchupQueue: () => {
-            const ids = LIST_OF_VALUES.map((v) => v.id)
-            return generateQueue(ids)
-          },
-        }),
-      },
-    },
-    AwaitingInput: {
-      on: {
-        FOCUS_VALUE: {
           actions: assign({
-            focusedId: ({ event }) => event.id,
-          }),
-        },
-        SELECT_WINNER: {
-          target: "Animating",
-          actions: assign({
-            winnerId: ({ event }) => event.winnerId,
+            currentBattle: ({ event }) => event.battle,
+            pendingBattle: null,
+            winnerId: null,
             focusedId: null,
           }),
         },
       },
     },
-    Animating: {
-      after: {
-        500: { target: "CheckingQueue" },
+    AwaitingInput: {
+      on: {
+        "BATTLE.PROJECTED": {
+          actions: assign({
+            currentBattle: ({ event }) => event.battle,
+            focusedId: null,
+          }),
+        },
+        "VALUE.FOCUS_REQUESTED": {
+          guard: "isPresentedValue",
+          actions: assign({
+            focusedId: ({ event }) => event.valueId,
+          }),
+        },
+        "VALUE.WINNER_SELECTED": {
+          guard: "isPresentedValue",
+          target: "AnimatingResult",
+          actions: [
+            assign({
+              winnerId: ({ event }) => event.valueId,
+              focusedId: null,
+            }),
+            "notifyWinnerSelected",
+          ],
+        },
+      },
+    },
+    AnimatingResult: {
+      on: {
+        "BATTLE.PROJECTED": {
+          actions: assign({
+            pendingBattle: ({ event }) => event.battle,
+          }),
+        },
+        "ANIMATION.RESULT_FINISHED": [
+          {
+            guard: "hasPendingBattle",
+            target: "AwaitingInput",
+            actions: assign({
+              currentBattle: ({ context }) => context.pendingBattle,
+              pendingBattle: null,
+              winnerId: null,
+              focusedId: null,
+            }),
+          },
+          {
+            target: "Preparing",
+            actions: assign({
+              currentBattle: null,
+              winnerId: null,
+              focusedId: null,
+            }),
+          },
+        ],
       },
     },
   },
