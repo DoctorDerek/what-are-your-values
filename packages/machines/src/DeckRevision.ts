@@ -2,16 +2,15 @@ import {
   createActiveDeck,
   type ActiveDeck,
 } from "@game/data/src/ActiveDeck"
-import type {
-  CustomValueDefinition,
-  CustomValueId,
-  ValueId,
-} from "@game/data/src/Value"
+import type { CustomValueDefinition, CustomValueId } from "@game/data/src/Value"
 import {
   reconfigureValueProgress,
   type ValueProgressById,
 } from "@game/data/src/ValueProgress"
-import { getLevelFromXP } from "@game/utils/src/LevelMath"
+import {
+  createCycleLevelSnapshot,
+  type CycleLevelSnapshot,
+} from "./CycleLevelSnapshot"
 import {
   createJoinPassRestorePoint,
   type JoinPassRestorePoint,
@@ -24,7 +23,7 @@ import {
 export type DeckRevisionCandidate = {
   readonly activeDeck: ActiveDeck
   readonly progressById: ValueProgressById
-  readonly cycleLevelSnapshot: ReadonlyMap<ValueId, number>
+  readonly cycleLevelSnapshot: CycleLevelSnapshot
   readonly scheduler: SchedulerRestorePoint | JoinPassRestorePoint
   readonly joinedValueIds: readonly CustomValueId[]
   readonly deckRevision: number
@@ -45,23 +44,6 @@ function incrementDeckRevision(deckRevision: number) {
   }
 
   return deckRevision + 1
-}
-
-function createCycleLevelSnapshot(
-  activeDeck: ActiveDeck,
-  progressById: ValueProgressById,
-) {
-  return new Map(
-    activeDeck.valueIds.map((valueId) => {
-      const progress = progressById.get(valueId)
-
-      if (!progress) {
-        throw new Error(`Value Progress is missing ${valueId}`)
-      }
-
-      return [valueId, getLevelFromXP(progress.totalXp)] as const
-    }),
-  )
 }
 
 export function createDeckRevisionCandidate({
