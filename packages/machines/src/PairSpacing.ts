@@ -36,3 +36,29 @@ export function avoidImmediateBoundaryRepeat(
   reorderedPairs[replacementIndex] = firstPair
   return reorderedPairs
 }
+
+export function preserveBoundarySpacingWhenPossible(
+  pairs: readonly ValuePair[],
+  previousPair: ValuePair,
+) {
+  if (!pairsShareValue(pairs[0], previousPair)) {
+    return pairs
+  }
+
+  const replacementIndex = pairs.findIndex(
+    (pair, index) =>
+      index > 0 &&
+      index < pairs.length - 1 &&
+      !pairsShareValue(pair, previousPair),
+  )
+
+  if (replacementIndex === -1) {
+    return pairs
+  }
+
+  const reorderedPairs = [...pairs]
+  const firstPair = reorderedPairs[0]
+  reorderedPairs[0] = reorderedPairs[replacementIndex]
+  reorderedPairs[replacementIndex] = firstPair
+  return reorderedPairs
+}
