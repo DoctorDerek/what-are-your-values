@@ -5,6 +5,11 @@ import {
 } from "@game/data/src/ActiveDeck"
 import type { ValueId, ValuePair } from "@game/data/src/Value"
 import { shuffleDeterministically } from "./DeterministicSequence"
+import {
+  createPairOrientationContext,
+  orientValuePair,
+  type PairOrientationContext,
+} from "./PairOrientation"
 
 declare const schedulerCursorBrand: unique symbol
 
@@ -54,9 +59,8 @@ function isActiveValue(participant: CircleParticipant): participant is ValueId {
 }
 
 type CycleProjectionContext = {
-  readonly activeValueCount: number
   readonly cycleIdentity: string
-  readonly orientationIndexes: ReadonlyMap<ValueId, number>
+  readonly orientation: PairOrientationContext
   readonly participantOrder: readonly ValueId[]
   readonly roundOrder: readonly number[]
   readonly shape: ScheduleShape
@@ -86,9 +90,6 @@ function createCycleProjectionContext(
       `${cycleIdentity}:participants`,
     ),
   )
-  const orientationIndexes = new Map(
-    activeDeck.valueIds.map((valueId, index) => [valueId, index]),
-  )
   const roundOrder = Object.freeze(
     shuffleDeterministically(
       Array.from({ length: shape.roundCount }, (_, index) => index),
@@ -97,9 +98,8 @@ function createCycleProjectionContext(
   )
 
   return {
-    activeValueCount: activeDeck.valueIds.length,
     cycleIdentity,
-    orientationIndexes,
+    orientation: createPairOrientationContext(activeDeck.valueIds),
     participantOrder,
     roundOrder,
     shape,
@@ -122,41 +122,13 @@ function rotateCircleParticipants(
   ]
 }
 
-function orientPair(
-  first: ValueId,
-  second: ValueId,
-  context: CycleProjectionContext,
-  cycleIndex: number,
-): ValuePair {
-  const firstIndex = context.orientationIndexes.get(first)
-  const secondIndex = context.orientationIndexes.get(second)
-
-  if (firstIndex === undefined || secondIndex === undefined) {
-    throw new Error("Scheduled pair contains an unknown active value")
-  }
-
-  const orientationSize =
-    context.activeValueCount % 2 === 0
-      ? context.activeValueCount + 1
-      : context.activeValueCount
-  const forwardDistance =
-    (secondIndex - firstIndex + orientationSize) % orientationSize
-  const firstLeads = forwardDistance <= (orientationSize - 1) / 2
-  const invertCycle = context.activeValueCount % 2 === 0 && cycleIndex % 2 === 1
-  const orientedFirstLeads = invertCycle ? !firstLeads : firstLeads
-
-  return Object.freeze(
-    orientedFirstLeads ? [first, second] : [second, first],
-  ) as ValuePair
-}
-
 function deriveBaseRoundPairs(
   context: CycleProjectionContext,
   sourceRoundIndex: number,
   cycleIndex: number,
 ) {
   const circleParticipants: readonly CircleParticipant[] =
-    context.activeValueCount % 2 === 0
+    context.orientation.activeValueCount % 2 === 0
       ? context.participantOrder
       : [...context.participantOrder, internalBye]
   const rotatedParticipants = rotateCircleParticipants(
@@ -170,7 +142,9 @@ function deriveBaseRoundPairs(
     const second = rotatedParticipants[rotatedParticipants.length - 1 - index]
 
     if (isActiveValue(first) && isActiveValue(second)) {
-      pairs.push(orientPair(first, second, context, cycleIndex))
+      pairs.push(
+        orientValuePair(first, second, context.orientation, cycleIndex),
+      )
     }
   }
 
