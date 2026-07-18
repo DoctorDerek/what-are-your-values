@@ -174,6 +174,25 @@ describe("Deck-reconfiguration scheduler", () => {
       projectDeckReconfigurationPair(activeDeck, corruptedRestorePoint),
     ).toThrow("Invalid deck-reconfiguration join pair count")
 
+    expect(() =>
+      projectDeckReconfigurationPair(activeDeck, {
+        ...restorePoint,
+        retainedPairCount: restorePoint.retainedPairCount + 1,
+      } as DeckReconfigurationRestorePoint),
+    ).toThrow("Invalid deck-reconfiguration retained pair count")
+    expect(() =>
+      projectDeckReconfigurationPair(activeDeck, {
+        ...restorePoint,
+        pairCount: restorePoint.pairCount + 1,
+      } as DeckReconfigurationRestorePoint),
+    ).toThrow("Invalid deck-reconfiguration pair count")
+    expect(() =>
+      projectDeckReconfigurationPair(activeDeck, {
+        ...restorePoint,
+        retainedValueIds: [...restorePoint.retainedValueIds].reverse(),
+      } as DeckReconfigurationRestorePoint),
+    ).toThrow("retained IDs do not match the Join Pass")
+
     const twoJoinedValues = createRestorePoint(2)
     const reversedJoinedValues = {
       ...twoJoinedValues.restorePoint,
