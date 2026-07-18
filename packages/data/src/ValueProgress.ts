@@ -115,10 +115,16 @@ export function reconfigureValueProgress({
 
   return createValueProgressById(
     revisedActiveDeck,
-    revisedActiveDeck.valueIds.map((valueId) => [
-      valueId,
-      validatedProgressById.get(valueId) ?? createUnplayedValueProgress(),
-    ]),
+    revisedActiveDeck.valueIds.map((valueId) => {
+      const retainedProgress = validatedProgressById.get(valueId)
+
+      return [
+        valueId,
+        retainedProgress
+          ? { ...retainedProgress, currentCycleWins: 0 }
+          : createUnplayedValueProgress(),
+      ]
+    }),
   )
 }
 

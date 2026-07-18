@@ -111,7 +111,10 @@ describe("Value Progress reconfiguration", () => {
     })
 
     expect(revisedProgressById.size).toBe(101)
-    expect(revisedProgressById.get(curiosityId)).toEqual(playedProgress)
+    expect(revisedProgressById.get(curiosityId)).toEqual({
+      ...playedProgress,
+      currentCycleWins: 0,
+    })
     expect(revisedProgressById.get(ingenuity.id)).toEqual({
       totalXp: 0,
       profileWins: 0,
@@ -153,9 +156,18 @@ describe("Value Progress reconfiguration", () => {
       progressById: editedProgressById,
     })
 
-    expect(editedProgressById.get(ingenuity.id)).toEqual(ingenuityProgress)
-    expect(editedProgressById.get(destiny.id)).toEqual(destinyProgress)
-    expect(deletedProgressById.get(ingenuity.id)).toEqual(ingenuityProgress)
+    expect(editedProgressById.get(ingenuity.id)).toEqual({
+      ...ingenuityProgress,
+      currentCycleWins: 0,
+    })
+    expect(editedProgressById.get(destiny.id)).toEqual({
+      ...destinyProgress,
+      currentCycleWins: 0,
+    })
+    expect(deletedProgressById.get(ingenuity.id)).toEqual({
+      ...ingenuityProgress,
+      currentCycleWins: 0,
+    })
     expect(deletedProgressById.has(destiny.id)).toBe(false)
     expect(deletedProgressById.size).toBe(101)
   })
