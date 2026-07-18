@@ -134,6 +134,29 @@ export function reconfigureValueProgress({
   )
 }
 
+export function beginNextValueProgressCycle(
+  activeDeck: ActiveDeck,
+  progressById: ValueProgressById,
+) {
+  const validatedProgressById = createValueProgressById(
+    activeDeck,
+    Array.from(progressById),
+  )
+
+  return createValueProgressById(
+    activeDeck,
+    activeDeck.valueIds.map((valueId) => {
+      const progress = validatedProgressById.get(valueId)
+
+      if (!progress) {
+        throw new Error(`Value Progress is missing ${valueId}`)
+      }
+
+      return [valueId, { ...progress, currentCycleWins: 0 }]
+    }),
+  )
+}
+
 export function resetValueProgress(activeDeck: ActiveDeck) {
   return createInitialValueProgress(activeDeck)
 }
