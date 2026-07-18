@@ -4,6 +4,7 @@ import {
   CANONICAL_CATALOG_VERSION,
   createCustomValueId,
   type CustomValueDefinition,
+  type CustomValueId,
 } from "./Value"
 
 function createCustomValue(
@@ -127,6 +128,13 @@ describe("Active Deck", () => {
   })
 
   it("rejects malformed Custom Value records", () => {
+    expect(() =>
+      createActiveDeck([
+        createCustomValue(1, {
+          id: "pvcs-2011:acceptance" as CustomValueId,
+        }),
+      ]),
+    ).toThrow("Invalid Custom Value identity")
     expect(() =>
       createActiveDeck([createCustomValue(1, { creationOrdinal: 0 })]),
     ).toThrow("Invalid Custom Value creation ordinal")
