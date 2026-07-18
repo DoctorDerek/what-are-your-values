@@ -11,6 +11,11 @@ const eslintConfig: Linter.Config[] = [
     plugins: {
       "only-warn": onlyWarn as unknown as ESLint.Plugin,
     },
+    settings: {
+      next: {
+        rootDir: "apps/web/",
+      },
+    },
   },
   eslintConfigPrettier,
 ]
