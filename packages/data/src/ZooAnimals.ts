@@ -1,141 +1,57 @@
-export type ZooAnimal = {
-  id: string
-}
+const zooAnimalIds = [
+  "batpack",
+  "bunnypack",
+  "cat01_brown",
+  "cat02_dark_gray",
+  "cat03_orange",
+  "cat04_light_gray",
+  "cat05_black",
+  "chickenpack",
+  "cranepack",
+  "crowpack",
+  "deer_female",
+  "dogpack",
+  "dragonfly01_blue",
+  "dragonfly02_yellow",
+  "dragonfly03_pink",
+  "dragonfly04_green",
+  "falconpack",
+  "foxpack",
+  "frogpack",
+  "kitten01_brown",
+  "kitten02_dark_gray",
+  "kitten03_orange",
+  "kitten04_light_gray",
+  "kitten05_black",
+  "lilaxolotl",
+  "lildoggie01_brown",
+  "lildoggie02_dark_gray",
+  "lildoggie03_orange",
+  "lildoggie04_light_gray",
+  "lildoggie05_black",
+  "lilfox_red",
+  "lilfox_white",
+  "lilhedgehog",
+  "lilotter",
+  "lilpig",
+  "mouse01_dark_gray",
+  "mouse02_brown",
+  "mouse03_light_gray",
+  "owlpack",
+  "pandapack",
+  "parrotpack",
+  "pigpack",
+  "raccoonpack",
+  "turtle_spritesheets",
+  "wolfpack",
+] as const
 
-export const ZOO_ANIMALS: ZooAnimal[] = [
-  {
-    id: "batpack",
-  },
-  {
-    id: "bunnypack",
-  },
-  {
-    id: "cat01_brown",
-  },
-  {
-    id: "cat02_dark_gray",
-  },
-  {
-    id: "cat03_orange",
-  },
-  {
-    id: "cat04_light_gray",
-  },
-  {
-    id: "cat05_black",
-  },
-  {
-    id: "chickenpack",
-  },
-  {
-    id: "cranepack",
-  },
-  {
-    id: "crowpack",
-  },
-  {
-    id: "deer_female",
-  },
-  {
-    id: "dogpack",
-  },
-  {
-    id: "dragonfly01_blue",
-  },
-  {
-    id: "dragonfly02_yellow",
-  },
-  {
-    id: "dragonfly03_pink",
-  },
-  {
-    id: "dragonfly04_green",
-  },
-  {
-    id: "falconpack",
-  },
-  {
-    id: "foxpack",
-  },
-  {
-    id: "frogpack",
-  },
-  {
-    id: "kitten01_brown",
-  },
-  {
-    id: "kitten02_dark_gray",
-  },
-  {
-    id: "kitten03_orange",
-  },
-  {
-    id: "kitten04_light_gray",
-  },
-  {
-    id: "kitten05_black",
-  },
-  {
-    id: "lilaxolotl",
-  },
-  {
-    id: "lildoggie01_brown",
-  },
-  {
-    id: "lildoggie02_dark_gray",
-  },
-  {
-    id: "lildoggie03_orange",
-  },
-  {
-    id: "lildoggie04_light_gray",
-  },
-  {
-    id: "lildoggie05_black",
-  },
-  {
-    id: "lilfox_red",
-  },
-  {
-    id: "lilfox_white",
-  },
-  {
-    id: "lilhedgehog",
-  },
-  {
-    id: "lilotter",
-  },
-  {
-    id: "lilpig",
-  },
-  {
-    id: "mouse01_dark_gray",
-  },
-  {
-    id: "mouse02_brown",
-  },
-  {
-    id: "mouse03_light_gray",
-  },
-  {
-    id: "owlpack",
-  },
-  {
-    id: "pandapack",
-  },
-  {
-    id: "parrotpack",
-  },
-  {
-    id: "pigpack",
-  },
-  {
-    id: "raccoonpack",
-  },
-  {
-    id: "turtle_spritesheets",
-  },
-  {
-    id: "wolfpack",
-  },
-]
+export type ZooAnimalId = (typeof zooAnimalIds)[number]
+
+export type ZooAnimal = Readonly<{
+  id: ZooAnimalId
+}>
+
+export const ZOO_ANIMALS = Object.freeze(
+  zooAnimalIds.map((id) => Object.freeze({ id })),
+)
