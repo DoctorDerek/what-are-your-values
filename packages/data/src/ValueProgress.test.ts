@@ -1,3 +1,4 @@
+import { MAX_SUPPORTED_TOTAL_XP } from "@game/utils/src/LevelMath"
 import { describe, expect, it } from "vitest"
 import { createActiveDeck } from "./ActiveDeck"
 import {
@@ -217,5 +218,27 @@ describe("Value Progress validation", () => {
     entries[0] = [entries[0][0], invalidProgress]
 
     expect(() => createValueProgressById(activeDeck, entries)).toThrow(error)
+  })
+
+  it("shares the exact supported total-XP boundary with level derivation", () => {
+    const activeDeck = createActiveDeck([])
+    const entries = Array.from(createInitialValueProgress(activeDeck))
+    const firstValueId = entries[0][0]
+
+    entries[0] = [
+      firstValueId,
+      createPlayedProgress(MAX_SUPPORTED_TOTAL_XP, 0, 0, 0),
+    ]
+    expect(
+      createValueProgressById(activeDeck, entries).get(firstValueId)?.totalXp,
+    ).toBe(MAX_SUPPORTED_TOTAL_XP)
+
+    entries[0] = [
+      firstValueId,
+      createPlayedProgress(MAX_SUPPORTED_TOTAL_XP + 1, 0, 0, 0),
+    ]
+    expect(() => createValueProgressById(activeDeck, entries)).toThrow(
+      "Invalid total XP",
+    )
   })
 })
