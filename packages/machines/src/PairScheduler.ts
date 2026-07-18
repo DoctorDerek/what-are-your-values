@@ -1,7 +1,6 @@
 import {
   getPairCount,
   type ActiveDeck,
-  type ActiveDeckFingerprint,
 } from "@game/data/src/ActiveDeck"
 import type { ValueId, ValuePair } from "@game/data/src/Value"
 import { shuffleDeterministically } from "./DeterministicSequence"
@@ -11,25 +10,17 @@ import {
 } from "./PairOrientation"
 import { deriveRoundRobinPairs } from "./RoundRobinPairs"
 
-declare const schedulerCursorBrand: unique symbol
+import {
+  assertSchedulerIdentity,
+  FULL_CYCLE_SCHEDULE_KIND,
+  PAIR_SCHEDULER_ALGORITHM_VERSION,
+  type SchedulerCursor,
+  type SchedulerIdentity,
+} from "./SchedulerIdentity"
 
-export const PAIR_SCHEDULER_ALGORITHM_VERSION = 1 as const
-export const FULL_CYCLE_SCHEDULE_KIND = "full-cycle" as const
-
-export type SchedulerCursor = number & {
-  readonly [schedulerCursorBrand]: "scheduler-cursor"
-}
-
-export type SchedulerRestorePoint = {
-  readonly algorithmVersion: typeof PAIR_SCHEDULER_ALGORITHM_VERSION
-  readonly activeDeckFingerprint: ActiveDeckFingerprint
-  readonly progressGeneration: number
-  readonly deckRevision: number
-  readonly scheduleKind: typeof FULL_CYCLE_SCHEDULE_KIND
-  readonly seed: string
-  readonly cycleIndex: number
-  readonly cursor: SchedulerCursor
-}
+export type SchedulerRestorePoint = SchedulerIdentity<
+  typeof FULL_CYCLE_SCHEDULE_KIND
+>
 
 export type ScheduleShape = {
   readonly roundCount: number
@@ -154,55 +145,12 @@ function assertSchedulerRestorePoint(
   activeDeck: ActiveDeck,
   restorePoint: SchedulerRestorePoint,
 ) {
-  if (restorePoint.algorithmVersion !== PAIR_SCHEDULER_ALGORITHM_VERSION) {
-    throw new Error(
-      `Unsupported pair scheduler algorithm: ${restorePoint.algorithmVersion}`,
-    )
-  }
-
-  if (restorePoint.activeDeckFingerprint !== activeDeck.fingerprint) {
-    throw new Error("Scheduler Active Deck fingerprint does not match")
-  }
-
-  if (restorePoint.scheduleKind !== FULL_CYCLE_SCHEDULE_KIND) {
-    throw new Error(`Unsupported schedule kind: ${restorePoint.scheduleKind}`)
-  }
-
-  if (
-    !Number.isSafeInteger(restorePoint.progressGeneration) ||
-    restorePoint.progressGeneration < 0
-  ) {
-    throw new Error(
-      `Invalid progress generation: ${restorePoint.progressGeneration}`,
-    )
-  }
-
-  if (
-    !Number.isSafeInteger(restorePoint.deckRevision) ||
-    restorePoint.deckRevision < 0
-  ) {
-    throw new Error(`Invalid deck revision: ${restorePoint.deckRevision}`)
-  }
-
-  if (restorePoint.seed.length === 0) {
-    throw new Error("Scheduler seed is required")
-  }
-
-  if (
-    !Number.isSafeInteger(restorePoint.cycleIndex) ||
-    restorePoint.cycleIndex < 0
-  ) {
-    throw new Error(`Invalid cycle index: ${restorePoint.cycleIndex}`)
-  }
-
-  const pairCount = getPairCount(activeDeck.valueIds.length)
-  if (
-    !Number.isSafeInteger(restorePoint.cursor) ||
-    restorePoint.cursor < 0 ||
-    restorePoint.cursor >= pairCount
-  ) {
-    throw new Error(`Invalid scheduler cursor: ${restorePoint.cursor}`)
-  }
+  assertSchedulerIdentity({
+    activeDeck,
+    identity: restorePoint,
+    expectedScheduleKind: FULL_CYCLE_SCHEDULE_KIND,
+    pairCount: getPairCount(activeDeck.valueIds.length),
+  })
 }
 
 export function getScheduleShape(activeValueCount: number): ScheduleShape {

@@ -9,13 +9,15 @@ import { describe, expect, it } from "vitest"
 import {
   advanceSchedulerCursor,
   createSchedulerRestorePoint,
-  FULL_CYCLE_SCHEDULE_KIND,
   getScheduleShape,
-  PAIR_SCHEDULER_ALGORITHM_VERSION,
   projectScheduledPair,
   projectScheduledRound,
   type SchedulerRestorePoint,
 } from "./PairScheduler"
+import {
+  FULL_CYCLE_SCHEDULE_KIND,
+  PAIR_SCHEDULER_ALGORITHM_VERSION,
+} from "./SchedulerIdentity"
 
 function createCustomValue(creationOrdinal: number): CustomValueDefinition {
   const uuidSuffix = creationOrdinal.toString().padStart(12, "0")
