@@ -7,9 +7,9 @@ import type { ValueId, ValuePair } from "@game/data/src/Value"
 import { shuffleDeterministically } from "./DeterministicSequence"
 import {
   createPairOrientationContext,
-  orientValuePair,
   type PairOrientationContext,
 } from "./PairOrientation"
+import { deriveRoundRobinPairs } from "./RoundRobinPairs"
 
 declare const schedulerCursorBrand: unique symbol
 
@@ -49,13 +49,6 @@ export type ScheduledPairProjection = {
   readonly sourceRoundIndex: number
   readonly matchIndex: number
   readonly pair: ValuePair
-}
-
-const internalBye: unique symbol = Symbol("internal-bye")
-type CircleParticipant = ValueId | typeof internalBye
-
-function isActiveValue(participant: CircleParticipant): participant is ValueId {
-  return participant !== internalBye
 }
 
 type CycleProjectionContext = {
@@ -106,52 +99,18 @@ function createCycleProjectionContext(
   }
 }
 
-function rotateCircleParticipants(
-  participants: readonly CircleParticipant[],
-  sourceRoundIndex: number,
-): CircleParticipant[] {
-  const fixedParticipant = participants[0]
-  const rotatingParticipants = participants.slice(1)
-  const rotation = sourceRoundIndex % rotatingParticipants.length
-  const splitIndex = rotatingParticipants.length - rotation
-
-  return [
-    fixedParticipant,
-    ...rotatingParticipants.slice(splitIndex),
-    ...rotatingParticipants.slice(0, splitIndex),
-  ]
-}
-
 function deriveBaseRoundPairs(
   context: CycleProjectionContext,
   sourceRoundIndex: number,
   cycleIndex: number,
 ) {
-  const circleParticipants: readonly CircleParticipant[] =
-    context.orientation.activeValueCount % 2 === 0
-      ? context.participantOrder
-      : [...context.participantOrder, internalBye]
-  const rotatedParticipants = rotateCircleParticipants(
-    circleParticipants,
+  return deriveRoundRobinPairs({
+    participantOrder: context.participantOrder,
     sourceRoundIndex,
-  )
-  const pairs: ValuePair[] = []
-
-  for (let index = 0; index < rotatedParticipants.length / 2; index += 1) {
-    const first = rotatedParticipants[index]
-    const second = rotatedParticipants[rotatedParticipants.length - 1 - index]
-
-    if (isActiveValue(first) && isActiveValue(second)) {
-      pairs.push(
-        orientValuePair(first, second, context.orientation, cycleIndex),
-      )
-    }
-  }
-
-  return shuffleDeterministically(
-    pairs,
-    `${context.cycleIdentity}:matches:${sourceRoundIndex}`,
-  )
+    orientation: context.orientation,
+    cycleIndex,
+    matchOrderSeed: `${context.cycleIdentity}:matches:${sourceRoundIndex}`,
+  })
 }
 
 function pairsShareValue(first: ValuePair, second: ValuePair) {
