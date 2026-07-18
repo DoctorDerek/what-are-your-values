@@ -27,6 +27,22 @@ export type SchedulerIdentity<TScheduleKind extends ScheduleKind> = {
   readonly cursor: SchedulerCursor
 }
 
+export function areSchedulerIdentitiesEqual(
+  first: SchedulerIdentity<ScheduleKind>,
+  second: SchedulerIdentity<ScheduleKind>,
+) {
+  return (
+    first.algorithmVersion === second.algorithmVersion &&
+    first.activeDeckFingerprint === second.activeDeckFingerprint &&
+    first.progressGeneration === second.progressGeneration &&
+    first.deckRevision === second.deckRevision &&
+    first.scheduleKind === second.scheduleKind &&
+    first.seed === second.seed &&
+    first.cycleIndex === second.cycleIndex &&
+    first.cursor === second.cursor
+  )
+}
+
 export function assertSchedulerIdentity<TScheduleKind extends ScheduleKind>({
   activeDeck,
   identity,
