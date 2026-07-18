@@ -1,9 +1,12 @@
 "use client"
 
-import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
+import type { ValueId } from "@game/data/src/Value"
+import { rankValues } from "@game/data/src/ValueRanking"
+import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
+import { projectScheduledPair } from "@game/machines/src/PairScheduler"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
-import { useEffect } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { webStorage } from "@/lib/WebStorage"
 import Crucible from "./Crucible"
 import Hub from "./Hub"
@@ -13,23 +16,44 @@ export default function GameClient() {
   const [state, send] = useMachine(rootMachine, {
     input: { storage: webStorage },
   })
+  const battleCycle = state.context.battleCycle
+  const rankedValues = useMemo(
+    () =>
+      battleCycle
+        ? rankValues(battleCycle.activeDeck, battleCycle.progressById)
+        : [],
+    [battleCycle],
+  )
+  const presentedBattle = useMemo(
+    () =>
+      battleCycle
+        ? Object.freeze({
+            pair: projectScheduledPair(
+              battleCycle.activeDeck,
+              battleCycle.scheduler,
+            ).pair,
+            scheduler: battleCycle.scheduler,
+          })
+        : null,
+    [battleCycle],
+  )
+  const handleWinnerSelected = useCallback(
+    (winnerId: ValueId, expectedScheduler: SchedulerRestorePoint) => {
+      send({
+        type: "BATTLE.WINNER_SELECTED",
+        winnerId,
+        expectedScheduler,
+      })
+    },
+    [send],
+  )
 
   useEffect(() => {
-    const uuid = webStorage.getItem("wayvm_uuid")
-    const xpStr = webStorage.getItem("wayvm_values_xp")
-
-    let valuesXp: Record<number, number> = {}
-    if (xpStr) {
-      valuesXp = JSON.parse(xpStr)
-    }
-
-    for (let i = 1; i <= LIST_OF_VALUES.length; i++) {
-      if (typeof valuesXp[i] !== "number") {
-        valuesXp[i] = 0
-      }
-    }
-
-    send({ type: "HYDRATE", uuid, valuesXp })
+    send({
+      type: "APP.HYDRATED",
+      uuid: webStorage.getItem("wayvm_uuid"),
+      schedulerSeed: crypto.randomUUID(),
+    })
   }, [send])
 
   if (state.matches("Hydrating")) {
@@ -44,17 +68,21 @@ export default function GameClient() {
     return (
       <Splash
         onComplete={() =>
-          send({ type: "SUBMIT_SPLASH", uuid: crypto.randomUUID() })
+          send({ type: "INTRODUCTION.COMPLETED", uuid: crypto.randomUUID() })
         }
       />
     )
   }
 
+  if (!battleCycle || !presentedBattle) {
+    throw new Error("Battle profile is unavailable after hydration")
+  }
+
   if (state.matches("Hub")) {
     return (
       <Hub
-        valuesXp={state.context.valuesXp}
-        onStartBattle={() => send({ type: "START_BATTLE" })}
+        rankedValues={rankedValues}
+        onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
       />
     )
   }
@@ -62,14 +90,11 @@ export default function GameClient() {
   if (state.matches("Crucible")) {
     return (
       <Crucible
-        valuesXp={state.context.valuesXp}
-        storageAdapter={webStorage}
-        onExit={() => send({ type: "EXIT_BATTLE" })}
-        onBattleCompleted={(
-          winnerId: number,
-          loserId: number,
-          xpGained: number,
-        ) => send({ type: "BATTLE_COMPLETED", winnerId, loserId, xpGained })}
+        activeDeck={battleCycle.activeDeck}
+        battle={presentedBattle}
+        progressById={battleCycle.progressById}
+        onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
+        onWinnerSelected={handleWinnerSelected}
       />
     )
   }

@@ -1,152 +1,122 @@
-import {
-  act,
-  render,
-  screen,
-  waitFor,
-  waitForElementToBeRemoved,
-} from "@testing-library/react"
+import { getValueDisplayName } from "@game/data/src/Value"
+import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
+import type { PresentedBattle } from "@game/machines/src/CombatMachine"
+import { projectScheduledPair } from "@game/machines/src/PairScheduler"
+import { act, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
-describe("Crucible Component Integration", () => {
-  it("prevents animation regression by forcing remount when the same value appears consecutively on the same side", async () => {
-    const onExitMock = vi.fn()
-    const onBattleCompletedMock = vi.fn()
-    const mockValuesXp = {}
+function createBattleProps(seed: string) {
+  const battleCycle = createInitialBattleCycle(seed)
+  const battle = Object.freeze({
+    pair: projectScheduledPair(battleCycle.activeDeck, battleCycle.scheduler)
+      .pair,
+    scheduler: battleCycle.scheduler,
+  }) satisfies PresentedBattle
 
-    const mockStorageAdapter = {
-      getItem: vi.fn(() =>
-        JSON.stringify([
-          [1, 3],
-          [1, 2],
-        ]),
-      ),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
+  return { battleCycle, battle }
+}
+
+describe("Crucible Component Integration", () => {
+  it("renders semantic canonical values and commits a keyboard selection once", async () => {
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps("keyboard-battle-seed")
+    const [winnerId, loserId] = battle.pair
+    const winner = battleCycle.activeDeck.values.find(
+      ({ id }) => id === winnerId,
+    )
+    const loser = battleCycle.activeDeck.values.find(({ id }) => id === loserId)
+    if (!winner || !loser) {
+      throw new Error("Projected definitions are missing")
     }
 
     render(
       <Crucible
-        valuesXp={mockValuesXp}
-        storageAdapter={mockStorageAdapter}
-        onExit={onExitMock}
-        onBattleCompleted={onBattleCompletedMock}
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={onWinnerSelected}
       />,
     )
 
-    const cardAIndicator = await screen.findByText("[1 / A]")
-    const cardBIndicator = await screen.findByText("[2 / D]")
-
-    const initialCardA = cardAIndicator.closest("div")
-    const initialCardB = cardBIndicator.closest("div")
-
-    expect(initialCardA).toBeInTheDocument()
-    expect(initialCardB).toBeInTheDocument()
+    expect(await screen.findByText(getValueDisplayName(winner))).toBeVisible()
+    expect(screen.getByText(getValueDisplayName(loser))).toBeVisible()
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "1" }))
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "1" }))
     })
 
-    expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
-
-    await waitForElementToBeRemoved(initialCardA, { timeout: 1500 })
-
-    const newCardAIndicator = await screen.findByText("[1 / A]")
-    const newCardA = newCardAIndicator.closest("div")
-
-    expect(newCardA).not.toBe(initialCardA)
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+    expect(onWinnerSelected).toHaveBeenCalledWith(
+      winnerId,
+      battleCycle.scheduler,
+    )
   })
 
-  it("focuses a card on first click and selects it as winner on second click", async () => {
-    const onExitMock = vi.fn()
-    const onBattleCompletedMock = vi.fn()
-    const mockValuesXp = { 1: 50, 2: 25 }
-    const mockStorageAdapter = {
-      getItem: vi.fn(() => JSON.stringify([[1, 2]])),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    }
+  it("focuses a card before committing its second click", async () => {
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps("pointer-battle-seed")
+    const [winnerId] = battle.pair
 
     render(
       <Crucible
-        valuesXp={mockValuesXp}
-        storageAdapter={mockStorageAdapter}
-        onExit={onExitMock}
-        onBattleCompleted={onBattleCompletedMock}
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={onWinnerSelected}
       />,
     )
 
     const cardAIndicator = await screen.findByText("[1 / A]")
     const cardA = cardAIndicator.closest("div")
-    if (!cardA) throw new Error("Card A not found")
+    if (!cardA) {
+      throw new Error("Card A was not rendered")
+    }
 
-    act(() => {
-      cardA.click()
-    })
-
+    act(() => cardA.click())
     expect(cardA.className).toContain("ring-8")
-    expect(onBattleCompletedMock).not.toHaveBeenCalled()
+    expect(onWinnerSelected).not.toHaveBeenCalled()
 
-    act(() => {
-      cardA.click()
-    })
-
-    expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
-    expect(onBattleCompletedMock).toHaveBeenCalledWith(1, 2, expect.any(Number))
+    act(() => cardA.click())
+    expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
   })
 
-  it("navigates via arrow keys and selects via enter/space", async () => {
-    const onExitMock = vi.fn()
-    const onBattleCompletedMock = vi.fn()
-    const mockValuesXp = { 1: 50, 2: 25 }
-    const mockStorageAdapter = {
-      getItem: vi.fn(() => JSON.stringify([[1, 2]])),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    }
+  it("supports arrow focus, keyboard confirmation, and Escape", async () => {
+    const onExit = vi.fn()
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps("navigation-battle-seed")
+    const [, winnerId] = battle.pair
 
     render(
       <Crucible
-        valuesXp={mockValuesXp}
-        storageAdapter={mockStorageAdapter}
-        onExit={onExitMock}
-        onBattleCompleted={onBattleCompletedMock}
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={onExit}
+        onWinnerSelected={onWinnerSelected}
       />,
     )
 
-    const cardAIndicator = await screen.findByText("[1 / A]")
     const cardBIndicator = await screen.findByText("[2 / D]")
-    const cardA = cardAIndicator.closest("div")
     const cardB = cardBIndicator.closest("div")
-
-    if (!cardA || !cardB) throw new Error("Cards not found")
+    if (!cardB) {
+      throw new Error("Card B was not rendered")
+    }
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }))
     })
-
     expect(cardB.className).toContain("ring-8")
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }))
-    })
-
-    expect(cardA.className).toContain("ring-8")
-
-    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }))
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
     })
 
-    expect(onExitMock).toHaveBeenCalledTimes(1)
-
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }))
-    })
-
-    expect(onBattleCompletedMock).toHaveBeenCalledTimes(1)
-    expect(onBattleCompletedMock).toHaveBeenCalledWith(1, 2, expect.any(Number))
+    expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
+    expect(onExit).toHaveBeenCalledTimes(1)
   })
 })

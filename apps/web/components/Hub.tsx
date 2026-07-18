@@ -1,28 +1,20 @@
 "use client"
 
-import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
+import { getValueDisplayName } from "@game/data/src/Value"
+import type { RankedValue } from "@game/data/src/ValueRanking"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 
 export default function Hub({
-  valuesXp,
+  rankedValues,
   onStartBattle,
 }: {
-  valuesXp: Record<number, number>
+  rankedValues: readonly RankedValue[]
   onStartBattle: () => void
 }) {
-  const rankedValues = Object.entries(valuesXp)
-    .map(([idStr, xp]) => {
-      const id = parseInt(idStr, 10)
-      const valObj = LIST_OF_VALUES.find((v) => v.id === id)
-      return {
-        id,
-        name: valObj?.value || "UNKNOWN",
-        xp,
-        level: getLevelFromXP(xp),
-      }
-    })
-    .sort((a, b) => b.xp - a.xp)
-    .slice(0, 5)
+  const hasComparisons = rankedValues.some(
+    ({ progress }) => progress.profileComparisons > 0,
+  )
+  const topFive = hasComparisons ? rankedValues.slice(0, 5) : []
 
   return (
     <div className="bg-mapache-vivid-dark noise-bg flex min-h-[100dvh] w-[100dvw] flex-col items-center p-8">
@@ -42,23 +34,29 @@ export default function Hub({
 
         <div className="flex flex-1 flex-col border-4 border-black bg-white p-10 shadow-[12px_12px_0px_0px_#000000]">
           <h2 className="text-mapache-vivid-dark mb-8 border-b-8 border-black pb-6 text-5xl font-black uppercase lg:text-6xl">
-            Personal Totem Pole
+            Top Five
           </h2>
-          <div className="flex flex-col gap-6">
-            {rankedValues.map((v, idx) => (
-              <div
-                key={v.id}
-                className="bg-mapache-vivid-secondary-purple flex items-center justify-between border-4 border-black p-6 shadow-[6px_6px_0px_0px_#000000]"
-              >
-                <span className="text-3xl font-black text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
-                  #{idx + 1} {v.name}
-                </span>
-                <span className="text-mapache-vivid-primary-raspberry border-4 border-black bg-white px-4 py-2 text-3xl font-black uppercase">
-                  LVL {v.level}
-                </span>
-              </div>
-            ))}
-          </div>
+          {hasComparisons ? (
+            <div className="flex flex-col gap-6">
+              {topFive.map(({ rank, definition, progress }) => (
+                <div
+                  key={definition.id}
+                  className="bg-mapache-vivid-secondary-purple flex items-center justify-between border-4 border-black p-6 shadow-[6px_6px_0px_0px_#000000]"
+                >
+                  <span className="text-3xl font-black text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
+                    #{rank} {getValueDisplayName(definition)}
+                  </span>
+                  <span className="text-mapache-vivid-primary-raspberry border-4 border-black bg-white px-4 py-2 text-3xl font-black uppercase">
+                    LVL {getLevelFromXP(progress.totalXp)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-mapache-vivid-dark my-auto text-center text-4xl leading-tight font-black">
+              Keep comparing values to reveal your Top Five.
+            </p>
+          )}
         </div>
       </div>
 
