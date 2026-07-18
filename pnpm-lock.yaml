@@ -122,6 +122,10 @@ importers:
         version: 6.0.3
 
   packages/data:
+    dependencies:
+      '@game/utils':
+        specifier: workspace:*
+        version: link:../utils
     devDependencies:
       typescript:
         specifier: ^6

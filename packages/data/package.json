@@ -2,6 +2,9 @@
   "name": "@game/data",
   "version": "0.1.0",
   "private": true,
+  "dependencies": {
+    "@game/utils": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^6"
   }

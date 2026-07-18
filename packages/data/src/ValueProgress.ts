@@ -1,3 +1,4 @@
+import { MAX_SUPPORTED_TOTAL_XP } from "@game/utils/src/LevelMath"
 import type { ActiveDeck } from "./ActiveDeck"
 import type { ValueId } from "./Value"
 
@@ -15,14 +16,19 @@ export type ValueProgressEntry = readonly [
 
 export type ValueProgressById = ReadonlyMap<ValueId, ValueProgress>
 
-function validateCounter(value: number, label: string, valueId: ValueId) {
-  if (!Number.isSafeInteger(value) || value < 0) {
+function validateCounter(
+  value: number,
+  label: string,
+  valueId: ValueId,
+  maximum: number = Number.MAX_SAFE_INTEGER,
+) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > maximum) {
     throw new Error(`Invalid ${label} for ${valueId}: ${value}`)
   }
 }
 
 function freezeValueProgress(valueId: ValueId, progress: ValueProgress) {
-  validateCounter(progress.totalXp, "total XP", valueId)
+  validateCounter(progress.totalXp, "total XP", valueId, MAX_SUPPORTED_TOTAL_XP)
   validateCounter(progress.profileWins, "profile wins", valueId)
   validateCounter(progress.profileComparisons, "profile comparisons", valueId)
   validateCounter(progress.currentCycleWins, "current-cycle wins", valueId)
