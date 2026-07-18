@@ -12,9 +12,9 @@ import {
   type CycleLevelSnapshot,
 } from "./CycleLevelSnapshot"
 import {
-  createJoinPassRestorePoint,
-  type JoinPassRestorePoint,
-} from "./JoinPassScheduler"
+  createDeckReconfigurationRestorePoint,
+  type DeckReconfigurationRestorePoint,
+} from "./DeckReconfigurationScheduler"
 import {
   createSchedulerRestorePoint,
   type SchedulerRestorePoint,
@@ -24,7 +24,9 @@ export type DeckRevisionCandidate = {
   readonly activeDeck: ActiveDeck
   readonly progressById: ValueProgressById
   readonly cycleLevelSnapshot: CycleLevelSnapshot
-  readonly scheduler: SchedulerRestorePoint | JoinPassRestorePoint
+  readonly scheduler:
+    | SchedulerRestorePoint
+    | DeckReconfigurationRestorePoint
   readonly joinedValueIds: readonly CustomValueId[]
   readonly deckRevision: number
   readonly progressGeneration: number
@@ -82,7 +84,7 @@ export function createDeckRevisionCandidate({
   )
   const scheduler =
     joinedValueIds.length > 0
-      ? createJoinPassRestorePoint({
+      ? createDeckReconfigurationRestorePoint({
           activeDeck,
           joinedValueIds,
           progressGeneration,
