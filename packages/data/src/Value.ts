@@ -38,6 +38,14 @@ export type ActiveValueDefinition =
 
 export type ValuePair = readonly [first: ValueId, second: ValueId]
 
+export function getValueDisplayName(value: ActiveValueDefinition) {
+  return value.kind === "canonical" ? value.englishName : value.name
+}
+
+export function getValueDisplayDefinition(value: ActiveValueDefinition) {
+  return value.kind === "canonical" ? value.sourceDefinition : value.definition
+}
+
 const canonicalValueIdPattern = /^pvcs-2011:[a-z0-9]+(?:-[a-z0-9]+)*$/
 const customValueIdPattern =
   /^custom:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
