@@ -34,10 +34,7 @@ function createDeck(customValueCount: number) {
   )
 }
 
-function createRestorePoint(
-  customValueCount: number,
-  cursor = 0,
-) {
+function createRestorePoint(customValueCount: number, cursor = 0) {
   const activeDeck = createDeck(customValueCount)
   const joinedValueIds = activeDeck.customValues.map(({ id }) => id)
 
@@ -180,7 +177,9 @@ describe("Deck-reconfiguration scheduler", () => {
     const twoJoinedValues = createRestorePoint(2)
     const reversedJoinedValues = {
       ...twoJoinedValues.restorePoint,
-      joinedValueIds: [...twoJoinedValues.restorePoint.joinedValueIds].reverse(),
+      joinedValueIds: [
+        ...twoJoinedValues.restorePoint.joinedValueIds,
+      ].reverse(),
     } as DeckReconfigurationRestorePoint
 
     expect(() =>

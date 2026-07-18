@@ -177,7 +177,11 @@ describe("Value Progress reconfiguration", () => {
     const resetProgressById = resetValueProgress(activeDeck)
 
     expect(Array.from(resetProgressById.keys())).toEqual(activeDeck.valueIds)
-    expect(Array.from(resetProgressById.values()).every(({ totalXp }) => totalXp === 0)).toBe(true)
+    expect(
+      Array.from(resetProgressById.values()).every(
+        ({ totalXp }) => totalXp === 0,
+      ),
+    ).toBe(true)
   })
 })
 

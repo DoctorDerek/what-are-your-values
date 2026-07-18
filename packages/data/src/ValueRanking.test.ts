@@ -91,9 +91,9 @@ describe("Value Ranking", () => {
     expect(ranking.map(({ rank }) => rank)).toEqual(
       Array.from({ length: 102 }, (_, index) => index + 1),
     )
-    expect(ranking.slice(0, 100).map(({ definition }) => definition.id)).toEqual(
-      activeDeck.valueIds.slice(0, 100),
-    )
+    expect(
+      ranking.slice(0, 100).map(({ definition }) => definition.id),
+    ).toEqual(activeDeck.valueIds.slice(0, 100))
     expect(ranking.at(100)?.definition.id).toBe(firstCustomValue.id)
     expect(ranking.at(101)?.definition.id).toBe(secondCustomValue.id)
   })

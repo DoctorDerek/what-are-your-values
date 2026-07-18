@@ -69,8 +69,7 @@ export function getJoinPassPairCount(
 
   const activeCount = BigInt(activeValueCount)
   const joinedCount = BigInt(joinedValueCount)
-  const pairCount =
-    (joinedCount * (2n * activeCount - joinedCount - 1n)) / 2n
+  const pairCount = (joinedCount * (2n * activeCount - joinedCount - 1n)) / 2n
 
   if (pairCount > maximumSafeInteger) {
     throw new Error(
@@ -107,7 +106,9 @@ function assertJoinPassMembership(
     throw new Error("Join Pass contains duplicate joined Value IDs")
   }
 
-  if (restorePoint.joinedValueIds.some((valueId) => !isCustomValueId(valueId))) {
+  if (
+    restorePoint.joinedValueIds.some((valueId) => !isCustomValueId(valueId))
+  ) {
     throw new Error("Join Pass joined IDs must be Custom Value IDs")
   }
 
@@ -145,9 +146,7 @@ function assertJoinPassMembership(
     restorePoint.joinedValueIds.length,
   )
   if (restorePoint.pairCount !== expectedPairCount) {
-    throw new Error(
-      `Invalid Join Pass pair count: ${restorePoint.pairCount}`,
-    )
+    throw new Error(`Invalid Join Pass pair count: ${restorePoint.pairCount}`)
   }
 }
 
@@ -197,7 +196,10 @@ function createJoinPassProjectionContext(
       ),
     ),
     joinedOrder: Object.freeze(
-      shuffleDeterministically(restorePoint.joinedValueIds, `${identity}:joined`),
+      shuffleDeterministically(
+        restorePoint.joinedValueIds,
+        `${identity}:joined`,
+      ),
     ),
     crossPairCount:
       restorePoint.joinedValueIds.length * restorePoint.retainedValueIds.length,

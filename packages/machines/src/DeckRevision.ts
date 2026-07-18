@@ -1,7 +1,4 @@
-import {
-  createActiveDeck,
-  type ActiveDeck,
-} from "@game/data/src/ActiveDeck"
+import { createActiveDeck, type ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { CustomValueDefinition, CustomValueId } from "@game/data/src/Value"
 import {
   reconfigureValueProgress,
@@ -24,9 +21,7 @@ export type DeckRevisionCandidate = {
   readonly activeDeck: ActiveDeck
   readonly progressById: ValueProgressById
   readonly cycleLevelSnapshot: CycleLevelSnapshot
-  readonly scheduler:
-    | SchedulerRestorePoint
-    | DeckReconfigurationRestorePoint
+  readonly scheduler: SchedulerRestorePoint | DeckReconfigurationRestorePoint
   readonly joinedValueIds: readonly CustomValueId[]
   readonly deckRevision: number
   readonly progressGeneration: number

@@ -1,7 +1,4 @@
-import {
-  getPairCount,
-  type ActiveDeck,
-} from "@game/data/src/ActiveDeck"
+import { getPairCount, type ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { CustomValueId, ValueId, ValuePair } from "@game/data/src/Value"
 import { shuffleDeterministically } from "./DeterministicSequence"
 import {
@@ -12,8 +9,8 @@ import {
   createPairOrientationContext,
   type PairOrientationContext,
 } from "./PairOrientation"
-import { avoidImmediateBoundaryRepeat } from "./PairSpacing"
 import { getScheduleShape } from "./PairScheduler"
+import { avoidImmediateBoundaryRepeat } from "./PairSpacing"
 import { deriveRoundRobinPairs } from "./RoundRobinPairs"
 import {
   assertSchedulerIdentity,
@@ -35,10 +32,7 @@ export type DeckReconfigurationRestorePoint = SchedulerIdentity<
 
 export type DeckReconfigurationPairProjection = {
   readonly cursor: SchedulerCursor
-  readonly pairKind:
-    | "joined-retained"
-    | "joined-joined"
-    | "retained-retained"
+  readonly pairKind: "joined-retained" | "joined-joined" | "retained-retained"
   readonly sourceCursor: SchedulerCursor
   readonly pair: ValuePair
 }

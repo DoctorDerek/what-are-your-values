@@ -42,8 +42,9 @@ describe("Active Deck", () => {
   ])(
     "derives the permanent K=%i pair-count fixture",
     (customValueCount, activeValueCount, expectedPairCount) => {
-      const customValues = Array.from({ length: customValueCount }, (_, index) =>
-        createCustomValue(index + 1),
+      const customValues = Array.from(
+        { length: customValueCount },
+        (_, index) => createCustomValue(index + 1),
       )
       const activeDeck = createActiveDeck(customValues)
 

@@ -16,13 +16,17 @@ export function validateCycleLevelSnapshot(
   candidateSnapshot: CycleLevelSnapshot,
 ): CycleLevelSnapshot {
   if (candidateSnapshot.size !== activeDeck.valueIds.length) {
-    throw new Error("Cycle Level Snapshot does not cover the complete Active Deck")
+    throw new Error(
+      "Cycle Level Snapshot does not cover the complete Active Deck",
+    )
   }
 
   const activeValueIdSet = new Set(activeDeck.valueIds)
   candidateSnapshot.forEach((level, valueId) => {
     if (!activeValueIdSet.has(valueId)) {
-      throw new Error(`Cycle Level Snapshot contains an inactive ID: ${valueId}`)
+      throw new Error(
+        `Cycle Level Snapshot contains an inactive ID: ${valueId}`,
+      )
     }
 
     validateSnapshotLevel(valueId, level)

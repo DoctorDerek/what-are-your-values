@@ -52,9 +52,7 @@ describe("Progress Reset", () => {
     expect(candidate.activeDeck.fingerprint).toBe(activeDeck.fingerprint)
     expect(candidate.deckRevision).toBe(8)
     expect(candidate.progressGeneration).toBe(4)
-    expect(candidate.scheduler.scheduleKind).toBe(
-      FULL_CYCLE_SCHEDULE_KIND,
-    )
+    expect(candidate.scheduler.scheduleKind).toBe(FULL_CYCLE_SCHEDULE_KIND)
     expect(candidate.scheduler.cycleIndex).toBe(0)
     expect(candidate.progressById.size).toBe(101)
     expect(

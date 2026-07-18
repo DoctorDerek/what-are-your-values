@@ -1,7 +1,4 @@
-import {
-  getPairCount,
-  type ActiveDeck,
-} from "@game/data/src/ActiveDeck"
+import { getPairCount, type ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId, ValuePair } from "@game/data/src/Value"
 import { shuffleDeterministically } from "./DeterministicSequence"
 import {
@@ -10,7 +7,6 @@ import {
 } from "./PairOrientation"
 import { avoidImmediateBoundaryRepeat } from "./PairSpacing"
 import { deriveRoundRobinPairs } from "./RoundRobinPairs"
-
 import {
   assertSchedulerIdentity,
   FULL_CYCLE_SCHEDULE_KIND,

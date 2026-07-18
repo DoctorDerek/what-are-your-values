@@ -61,7 +61,8 @@ describe("Deck Revision", () => {
   it("adds Ingenuity through a Join Pass without erasing retained progress", () => {
     const ingenuity = createCustomValue(1, {
       name: "Ingenuity",
-      definition: "To solve problems in original, resourceful, and practical ways.",
+      definition:
+        "To solve problems in original, resourceful, and practical ways.",
     })
     const priorActiveDeck = createActiveDeck([])
     const curiosityId = priorActiveDeck.valueIds[22]
@@ -157,9 +158,7 @@ describe("Deck Revision", () => {
     })
 
     expect(candidate.joinedValueIds).toEqual([])
-    expect(candidate.scheduler.scheduleKind).toBe(
-      FULL_CYCLE_SCHEDULE_KIND,
-    )
+    expect(candidate.scheduler.scheduleKind).toBe(FULL_CYCLE_SCHEDULE_KIND)
     expect(candidate.progressById.get(ingenuity.id)).toEqual({
       ...ingenuityProgress,
       currentCycleWins: 0,
@@ -192,9 +191,7 @@ describe("Deck Revision", () => {
       ...destinyProgress,
       currentCycleWins: 0,
     })
-    expect(candidate.scheduler.scheduleKind).toBe(
-      FULL_CYCLE_SCHEDULE_KIND,
-    )
+    expect(candidate.scheduler.scheduleKind).toBe(FULL_CYCLE_SCHEDULE_KIND)
   })
 
   it("rejects no-op and unsafe revisions without a partial candidate", () => {

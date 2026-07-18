@@ -34,8 +34,7 @@ export function orientValuePair(
   const forwardDistance =
     (secondIndex - firstIndex + orientationSize) % orientationSize
   const firstLeads = forwardDistance <= (orientationSize - 1) / 2
-  const invertCycle =
-    context.activeValueCount % 2 === 0 && cycleIndex % 2 === 1
+  const invertCycle = context.activeValueCount % 2 === 0 && cycleIndex % 2 === 1
 
   return Object.freeze(
     firstLeads !== invertCycle ? [first, second] : [second, first],

@@ -1,9 +1,6 @@
 import type { ValueId, ValuePair } from "@game/data/src/Value"
 import { shuffleDeterministically } from "./DeterministicSequence"
-import {
-  orientValuePair,
-  type PairOrientationContext,
-} from "./PairOrientation"
+import { orientValuePair, type PairOrientationContext } from "./PairOrientation"
 
 const internalBye: unique symbol = Symbol("internal-bye")
 type CircleParticipant = ValueId | typeof internalBye

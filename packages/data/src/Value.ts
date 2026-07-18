@@ -34,8 +34,7 @@ export type CustomValueDefinition = {
 }
 
 export type ActiveValueDefinition =
-  | CanonicalValueDefinition
-  | CustomValueDefinition
+  CanonicalValueDefinition | CustomValueDefinition
 
 export type ValuePair = readonly [first: ValueId, second: ValueId]
 

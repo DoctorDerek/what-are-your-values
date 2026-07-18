@@ -44,9 +44,7 @@ function compareRankedEvidence(
   }
 
   if (first.progress.currentCycleWins !== second.progress.currentCycleWins) {
-    return (
-      second.progress.currentCycleWins - first.progress.currentCycleWins
-    )
+    return second.progress.currentCycleWins - first.progress.currentCycleWins
   }
 
   if (first.progress.profileWins !== second.progress.profileWins) {

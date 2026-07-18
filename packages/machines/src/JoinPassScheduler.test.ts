@@ -145,10 +145,7 @@ describe("Join Pass pair count", () => {
       "Invalid active value count",
     )
     expect(() =>
-      getJoinPassPairCount(
-        Number.MAX_SAFE_INTEGER,
-        Number.MAX_SAFE_INTEGER,
-      ),
+      getJoinPassPairCount(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER),
     ).toThrow("Unsafe Join Pass pair count")
   })
 })
@@ -206,8 +203,9 @@ describe("Join Pass coverage", () => {
       )
       expect(new Set(pairKeys)).toEqual(expectedPairKeys)
       expect(pairKeys).toHaveLength(expectedPairKeys.size)
-      expect(projections.every(({ pair: [first, second] }) => first !== second))
-        .toBe(true)
+      expect(
+        projections.every(({ pair: [first, second] }) => first !== second),
+      ).toBe(true)
     },
   )
 
@@ -215,8 +213,7 @@ describe("Join Pass coverage", () => {
     "partitions K=%i join pairs from retained-only pairs into the full deck",
     (joinedValueCount) => {
       const activeDeck = createDeck(joinedValueCount)
-      const retainedValueCount =
-        activeDeck.valueIds.length - joinedValueCount
+      const retainedValueCount = activeDeck.valueIds.length - joinedValueCount
 
       expect(
         getJoinPassPairCount(activeDeck.valueIds.length, joinedValueCount) +
@@ -289,11 +286,13 @@ describe("Join Pass reconstruction", () => {
     const collectFirstPairs = (
       overrides: Parameters<typeof createRestorePoint>[3],
     ) =>
-      Array.from({ length: 20 }, (_, cursor) =>
-        projectJoinPassPair(
-          activeDeck,
-          createRestorePoint(activeDeck, joinedValueIds, cursor, overrides),
-        ).pair,
+      Array.from(
+        { length: 20 },
+        (_, cursor) =>
+          projectJoinPassPair(
+            activeDeck,
+            createRestorePoint(activeDeck, joinedValueIds, cursor, overrides),
+          ).pair,
       )
 
     const baseline = collectFirstPairs({})
@@ -312,9 +311,9 @@ describe("Join Pass reconstruction", () => {
       initialRestorePoint.pairCount - 1,
     )
 
-    expect(
-      advanceJoinPassCursor(activeDeck, initialRestorePoint)?.cursor,
-    ).toBe(1)
+    expect(advanceJoinPassCursor(activeDeck, initialRestorePoint)?.cursor).toBe(
+      1,
+    )
     expect(advanceJoinPassCursor(activeDeck, finalRestorePoint)).toBeNull()
   })
 })
@@ -338,9 +337,9 @@ describe("Join Pass restore validation", () => {
       pairCount: restorePoint.pairCount + 1,
     }
 
-    expect(() => createRestorePoint(activeDeck, duplicatedJoinedValues)).toThrow(
-      "duplicate joined Value IDs",
-    )
+    expect(() =>
+      createRestorePoint(activeDeck, duplicatedJoinedValues),
+    ).toThrow("duplicate joined Value IDs")
     expect(() =>
       createJoinPassRestorePoint({
         activeDeck,
@@ -351,9 +350,9 @@ describe("Join Pass restore validation", () => {
         cycleIndex: 0,
       }),
     ).toThrow("joined IDs must be Custom Value IDs")
-    expect(() =>
-      projectJoinPassPair(changedDeck, restorePoint),
-    ).toThrow("fingerprint does not match")
+    expect(() => projectJoinPassPair(changedDeck, restorePoint)).toThrow(
+      "fingerprint does not match",
+    )
     expect(() =>
       projectJoinPassPair(
         activeDeck,
@@ -361,10 +360,7 @@ describe("Join Pass restore validation", () => {
       ),
     ).toThrow("retained Value IDs do not match")
     expect(() =>
-      projectJoinPassPair(
-        activeDeck,
-        alteredPairCount as JoinPassRestorePoint,
-      ),
+      projectJoinPassPair(activeDeck, alteredPairCount as JoinPassRestorePoint),
     ).toThrow("Invalid Join Pass pair count")
     expect(() =>
       createRestorePoint(activeDeck, joinedValueIds, restorePoint.pairCount),

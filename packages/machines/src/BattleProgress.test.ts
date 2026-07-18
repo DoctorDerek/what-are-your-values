@@ -218,10 +218,7 @@ describe("Battle Progress", () => {
       createCandidate([firstValueId, secondValueId], thirdValueId),
     ).toThrow("winner is not part")
     expect(() =>
-      createCandidate(
-        [firstValueId, createCustomValue(1).id],
-        firstValueId,
-      ),
+      createCandidate([firstValueId, createCustomValue(1).id], firstValueId),
     ).toThrow("inactive Value ID")
 
     const incompleteSnapshot = new Map(cycleLevelSnapshot)

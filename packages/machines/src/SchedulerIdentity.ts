@@ -10,8 +10,7 @@ export const FULL_CYCLE_SCHEDULE_KIND = "full-cycle" as const
 export const JOIN_PASS_SCHEDULE_KIND = "join-pass" as const
 
 export type ScheduleKind =
-  | typeof FULL_CYCLE_SCHEDULE_KIND
-  | typeof JOIN_PASS_SCHEDULE_KIND
+  typeof FULL_CYCLE_SCHEDULE_KIND | typeof JOIN_PASS_SCHEDULE_KIND
 
 export type SchedulerCursor = number & {
   readonly [schedulerCursorBrand]: "scheduler-cursor"
@@ -73,10 +72,7 @@ export function assertSchedulerIdentity<TScheduleKind extends ScheduleKind>({
     throw new Error("Scheduler seed is required")
   }
 
-  if (
-    !Number.isSafeInteger(identity.cycleIndex) ||
-    identity.cycleIndex < 0
-  ) {
+  if (!Number.isSafeInteger(identity.cycleIndex) || identity.cycleIndex < 0) {
     throw new Error(`Invalid cycle index: ${identity.cycleIndex}`)
   }
 
