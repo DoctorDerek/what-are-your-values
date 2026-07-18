@@ -7,6 +7,7 @@ import {
   type ValueId,
 } from "./Value"
 import {
+  beginNextValueProgressCycle,
   createInitialValueProgress,
   createValueProgressById,
   reconfigureValueProgress,
@@ -183,6 +184,36 @@ describe("Value Progress reconfiguration", () => {
         ({ totalXp }) => totalXp === 0,
       ),
     ).toBe(true)
+  })
+
+  it("starts the next pair cycle without erasing lifetime evidence", () => {
+    const activeDeck = createActiveDeck([])
+    const [firstValueId, secondValueId] = activeDeck.valueIds
+    const firstProgress = createPlayedProgress(21, 6, 9, 2)
+    const secondProgress = createPlayedProgress(13, 4, 7, 1)
+    const progressById = replaceProgress(
+      replaceProgress(
+        createInitialValueProgress(activeDeck),
+        firstValueId,
+        firstProgress,
+      ),
+      secondValueId,
+      secondProgress,
+    )
+    const nextCycleProgressById = beginNextValueProgressCycle(
+      activeDeck,
+      progressById,
+    )
+
+    expect(nextCycleProgressById.get(firstValueId)).toEqual({
+      ...firstProgress,
+      currentCycleWins: 0,
+    })
+    expect(nextCycleProgressById.get(secondValueId)).toEqual({
+      ...secondProgress,
+      currentCycleWins: 0,
+    })
+    expect(progressById.get(firstValueId)).toEqual(firstProgress)
   })
 })
 
