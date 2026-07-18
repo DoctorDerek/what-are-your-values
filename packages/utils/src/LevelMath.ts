@@ -33,8 +33,3 @@ export function calculateCycleSnapshotXpPayout(
 
   return Math.min(opponentLevelAtCycleStart, 100)
 }
-
-export function calculateXPPayout(loserTotalXP: number) {
-  const loserLevel = getLevelFromXP(loserTotalXP)
-  return calculateCycleSnapshotXpPayout(loserLevel)
-}

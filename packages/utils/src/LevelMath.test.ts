@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
   calculateCycleSnapshotXpPayout,
-  calculateXPPayout,
   getLevelFromXP,
   MAX_SUPPORTED_TOTAL_XP,
 } from "./LevelMath"
@@ -47,25 +46,6 @@ describe("getLevelFromXP", () => {
         getLevelFromXP(boundaries[i - 1]),
       )
     }
-  })
-})
-
-describe("calculateXPPayout", () => {
-  it("returns minimum payout of 1 for zero XP loser", () => {
-    expect(calculateXPPayout(0)).toBe(1)
-  })
-
-  it("returns loser level as payout for mid-range values", () => {
-    expect(calculateXPPayout(3)).toBe(3)
-    expect(calculateXPPayout(10)).toBe(5)
-  })
-
-  it("caps payout at 100 for extremely high-level losers", () => {
-    expect(calculateXPPayout(1000000)).toBe(100)
-  })
-
-  it("rejects invalid loser XP instead of hiding corrupt progress", () => {
-    expect(() => calculateXPPayout(-999)).toThrow("Unsupported total XP")
   })
 })
 
