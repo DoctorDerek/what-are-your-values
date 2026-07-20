@@ -1,7 +1,6 @@
 # What Are Your Values, Mapache?
 
-[![Vercel](https://therealsujitk-vercel-badge.vercel.app/?app=what-are-your-values)](https://what-are-your-values-mapache.DoctorDerek.com)
-[![Codecov](https://codecov.io/gh/DoctorDerek/what-are-your-values-mapache/graph/badge.svg)](https://app.codecov.io/gh/DoctorDerek/what-are-your-values-mapache)
+[![Production](https://img.shields.io/website?url=https%3A%2F%2Fwww.whatareyourvaluesmapache.com%2F&up_message=live&down_message=offline&label=production&logo=vercel&logoColor=white)](https://www.whatareyourvaluesmapache.com/) [![Codecov](https://codecov.io/gh/DoctorDerek/what-are-your-values-mapache/graph/badge.svg)](https://app.codecov.io/gh/DoctorDerek/what-are-your-values-mapache) [![Test and Lint](https://github.com/DoctorDerek/what-are-your-values-mapache/actions/workflows/test-and-lint.yml/badge.svg)](https://github.com/DoctorDerek/what-are-your-values-mapache/actions/workflows/test-and-lint.yml) [![Playwright](https://github.com/DoctorDerek/what-are-your-values-mapache/actions/workflows/playwright.yml/badge.svg)](https://github.com/DoctorDerek/what-are-your-values-mapache/actions/workflows/playwright.yml)
 
 ## Play the game free now to find out what your values are: [https://what-are-your-values-mapache.DoctorDerek.com](https://what-are-your-values-mapache.DoctorDerek.com)
 
