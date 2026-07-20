@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { calculateXPPayout, getLevelFromXP } from "./LevelMath"
+import {
+  calculateCycleSnapshotXpPayout,
+  getLevelFromXP,
+  MAX_SUPPORTED_TOTAL_XP,
+} from "./LevelMath"
 
 describe("getLevelFromXP", () => {
   it("returns level 1 for zero XP", () => {
     expect(getLevelFromXP(0)).toBe(1)
-  })
-
-  it("returns level 1 for negative XP", () => {
-    expect(getLevelFromXP(-100)).toBe(1)
   })
 
   it("returns level 2 for 1 XP (triangular number threshold)", () => {
@@ -27,10 +27,17 @@ describe("getLevelFromXP", () => {
   })
 
   it("handles large XP values without overflow", () => {
-    const level = getLevelFromXP(10000)
+    const level = getLevelFromXP(MAX_SUPPORTED_TOTAL_XP)
     expect(level).toBeGreaterThan(100)
     expect(Number.isFinite(level)).toBe(true)
   })
+
+  it.each([-1, 0.5, MAX_SUPPORTED_TOTAL_XP + 1, Number.MAX_SAFE_INTEGER])(
+    "rejects unsupported total XP: %s",
+    (totalXp) => {
+      expect(() => getLevelFromXP(totalXp)).toThrow("Unsupported total XP")
+    },
+  )
 
   it("increases monotonically across boundary values", () => {
     const boundaries = [0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55]
@@ -42,21 +49,22 @@ describe("getLevelFromXP", () => {
   })
 })
 
-describe("calculateXPPayout", () => {
-  it("returns minimum payout of 1 for zero XP loser", () => {
-    expect(calculateXPPayout(0)).toBe(1)
+describe("calculateCycleSnapshotXpPayout", () => {
+  it.each([
+    [1, 1],
+    [15, 15],
+    [100, 100],
+    [130, 100],
+  ])("maps a snapshotted level of %i to %i XP", (level, payout) => {
+    expect(calculateCycleSnapshotXpPayout(level)).toBe(payout)
   })
 
-  it("returns loser level as payout for mid-range values", () => {
-    expect(calculateXPPayout(3)).toBe(3)
-    expect(calculateXPPayout(10)).toBe(5)
-  })
-
-  it("caps payout at 100 for extremely high-level losers", () => {
-    expect(calculateXPPayout(1000000)).toBe(100)
-  })
-
-  it("never returns less than 1", () => {
-    expect(calculateXPPayout(-999)).toBeGreaterThanOrEqual(1)
-  })
+  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects an invalid snapshotted level: %s",
+    (level) => {
+      expect(() => calculateCycleSnapshotXpPayout(level)).toThrow(
+        "Invalid cycle-snapshot opponent level",
+      )
+    },
+  )
 })

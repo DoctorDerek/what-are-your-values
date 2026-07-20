@@ -5,13 +5,13 @@
 
 ## Play the game free now to find out what your values are: [https://what-are-your-values-mapache.DoctorDerek.com](https://what-are-your-values-mapache.DoctorDerek.com)
 
-_What Are Your Values, Mapache?_ is a high-speed, zero-friction autobattler designed to gamify Acceptance and Commitment Therapy (ACT) value-sorting by pitting 83 fundamental human values against each other in rapid-fire 1v1 matchups.
+_What Are Your Values, Mapache?_ is a high-speed autobattler designed to help you find your values in life by pitting 100 canonical human values against one another in rapid-fire battles.
 
 The application is a frontend engineering showcase built as a `pnpm` Turborepo with Next.js (App Router), React 19, and Tailwind CSS v4.
 
-To explicitly reject the fragility of unpredictable renders, the entire client-side battle loop, priority queueing, and layout routing are deterministically governed by a robust XState v5 actor model (state machines).
+Strict TypeScript domain modules and XState v5 machines govern the canonical value catalog, lazy deterministic pair scheduler, score progression, and application routing.
 
-Currently deployed as an offline-first Phase A build featuring the core combat sandbox (gameplay loop).
+The current web build provides the core battle loop. Custom Values, JSON data portability, achievements, and Expo mobile support are next in the GDD roadmap.
 
 ## Technical Journal
 

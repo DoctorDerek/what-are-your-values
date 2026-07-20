@@ -1,84 +1,96 @@
 "use client"
 
-import { LIST_OF_VALUES } from "@game/data/src/ListOfValues"
-import { combatMachine } from "@game/machines/src/CombatMachine"
-import { StorageAdapter } from "@game/machines/src/StorageAdapter"
-import { calculateXPPayout, getLevelFromXP } from "@game/utils/src/LevelMath"
+import type { ActiveDeck } from "@game/data/src/ActiveDeck"
+import {
+  getValueDisplayDefinition,
+  getValueDisplayName,
+  type ValueId,
+} from "@game/data/src/Value"
+import type { ValueProgressById } from "@game/data/src/ValueProgress"
+import {
+  combatMachine,
+  type PresentedBattle,
+} from "@game/machines/src/CombatMachine"
+import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
+import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence, motion } from "motion/react"
 import { useCallback, useEffect } from "react"
 
 export default function Crucible({
-  valuesXp,
+  activeDeck,
+  battle,
+  progressById,
   onExit,
-  onBattleCompleted,
-  storageAdapter,
+  onWinnerSelected,
 }: {
-  valuesXp: Record<number, number>
+  activeDeck: ActiveDeck
+  battle: PresentedBattle
+  progressById: ValueProgressById
   onExit: () => void
-  onBattleCompleted: (w: number, l: number, xp: number) => void
-  storageAdapter: StorageAdapter
+  onWinnerSelected: (
+    winnerId: ValueId,
+    expectedScheduler: SchedulerRestorePoint,
+  ) => void
 }) {
   const [state, send] = useMachine(combatMachine, {
-    input: { storage: storageAdapter },
+    input: { onWinnerSelected },
   })
 
   useEffect(() => {
-    const queueStr = storageAdapter.getItem("wayvm_queue")
-    const queue = queueStr ? JSON.parse(queueStr) : []
-    const valueIds = LIST_OF_VALUES.map((v) => v.id)
-    send({ type: "INITIALIZE", queue, valueIds })
-  }, [send, storageAdapter])
+    send({ type: "BATTLE.PROJECTED", battle })
+  }, [battle, send])
 
   const handleSelect = useCallback(
-    (winnerId: number, loserId: number) => {
+    (winnerId: ValueId) => {
       if (!state.matches("AwaitingInput")) return
-      const loserXp = valuesXp[loserId] || 0
-      const payout = calculateXPPayout(loserXp)
-      onBattleCompleted(winnerId, loserId, payout)
-      send({ type: "SELECT_WINNER", winnerId })
+      send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
     },
-    [state, valuesXp, onBattleCompleted, send],
+    [state, send],
   )
 
   const focusedId = state.context.focusedId
-  const currentPair = state.context.currentPair
+  const currentPair = state.context.currentBattle?.pair ?? null
   const isAwaiting = state.matches("AwaitingInput")
+  const isAnimating = state.matches("AnimatingResult")
+  const handleAnimationComplete = useCallback(() => {
+    if (isAnimating) {
+      send({ type: "ANIMATION.RESULT_FINISHED" })
+    }
+  }, [isAnimating, send])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isAwaiting || !currentPair) return
 
       if (e.key === "1" || e.key.toLowerCase() === "a") {
-        handleSelect(currentPair[0], currentPair[1])
+        handleSelect(currentPair[0])
       } else if (e.key === "2" || e.key.toLowerCase() === "d") {
-        handleSelect(currentPair[1], currentPair[0])
+        handleSelect(currentPair[1])
       } else if (e.key === "Escape") {
         onExit()
       } else if (e.key === "Enter" || e.key === " ") {
         if (focusedId) {
-          const loserId =
-            currentPair[0] === focusedId ? currentPair[1] : currentPair[0]
-          handleSelect(focusedId, loserId)
+          handleSelect(focusedId)
         }
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-        send({ type: "FOCUS_VALUE", id: currentPair[0] })
+        send({ type: "VALUE.FOCUS_REQUESTED", valueId: currentPair[0] })
       } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-        send({ type: "FOCUS_VALUE", id: currentPair[1] })
+        send({ type: "VALUE.FOCUS_REQUESTED", valueId: currentPair[1] })
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isAwaiting, currentPair, focusedId, valuesXp, send, onExit, handleSelect])
+  }, [isAwaiting, currentPair, focusedId, send, onExit, handleSelect])
 
-  const handleCardClick = (clickedId: number, opponentId: number) => {
+  const handleCardClick = (clickedId: ValueId) => {
     if (!isAwaiting) return
 
     if (focusedId === clickedId) {
-      handleSelect(clickedId, opponentId)
+      handleSelect(clickedId)
     } else {
-      send({ type: "FOCUS_VALUE", id: clickedId })
+      send({ type: "VALUE.FOCUS_REQUESTED", valueId: clickedId })
     }
   }
 
@@ -91,11 +103,15 @@ export default function Crucible({
   }
 
   const [idA, idB] = currentPair
-  const valA = LIST_OF_VALUES.find((v) => v.id === idA)
-  const valB = LIST_OF_VALUES.find((v) => v.id === idB)
-  const levelA = getLevelFromXP(valuesXp[idA] || 0)
-  const levelB = getLevelFromXP(valuesXp[idB] || 0)
-  const isAnimating = state.matches("Animating")
+  const valA = activeDeck.values.find(({ id }) => id === idA)
+  const valB = activeDeck.values.find(({ id }) => id === idB)
+  const progressA = progressById.get(idA)
+  const progressB = progressById.get(idB)
+  if (!valA || !valB || !progressA || !progressB) {
+    throw new Error("Projected battle is missing Active Deck data")
+  }
+  const levelA = getLevelFromXP(progressA.totalXp)
+  const levelB = getLevelFromXP(progressB.totalXp)
   const winnerId = state.context.winnerId
 
   return (
@@ -134,7 +150,8 @@ export default function Crucible({
           }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          onClick={() => handleCardClick(idA, idB)}
+          onAnimationComplete={handleAnimationComplete}
+          onClick={() => handleCardClick(idA)}
           className={`bg-mapache-vivid-primary-cyan flex flex-1 cursor-pointer flex-col items-center justify-center border-b-8 border-black p-8 hover:brightness-110 lg:border-r-8 lg:border-b-0 ${focusedId === idA ? "ring-8 ring-white ring-inset" : ""}`}
         >
           <span className="absolute top-8 left-8 text-3xl font-black text-black/40 uppercase drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] lg:text-5xl">
@@ -145,10 +162,10 @@ export default function Crucible({
               LVL {levelA}
             </span>
             <h2 className="mb-8 max-w-4xl text-6xl leading-none font-black tracking-tighter text-white uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-9xl">
-              {valA?.value}
+              {getValueDisplayName(valA)}
             </h2>
             <p className="mx-auto max-w-2xl border-2 border-white/20 bg-black/40 p-6 text-3xl font-bold text-white drop-shadow-[2px_2px_0px_#000000]">
-              &ldquo;{valA?.definition}&rdquo;
+              &ldquo;{getValueDisplayDefinition(valA)}&rdquo;
             </p>
           </div>
         </motion.div>
@@ -172,7 +189,8 @@ export default function Crucible({
           }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          onClick={() => handleCardClick(idB, idA)}
+          onAnimationComplete={handleAnimationComplete}
+          onClick={() => handleCardClick(idB)}
           className={`bg-mapache-vivid-primary-raspberry flex flex-1 cursor-pointer flex-col items-center justify-center p-8 hover:brightness-110 ${focusedId === idB ? "ring-8 ring-white ring-inset" : ""}`}
         >
           <span className="absolute top-8 right-8 text-3xl font-black text-black/40 uppercase drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] lg:text-5xl">
@@ -183,10 +201,10 @@ export default function Crucible({
               LVL {levelB}
             </span>
             <h2 className="mb-8 max-w-4xl text-6xl leading-none font-black tracking-tighter text-white uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-9xl">
-              {valB?.value}
+              {getValueDisplayName(valB)}
             </h2>
             <p className="mx-auto max-w-2xl border-2 border-white/20 bg-black/40 p-6 text-3xl font-bold text-white drop-shadow-[2px_2px_0px_#000000]">
-              &ldquo;{valB?.definition}&rdquo;
+              &ldquo;{getValueDisplayDefinition(valB)}&rdquo;
             </p>
           </div>
         </motion.div>
