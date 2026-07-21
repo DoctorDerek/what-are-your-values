@@ -8,6 +8,7 @@ import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo } from "react"
 import { webStorage } from "@/lib/WebStorage"
+import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import Hub from "./Hub"
 import Splash from "./Splash"
@@ -82,7 +83,17 @@ export default function GameClient() {
     return (
       <Hub
         rankedValues={rankedValues}
+        onSeeAllValues={() => send({ type: "ALL_VALUES.OPEN_REQUESTED" })}
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+      />
+    )
+  }
+
+  if (state.matches("AllValues")) {
+    return (
+      <AllValues
+        rankedValues={rankedValues}
+        onClose={() => send({ type: "ALL_VALUES.CLOSE_REQUESTED" })}
       />
     )
   }

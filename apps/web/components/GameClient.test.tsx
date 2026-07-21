@@ -63,4 +63,31 @@ describe("GameClient Integration", () => {
       "00000000-0000-4000-8000-000000000043",
     )
   })
+
+  it("opens the complete All Values ranking and returns to the unchanged Hub", async () => {
+    vi.spyOn(webStorage, "getItem").mockReturnValue("returning-player")
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000044",
+    )
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByText("Keep comparing values to reveal your Top Five."),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+    expect(screen.getByText("100 Active Values")).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(100)
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+
+    expect(await screen.findByText("Sovereign Dashboard")).toBeVisible()
+    expect(
+      screen.getByText("Keep comparing values to reveal your Top Five."),
+    ).toBeVisible()
+  })
 })

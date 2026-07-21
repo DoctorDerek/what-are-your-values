@@ -6,9 +6,11 @@ import { getLevelFromXP } from "@game/utils/src/LevelMath"
 
 export default function Hub({
   rankedValues,
+  onSeeAllValues,
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
+  onSeeAllValues: () => void
   onStartBattle: () => void
 }) {
   const hasComparisons = rankedValues.some(
@@ -54,6 +56,14 @@ export default function Hub({
           </p>
         )}
       </section>
+
+      <button
+        type="button"
+        onClick={onSeeAllValues}
+        className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark mt-10 w-full max-w-7xl cursor-pointer border-4 border-black py-5 text-4xl font-black uppercase shadow-[10px_10px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[10px] active:translate-y-[10px] active:shadow-none"
+      >
+        See All Values
+      </button>
 
       <button
         onClick={onStartBattle}

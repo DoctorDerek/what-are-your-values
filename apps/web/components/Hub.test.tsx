@@ -19,6 +19,7 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        onSeeAllValues={vi.fn()}
         onStartBattle={vi.fn()}
       />,
     )
@@ -31,6 +32,7 @@ describe("Hub Component Integration", () => {
   })
 
   it("renders the exact evidence ranking and starts a battle", () => {
+    const onSeeAllValues = vi.fn()
     const onStartBattle = vi.fn()
     const initialBattleCycle = createInitialBattleCycle("ranked-hub-seed")
     const [winnerId] = projectScheduledPair(
@@ -55,12 +57,16 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        onSeeAllValues={onSeeAllValues}
         onStartBattle={onStartBattle}
       />,
     )
 
     expect(screen.getByText(`#1 ${getValueDisplayName(winner)}`)).toBeVisible()
     expect(screen.getByText("LVL 2")).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
+    expect(onSeeAllValues).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
     expect(onStartBattle).toHaveBeenCalledTimes(1)
