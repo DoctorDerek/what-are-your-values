@@ -86,4 +86,23 @@ describe("All Values Component Integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close" }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it("closes through Escape without changing the visible ranking first", () => {
+    const onClose = vi.fn()
+    const battleCycle = createInitialBattleCycle("all-values-escape-seed")
+
+    render(
+      <AllValues
+        rankedValues={rankValues(
+          battleCycle.activeDeck,
+          battleCycle.progressById,
+        )}
+        onClose={onClose}
+      />,
+    )
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(100)
+    fireEvent.keyDown(window, { key: "Escape" })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })
