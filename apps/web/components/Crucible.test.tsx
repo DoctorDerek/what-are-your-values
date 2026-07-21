@@ -1,4 +1,7 @@
-import { getValueDisplayName } from "@game/data/src/Value"
+import {
+  getValueDisplayDefinition,
+  getValueDisplayName,
+} from "@game/data/src/Value"
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
@@ -126,5 +129,59 @@ describe("Crucible Component Integration", () => {
 
     expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
     expect(onExit).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps both value cards vertically readable without horizontal overflow", async () => {
+    const { battleCycle, battle } = createBattleProps("readable-copy-seed")
+    const definitions = battle.pair.map((valueId) => {
+      const definition = battleCycle.activeDeck.values.find(
+        ({ id }) => id === valueId,
+      )
+      if (!definition) {
+        throw new Error("Projected value definition is missing")
+      }
+
+      return definition
+    })
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("main", { name: "Value battle" })).toHaveClass(
+      "overflow-hidden",
+      "touch-manipulation",
+    )
+
+    for (const definition of definitions) {
+      const choice = await screen.findByRole("button", {
+        name: `Choose ${getValueDisplayName(definition)}`,
+      })
+      const heading = screen.getByRole("heading", {
+        name: getValueDisplayName(definition),
+      })
+      const definitionCopy = screen.getByText(
+        `“${getValueDisplayDefinition(definition)}”`,
+      )
+
+      expect(choice).toHaveClass(
+        "min-h-0",
+        "min-w-0",
+        "overflow-x-hidden",
+        "overflow-y-auto",
+        "overscroll-contain",
+      )
+      expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
+      expect(definitionCopy).toHaveClass(
+        "break-words",
+        "[overflow-wrap:anywhere]",
+      )
+    }
   })
 })

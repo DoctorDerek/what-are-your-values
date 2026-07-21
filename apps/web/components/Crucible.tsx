@@ -120,10 +120,13 @@ export default function Crucible({
   const winnerId = state.context.winnerId
 
   return (
-    <div className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-none flex-col overflow-hidden lg:flex-row">
+    <main
+      aria-label="Value battle"
+      className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden lg:flex-row"
+    >
       <button
         onClick={onExit}
-        className="bg-mapache-vivid-secondary-red absolute top-6 left-1/2 z-50 -translate-x-1/2 cursor-pointer border-4 border-black px-10 py-4 text-3xl font-black text-white uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none"
+        className="bg-mapache-vivid-secondary-red absolute top-3 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2 cursor-pointer border-4 border-black px-4 py-2 text-xl font-black [overflow-wrap:anywhere] break-words whitespace-normal text-white uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none sm:top-6 sm:px-10 sm:py-4 sm:text-3xl"
       >
         Stop [ESC]
       </button>
@@ -161,6 +164,6 @@ export default function Crucible({
           onAnimationComplete={handleAnimationComplete}
         />
       </AnimatePresence>
-    </div>
+    </main>
   )
 }
