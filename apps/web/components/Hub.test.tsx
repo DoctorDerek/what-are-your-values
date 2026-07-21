@@ -27,6 +27,7 @@ describe("Hub Component Integration", () => {
       screen.getByText("Keep comparing values to reveal your Top Five."),
     ).toBeVisible()
     expect(screen.queryByText("#1 Acceptance")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Avatar|Phase C/)).not.toBeInTheDocument()
   })
 
   it("renders the exact evidence ranking and starts a battle", () => {
