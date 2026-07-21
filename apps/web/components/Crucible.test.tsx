@@ -118,6 +118,9 @@ describe("Crucible Component Integration", () => {
       `Definition of ${getValueDisplayName(definition)}`,
     )
 
+    expect(choice).toHaveAccessibleDescription(
+      getValueDisplayDefinition(definition),
+    )
     expect(choice).not.toContainElement(definitionControl)
     fireEvent.click(definitionControl)
     expect(
