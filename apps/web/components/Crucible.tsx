@@ -122,7 +122,7 @@ export default function Crucible({
   return (
     <main
       aria-label="Value battle"
-      className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden lg:flex-row"
+      className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row"
     >
       <button
         onClick={onExit}
