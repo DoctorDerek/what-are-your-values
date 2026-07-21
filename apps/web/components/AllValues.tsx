@@ -1,11 +1,9 @@
 "use client"
 
-import {
-  getValueDisplayDefinition,
-  getValueDisplayName,
-} from "@game/data/src/Value"
+import { getValueDisplayName } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import { useMemo, useState } from "react"
+import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 export default function AllValues({
@@ -117,14 +115,9 @@ export default function AllValues({
                     ) : null}
                     <ValueLevelProgress totalXp={progress.totalXp} />
                   </div>
-                  <details className="mt-5 border-t-4 border-black pt-4">
-                    <summary className="focus-visible:outline-mapache-vivid-primary-blue cursor-pointer text-xl font-black underline decoration-4 underline-offset-4 focus-visible:outline-4 focus-visible:outline-offset-4">
-                      View {displayName} Definition
-                    </summary>
-                    <p className="mt-4 text-xl leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap">
-                      {getValueDisplayDefinition(definition)}
-                    </p>
-                  </details>
+                  <div className="mt-5">
+                    <ValueDefinitionDisclosure definition={definition} />
+                  </div>
                 </li>
               )
             })}
