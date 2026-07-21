@@ -121,8 +121,8 @@ describe("Crucible Component Integration", () => {
     expect(choice).not.toContainElement(definitionControl)
     fireEvent.click(definitionControl)
     expect(
-      screen.getByText(getValueDisplayDefinition(definition)),
-    ).toBeVisible()
+      definitionControl.closest("details")?.querySelector("p"),
+    ).toHaveTextContent(getValueDisplayDefinition(definition))
     expect(onWinnerSelected).not.toHaveBeenCalled()
 
     fireEvent.click(choice)
@@ -211,9 +211,9 @@ describe("Crucible Component Integration", () => {
         `Definition of ${getValueDisplayName(definition)}`,
       )
       fireEvent.click(definitionControl)
-      const definitionCopy = screen.getByText(
-        getValueDisplayDefinition(definition),
-      )
+      const definitionCopy = definitionControl
+        .closest("details")
+        ?.querySelector("p")
 
       expect(choice.parentElement).toHaveClass(
         "min-h-0",

@@ -1,12 +1,13 @@
 "use client"
 
 import {
+  getValueDisplayDefinition,
   getValueDisplayName,
   type ActiveValueDefinition,
   type ValueId,
 } from "@game/data/src/Value"
 import { motion } from "motion/react"
-import { forwardRef } from "react"
+import { forwardRef, useId } from "react"
 import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
 
 export type ValueChoicePosition = "first" | "second"
@@ -51,6 +52,7 @@ export const ValueChoiceCard = forwardRef<
     : "bg-mapache-vivid-primary-raspberry"
   const indicatorClasses = isFirst ? "top-8 left-8" : "top-8 right-8"
   const indicator = isFirst ? "[1 / A]" : "[2 / D]"
+  const accessibleDefinitionId = useId()
 
   return (
     <motion.div
@@ -72,6 +74,7 @@ export const ValueChoiceCard = forwardRef<
         ref={ref}
         type="button"
         aria-label={`Choose ${displayName}`}
+        aria-describedby={accessibleDefinitionId}
         disabled={!isEnabled}
         onClick={() => onActivate(value.id)}
         onFocus={() => onFocus(value.id)}
@@ -92,6 +95,9 @@ export const ValueChoiceCard = forwardRef<
         </div>
       </button>
 
+      <span id={accessibleDefinitionId} className="sr-only">
+        {getValueDisplayDefinition(value)}
+      </span>
       <div className="relative z-10 w-full shrink-0 px-4 pb-4 sm:px-6 sm:pb-6">
         <ValueDefinitionDisclosure definition={value} />
       </div>
