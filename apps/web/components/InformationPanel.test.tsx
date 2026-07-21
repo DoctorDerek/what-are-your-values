@@ -19,6 +19,10 @@ describe("InformationPanel Component Integration", () => {
     expect(
       screen.getByRole("main").querySelector("section"),
     ).toHaveAccessibleName("Introduction")
+    expect(screen.getByRole("main")).not.toHaveClass(
+      "overscroll-none",
+      "select-none",
+    )
     expect(screen.getByTestId("information-panel-body")).toHaveClass(
       "overflow-y-auto",
     )

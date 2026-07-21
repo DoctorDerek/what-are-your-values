@@ -156,6 +156,8 @@ describe("Crucible Component Integration", () => {
 
     expect(screen.getByRole("main", { name: "Value battle" })).toHaveClass(
       "overflow-hidden",
+      "overscroll-none",
+      "select-none",
       "touch-manipulation",
     )
 
