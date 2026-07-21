@@ -2,7 +2,8 @@
 
 import { getValueDisplayName } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
-import { getLevelFromXP } from "@game/utils/src/LevelMath"
+import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
+import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 export default function Hub({
   rankedValues,
@@ -35,21 +36,29 @@ export default function Hub({
           Top Five
         </h2>
         {hasComparisons ? (
-          <div className="flex flex-col gap-6">
+          <ol className="flex flex-col gap-6">
             {topFive.map(({ rank, definition, progress }) => (
-              <div
+              <li
                 key={definition.id}
-                className="bg-mapache-vivid-secondary-purple flex items-center justify-between border-4 border-black p-6 shadow-[6px_6px_0px_0px_#000000]"
+                className="bg-mapache-vivid-secondary-purple border-4 border-black p-5 shadow-[6px_6px_0px_0px_#000000] sm:p-6"
               >
-                <span className="text-3xl font-black text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
-                  #{rank} {getValueDisplayName(definition)}
-                </span>
-                <span className="text-mapache-vivid-primary-raspberry border-4 border-black bg-white px-4 py-2 text-3xl font-black uppercase">
-                  LVL {getLevelFromXP(progress.totalXp)}
-                </span>
-              </div>
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+                  <span className="min-w-0 text-3xl font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
+                    #{rank} {getValueDisplayName(definition)}
+                  </span>
+                  {definition.kind === "custom" ? (
+                    <span className="bg-mapache-vivid-primary-cyan border-4 border-black px-3 py-2 text-lg font-black text-black uppercase">
+                      Yours
+                    </span>
+                  ) : null}
+                  <ValueLevelProgress totalXp={progress.totalXp} />
+                </div>
+                <div className="mt-4">
+                  <ValueDefinitionDisclosure definition={definition} />
+                </div>
+              </li>
             ))}
-          </div>
+          </ol>
         ) : (
           <p className="text-mapache-vivid-dark my-auto text-center text-4xl leading-tight font-black">
             Keep comparing values to reveal your Top Five.

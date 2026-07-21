@@ -63,7 +63,7 @@ describe("Hub Component Integration", () => {
     )
 
     expect(screen.getByText(`#1 ${getValueDisplayName(winner)}`)).toBeVisible()
-    expect(screen.getByText("LVL 2")).toBeVisible()
+    expect(screen.getByText("Level 2")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
     expect(onSeeAllValues).toHaveBeenCalledTimes(1)
