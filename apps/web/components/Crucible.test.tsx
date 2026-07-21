@@ -90,6 +90,45 @@ describe("Crucible Component Integration", () => {
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
+  it("opens a sibling definition without choosing or advancing the value", async () => {
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps("definition-battle-seed")
+    const [valueId] = battle.pair
+    const definition = battleCycle.activeDeck.values.find(
+      ({ id }) => id === valueId,
+    )
+    if (!definition) {
+      throw new Error("Projected value definition is missing")
+    }
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    const choice = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(definition)}`,
+    })
+    const definitionControl = screen.getByText(
+      `Definition of ${getValueDisplayName(definition)}`,
+    )
+
+    expect(choice).not.toContainElement(definitionControl)
+    fireEvent.click(definitionControl)
+    expect(
+      screen.getByText(getValueDisplayDefinition(definition)),
+    ).toBeVisible()
+    expect(onWinnerSelected).not.toHaveBeenCalled()
+
+    fireEvent.click(choice)
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+  })
+
   it("supports arrow focus, keyboard confirmation, and Escape", async () => {
     const onExit = vi.fn()
     const onWinnerSelected = vi.fn()
