@@ -5,7 +5,7 @@ import {
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
-import { act, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
@@ -168,11 +168,15 @@ describe("Crucible Component Integration", () => {
       const heading = screen.getByRole("heading", {
         name: getValueDisplayName(definition),
       })
+      const definitionControl = screen.getByText(
+        `Definition of ${getValueDisplayName(definition)}`,
+      )
+      fireEvent.click(definitionControl)
       const definitionCopy = screen.getByText(
-        `“${getValueDisplayDefinition(definition)}”`,
+        getValueDisplayDefinition(definition),
       )
 
-      expect(choice).toHaveClass(
+      expect(choice.parentElement).toHaveClass(
         "min-h-0",
         "min-w-0",
         "overflow-x-hidden",
