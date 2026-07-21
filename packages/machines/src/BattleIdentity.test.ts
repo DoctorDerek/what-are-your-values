@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createInitialBattleCycle } from "./BattleCycle"
-import { createBattleId } from "./BattleIdentity"
+import { createBattleId, createCycleCompleteEventId } from "./BattleIdentity"
 import {
   advanceSchedulerCursor,
   createSchedulerRestorePoint,
@@ -52,5 +52,15 @@ describe("Battle Identity", () => {
 
     expect(new Set(variants.map(createBattleId)).size).toBe(variants.length)
     expect(variants.map(createBattleId)).not.toContain(initialBattleId)
+  })
+
+  it("derives one stable cycle-complete event from the final battle identity", () => {
+    const battleCycle = createInitialBattleCycle("cycle-event-identity-seed")
+    const battleId = createBattleId(battleCycle.scheduler)
+
+    expect(createCycleCompleteEventId(battleId)).toBe(
+      createCycleCompleteEventId(battleId),
+    )
+    expect(createCycleCompleteEventId(battleId)).not.toBe(battleId)
   })
 })
