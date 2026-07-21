@@ -5,8 +5,8 @@ import {
   getValueDisplayName,
 } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
-import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMemo, useState } from "react"
+import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 export default function AllValues({
   rankedValues,
@@ -115,9 +115,7 @@ export default function AllValues({
                         Yours
                       </span>
                     ) : null}
-                    <span className="text-mapache-vivid-primary-raspberry border-4 border-black px-3 py-2 text-xl font-black uppercase">
-                      Level {getLevelFromXP(progress.totalXp)}
-                    </span>
+                    <ValueLevelProgress totalXp={progress.totalXp} />
                   </div>
                   <details className="mt-5 border-t-4 border-black pt-4">
                     <summary className="focus-visible:outline-mapache-vivid-primary-blue cursor-pointer text-xl font-black underline decoration-4 underline-offset-4 focus-visible:outline-4 focus-visible:outline-offset-4">
