@@ -27,6 +27,8 @@ export const rootMachine = setup({
         }
       | { type: "INTRODUCTION.COMPLETED"; uuid: string }
       | { type: "BATTLE.START_REQUESTED" }
+      | { type: "ALL_VALUES.OPEN_REQUESTED" }
+      | { type: "ALL_VALUES.CLOSE_REQUESTED" }
       | {
           type: "BATTLE.WINNER_SELECTED"
           winnerId: ValueId
@@ -113,6 +115,12 @@ export const rootMachine = setup({
     Hub: {
       on: {
         "BATTLE.START_REQUESTED": { target: "Crucible" },
+        "ALL_VALUES.OPEN_REQUESTED": { target: "AllValues" },
+      },
+    },
+    AllValues: {
+      on: {
+        "ALL_VALUES.CLOSE_REQUESTED": { target: "Hub" },
       },
     },
     Crucible: {
