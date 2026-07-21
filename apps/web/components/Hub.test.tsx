@@ -1,4 +1,7 @@
-import { getValueDisplayName } from "@game/data/src/Value"
+import {
+  getValueDisplayDefinition,
+  getValueDisplayName,
+} from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
   createBattleCycleCandidate,
@@ -64,6 +67,15 @@ describe("Hub Component Integration", () => {
 
     expect(screen.getByText(`#1 ${getValueDisplayName(winner)}`)).toBeVisible()
     expect(screen.getByText("Level 2")).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(5)
+    expect(
+      screen.getByRole("progressbar", { name: "XP toward Level 3" }),
+    ).toHaveAttribute("aria-valuenow", "0")
+
+    fireEvent.click(
+      screen.getByText(`Definition of ${getValueDisplayName(winner)}`),
+    )
+    expect(screen.getByText(getValueDisplayDefinition(winner))).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
     expect(onSeeAllValues).toHaveBeenCalledTimes(1)
