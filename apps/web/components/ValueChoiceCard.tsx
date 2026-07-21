@@ -7,29 +7,43 @@ import {
   type ValueId,
 } from "@game/data/src/Value"
 import { motion } from "motion/react"
+import { forwardRef } from "react"
 
 export type ValueChoicePosition = "first" | "second"
 
-export function ValueChoiceCard({
-  position,
-  value,
-  level,
-  focusedId,
-  winnerId,
-  isAnimating,
-  onActivate,
-  onAnimationComplete,
-}: {
+type ValueChoiceCardProps = {
   position: ValueChoicePosition
   value: ActiveValueDefinition
   level: number
   focusedId: ValueId | null
   winnerId: ValueId | null
+  isEnabled: boolean
   isAnimating: boolean
   onActivate: (valueId: ValueId) => void
+  onFocus: (valueId: ValueId) => void
   onAnimationComplete: () => void
-}) {
+}
+
+export const ValueChoiceCard = forwardRef<
+  HTMLButtonElement,
+  ValueChoiceCardProps
+>(function ValueChoiceCard(
+  {
+    position,
+    value,
+    level,
+    focusedId,
+    winnerId,
+    isEnabled,
+    isAnimating,
+    onActivate,
+    onFocus,
+    onAnimationComplete,
+  },
+  ref,
+) {
   const isFirst = position === "first"
+  const displayName = getValueDisplayName(value)
   const isWinner = isAnimating && winnerId === value.id
   const isDefeated = isAnimating && winnerId !== value.id
   const positionClasses = isFirst
@@ -39,7 +53,11 @@ export function ValueChoiceCard({
   const indicator = isFirst ? "[1 / A]" : "[2 / D]"
 
   return (
-    <motion.div
+    <motion.button
+      ref={ref}
+      type="button"
+      aria-label={`Choose ${displayName}`}
+      disabled={!isEnabled}
       layout
       initial={{ x: isFirst ? "-100%" : "100%", opacity: 0 }}
       animate={{
@@ -53,7 +71,8 @@ export function ValueChoiceCard({
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
       onAnimationComplete={onAnimationComplete}
       onClick={() => onActivate(value.id)}
-      className={`${positionClasses} flex flex-1 cursor-pointer flex-col items-center justify-center p-8 hover:brightness-110 ${focusedId === value.id ? "ring-8 ring-white ring-inset" : ""}`}
+      onFocus={() => onFocus(value.id)}
+      className={`${positionClasses} relative flex flex-1 cursor-pointer flex-col items-center justify-center p-8 hover:brightness-110 focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default disabled:hover:brightness-100 ${focusedId === value.id ? "ring-8 ring-white ring-inset" : ""}`}
     >
       <span
         className={`${indicatorClasses} absolute text-3xl font-black text-black/40 uppercase drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] lg:text-5xl`}
@@ -65,12 +84,12 @@ export function ValueChoiceCard({
           LVL {level}
         </span>
         <h2 className="mb-8 max-w-4xl text-6xl leading-none font-black tracking-tighter text-white uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-9xl">
-          {getValueDisplayName(value)}
+          {displayName}
         </h2>
         <p className="mx-auto max-w-2xl border-2 border-white/20 bg-black/40 p-6 text-3xl font-bold text-white drop-shadow-[2px_2px_0px_#000000]">
           &ldquo;{getValueDisplayDefinition(value)}&rdquo;
         </p>
       </div>
-    </motion.div>
+    </motion.button>
   )
-}
+})

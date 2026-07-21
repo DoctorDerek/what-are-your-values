@@ -26,13 +26,12 @@ describe("GameClient Integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
 
     const winnerIndicator = await screen.findByText("[1 / A]")
-    const winnerCard = winnerIndicator.closest("div")
+    const winnerCard = winnerIndicator.closest("button")
     const winnerName = winnerCard?.querySelector("h2")?.textContent
     if (!winnerCard || !winnerName) {
       throw new Error("The projected winner card is unavailable")
     }
 
-    fireEvent.click(winnerCard)
     fireEvent.click(winnerCard)
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
 

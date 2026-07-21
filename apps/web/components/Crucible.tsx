@@ -11,7 +11,7 @@ import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { ValueChoiceCard } from "./ValueChoiceCard"
 
 export default function Crucible({
@@ -33,6 +33,8 @@ export default function Crucible({
   const [state, send] = useMachine(combatMachine, {
     input: { onWinnerSelected },
   })
+  const firstChoiceRef = useRef<HTMLButtonElement>(null)
+  const secondChoiceRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     send({ type: "BATTLE.PROJECTED", battle })
@@ -61,19 +63,26 @@ export default function Crucible({
       if (!isAwaiting || !currentPair) return
 
       if (e.key === "1" || e.key.toLowerCase() === "a") {
+        e.preventDefault()
         handleSelect(currentPair[0])
       } else if (e.key === "2" || e.key.toLowerCase() === "d") {
+        e.preventDefault()
         handleSelect(currentPair[1])
       } else if (e.key === "Escape") {
         onExit()
       } else if (e.key === "Enter" || e.key === " ") {
         if (focusedId) {
+          e.preventDefault()
           handleSelect(focusedId)
         }
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault()
         send({ type: "VALUE.FOCUS_REQUESTED", valueId: currentPair[0] })
+        firstChoiceRef.current?.focus()
       } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault()
         send({ type: "VALUE.FOCUS_REQUESTED", valueId: currentPair[1] })
+        secondChoiceRef.current?.focus()
       }
     }
 
@@ -81,15 +90,14 @@ export default function Crucible({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isAwaiting, currentPair, focusedId, send, onExit, handleSelect])
 
-  const handleCardClick = (clickedId: ValueId) => {
-    if (!isAwaiting) return
-
-    if (focusedId === clickedId) {
-      handleSelect(clickedId)
-    } else {
-      send({ type: "VALUE.FOCUS_REQUESTED", valueId: clickedId })
-    }
-  }
+  const handleCardFocus = useCallback(
+    (valueId: ValueId) => {
+      if (isAwaiting) {
+        send({ type: "VALUE.FOCUS_REQUESTED", valueId })
+      }
+    },
+    [isAwaiting, send],
+  )
 
   if (!currentPair) {
     return (
@@ -122,28 +130,34 @@ export default function Crucible({
 
       <AnimatePresence mode="popLayout">
         <ValueChoiceCard
+          ref={firstChoiceRef}
           key={`Card A: ${idA} vs. ${idB}`}
           position="first"
           value={valA}
           level={levelA}
           focusedId={focusedId}
           winnerId={winnerId}
+          isEnabled={isAwaiting}
           isAnimating={isAnimating}
-          onActivate={handleCardClick}
+          onActivate={handleSelect}
+          onFocus={handleCardFocus}
           onAnimationComplete={handleAnimationComplete}
         />
       </AnimatePresence>
 
       <AnimatePresence mode="popLayout">
         <ValueChoiceCard
+          ref={secondChoiceRef}
           key={`Card B: ${idB} vs. ${idA}`}
           position="second"
           value={valB}
           level={levelB}
           focusedId={focusedId}
           winnerId={winnerId}
+          isEnabled={isAwaiting}
           isAnimating={isAnimating}
-          onActivate={handleCardClick}
+          onActivate={handleSelect}
+          onFocus={handleCardFocus}
           onAnimationComplete={handleAnimationComplete}
         />
       </AnimatePresence>

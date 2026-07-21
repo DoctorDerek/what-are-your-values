@@ -55,10 +55,16 @@ describe("Crucible Component Integration", () => {
     )
   })
 
-  it("focuses a card before committing its second click", async () => {
+  it("commits the first pointer activation exactly once", async () => {
     const onWinnerSelected = vi.fn()
     const { battleCycle, battle } = createBattleProps("pointer-battle-seed")
     const [winnerId] = battle.pair
+    const winner = battleCycle.activeDeck.values.find(
+      ({ id }) => id === winnerId,
+    )
+    if (!winner) {
+      throw new Error("Projected winner definition is missing")
+    }
 
     render(
       <Crucible
@@ -70,18 +76,15 @@ describe("Crucible Component Integration", () => {
       />,
     )
 
-    const cardAIndicator = await screen.findByText("[1 / A]")
-    const cardA = cardAIndicator.closest("div")
-    if (!cardA) {
-      throw new Error("Card A was not rendered")
-    }
-
-    act(() => cardA.click())
-    expect(cardA.className).toContain("ring-8")
-    expect(onWinnerSelected).not.toHaveBeenCalled()
+    const cardA = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(winner)}`,
+    })
 
     act(() => cardA.click())
     expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
+
+    act(() => cardA.click())
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
   it("supports arrow focus, keyboard confirmation, and Escape", async () => {
@@ -100,16 +103,21 @@ describe("Crucible Component Integration", () => {
       />,
     )
 
-    const cardBIndicator = await screen.findByText("[2 / D]")
-    const cardB = cardBIndicator.closest("div")
-    if (!cardB) {
-      throw new Error("Card B was not rendered")
+    const winner = battleCycle.activeDeck.values.find(
+      ({ id }) => id === winnerId,
+    )
+    if (!winner) {
+      throw new Error("Projected winner definition is missing")
     }
+    const cardB = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(winner)}`,
+    })
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }))
     })
     expect(cardB.className).toContain("ring-8")
+    expect(cardB).toHaveFocus()
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }))
