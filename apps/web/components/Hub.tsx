@@ -2,15 +2,18 @@
 
 import { getValueDisplayName } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
+import type { Ref } from "react"
 import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 export default function Hub({
   rankedValues,
+  seeAllValuesButtonRef,
   onSeeAllValues,
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
+  seeAllValuesButtonRef?: Ref<HTMLButtonElement>
   onSeeAllValues: () => void
   onStartBattle: () => void
 }) {
@@ -67,6 +70,7 @@ export default function Hub({
       </section>
 
       <button
+        ref={seeAllValuesButtonRef}
         type="button"
         onClick={onSeeAllValues}
         className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark mt-10 w-full max-w-7xl cursor-pointer border-4 border-black py-5 text-4xl font-black uppercase shadow-[10px_10px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[10px] active:translate-y-[10px] active:shadow-none"

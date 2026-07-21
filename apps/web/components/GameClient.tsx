@@ -6,7 +6,7 @@ import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { webStorage } from "@/lib/WebStorage"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
@@ -17,6 +17,8 @@ export default function GameClient() {
   const [state, send] = useMachine(rootMachine, {
     input: { storage: webStorage },
   })
+  const seeAllValuesButtonRef = useRef<HTMLButtonElement>(null)
+  const shouldRestoreSeeAllValuesFocusRef = useRef(false)
   const battleCycle = state.context.battleCycle
   const rankedValues = useMemo(
     () =>
@@ -48,6 +50,10 @@ export default function GameClient() {
     },
     [send],
   )
+  const handleAllValuesClose = useCallback(() => {
+    shouldRestoreSeeAllValuesFocusRef.current = true
+    send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
+  }, [send])
 
   useEffect(() => {
     send({
@@ -56,6 +62,13 @@ export default function GameClient() {
       schedulerSeed: crypto.randomUUID(),
     })
   }, [send])
+
+  useEffect(() => {
+    if (state.matches("Hub") && shouldRestoreSeeAllValuesFocusRef.current) {
+      shouldRestoreSeeAllValuesFocusRef.current = false
+      seeAllValuesButtonRef.current?.focus()
+    }
+  }, [state])
 
   if (state.matches("Hydrating")) {
     return (
@@ -83,6 +96,7 @@ export default function GameClient() {
     return (
       <Hub
         rankedValues={rankedValues}
+        seeAllValuesButtonRef={seeAllValuesButtonRef}
         onSeeAllValues={() => send({ type: "ALL_VALUES.OPEN_REQUESTED" })}
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
       />
@@ -91,10 +105,7 @@ export default function GameClient() {
 
   if (state.matches("AllValues")) {
     return (
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={() => send({ type: "ALL_VALUES.CLOSE_REQUESTED" })}
-      />
+      <AllValues rankedValues={rankedValues} onClose={handleAllValuesClose} />
     )
   }
 

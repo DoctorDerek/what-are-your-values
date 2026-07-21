@@ -36,7 +36,7 @@ describe("GameClient Integration", () => {
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
 
     expect(await screen.findByText(`#1 ${winnerName}`)).toBeVisible()
-    expect(screen.getByText("LVL 2")).toBeVisible()
+    expect(screen.getByText("Level 2")).toBeVisible()
     expect(getItem).toHaveBeenCalledTimes(1)
     expect(getItem).toHaveBeenCalledWith("wayvm_uuid")
     expect(setItem).not.toHaveBeenCalled()
@@ -89,5 +89,6 @@ describe("GameClient Integration", () => {
     expect(
       screen.getByText("Keep comparing values to reveal your Top Five."),
     ).toBeVisible()
+    expect(screen.getByRole("button", { name: "See All Values" })).toHaveFocus()
   })
 })
