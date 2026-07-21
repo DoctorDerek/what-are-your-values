@@ -40,4 +40,27 @@ describe("createValueChoiceMotion", () => {
       y: 100,
     })
   })
+
+  it("removes every large spatial transition under reduced motion", () => {
+    expect(
+      createValueChoiceMotion({
+        isFirst: true,
+        isWinner: false,
+        isDefeated: true,
+        isAnimating: true,
+        shouldReduceMotion: true,
+      }),
+    ).toEqual({
+      initial: false,
+      animate: {
+        x: 0,
+        opacity: 0.3,
+        scale: 1,
+        filter: "grayscale(100%)",
+        y: 0,
+      },
+      exit: { opacity: 0, scale: 1 },
+      transition: { duration: 0 },
+    })
+  })
 })

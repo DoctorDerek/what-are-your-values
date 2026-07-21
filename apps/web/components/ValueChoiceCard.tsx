@@ -6,7 +6,7 @@ import {
   type ActiveValueDefinition,
   type ValueId,
 } from "@game/data/src/Value"
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
 import { forwardRef, useId } from "react"
 import { createValueChoiceMotion } from "@/components/ValueChoiceMotion"
 import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
@@ -54,11 +54,13 @@ export const ValueChoiceCard = forwardRef<
   const indicatorClasses = isFirst ? "top-8 left-8" : "top-8 right-8"
   const indicator = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
+  const shouldReduceMotion = useReducedMotion() === true
   const valueChoiceMotion = createValueChoiceMotion({
     isFirst,
     isWinner,
     isDefeated,
     isAnimating,
+    shouldReduceMotion,
   })
 
   return (
