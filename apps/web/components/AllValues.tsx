@@ -2,7 +2,7 @@
 
 import { getValueDisplayName } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
@@ -29,6 +29,17 @@ export default function AllValues({
   const hasComparisons = rankedValues.some(
     ({ progress }) => progress.profileComparisons > 0,
   )
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [onClose])
 
   return (
     <main className="noise-bg bg-mapache-vivid-dark min-h-[100dvh] w-full text-white">
