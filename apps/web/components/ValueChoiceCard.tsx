@@ -8,6 +8,7 @@ import {
 } from "@game/data/src/Value"
 import { motion } from "motion/react"
 import { forwardRef, useId } from "react"
+import { createValueChoiceMotion } from "@/components/ValueChoiceMotion"
 import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
 
 export type ValueChoicePosition = "first" | "second"
@@ -53,20 +54,20 @@ export const ValueChoiceCard = forwardRef<
   const indicatorClasses = isFirst ? "top-8 left-8" : "top-8 right-8"
   const indicator = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
+  const valueChoiceMotion = createValueChoiceMotion({
+    isFirst,
+    isWinner,
+    isDefeated,
+    isAnimating,
+  })
 
   return (
     <motion.div
       layout
-      initial={{ x: isFirst ? "-100%" : "100%", opacity: 0 }}
-      animate={{
-        x: 0,
-        opacity: isDefeated ? 0.3 : 1,
-        scale: isWinner ? 1.05 : isAnimating ? 0.9 : 1,
-        filter: isDefeated ? "grayscale(100%)" : "grayscale(0%)",
-        y: isDefeated ? (isFirst ? -100 : 100) : 0,
-      }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      initial={valueChoiceMotion.initial}
+      animate={valueChoiceMotion.animate}
+      exit={valueChoiceMotion.exit}
+      transition={valueChoiceMotion.transition}
       onAnimationComplete={onAnimationComplete}
       className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain`}
     >
