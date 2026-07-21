@@ -1,11 +1,7 @@
 "use client"
 
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
-import {
-  getValueDisplayDefinition,
-  getValueDisplayName,
-  type ValueId,
-} from "@game/data/src/Value"
+import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
 import {
   combatMachine,
@@ -14,8 +10,9 @@ import {
 import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
 import { useCallback, useEffect } from "react"
+import { ValueChoiceCard } from "./ValueChoiceCard"
 
 export default function Crucible({
   activeDeck,
@@ -123,91 +120,32 @@ export default function Crucible({
         Stop [ESC]
       </button>
 
-      {/*
-       * ONE-TIME EXCEPTION TO NO CODE COMMENT RULE:
-       * Animation (React Key Prop) Note: To ensure that Motion or other animations fire correctly —
-       * and that the cards have truly unique key props — the cards use the React key props
-       * key={`Card A: ${idA} vs. ${idB}`} and key={`Card B: ${idB} vs. ${idA}`}; this prevents a
-       * fixed regression (bug) where animations wouldn’t fire if the same value appeared twice
-       * on one side (“Card A” or “Card B”), which created an edge case of an extremely confusing UX
-       * because the repeat card didn’t animate correctly.
-       */}
       <AnimatePresence mode="popLayout">
-        <motion.div
+        <ValueChoiceCard
           key={`Card A: ${idA} vs. ${idB}`}
-          layout
-          initial={{ x: "-100%", opacity: 0 }}
-          animate={{
-            x: 0,
-            opacity: isAnimating && winnerId === idB ? 0.3 : 1,
-            scale:
-              isAnimating && winnerId === idA ? 1.05 : isAnimating ? 0.9 : 1,
-            filter:
-              isAnimating && winnerId === idB
-                ? "grayscale(100%)"
-                : "grayscale(0%)",
-            y: isAnimating && winnerId === idB ? -100 : 0,
-          }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          position="first"
+          value={valA}
+          level={levelA}
+          focusedId={focusedId}
+          winnerId={winnerId}
+          isAnimating={isAnimating}
+          onActivate={handleCardClick}
           onAnimationComplete={handleAnimationComplete}
-          onClick={() => handleCardClick(idA)}
-          className={`bg-mapache-vivid-primary-cyan flex flex-1 cursor-pointer flex-col items-center justify-center border-b-8 border-black p-8 hover:brightness-110 lg:border-r-8 lg:border-b-0 ${focusedId === idA ? "ring-8 ring-white ring-inset" : ""}`}
-        >
-          <span className="absolute top-8 left-8 text-3xl font-black text-black/40 uppercase drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] lg:text-5xl">
-            [1 / A]
-          </span>
-          <div className="text-center">
-            <span className="mb-10 inline-block border-4 border-black bg-white px-8 py-3 text-4xl font-black text-black uppercase shadow-[6px_6px_0px_0px_#000000]">
-              LVL {levelA}
-            </span>
-            <h2 className="mb-8 max-w-4xl text-6xl leading-none font-black tracking-tighter text-white uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-9xl">
-              {getValueDisplayName(valA)}
-            </h2>
-            <p className="mx-auto max-w-2xl border-2 border-white/20 bg-black/40 p-6 text-3xl font-bold text-white drop-shadow-[2px_2px_0px_#000000]">
-              &ldquo;{getValueDisplayDefinition(valA)}&rdquo;
-            </p>
-          </div>
-        </motion.div>
+        />
       </AnimatePresence>
 
       <AnimatePresence mode="popLayout">
-        <motion.div
+        <ValueChoiceCard
           key={`Card B: ${idB} vs. ${idA}`}
-          layout
-          initial={{ x: "100%", opacity: 0 }}
-          animate={{
-            x: 0,
-            opacity: isAnimating && winnerId === idA ? 0.3 : 1,
-            scale:
-              isAnimating && winnerId === idB ? 1.05 : isAnimating ? 0.9 : 1,
-            filter:
-              isAnimating && winnerId === idA
-                ? "grayscale(100%)"
-                : "grayscale(0%)",
-            y: isAnimating && winnerId === idA ? 100 : 0,
-          }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          position="second"
+          value={valB}
+          level={levelB}
+          focusedId={focusedId}
+          winnerId={winnerId}
+          isAnimating={isAnimating}
+          onActivate={handleCardClick}
           onAnimationComplete={handleAnimationComplete}
-          onClick={() => handleCardClick(idB)}
-          className={`bg-mapache-vivid-primary-raspberry flex flex-1 cursor-pointer flex-col items-center justify-center p-8 hover:brightness-110 ${focusedId === idB ? "ring-8 ring-white ring-inset" : ""}`}
-        >
-          <span className="absolute top-8 right-8 text-3xl font-black text-black/40 uppercase drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] lg:text-5xl">
-            [2 / D]
-          </span>
-          <div className="text-center">
-            <span className="mb-10 inline-block border-4 border-black bg-white px-8 py-3 text-4xl font-black text-black uppercase shadow-[6px_6px_0px_0px_#000000]">
-              LVL {levelB}
-            </span>
-            <h2 className="mb-8 max-w-4xl text-6xl leading-none font-black tracking-tighter text-white uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-9xl">
-              {getValueDisplayName(valB)}
-            </h2>
-            <p className="mx-auto max-w-2xl border-2 border-white/20 bg-black/40 p-6 text-3xl font-bold text-white drop-shadow-[2px_2px_0px_#000000]">
-              &ldquo;{getValueDisplayDefinition(valB)}&rdquo;
-            </p>
-          </div>
-        </motion.div>
+        />
       </AnimatePresence>
     </div>
   )
