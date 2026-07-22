@@ -202,4 +202,30 @@ describe("Battle Delta transitions", () => {
       projectScheduledPair(undone.activeDeck, undone.scheduler).pair,
     ).toEqual(candidate.delta.pair)
   })
+
+  it("rejects stale Undo and Redo source schedulers without mutating either state", () => {
+    const battleCycle = createInitialBattleCycle("stale-delta-source-seed")
+    const [winnerId] = projectScheduledPair(
+      battleCycle.activeDeck,
+      battleCycle.scheduler,
+    ).pair
+    const candidate = createBattleCycleCandidate({
+      battleCycle,
+      winnerId,
+      expectedScheduler: battleCycle.scheduler,
+    })
+    const priorProgressEntries = Array.from(battleCycle.progressById)
+    const resultingProgressEntries = Array.from(candidate.progressById)
+
+    expect(() =>
+      undoBattleDelta({ battleCycle, delta: candidate.delta }),
+    ).toThrow("Undo requires the Battle Delta resulting scheduler")
+    expect(() =>
+      redoBattleDelta({ battleCycle: candidate, delta: candidate.delta }),
+    ).toThrow("Redo requires the Battle Delta prior scheduler")
+    expect(Array.from(battleCycle.progressById)).toEqual(priorProgressEntries)
+    expect(Array.from(candidate.progressById)).toEqual(resultingProgressEntries)
+    expect(battleCycle.scheduler.cursor).toBe(0)
+    expect(candidate.scheduler.cursor).toBe(1)
+  })
 })
