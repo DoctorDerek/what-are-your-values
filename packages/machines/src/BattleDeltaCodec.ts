@@ -1,10 +1,6 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import {
-  createValueProgress,
-  type ValueProgress,
-} from "@game/data/src/ValueProgress"
-import {
   BATTLE_DELTA_VERSION,
   createBattleDelta,
   CYCLE_BOUNDARY_TRANSITION_VERSION,
@@ -39,13 +35,11 @@ import {
   encodeValueNumberEntries,
   type EncodedValueNumberEntry,
 } from "./ValueNumberMapCodec"
-
-type EncodedValueProgress = readonly [
-  totalXp: number,
-  profileWins: number,
-  profileComparisons: number,
-  currentCycleWins: number,
-]
+import {
+  decodeValueProgress,
+  encodeValueProgress,
+  type EncodedValueProgress,
+} from "./ValueProgressCodec"
 
 type EncodedCycleBoundaryTransition = readonly [
   version: number,
@@ -75,15 +69,6 @@ export type EncodedBattleDelta = readonly [
   resultingScheduler: EncodedSchedulerRestorePoint,
   cycleBoundary: EncodedCycleBoundaryTransition | null,
 ]
-
-function encodeValueProgress(progress: ValueProgress): EncodedValueProgress {
-  return [
-    progress.totalXp,
-    progress.profileWins,
-    progress.profileComparisons,
-    progress.currentCycleWins,
-  ]
-}
 
 function encodeCycleBoundaryTransition(
   boundary: CycleBoundaryTransition,
@@ -125,23 +110,6 @@ export function encodeBattleDelta(delta: BattleDelta): EncodedBattleDelta {
 export function getEncodedBattleDeltaByteLength(delta: BattleDelta) {
   return new TextEncoder().encode(JSON.stringify(encodeBattleDelta(delta)))
     .byteLength
-}
-
-function decodeValueProgress(valueId: ValueId, value: unknown, label: string) {
-  const tuple = readTuple(value, 4, label)
-
-  return createValueProgress(valueId, {
-    totalXp: readNonNegativeSafeInteger(tuple[0], `${label} total XP`),
-    profileWins: readNonNegativeSafeInteger(tuple[1], `${label} profile wins`),
-    profileComparisons: readNonNegativeSafeInteger(
-      tuple[2],
-      `${label} profile comparisons`,
-    ),
-    currentCycleWins: readNonNegativeSafeInteger(
-      tuple[3],
-      `${label} current-cycle wins`,
-    ),
-  })
 }
 
 function decodeCycleBoundaryTransition(
