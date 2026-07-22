@@ -1,4 +1,7 @@
-import { getValueDisplayName } from "@game/data/src/Value"
+import {
+  getValueDisplayDefinition,
+  getValueDisplayName,
+} from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
   createBattleCycleCandidate,
@@ -27,9 +30,10 @@ describe("All Values Component Integration", () => {
     expect(screen.queryByText("Top Five")).not.toBeInTheDocument()
     expect(
       screen.getByText(
-        `What ${getValueDisplayName(rankedValues[0].definition)} means`,
+        `“${getValueDisplayDefinition(rankedValues[0].definition)}”`,
       ),
     ).toBeVisible()
+    expect(document.querySelector("details")).not.toBeInTheDocument()
   })
 
   it("filters without reordering ranks and restores the complete list", () => {

@@ -90,7 +90,7 @@ describe("Crucible Component Integration", () => {
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
-  it("opens a sibling definition without choosing or advancing the value", async () => {
+  it("shows the definition inside the one-tap value choice", async () => {
     const onWinnerSelected = vi.fn()
     const { battleCycle, battle } = createBattleProps("definition-battle-seed")
     const [valueId] = battle.pair
@@ -114,21 +114,16 @@ describe("Crucible Component Integration", () => {
     const choice = await screen.findByRole("button", {
       name: `Choose ${getValueDisplayName(definition)}`,
     })
-    const definitionControl = screen.getByText(
-      `What ${getValueDisplayName(definition)} means`,
+    const definitionCopy = screen.getByText(
+      `“${getValueDisplayDefinition(definition)}”`,
     )
 
     expect(choice).toHaveAccessibleDescription(
-      getValueDisplayDefinition(definition),
+      `“${getValueDisplayDefinition(definition)}”`,
     )
-    expect(choice).not.toContainElement(definitionControl)
-    fireEvent.click(definitionControl)
-    expect(
-      definitionControl.closest("details")?.querySelector("p"),
-    ).toHaveTextContent(getValueDisplayDefinition(definition))
-    expect(onWinnerSelected).not.toHaveBeenCalled()
-
-    fireEvent.click(choice)
+    expect(choice).toContainElement(definitionCopy)
+    expect(document.querySelector("details")).not.toBeInTheDocument()
+    fireEvent.click(definitionCopy)
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
@@ -210,13 +205,9 @@ describe("Crucible Component Integration", () => {
       const heading = screen.getByRole("heading", {
         name: getValueDisplayName(definition),
       })
-      const definitionControl = screen.getByText(
-        `What ${getValueDisplayName(definition)} means`,
+      const definitionCopy = screen.getByText(
+        `“${getValueDisplayDefinition(definition)}”`,
       )
-      fireEvent.click(definitionControl)
-      const definitionCopy = definitionControl
-        .closest("details")
-        ?.querySelector("p")
 
       expect(choice.parentElement).toHaveClass(
         "min-h-0",

@@ -72,10 +72,10 @@ describe("Hub Component Integration", () => {
       screen.getByRole("progressbar", { name: "XP toward Level 3" }),
     ).toHaveAttribute("aria-valuenow", "0")
 
-    fireEvent.click(
-      screen.getByText(`What ${getValueDisplayName(winner)} means`),
-    )
-    expect(screen.getByText(getValueDisplayDefinition(winner))).toBeVisible()
+    expect(
+      screen.getByText(`“${getValueDisplayDefinition(winner)}”`),
+    ).toBeVisible()
+    expect(document.querySelector("details")).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
     expect(onSeeAllValues).toHaveBeenCalledTimes(1)

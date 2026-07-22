@@ -1,9 +1,11 @@
 "use client"
 
-import { getValueDisplayName } from "@game/data/src/Value"
+import {
+  getValueDisplayDefinition,
+  getValueDisplayName,
+} from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import type { Ref } from "react"
-import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 export default function Hub({
@@ -56,9 +58,9 @@ export default function Hub({
                   ) : null}
                   <ValueLevelProgress totalXp={progress.totalXp} />
                 </div>
-                <div className="mt-4">
-                  <ValueDefinitionDisclosure definition={definition} />
-                </div>
+                <p className="mt-4 border-t-4 border-black bg-white p-3 text-lg leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-black">
+                  “{getValueDisplayDefinition(definition)}”
+                </p>
               </li>
             ))}
           </ol>

@@ -9,7 +9,6 @@ import {
 import { motion, useReducedMotion } from "motion/react"
 import { forwardRef, useId } from "react"
 import { createValueChoiceMotion } from "@/components/ValueChoiceMotion"
-import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
 
 export type ValueChoicePosition = "first" | "second"
 
@@ -95,15 +94,14 @@ export const ValueChoiceCard = forwardRef<
           <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(2.25rem,8vw,8rem)] leading-none font-black [overflow-wrap:anywhere] break-words whitespace-normal text-white uppercase drop-shadow-[6px_6px_0px_#000000]">
             {displayName}
           </h2>
+          <p
+            id={accessibleDefinitionId}
+            className="mx-auto mt-8 max-w-2xl border-2 border-white/20 bg-black/40 p-5 text-[clamp(1.25rem,3vw,1.875rem)] leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-white drop-shadow-[2px_2px_0px_#000000] sm:p-6"
+          >
+            “{getValueDisplayDefinition(value)}”
+          </p>
         </div>
       </button>
-
-      <span id={accessibleDefinitionId} className="sr-only">
-        {getValueDisplayDefinition(value)}
-      </span>
-      <div className="relative z-10 w-full shrink-0 px-4 pb-4 sm:px-6 sm:pb-6">
-        <ValueDefinitionDisclosure definition={value} />
-      </div>
     </motion.div>
   )
 })
