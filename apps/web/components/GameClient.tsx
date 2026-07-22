@@ -19,26 +19,26 @@ export default function GameClient() {
   })
   const seeAllValuesButtonRef = useRef<HTMLButtonElement>(null)
   const shouldRestoreSeeAllValuesFocusRef = useRef(false)
-  const battleCycle = state.context.battleCycle
+  const battleProfile = state.context.battleProfile
   const rankedValues = useMemo(
     () =>
-      battleCycle
-        ? rankValues(battleCycle.activeDeck, battleCycle.progressById)
+      battleProfile
+        ? rankValues(battleProfile.activeDeck, battleProfile.progressById)
         : [],
-    [battleCycle],
+    [battleProfile],
   )
   const presentedBattle = useMemo(
     () =>
-      battleCycle
+      battleProfile
         ? Object.freeze({
             pair: projectScheduledPair(
-              battleCycle.activeDeck,
-              battleCycle.scheduler,
+              battleProfile.activeDeck,
+              battleProfile.scheduler,
             ).pair,
-            scheduler: battleCycle.scheduler,
+            scheduler: battleProfile.scheduler,
           })
         : null,
-    [battleCycle],
+    [battleProfile],
   )
   const handleWinnerSelected = useCallback(
     (winnerId: ValueId, expectedScheduler: SchedulerRestorePoint) => {
@@ -88,7 +88,7 @@ export default function GameClient() {
     )
   }
 
-  if (!battleCycle || !presentedBattle) {
+  if (!battleProfile || !presentedBattle) {
     throw new Error("Battle profile is unavailable after hydration")
   }
 
@@ -112,9 +112,9 @@ export default function GameClient() {
   if (state.matches("Crucible")) {
     return (
       <Crucible
-        activeDeck={battleCycle.activeDeck}
+        activeDeck={battleProfile.activeDeck}
         battle={presentedBattle}
-        progressById={battleCycle.progressById}
+        progressById={battleProfile.progressById}
         onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
         onWinnerSelected={handleWinnerSelected}
       />

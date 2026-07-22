@@ -23,7 +23,11 @@ describe("Root Machine", () => {
 
     let snapshot = actor.getSnapshot()
     expect(snapshot.matches("Splash")).toBe(true)
-    expect(snapshot.context.battleCycle?.activeDeck.valueIds).toHaveLength(100)
+    expect(snapshot.context.battleProfile?.activeDeck.valueIds).toHaveLength(
+      100,
+    )
+    expect(snapshot.context.battleProfile?.history).toEqual([])
+    expect(snapshot.context.battleProfile?.redo).toEqual([])
     expect(storage.setItem).not.toHaveBeenCalled()
 
     actor.send({
@@ -70,16 +74,16 @@ describe("Root Machine", () => {
       schedulerSeed: "all-values-profile-seed",
     })
 
-    const battleCycle = actor.getSnapshot().context.battleCycle
+    const battleProfile = actor.getSnapshot().context.battleProfile
     actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
 
     expect(actor.getSnapshot().matches("AllValues")).toBe(true)
-    expect(actor.getSnapshot().context.battleCycle).toBe(battleCycle)
+    expect(actor.getSnapshot().context.battleProfile).toBe(battleProfile)
 
     actor.send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
 
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
-    expect(actor.getSnapshot().context.battleCycle).toBe(battleCycle)
+    expect(actor.getSnapshot().context.battleProfile).toBe(battleProfile)
   })
 
   it("commits one trusted battle and ignores duplicate stale selection events", () => {
@@ -95,43 +99,47 @@ describe("Root Machine", () => {
     actor.send({ type: "BATTLE.START_REQUESTED" })
 
     const awaitingSnapshot = actor.getSnapshot()
-    const awaitingBattleCycle = awaitingSnapshot.context.battleCycle
-    if (!awaitingBattleCycle) {
+    const awaitingBattleProfile = awaitingSnapshot.context.battleProfile
+    if (!awaitingBattleProfile) {
       throw new Error("Battle profile did not initialize")
     }
 
     const [winnerId, loserId] = projectScheduledPair(
-      awaitingBattleCycle.activeDeck,
-      awaitingBattleCycle.scheduler,
+      awaitingBattleProfile.activeDeck,
+      awaitingBattleProfile.scheduler,
     ).pair
     const selectionEvent = {
       type: "BATTLE.WINNER_SELECTED" as const,
       winnerId,
-      expectedScheduler: awaitingBattleCycle.scheduler,
+      expectedScheduler: awaitingBattleProfile.scheduler,
     }
     actor.send(selectionEvent)
 
     const committedSnapshot = actor.getSnapshot()
-    const committedBattleCycle = committedSnapshot.context.battleCycle
-    if (!committedBattleCycle) {
+    const committedBattleProfile = committedSnapshot.context.battleProfile
+    if (!committedBattleProfile) {
       throw new Error("Battle profile disappeared after selection")
     }
 
     expect(committedSnapshot.matches("Crucible")).toBe(true)
-    expect(committedBattleCycle.scheduler.cursor).toBe(1)
-    expect(committedBattleCycle.progressById.get(winnerId)).toMatchObject({
+    expect(committedBattleProfile.scheduler.cursor).toBe(1)
+    expect(committedBattleProfile.history).toHaveLength(1)
+    expect(committedBattleProfile.redo).toEqual([])
+    expect(committedBattleProfile.progressById.get(winnerId)).toMatchObject({
       totalXp: 1,
       profileWins: 1,
       profileComparisons: 1,
     })
-    expect(committedBattleCycle.progressById.get(loserId)).toMatchObject({
+    expect(committedBattleProfile.progressById.get(loserId)).toMatchObject({
       totalXp: 0,
       profileWins: 0,
       profileComparisons: 1,
     })
 
     actor.send(selectionEvent)
-    expect(actor.getSnapshot().context.battleCycle).toBe(committedBattleCycle)
+    expect(actor.getSnapshot().context.battleProfile).toBe(
+      committedBattleProfile,
+    )
 
     actor.send({ type: "BATTLE.EXIT_REQUESTED" })
     expect(actor.getSnapshot().matches("Hub")).toBe(true)

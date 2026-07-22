@@ -1,10 +1,10 @@
 import type { ValueId } from "@game/data/src/Value"
 import { assign, setup } from "xstate"
 import {
-  createBattleCycleCandidate,
-  createInitialBattleCycle,
-  type BattleCycleState,
-} from "./BattleCycle"
+  applyBattleChoice,
+  createInitialBattleProfile,
+  type BattleProfile,
+} from "./BattleProfile"
 import {
   projectScheduledPair,
   type SchedulerRestorePoint,
@@ -16,7 +16,7 @@ export const rootMachine = setup({
   types: {
     context: {} as {
       uuid: string | null
-      battleCycle: BattleCycleState | null
+      battleProfile: BattleProfile | null
       storage: StorageAdapter
     },
     events: {} as
@@ -39,13 +39,13 @@ export const rootMachine = setup({
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
-      if (event.type !== "BATTLE.WINNER_SELECTED" || !context.battleCycle) {
+      if (event.type !== "BATTLE.WINNER_SELECTED" || !context.battleProfile) {
         return false
       }
 
       if (
         !areSchedulerIdentitiesEqual(
-          context.battleCycle.scheduler,
+          context.battleProfile.scheduler,
           event.expectedScheduler,
         )
       ) {
@@ -53,8 +53,8 @@ export const rootMachine = setup({
       }
 
       return projectScheduledPair(
-        context.battleCycle.activeDeck,
-        context.battleCycle.scheduler,
+        context.battleProfile.activeDeck,
+        context.battleProfile.scheduler,
       ).pair.includes(event.winnerId)
     },
   },
@@ -72,7 +72,7 @@ export const rootMachine = setup({
   initial: "Hydrating",
   context: ({ input }) => ({
     uuid: null,
-    battleCycle: null,
+    battleProfile: null,
     storage: input.storage,
   }),
   states: {
@@ -84,16 +84,16 @@ export const rootMachine = setup({
             target: "Hub",
             actions: assign({
               uuid: ({ event }) => event.uuid,
-              battleCycle: ({ event }) =>
-                createInitialBattleCycle(event.schedulerSeed),
+              battleProfile: ({ event }) =>
+                createInitialBattleProfile(event.schedulerSeed),
             }),
           },
           {
             target: "Splash",
             actions: assign({
               uuid: ({ event }) => event.uuid,
-              battleCycle: ({ event }) =>
-                createInitialBattleCycle(event.schedulerSeed),
+              battleProfile: ({ event }) =>
+                createInitialBattleProfile(event.schedulerSeed),
             }),
           },
         ],
@@ -129,16 +129,16 @@ export const rootMachine = setup({
         "BATTLE.WINNER_SELECTED": {
           guard: "isCurrentBattleSelection",
           actions: assign({
-            battleCycle: ({ context, event }) => {
-              if (!context.battleCycle) {
+            battleProfile: ({ context, event }) => {
+              if (!context.battleProfile) {
                 throw new Error("Battle profile is not initialized")
               }
 
-              return createBattleCycleCandidate({
-                battleCycle: context.battleCycle,
+              return applyBattleChoice({
+                profile: context.battleProfile,
                 winnerId: event.winnerId,
                 expectedScheduler: event.expectedScheduler,
-              })
+              }).profile
             },
           }),
         },
