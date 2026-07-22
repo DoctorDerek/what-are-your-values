@@ -11,10 +11,12 @@ import {
   createEmptyBattleTimeline,
   takeBattleTimelineRedo,
   takeBattleTimelineUndo,
+  validateBattleTimeline,
   type BattleTimeline,
   type BattleTimelineLimits,
 } from "./BattleTimeline"
 import type { SchedulerRestorePoint } from "./PairScheduler"
+import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 export type BattleProfile = BattleCycleState & BattleTimeline
 
@@ -35,6 +37,81 @@ function createBattleProfile(
     history: timeline.history,
     redo: timeline.redo,
   }) satisfies BattleProfile
+}
+
+function assertBattleCycleStateEquals(
+  actual: BattleCycleState,
+  expected: BattleCycleState,
+) {
+  if (!areSchedulerIdentitiesEqual(actual.scheduler, expected.scheduler)) {
+    throw new Error("Battle Profile scheduler does not match retained History")
+  }
+
+  expected.activeDeck.valueIds.forEach((valueId) => {
+    const actualProgress = actual.progressById.get(valueId)
+    const expectedProgress = expected.progressById.get(valueId)
+
+    if (
+      !actualProgress ||
+      !expectedProgress ||
+      actualProgress.totalXp !== expectedProgress.totalXp ||
+      actualProgress.profileWins !== expectedProgress.profileWins ||
+      actualProgress.profileComparisons !==
+        expectedProgress.profileComparisons ||
+      actualProgress.currentCycleWins !== expectedProgress.currentCycleWins
+    ) {
+      throw new Error(
+        `Battle Profile progress does not match retained History for ${valueId}`,
+      )
+    }
+
+    if (
+      actual.cycleLevelSnapshot.get(valueId) !==
+      expected.cycleLevelSnapshot.get(valueId)
+    ) {
+      throw new Error(
+        `Battle Profile cycle snapshot does not match retained History for ${valueId}`,
+      )
+    }
+  })
+}
+
+export function validateBattleProfile(
+  profile: BattleProfile,
+  timelineLimits?: BattleTimelineLimits,
+) {
+  const timeline = validateBattleTimeline({
+    timeline: profile,
+    activeValueCount: profile.activeDeck.valueIds.length,
+    limits: timelineLimits,
+  })
+  let historyBase: BattleCycleState = profile
+
+  for (let index = timeline.history.length - 1; index >= 0; index -= 1) {
+    historyBase = undoBattleDelta({
+      battleCycle: historyBase,
+      delta: timeline.history[index],
+    })
+  }
+
+  const replayedCurrentState = timeline.history.reduce(
+    (battleCycle, delta) => redoBattleDelta({ battleCycle, delta }),
+    historyBase,
+  )
+  assertBattleCycleStateEquals(replayedCurrentState, profile)
+
+  for (
+    let index = timeline.redo.length - 1, redoState: BattleCycleState = profile;
+    index >= 0;
+    index -= 1
+  ) {
+    redoState = redoBattleDelta({
+      battleCycle: redoState,
+      delta: timeline.redo[index],
+    })
+  }
+
+  return createBattleProfile(profile, timeline)
 }
 
 function createBattleProfileTransition(

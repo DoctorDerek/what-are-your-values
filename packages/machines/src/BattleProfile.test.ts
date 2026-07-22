@@ -4,6 +4,7 @@ import {
   applyBattleRedo,
   applyBattleUndo,
   createInitialBattleProfile,
+  validateBattleProfile,
 } from "./BattleProfile"
 import { projectScheduledPair } from "./PairScheduler"
 
@@ -90,5 +91,42 @@ describe("Battle Profile", () => {
     expect(applyBattleRedo(profile)).toBeNull()
     expect(profile.history).toEqual([])
     expect(profile.redo).toEqual([])
+  })
+
+  it("validates retained History and Redo as one executable transition chain", () => {
+    const initial = createInitialBattleProfile("profile-validation-seed")
+    const first = chooseValue(initial, 0)
+    const second = chooseValue(first.profile, 1)
+    const firstUndo = applyBattleUndo(second.profile)
+    if (!firstUndo) {
+      throw new Error("The second battle cannot be undone")
+    }
+    const secondUndo = applyBattleUndo(firstUndo.profile)
+    if (!secondUndo) {
+      throw new Error("The first battle cannot be undone")
+    }
+
+    expect(validateBattleProfile(firstUndo.profile)).toEqual(firstUndo.profile)
+    expect(validateBattleProfile(secondUndo.profile)).toEqual(
+      secondUndo.profile,
+    )
+    expect(() =>
+      validateBattleProfile({
+        ...secondUndo.profile,
+        redo: [...secondUndo.profile.redo].reverse(),
+      }),
+    ).toThrow("Redo requires the Battle Delta prior scheduler")
+  })
+
+  it("rejects a current profile that disagrees with its retained History", () => {
+    const initial = createInitialBattleProfile("profile-tamper-seed")
+    const committed = chooseValue(initial, 0)
+
+    expect(() =>
+      validateBattleProfile({
+        ...committed.profile,
+        progressById: initial.progressById,
+      }),
+    ).toThrow("Undo progress does not match Battle Delta")
   })
 })
