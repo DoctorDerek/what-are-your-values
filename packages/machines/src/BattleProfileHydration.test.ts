@@ -5,6 +5,9 @@ import { hydrateBattleProfileStore } from "./BattleProfileHydration"
 import {
   BATTLE_PROFILE_JOURNAL_KEY_PREFIX,
   BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_QUARANTINE_KEY,
+  BATTLE_PROFILE_SNAPSHOT_A_KEY,
+  BATTLE_PROFILE_SNAPSHOT_B_KEY,
   commitBattleProfileStoreEvent,
   initializeBattleProfileStore,
 } from "./BattleProfileStore"
@@ -28,6 +31,27 @@ function createChoiceEvent(
   )
 }
 
+async function createCommittedStore(seed: string, generationCount: number) {
+  const store = createInMemoryDurableStore()
+  let state = await initializeBattleProfileStore({
+    store,
+    profile: createInitialBattleProfile(seed),
+    createdAt: "2026-07-21T00:00:00.000Z",
+    appVersion: "0.1.0",
+  })
+
+  for (let generation = 1; generation <= generationCount; generation += 1) {
+    state = await commitBattleProfileStoreEvent({
+      store,
+      state,
+      event: createChoiceEvent(state.head.profile),
+      committedAt: new Date(Date.UTC(2026, 6, 21, 0, generation)).toISOString(),
+    })
+  }
+
+  return { store, state }
+}
+
 describe("Battle Profile Hydration", () => {
   it("reports an untouched store as empty", async () => {
     await expect(
@@ -39,24 +63,7 @@ describe("Battle Profile Hydration", () => {
   })
 
   it("reconstructs the manifest head from its active checkpoint and journals", async () => {
-    const store = createInMemoryDurableStore()
-    let state = await initializeBattleProfileStore({
-      store,
-      profile: createInitialBattleProfile("hydration-seed"),
-      createdAt: "2026-07-21T00:00:00.000Z",
-      appVersion: "0.1.0",
-    })
-
-    for (let generation = 1; generation <= 40; generation += 1) {
-      state = await commitBattleProfileStoreEvent({
-        store,
-        state,
-        event: createChoiceEvent(state.head.profile),
-        committedAt: new Date(
-          Date.UTC(2026, 6, 21, 0, generation),
-        ).toISOString(),
-      })
-    }
+    const { store, state } = await createCommittedStore("hydration-seed", 40)
 
     await expect(
       hydrateBattleProfileStore({ store, appVersion: "0.2.0" }),
@@ -66,7 +73,7 @@ describe("Battle Profile Hydration", () => {
     })
   })
 
-  it("preserves all bytes and requests recovery when a journal is missing", async () => {
+  it("recovers the newest contiguous checkpoint when a journal is missing", async () => {
     const store = createInMemoryDurableStore()
     let state = await initializeBattleProfileStore({
       store,
@@ -91,20 +98,22 @@ describe("Battle Profile Hydration", () => {
       putEntries: [],
       deleteKeys: [`${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}1`],
     })
-    const damagedEntries = await store.readAll()
     const result = await hydrateBattleProfileStore({
       store,
       appVersion: "0.1.0",
     })
 
     expect(result).toMatchObject({
-      status: "recovery-required",
-      issue: "Battle Profile journal generation 1 is missing",
+      status: "ready",
+      state: {
+        head: { generation: 0, revision: 0 },
+        manifest: { headGeneration: 0, headRevision: 0 },
+      },
     })
-    await expect(store.readAll()).resolves.toEqual(damagedEntries)
+    expect(result).toHaveProperty("recoveryNotice")
   })
 
-  it("preserves corrupt manifest bytes for recovery", async () => {
+  it("rebuilds a corrupt manifest from the newest valid checkpoint", async () => {
     const store = createInMemoryDurableStore()
     await initializeBattleProfileStore({
       store,
@@ -126,11 +135,111 @@ describe("Battle Profile Hydration", () => {
     await expect(
       hydrateBattleProfileStore({ store, appVersion: "0.1.0" }),
     ).resolves.toMatchObject({
-      status: "recovery-required",
-      issue: "Persisted JSON is malformed",
+      status: "ready",
+      state: { head: { generation: 0, revision: 0 } },
     })
-    await expect(store.readAll()).resolves.toEqual(
-      new Map(entries).set(BATTLE_PROFILE_MANIFEST_KEY, "corrupt"),
+    expect((await store.readAll()).get(BATTLE_PROFILE_MANIFEST_KEY)).not.toBe(
+      "corrupt",
     )
+  })
+
+  it("restores a corrupt active slot from the fallback and quarantines its bytes", async () => {
+    const { store } = await createCommittedStore("fallback-recovery-seed", 40)
+    const entries = await store.readAll()
+    const activeCheckpointBytes = entries.get(BATTLE_PROFILE_SNAPSHOT_B_KEY)
+    if (!activeCheckpointBytes) {
+      throw new Error("The active checkpoint fixture is missing")
+    }
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_SNAPSHOT_B_KEY, activeCheckpointBytes]],
+      putEntries: [[BATTLE_PROFILE_SNAPSHOT_B_KEY, "corrupt-checkpoint"]],
+      deleteKeys: [],
+    })
+
+    const result = await hydrateBattleProfileStore({
+      store,
+      appVersion: "0.2.0",
+    })
+    const recoveredEntries = await store.readAll()
+
+    expect(result).toMatchObject({
+      status: "ready",
+      state: {
+        head: { generation: 40, revision: 40 },
+        manifest: {
+          activeSlot: "b",
+          checkpointGeneration: 40,
+          headGeneration: 40,
+        },
+      },
+    })
+    expect(recoveredEntries.get(BATTLE_PROFILE_QUARANTINE_KEY)).toBe(
+      "corrupt-checkpoint",
+    )
+    expect(recoveredEntries.get(BATTLE_PROFILE_SNAPSHOT_A_KEY)).toBe(
+      entries.get(BATTLE_PROFILE_SNAPSHOT_A_KEY),
+    )
+  })
+
+  it("requires explicit recovery when neither checkpoint is readable", async () => {
+    const store = createInMemoryDurableStore()
+    await initializeBattleProfileStore({
+      store,
+      profile: createInitialBattleProfile("unreadable-slots-seed"),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const entries = await store.readAll()
+    const snapshotABytes = entries.get(BATTLE_PROFILE_SNAPSHOT_A_KEY)
+    if (!snapshotABytes) {
+      throw new Error("The slot A fixture is missing")
+    }
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_SNAPSHOT_A_KEY, snapshotABytes]],
+      putEntries: [[BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-a"]],
+      deleteKeys: [],
+    })
+    const damagedEntries = await store.readAll()
+
+    await expect(
+      hydrateBattleProfileStore({ store, appVersion: "0.1.0" }),
+    ).resolves.toMatchObject({
+      status: "recovery-required",
+      issue: expect.stringContaining(
+        "Both Battle Profile checkpoint slots are unreadable",
+      ),
+    })
+    await expect(store.readAll()).resolves.toEqual(damagedEntries)
+  })
+
+  it("does not replace an existing quarantine during fallback recovery", async () => {
+    const { store } = await createCommittedStore("occupied-quarantine-seed", 32)
+    const entries = await store.readAll()
+    const snapshotBBytes = entries.get(BATTLE_PROFILE_SNAPSHOT_B_KEY)
+    if (!snapshotBBytes) {
+      throw new Error("The slot B fixture is missing")
+    }
+    await store.compareAndSwapVerified({
+      expectedEntries: [
+        [BATTLE_PROFILE_SNAPSHOT_B_KEY, snapshotBBytes],
+        [BATTLE_PROFILE_QUARANTINE_KEY, null],
+      ],
+      putEntries: [
+        [BATTLE_PROFILE_SNAPSHOT_B_KEY, "corrupt-b"],
+        [BATTLE_PROFILE_QUARANTINE_KEY, "prior-quarantine"],
+      ],
+      deleteKeys: [],
+    })
+    const damagedEntries = await store.readAll()
+
+    await expect(
+      hydrateBattleProfileStore({ store, appVersion: "0.1.0" }),
+    ).resolves.toMatchObject({
+      status: "recovery-required",
+      issue: expect.stringContaining(
+        "Existing quarantine must be exported or discarded first",
+      ),
+    })
+    await expect(store.readAll()).resolves.toEqual(damagedEntries)
   })
 })

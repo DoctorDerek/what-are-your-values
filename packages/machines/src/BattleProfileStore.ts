@@ -81,6 +81,18 @@ export function readBattleProfileJournalKeyGeneration(key: string) {
   return generation
 }
 
+export function getSortedBattleProfileJournalKeys(
+  entries: ReadonlyMap<string, string>,
+) {
+  return Array.from(entries.keys())
+    .filter((key) => key.startsWith(BATTLE_PROFILE_JOURNAL_KEY_PREFIX))
+    .map((key) => ({
+      key,
+      generation: readBattleProfileJournalKeyGeneration(key),
+    }))
+    .sort((first, second) => first.generation - second.generation)
+}
+
 export async function initializeBattleProfileStore({
   store,
   profile,

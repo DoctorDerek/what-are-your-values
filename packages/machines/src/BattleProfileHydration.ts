@@ -1,6 +1,7 @@
 import { decodeBattleProfileCheckpoint } from "./BattleProfileCheckpoint"
 import { replayBattleProfileJournalToGeneration } from "./BattleProfileJournalReplay"
 import { decodeBattleProfileManifest } from "./BattleProfileManifest"
+import { recoverBattleProfileStore } from "./BattleProfileRecovery"
 import {
   BATTLE_PROFILE_JOURNAL_KEY_PREFIX,
   BATTLE_PROFILE_MANIFEST_KEY,
@@ -8,14 +9,18 @@ import {
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
   createBattleProfileStoreState,
-  readBattleProfileJournalKeyGeneration,
+  getSortedBattleProfileJournalKeys,
   type BattleProfileStoreState,
 } from "./BattleProfileStore"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
 
 export type BattleProfileHydrationResult =
   | { readonly status: "empty" }
-  | { readonly status: "ready"; readonly state: BattleProfileStoreState }
+  | {
+      readonly status: "ready"
+      readonly state: BattleProfileStoreState
+      readonly recoveryNotice?: string
+    }
   | {
       readonly status: "recovery-required"
       readonly issue: string
@@ -35,16 +40,6 @@ function hasBattleProfileRecords(entries: ReadonlyMap<string, string>) {
       key === BATTLE_PROFILE_QUARANTINE_KEY ||
       key.startsWith(BATTLE_PROFILE_JOURNAL_KEY_PREFIX),
   )
-}
-
-function getSortedJournalKeys(entries: ReadonlyMap<string, string>) {
-  return Array.from(entries.keys())
-    .filter((key) => key.startsWith(BATTLE_PROFILE_JOURNAL_KEY_PREFIX))
-    .map((key) => ({
-      key,
-      generation: readBattleProfileJournalKeyGeneration(key),
-    }))
-    .sort((first, second) => first.generation - second.generation)
 }
 
 export async function hydrateBattleProfileStore({
@@ -81,7 +76,9 @@ export async function hydrateBattleProfileStore({
       throw new Error("Active checkpoint does not match the manifest")
     }
 
-    const journalKeys = getSortedJournalKeys(entries).map(({ key }) => key)
+    const journalKeys = getSortedBattleProfileJournalKeys(entries).map(
+      ({ key }) => key,
+    )
     const head = await replayBattleProfileJournalToGeneration({
       entries,
       checkpoint,
@@ -108,10 +105,21 @@ export async function hydrateBattleProfileStore({
       }),
     })
   } catch (error: unknown) {
-    return Object.freeze({
-      status: "recovery-required",
-      issue: getErrorMessage(error),
-      entries: new Map(entries),
-    })
+    const cleanHydrationIssue = getErrorMessage(error)
+
+    try {
+      return await recoverBattleProfileStore({
+        store,
+        entries,
+        appVersion,
+        cleanHydrationIssue,
+      })
+    } catch (recoveryError: unknown) {
+      return Object.freeze({
+        status: "recovery-required",
+        issue: `${cleanHydrationIssue}; ${getErrorMessage(recoveryError)}`,
+        entries: new Map(entries),
+      })
+    }
   }
 }

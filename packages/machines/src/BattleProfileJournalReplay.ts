@@ -53,3 +53,48 @@ export async function replayBattleProfileJournalToGeneration({
 
   return head
 }
+
+export async function replayAvailableBattleProfileJournal({
+  entries,
+  checkpoint,
+  maximumGeneration,
+}: {
+  readonly entries: ReadonlyMap<string, string>
+  readonly checkpoint: BattleProfileCheckpoint
+  readonly maximumGeneration: number
+}) {
+  let head = createBattleProfileCheckpointHead(checkpoint)
+  let updatedAt = checkpoint.updatedAt
+  let stoppedIssue: string | null = null
+
+  for (
+    let generation = checkpoint.generation + 1;
+    generation <= maximumGeneration;
+    generation += 1
+  ) {
+    const serialized = entries.get(getBattleProfileJournalKey(generation))
+    if (!serialized) {
+      stoppedIssue = `Battle Profile journal generation ${generation} is missing`
+      break
+    }
+
+    try {
+      const record = await decodeBattleProfileJournalRecord(
+        head.profile.activeDeck,
+        serialized,
+      )
+      if (record.generation !== generation) {
+        throw new Error(
+          `Battle Profile journal key disagrees at generation ${generation}`,
+        )
+      }
+      head = applyBattleProfileJournalRecord(head, record)
+      updatedAt = record.committedAt
+    } catch (error: unknown) {
+      stoppedIssue = error instanceof Error ? error.message : String(error)
+      break
+    }
+  }
+
+  return Object.freeze({ head, updatedAt, stoppedIssue })
+}
