@@ -9,6 +9,7 @@ import {
 import {
   beginNextValueProgressCycle,
   createInitialValueProgress,
+  createValueProgress,
   createValueProgressById,
   reconfigureValueProgress,
   resetValueProgress,
@@ -218,6 +219,19 @@ describe("Value Progress reconfiguration", () => {
 })
 
 describe("Value Progress validation", () => {
+  it("exposes one canonical validator for durable progress boundaries", () => {
+    const valueId = createActiveDeck([]).valueIds[0]
+    const candidate = createPlayedProgress(8, 3, 5, 2)
+    const progress = createValueProgress(valueId, candidate)
+
+    expect(progress).toEqual(candidate)
+    expect(progress).not.toBe(candidate)
+    expect(Object.isFrozen(progress)).toBe(true)
+    expect(() =>
+      createValueProgress(valueId, createPlayedProgress(3, 3, 2, 0)),
+    ).toThrow("Profile wins exceed comparisons")
+  })
+
   it("rejects missing, duplicate, and inactive IDs", () => {
     const activeDeck = createActiveDeck([])
     const validEntries = Array.from(createInitialValueProgress(activeDeck))
