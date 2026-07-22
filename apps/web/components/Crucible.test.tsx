@@ -20,6 +20,15 @@ function createBattleProps(seed: string) {
   return { battleCycle, battle }
 }
 
+function createHistoryProps() {
+  return {
+    canUndo: false,
+    canRedo: false,
+    onUndo: vi.fn(),
+    onRedo: vi.fn(),
+  }
+}
+
 describe("Crucible Component Integration", () => {
   it("renders semantic canonical values and commits a keyboard selection once", async () => {
     const onWinnerSelected = vi.fn()
@@ -35,6 +44,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -71,6 +81,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -103,6 +114,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -135,6 +147,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -183,6 +196,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -222,5 +236,44 @@ describe("Crucible Component Integration", () => {
         "[overflow-wrap:anywhere]",
       )
     }
+  })
+
+  it("routes available Undo and Redo controls without selecting a value", async () => {
+    const onUndo = vi.fn()
+    const onRedo = vi.fn()
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps("history-control-seed")
+    const firstDefinition = battleCycle.activeDeck.values.find(
+      ({ id }) => id === battle.pair[0],
+    )
+    if (!firstDefinition) {
+      throw new Error("Projected value definition is missing")
+    }
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        canUndo
+        canRedo
+        onExit={vi.fn()}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }))
+    fireEvent.keyDown(window, { key: "y" })
+    fireEvent.keyDown(window, { key: "z", repeat: true })
+
+    expect(onUndo).toHaveBeenCalledTimes(1)
+    expect(onRedo).toHaveBeenCalledTimes(1)
+    expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 })

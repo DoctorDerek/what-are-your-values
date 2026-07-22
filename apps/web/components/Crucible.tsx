@@ -12,19 +12,28 @@ import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
 import { useCallback, useEffect, useRef } from "react"
+import BattleActionBar from "./BattleActionBar"
 import { ValueChoiceCard } from "./ValueChoiceCard"
 
 export default function Crucible({
   activeDeck,
   battle,
   progressById,
+  canUndo,
+  canRedo,
   onExit,
+  onUndo,
+  onRedo,
   onWinnerSelected,
 }: {
   activeDeck: ActiveDeck
   battle: PresentedBattle
   progressById: ValueProgressById
+  canUndo: boolean
+  canRedo: boolean
   onExit: () => void
+  onUndo: () => void
+  onRedo: () => void
   onWinnerSelected: (
     winnerId: ValueId,
     expectedScheduler: SchedulerRestorePoint,
@@ -62,10 +71,22 @@ export default function Crucible({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isAwaiting || !currentPair) return
 
-      if (e.key === "1" || e.key.toLowerCase() === "a") {
+      const normalizedKey = e.key.toLowerCase()
+      const isUndoCommand = normalizedKey === "z" && !e.shiftKey
+      const isRedoCommand =
+        normalizedKey === "y" ||
+        (normalizedKey === "z" && e.shiftKey && (e.metaKey || e.ctrlKey))
+
+      if (isUndoCommand && canUndo && !e.repeat) {
+        e.preventDefault()
+        onUndo()
+      } else if (isRedoCommand && canRedo && !e.repeat) {
+        e.preventDefault()
+        onRedo()
+      } else if (e.key === "1" || normalizedKey === "a") {
         e.preventDefault()
         handleSelect(currentPair[0])
-      } else if (e.key === "2" || e.key.toLowerCase() === "d") {
+      } else if (e.key === "2" || normalizedKey === "d") {
         e.preventDefault()
         handleSelect(currentPair[1])
       } else if (e.key === "Escape") {
@@ -88,7 +109,18 @@ export default function Crucible({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isAwaiting, currentPair, focusedId, send, onExit, handleSelect])
+  }, [
+    isAwaiting,
+    currentPair,
+    focusedId,
+    canUndo,
+    canRedo,
+    send,
+    onExit,
+    onUndo,
+    onRedo,
+    handleSelect,
+  ])
 
   const handleCardFocus = useCallback(
     (valueId: ValueId) => {
@@ -124,12 +156,13 @@ export default function Crucible({
       aria-label="Value battle"
       className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row"
     >
-      <button
-        onClick={onExit}
-        className="bg-mapache-vivid-secondary-red absolute top-3 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2 cursor-pointer border-4 border-black px-4 py-2 text-xl font-black [overflow-wrap:anywhere] break-words whitespace-normal text-white uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none sm:top-6 sm:px-10 sm:py-4 sm:text-3xl"
-      >
-        Stop [ESC]
-      </button>
+      <BattleActionBar
+        canUndo={isAwaiting && canUndo}
+        canRedo={isAwaiting && canRedo}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onStop={onExit}
+      />
 
       <AnimatePresence mode="popLayout">
         <ValueChoiceCard
