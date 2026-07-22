@@ -1,3 +1,4 @@
+import { getPairCount } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import {
   createValueProgressById,
@@ -10,7 +11,10 @@ import {
   type BattleCycleState,
 } from "./BattleCycle"
 import { redoBattleDelta, undoBattleDelta } from "./BattleDeltaTransition"
-import { projectScheduledPair } from "./PairScheduler"
+import {
+  createSchedulerRestorePoint,
+  projectScheduledPair,
+} from "./PairScheduler"
 
 function createProgress(
   totalXp: number,
@@ -113,5 +117,89 @@ describe("Battle Delta transitions", () => {
       priorSnapshotEntries,
     )
     expect(Array.from(candidate.progressById)).toEqual(resultingProgressEntries)
+  })
+
+  it("round-trips the final pair across exact cycle snapshots and current-win maps", () => {
+    const initialBattleCycle = createInitialBattleCycle(
+      "boundary-delta-transition-seed",
+    )
+    const finalScheduler = createSchedulerRestorePoint({
+      activeDeck: initialBattleCycle.activeDeck,
+      progressGeneration: initialBattleCycle.scheduler.progressGeneration,
+      deckRevision: initialBattleCycle.scheduler.deckRevision,
+      seed: initialBattleCycle.scheduler.seed,
+      cycleIndex: initialBattleCycle.scheduler.cycleIndex,
+      cursor: getPairCount(initialBattleCycle.activeDeck.valueIds.length) - 1,
+    })
+    const [winnerId, loserId] = projectScheduledPair(
+      initialBattleCycle.activeDeck,
+      finalScheduler,
+    ).pair
+    const otherValueId = initialBattleCycle.activeDeck.valueIds.find(
+      (valueId) => valueId !== winnerId && valueId !== loserId,
+    )
+
+    if (!otherValueId) {
+      throw new Error("Boundary transition fixture requires another value")
+    }
+
+    const progressById = replaceProgress(
+      initialBattleCycle,
+      new Map([
+        [winnerId, createProgress(6, 3, 5, 2)],
+        [loserId, createProgress(210, 7, 12, 1)],
+        [otherValueId, createProgress(5, 2, 4, 2)],
+      ]),
+    )
+    const cycleLevelSnapshot = new Map(initialBattleCycle.cycleLevelSnapshot)
+    cycleLevelSnapshot.set(loserId, 15)
+    const battleCycle = Object.freeze({
+      ...initialBattleCycle,
+      progressById,
+      cycleLevelSnapshot,
+      scheduler: finalScheduler,
+    }) satisfies BattleCycleState
+    const candidate = createBattleCycleCandidate({
+      battleCycle,
+      winnerId,
+      expectedScheduler: finalScheduler,
+    })
+    const boundary = candidate.delta.cycleBoundary
+
+    if (!boundary) {
+      throw new Error("Final pair did not create a cycle-boundary transition")
+    }
+
+    const undone = undoBattleDelta({
+      battleCycle: candidate,
+      delta: candidate.delta,
+    })
+    const redone = redoBattleDelta({
+      battleCycle: undone,
+      delta: candidate.delta,
+    })
+
+    expect(candidate.delta.xpGained).toBe(15)
+    expect(candidate.delta.resultingWinnerProgress.currentCycleWins).toBe(3)
+    expect(candidate.progressById.get(winnerId)?.currentCycleWins).toBe(0)
+    expect(
+      Array.from(candidate.progressById.values()).every(
+        ({ currentCycleWins }) => currentCycleWins === 0,
+      ),
+    ).toBe(true)
+    expectBattleCycleToEqual(undone, battleCycle)
+    expectBattleCycleToEqual(redone, candidate)
+    expect(undone.progressById.get(winnerId)?.currentCycleWins).toBe(2)
+    expect(undone.progressById.get(loserId)?.currentCycleWins).toBe(1)
+    expect(undone.progressById.get(otherValueId)?.currentCycleWins).toBe(2)
+    expect(Array.from(undone.cycleLevelSnapshot)).toEqual(
+      Array.from(boundary.priorCycleLevelSnapshot),
+    )
+    expect(Array.from(redone.cycleLevelSnapshot)).toEqual(
+      Array.from(boundary.resultingCycleLevelSnapshot),
+    )
+    expect(
+      projectScheduledPair(undone.activeDeck, undone.scheduler).pair,
+    ).toEqual(candidate.delta.pair)
   })
 })
