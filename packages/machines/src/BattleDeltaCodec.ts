@@ -27,6 +27,13 @@ import {
   type SchedulerRestorePoint,
 } from "./PairScheduler"
 import {
+  readActiveValueId,
+  readNonNegativeSafeInteger,
+  readPositiveSafeInteger,
+  readString,
+  readTuple,
+} from "./PersistenceValidation"
+import {
   FULL_CYCLE_SCHEDULE_KIND,
   PAIR_SCHEDULER_ALGORITHM_VERSION,
 } from "./SchedulerIdentity"
@@ -150,55 +157,6 @@ export function encodeBattleDelta(delta: BattleDelta): EncodedBattleDelta {
 export function getEncodedBattleDeltaByteLength(delta: BattleDelta) {
   return new TextEncoder().encode(JSON.stringify(encodeBattleDelta(delta)))
     .byteLength
-}
-
-function readTuple(value: unknown, length: number, label: string) {
-  if (!Array.isArray(value) || value.length !== length) {
-    throw new Error(`Invalid ${label}`)
-  }
-
-  return value as readonly unknown[]
-}
-
-function readString(value: unknown, label: string) {
-  if (typeof value !== "string") {
-    throw new Error(`Invalid ${label}`)
-  }
-
-  return value
-}
-
-function readNonNegativeSafeInteger(value: unknown, label: string) {
-  if (!Number.isSafeInteger(value) || (value as number) < 0) {
-    throw new Error(`Invalid ${label}: ${String(value)}`)
-  }
-
-  return value as number
-}
-
-function readPositiveSafeInteger(value: unknown, label: string) {
-  const integer = readNonNegativeSafeInteger(value, label)
-  if (integer < 1) {
-    throw new Error(`Invalid ${label}: ${integer}`)
-  }
-
-  return integer
-}
-
-function readActiveValueId(
-  activeDeck: ActiveDeck,
-  value: unknown,
-  label: string,
-) {
-  const candidate = readString(value, label)
-  const valueId = activeDeck.valueIds.find(
-    (activeValueId) => activeValueId === candidate,
-  )
-  if (!valueId) {
-    throw new Error(`${label} is not in the Active Deck: ${candidate}`)
-  }
-
-  return valueId
 }
 
 function decodeValueProgress(valueId: ValueId, value: unknown, label: string) {
