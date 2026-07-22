@@ -1,7 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
+
+vi.mock("@/lib/IndexedDbDurableStore", async () => {
+  const { createInMemoryDurableStore } =
+    await import("@game/machines/src/InMemoryDurableStore")
+
+  return {
+    createIndexedDbDurableStore: () => createInMemoryDurableStore(),
+  }
+})
 
 describe("GameClient Integration", () => {
   afterEach(() => {
@@ -33,6 +42,9 @@ describe("GameClient Integration", () => {
     }
 
     fireEvent.click(winnerCard)
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
+    )
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
 
     expect(await screen.findByText(`#1 ${winnerName}`)).toBeVisible()
