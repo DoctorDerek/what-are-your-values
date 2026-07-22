@@ -193,10 +193,12 @@ async function compareAndSwapDatabaseEntries(
   }
 }
 
-export function createIndexedDbDurableStore(indexedDb: IDBFactory) {
+export function createIndexedDbDurableStore(
+  getIndexedDb: () => IDBFactory = () => globalThis.indexedDB,
+) {
   return Object.freeze({
-    readAll: () => readAllDatabaseEntries(indexedDb),
+    readAll: () => readAllDatabaseEntries(getIndexedDb()),
     compareAndSwapVerified: (transaction) =>
-      compareAndSwapDatabaseEntries(indexedDb, transaction),
+      compareAndSwapDatabaseEntries(getIndexedDb(), transaction),
   }) satisfies DurableStoreAdapter
 }
