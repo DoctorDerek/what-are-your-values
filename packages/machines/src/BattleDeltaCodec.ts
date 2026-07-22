@@ -34,6 +34,11 @@ import {
   encodeSchedulerRestorePoint,
   type EncodedSchedulerRestorePoint,
 } from "./SchedulerCodec"
+import {
+  decodeCompleteValueNumberMap,
+  encodeValueNumberEntries,
+  type EncodedValueNumberEntry,
+} from "./ValueNumberMapCodec"
 
 type EncodedValueProgress = readonly [
   totalXp: number,
@@ -41,8 +46,6 @@ type EncodedValueProgress = readonly [
   profileComparisons: number,
   currentCycleWins: number,
 ]
-
-type EncodedValueNumberEntry = readonly [valueId: string, value: number]
 
 type EncodedCycleBoundaryTransition = readonly [
   version: number,
@@ -80,12 +83,6 @@ function encodeValueProgress(progress: ValueProgress): EncodedValueProgress {
     progress.profileComparisons,
     progress.currentCycleWins,
   ]
-}
-
-function encodeValueNumberEntries(
-  entries: ReadonlyMap<ValueId, number>,
-): readonly EncodedValueNumberEntry[] {
-  return Array.from(entries, ([valueId, value]) => [valueId, value] as const)
 }
 
 function encodeCycleBoundaryTransition(
@@ -145,46 +142,6 @@ function decodeValueProgress(valueId: ValueId, value: unknown, label: string) {
       `${label} current-cycle wins`,
     ),
   })
-}
-
-function decodeCompleteValueNumberMap(
-  activeDeck: ActiveDeck,
-  value: unknown,
-  label: string,
-  minimumValue: number,
-) {
-  if (!Array.isArray(value) || value.length !== activeDeck.valueIds.length) {
-    throw new Error(`${label} does not cover the complete Active Deck`)
-  }
-
-  const decoded = new Map<ValueId, number>()
-  value.forEach((entry, index) => {
-    const tuple = readTuple(entry, 2, `${label} entry ${index}`)
-    const valueId = readActiveValueId(activeDeck, tuple[0], `${label} Value ID`)
-    const number = readNonNegativeSafeInteger(
-      tuple[1],
-      `${label} value for ${valueId}`,
-    )
-    if (number < minimumValue) {
-      throw new Error(`Invalid ${label} value for ${valueId}: ${number}`)
-    }
-    if (decoded.has(valueId)) {
-      throw new Error(`${label} contains duplicate Value ID: ${valueId}`)
-    }
-
-    decoded.set(valueId, number)
-  })
-
-  return new Map(
-    activeDeck.valueIds.map((valueId) => {
-      const number = decoded.get(valueId)
-      if (number === undefined) {
-        throw new Error(`${label} is missing ${valueId}`)
-      }
-
-      return [valueId, number] as const
-    }),
-  )
 }
 
 function decodeCycleBoundaryTransition(
