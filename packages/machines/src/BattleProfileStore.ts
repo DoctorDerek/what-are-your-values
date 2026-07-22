@@ -34,7 +34,7 @@ export type BattleProfileStoreState = {
   readonly journalKeys: readonly string[]
 }
 
-function freezeBattleProfileStoreState(
+export function createBattleProfileStoreState(
   state: BattleProfileStoreState,
 ): BattleProfileStoreState {
   return Object.freeze({
@@ -123,7 +123,7 @@ export async function initializeBattleProfileStore({
     deleteKeys: [],
   })
 
-  return freezeBattleProfileStoreState({
+  return createBattleProfileStoreState({
     head: Object.freeze({
       generation: 0,
       revision: 0,
@@ -180,7 +180,7 @@ export async function commitBattleProfileStoreEvent({
       deleteKeys: [],
     })
 
-    return freezeBattleProfileStoreState({
+    return createBattleProfileStoreState({
       ...state,
       head: commit.head,
       manifest,
@@ -236,7 +236,7 @@ export async function commitBattleProfileStoreEvent({
     deleteKeys,
   })
 
-  return freezeBattleProfileStoreState({
+  return createBattleProfileStoreState({
     ...state,
     head: commit.head,
     manifest,
