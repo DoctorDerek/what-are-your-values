@@ -41,7 +41,7 @@ test("a new player starts immediately and reviews the complete ranking", async (
   ).toBeFocused()
 })
 
-test("a returning player reads a visible definition and commits one battle", async ({
+test("a returning player keeps one committed battle across reload", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -67,7 +67,7 @@ test("a returning player reads a visible definition and commits one battle", asy
 
   await firstChoice.click()
   await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
-  await page.getByRole("button", { name: /^Stop/ }).click()
+  await page.reload()
 
   await expect(page.getByText(`#1 ${firstChoiceName}`)).toBeVisible()
   await expect(page.getByText("Level 2")).toBeVisible()
