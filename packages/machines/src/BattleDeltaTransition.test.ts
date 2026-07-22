@@ -11,7 +11,11 @@ import {
   type BattleCycleState,
 } from "./BattleCycle"
 import type { BattleDelta } from "./BattleDelta"
-import { redoBattleDelta, undoBattleDelta } from "./BattleDeltaTransition"
+import {
+  redoBattleDelta,
+  undoBattleDelta,
+  validateBattleDelta,
+} from "./BattleDeltaTransition"
 import {
   createSchedulerRestorePoint,
   projectScheduledPair,
@@ -95,6 +99,10 @@ describe("Battle Delta transitions", () => {
       expectedScheduler: battleCycle.scheduler,
     })
     const resultingProgressEntries = Array.from(candidate.progressById)
+
+    expect(validateBattleDelta(candidate.activeDeck, candidate.delta)).toEqual(
+      candidate.delta,
+    )
 
     expect(candidate.delta.xpGained).toBe(15)
 
