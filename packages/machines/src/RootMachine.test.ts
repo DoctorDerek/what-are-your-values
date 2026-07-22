@@ -94,13 +94,14 @@ describe("Root Machine", () => {
   })
 
   it("initializes an empty durable profile before routing a returning introduction to the Hub", async () => {
-    const { actor, durableStore } = await bootRootActor({
+    const { actor, storage, durableStore } = await bootRootActor({
       uuid: "returning-profile",
       schedulerSeed: "returning-profile-seed",
     })
 
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
     expect(actor.getSnapshot().context.battleProfileStoreState).not.toBeNull()
+    expect(storage.setItem).not.toHaveBeenCalled()
     expect((await durableStore.readAll()).size).toBe(2)
   })
 

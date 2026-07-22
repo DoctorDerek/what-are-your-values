@@ -34,6 +34,7 @@ type RootMachineContext = {
   battleProfileStoreState: BattleProfileStoreState | null
   pendingBattleProfileCommit: BattleProfileCommit | null
   persistenceIssue: string | null
+  shouldSaveIntroductionId: boolean
 }
 
 type RootMachineEvent =
@@ -128,6 +129,10 @@ export const rootMachine = setup({
   },
   actions: {
     saveIntroductionId: ({ context }) => {
+      if (!context.shouldSaveIntroductionId) {
+        return
+      }
+
       if (!context.uuid) {
         throw new Error("Introduction completion is missing a UUID")
       }
@@ -144,6 +149,7 @@ export const rootMachine = setup({
     battleProfileStoreState: null,
     pendingBattleProfileCommit: null,
     persistenceIssue: null,
+    shouldSaveIntroductionId: false,
     storage: input.storage,
     durableStore: input.durableStore,
     appVersion: input.appVersion,
@@ -159,6 +165,7 @@ export const rootMachine = setup({
             battleProfile: ({ event }) =>
               createInitialBattleProfile(event.schedulerSeed),
             persistenceIssue: null,
+            shouldSaveIntroductionId: false,
           }),
         },
       },
@@ -223,6 +230,7 @@ export const rootMachine = setup({
           target: "InitializingProfile",
           actions: assign({
             uuid: ({ event }) => event.uuid,
+            shouldSaveIntroductionId: true,
           }),
         },
       },
@@ -245,6 +253,7 @@ export const rootMachine = setup({
               persistenceIssue: null,
             }),
             "saveIntroductionId",
+            assign({ shouldSaveIntroductionId: false }),
           ],
         },
         onError: [
