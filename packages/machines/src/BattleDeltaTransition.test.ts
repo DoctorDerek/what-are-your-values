@@ -10,6 +10,7 @@ import {
   createInitialBattleCycle,
   type BattleCycleState,
 } from "./BattleCycle"
+import type { BattleDelta } from "./BattleDelta"
 import { redoBattleDelta, undoBattleDelta } from "./BattleDeltaTransition"
 import {
   createSchedulerRestorePoint,
@@ -227,5 +228,66 @@ describe("Battle Delta transitions", () => {
     expect(Array.from(candidate.progressById)).toEqual(resultingProgressEntries)
     expect(battleCycle.scheduler.cursor).toBe(0)
     expect(candidate.scheduler.cursor).toBe(1)
+  })
+
+  it("rejects tampered delta evidence and mismatched progress without mutation", () => {
+    const battleCycle = createInitialBattleCycle("tampered-delta-evidence-seed")
+    const [winnerId] = projectScheduledPair(
+      battleCycle.activeDeck,
+      battleCycle.scheduler,
+    ).pair
+    const candidate = createBattleCycleCandidate({
+      battleCycle,
+      winnerId,
+      expectedScheduler: battleCycle.scheduler,
+    })
+    const tamperedPayoutDelta = Object.freeze({
+      ...candidate.delta,
+      xpGained: candidate.delta.xpGained + 1,
+    }) satisfies BattleDelta
+    const tamperedIdentityDelta = Object.freeze({
+      ...candidate.delta,
+      battleId:
+        `${candidate.delta.battleId}:tampered` as BattleDelta["battleId"],
+    }) satisfies BattleDelta
+    const mismatchedWinnerProgress = {
+      ...candidate.delta.resultingWinnerProgress,
+      totalXp: candidate.delta.resultingWinnerProgress.totalXp + 1,
+    }
+    const mismatchedProgressById = replaceProgress(
+      candidate,
+      new Map([[winnerId, mismatchedWinnerProgress]]),
+    )
+    const mismatchedCandidate = Object.freeze({
+      ...candidate,
+      progressById: mismatchedProgressById,
+    }) satisfies BattleCycleState
+    const resultingProgressEntries = Array.from(candidate.progressById)
+    const mismatchedProgressEntries = Array.from(
+      mismatchedCandidate.progressById,
+    )
+
+    expect(() =>
+      undoBattleDelta({
+        battleCycle: candidate,
+        delta: tamperedPayoutDelta,
+      }),
+    ).toThrow("Battle Delta progress transition is inconsistent")
+    expect(() =>
+      undoBattleDelta({
+        battleCycle: candidate,
+        delta: tamperedIdentityDelta,
+      }),
+    ).toThrow("Battle Delta identity does not match its profile boundary")
+    expect(() =>
+      undoBattleDelta({
+        battleCycle: mismatchedCandidate,
+        delta: candidate.delta,
+      }),
+    ).toThrow(`Undo progress does not match Battle Delta for ${winnerId}`)
+    expect(Array.from(candidate.progressById)).toEqual(resultingProgressEntries)
+    expect(Array.from(mismatchedCandidate.progressById)).toEqual(
+      mismatchedProgressEntries,
+    )
   })
 })
