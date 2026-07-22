@@ -27,7 +27,7 @@ describe("All Values Component Integration", () => {
     expect(screen.queryByText("Top Five")).not.toBeInTheDocument()
     expect(
       screen.getByText(
-        `Definition of ${getValueDisplayName(rankedValues[0].definition)}`,
+        `What ${getValueDisplayName(rankedValues[0].definition)} means`,
       ),
     ).toBeVisible()
   })

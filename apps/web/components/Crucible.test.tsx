@@ -115,7 +115,7 @@ describe("Crucible Component Integration", () => {
       name: `Choose ${getValueDisplayName(definition)}`,
     })
     const definitionControl = screen.getByText(
-      `Definition of ${getValueDisplayName(definition)}`,
+      `What ${getValueDisplayName(definition)} means`,
     )
 
     expect(choice).toHaveAccessibleDescription(
@@ -211,7 +211,7 @@ describe("Crucible Component Integration", () => {
         name: getValueDisplayName(definition),
       })
       const definitionControl = screen.getByText(
-        `Definition of ${getValueDisplayName(definition)}`,
+        `What ${getValueDisplayName(definition)} means`,
       )
       fireEvent.click(definitionControl)
       const definitionCopy = definitionControl

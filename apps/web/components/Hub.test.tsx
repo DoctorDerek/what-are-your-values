@@ -73,7 +73,7 @@ describe("Hub Component Integration", () => {
     ).toHaveAttribute("aria-valuenow", "0")
 
     fireEvent.click(
-      screen.getByText(`Definition of ${getValueDisplayName(winner)}`),
+      screen.getByText(`What ${getValueDisplayName(winner)} means`),
     )
     expect(screen.getByText(getValueDisplayDefinition(winner))).toBeVisible()
 
