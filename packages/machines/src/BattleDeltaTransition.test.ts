@@ -199,6 +199,38 @@ describe("Battle Delta transitions", () => {
     expect(Array.from(redone.cycleLevelSnapshot)).toEqual(
       Array.from(boundary.resultingCycleLevelSnapshot),
     )
+    expect(undone.cycleLevelSnapshot).not.toBe(boundary.priorCycleLevelSnapshot)
+    expect(redone.cycleLevelSnapshot).not.toBe(
+      boundary.resultingCycleLevelSnapshot,
+    )
+    const retainedPriorWinnerLevel =
+      boundary.priorCycleLevelSnapshot.get(winnerId)
+    const retainedResultingWinnerLevel =
+      boundary.resultingCycleLevelSnapshot.get(winnerId)
+
+    if (
+      retainedPriorWinnerLevel === undefined ||
+      retainedResultingWinnerLevel === undefined
+    ) {
+      throw new Error("Boundary transition snapshots lost the winning value")
+    }
+
+    const mutableUndoneSnapshot = undone.cycleLevelSnapshot as Map<
+      ValueId,
+      number
+    >
+    const mutableRedoneSnapshot = redone.cycleLevelSnapshot as Map<
+      ValueId,
+      number
+    >
+    mutableUndoneSnapshot.set(winnerId, retainedPriorWinnerLevel + 1)
+    mutableRedoneSnapshot.set(winnerId, retainedResultingWinnerLevel + 1)
+    expect(boundary.priorCycleLevelSnapshot.get(winnerId)).toBe(
+      retainedPriorWinnerLevel,
+    )
+    expect(boundary.resultingCycleLevelSnapshot.get(winnerId)).toBe(
+      retainedResultingWinnerLevel,
+    )
     expect(
       projectScheduledPair(undone.activeDeck, undone.scheduler).pair,
     ).toEqual(candidate.delta.pair)
