@@ -12,6 +12,7 @@ import {
   getBattleTimelineSerializedByteLength,
   takeBattleTimelineRedo,
   takeBattleTimelineUndo,
+  validateBattleTimeline,
   type BattleTimeline,
   type BattleTimelineLimits,
 } from "./BattleTimeline"
@@ -188,5 +189,42 @@ describe("Battle Timeline", () => {
     expect(() =>
       getBattleTimelineCapacity(100, { deltaLimit: 512, byteBudget: 6 }),
     ).toThrow("Invalid Battle Timeline byte budget: 6")
+  })
+
+  it("validates combined event and byte limits without changing timeline order", () => {
+    const first = appendCandidate(
+      createEmptyBattleTimeline(),
+      createInitialBattleCycle("timeline-validation-seed"),
+    )
+    const second = appendCandidate(first.timeline, first.battleCycle)
+    const undone = takeBattleTimelineUndo(second.timeline)
+    if (!undone) {
+      throw new Error("The retained battle cannot be undone")
+    }
+
+    expect(
+      validateBattleTimeline({
+        timeline: undone.timeline,
+        activeValueCount: second.battleCycle.activeDeck.valueIds.length,
+      }),
+    ).toEqual(undone.timeline)
+    expect(() =>
+      validateBattleTimeline({
+        timeline: undone.timeline,
+        activeValueCount: second.battleCycle.activeDeck.valueIds.length,
+        limits: { deltaLimit: 1, byteBudget: generousByteBudget },
+      }),
+    ).toThrow("Battle Timeline exceeds its combined delta capacity")
+    expect(() =>
+      validateBattleTimeline({
+        timeline: undone.timeline,
+        activeValueCount: second.battleCycle.activeDeck.valueIds.length,
+        limits: {
+          deltaLimit: 512,
+          byteBudget:
+            getBattleTimelineSerializedByteLength(undone.timeline) - 1,
+        },
+      }),
+    ).toThrow("Battle Timeline exceeds its serialized byte budget")
   })
 })

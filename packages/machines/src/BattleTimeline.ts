@@ -68,6 +68,28 @@ export function getBattleTimelineSerializedByteLength(
   return new TextEncoder().encode(serializedTimeline).byteLength
 }
 
+export function validateBattleTimeline({
+  timeline,
+  activeValueCount,
+  limits = DEFAULT_BATTLE_TIMELINE_LIMITS,
+}: {
+  readonly timeline: BattleTimeline
+  readonly activeValueCount: number
+  readonly limits?: BattleTimelineLimits
+}) {
+  const capacity = getBattleTimelineCapacity(activeValueCount, limits)
+  const candidate = freezeBattleTimeline(timeline.history, timeline.redo)
+
+  if (candidate.history.length + candidate.redo.length > capacity) {
+    throw new Error("Battle Timeline exceeds its combined delta capacity")
+  }
+  if (getBattleTimelineSerializedByteLength(candidate) > limits.byteBudget) {
+    throw new Error("Battle Timeline exceeds its serialized byte budget")
+  }
+
+  return candidate
+}
+
 export function appendBattleTimelineDelta({
   timeline,
   delta,
