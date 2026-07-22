@@ -1,5 +1,6 @@
 import { getPairCount } from "@game/data/src/ActiveDeck"
 import type { BattleDelta } from "./BattleDelta"
+import { encodeBattleDelta } from "./BattleDeltaCodec"
 
 export const VALIDATED_TIMELINE_DELTA_LIMIT = 512 as const
 export const TIMELINE_BYTE_BUDGET = 1_048_576 as const
@@ -59,11 +60,10 @@ export function getBattleTimelineCapacity(
 export function getBattleTimelineSerializedByteLength(
   timeline: BattleTimeline,
 ) {
-  const serializedTimeline = JSON.stringify(
-    [timeline.history, timeline.redo],
-    (_key, value: unknown) =>
-      value instanceof Map ? Array.from(value.entries()) : value,
-  )
+  const serializedTimeline = JSON.stringify([
+    timeline.history.map(encodeBattleDelta),
+    timeline.redo.map(encodeBattleDelta),
+  ])
 
   return new TextEncoder().encode(serializedTimeline).byteLength
 }

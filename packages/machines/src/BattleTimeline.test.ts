@@ -4,6 +4,7 @@ import {
   createInitialBattleCycle,
   type BattleCycleState,
 } from "./BattleCycle"
+import { encodeBattleDelta } from "./BattleDeltaCodec"
 import {
   appendBattleTimelineDelta,
   createEmptyBattleTimeline,
@@ -71,6 +72,15 @@ describe("Battle Timeline", () => {
       createInitialBattleCycle("timeline-movement-seed"),
     )
     const second = appendCandidate(first.timeline, first.battleCycle)
+
+    expect(getBattleTimelineSerializedByteLength(second.timeline)).toBe(
+      new TextEncoder().encode(
+        JSON.stringify([
+          second.timeline.history.map(encodeBattleDelta),
+          second.timeline.redo.map(encodeBattleDelta),
+        ]),
+      ).byteLength,
+    )
 
     const firstUndo = takeBattleTimelineUndo(second.timeline)
     if (!firstUndo) {
