@@ -41,7 +41,7 @@ test("a new player starts immediately and reviews the complete ranking", async (
   ).toBeFocused()
 })
 
-test("a returning player inspects a definition and commits one battle", async ({
+test("a returning player reads a visible definition and commits one battle", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -60,13 +60,13 @@ test("a returning player inspects a definition and commits one battle", async ({
     throw new Error("The first projected value is missing its accessible name")
   }
 
-  await page
-    .getByText(`Definition of ${firstChoiceName}`, { exact: true })
-    .click()
-  await expect(firstChoice).toBeEnabled()
+  await expect(firstChoice).toHaveAccessibleDescription(/^“.+”$/)
+  await expect(firstChoice.locator("p")).toBeVisible()
+  await expect(page.locator("details")).toHaveCount(0)
   await expect(page.getByRole("button", { name: /^Choose / })).toHaveCount(2)
 
   await firstChoice.click()
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
   await page.getByRole("button", { name: /^Stop/ }).click()
 
   await expect(page.getByText(`#1 ${firstChoiceName}`)).toBeVisible()
