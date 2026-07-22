@@ -17,6 +17,7 @@ import {
 } from "./CycleLevelSnapshot"
 import {
   advanceSchedulerCursor,
+  createSchedulerRestorePoint,
   projectScheduledPair,
   type SchedulerRestorePoint,
 } from "./PairScheduler"
@@ -138,15 +139,40 @@ export function createBattleDelta({
     activeDeck,
     priorScheduler,
   )
-  if (
-    (ordinaryResultingScheduler === null) !== (cycleBoundary !== null) ||
-    (ordinaryResultingScheduler !== null &&
+  if (ordinaryResultingScheduler) {
+    if (
+      cycleBoundary ||
       !areSchedulerIdentitiesEqual(
         ordinaryResultingScheduler,
         resultingScheduler,
-      ))
-  ) {
-    throw new Error("Battle delta scheduler transition is inconsistent")
+      )
+    ) {
+      throw new Error("Battle delta scheduler transition is inconsistent")
+    }
+  } else {
+    if (!cycleBoundary) {
+      throw new Error("Battle delta scheduler transition is inconsistent")
+    }
+
+    if (priorScheduler.cycleIndex === Number.MAX_SAFE_INTEGER) {
+      throw new Error("Pair cycle index cannot be incremented safely")
+    }
+
+    const expectedResultingScheduler = createSchedulerRestorePoint({
+      activeDeck,
+      progressGeneration: priorScheduler.progressGeneration,
+      deckRevision: priorScheduler.deckRevision,
+      seed: priorScheduler.seed,
+      cycleIndex: priorScheduler.cycleIndex + 1,
+    })
+    if (
+      !areSchedulerIdentitiesEqual(
+        expectedResultingScheduler,
+        resultingScheduler,
+      )
+    ) {
+      throw new Error("Battle delta scheduler transition is inconsistent")
+    }
   }
 
   const battleId = createBattleId(priorScheduler)
