@@ -16,6 +16,20 @@ export function readString(value: unknown, label: string) {
   return value
 }
 
+export function readIsoTimestamp(value: unknown, label: string) {
+  const timestamp = readString(value, label)
+  const parsedTimestamp = new Date(timestamp)
+
+  if (
+    !Number.isFinite(parsedTimestamp.getTime()) ||
+    parsedTimestamp.toISOString() !== timestamp
+  ) {
+    throw new Error(`Invalid ${label}: ${timestamp}`)
+  }
+
+  return timestamp
+}
+
 export function readNonNegativeSafeInteger(value: unknown, label: string) {
   if (!Number.isSafeInteger(value) || (value as number) < 0) {
     throw new Error(`Invalid ${label}: ${String(value)}`)
