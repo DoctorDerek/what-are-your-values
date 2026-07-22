@@ -2,6 +2,8 @@ import type { ValueId } from "@game/data/src/Value"
 import { assign, setup } from "xstate"
 import {
   applyBattleChoice,
+  applyBattleRedo,
+  applyBattleUndo,
   createInitialBattleProfile,
   type BattleProfile,
 } from "./BattleProfile"
@@ -34,6 +36,8 @@ export const rootMachine = setup({
           winnerId: ValueId
           expectedScheduler: SchedulerRestorePoint
         }
+      | { type: "BATTLE.UNDO_REQUESTED" }
+      | { type: "BATTLE.REDO_REQUESTED" }
       | { type: "BATTLE.EXIT_REQUESTED" },
     input: {} as { storage: StorageAdapter },
   },
@@ -57,6 +61,10 @@ export const rootMachine = setup({
         context.battleProfile.scheduler,
       ).pair.includes(event.winnerId)
     },
+    canUndoBattle: ({ context }) =>
+      (context.battleProfile?.history.length ?? 0) > 0,
+    canRedoBattle: ({ context }) =>
+      (context.battleProfile?.redo.length ?? 0) > 0,
   },
   actions: {
     saveIntroductionId: ({ context }) => {
@@ -139,6 +147,40 @@ export const rootMachine = setup({
                 winnerId: event.winnerId,
                 expectedScheduler: event.expectedScheduler,
               }).profile
+            },
+          }),
+        },
+        "BATTLE.UNDO_REQUESTED": {
+          guard: "canUndoBattle",
+          actions: assign({
+            battleProfile: ({ context }) => {
+              if (!context.battleProfile) {
+                throw new Error("Battle profile is not initialized")
+              }
+
+              const transition = applyBattleUndo(context.battleProfile)
+              if (!transition) {
+                throw new Error("Battle Undo is unavailable")
+              }
+
+              return transition.profile
+            },
+          }),
+        },
+        "BATTLE.REDO_REQUESTED": {
+          guard: "canRedoBattle",
+          actions: assign({
+            battleProfile: ({ context }) => {
+              if (!context.battleProfile) {
+                throw new Error("Battle profile is not initialized")
+              }
+
+              const transition = applyBattleRedo(context.battleProfile)
+              if (!transition) {
+                throw new Error("Battle Redo is unavailable")
+              }
+
+              return transition.profile
             },
           }),
         },

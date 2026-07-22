@@ -144,4 +144,78 @@ describe("Root Machine", () => {
     actor.send({ type: "BATTLE.EXIT_REQUESTED" })
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
   })
+
+  it("applies guarded Undo, Redo, and replacement branches to the canonical profile", () => {
+    const actor = createActor(rootMachine, {
+      input: { storage: createStorage() },
+    })
+    actor.start()
+    actor.send({
+      type: "APP.HYDRATED",
+      uuid: "history-profile",
+      schedulerSeed: "root-history-seed",
+    })
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+
+    const initialProfile = actor.getSnapshot().context.battleProfile
+    if (!initialProfile) {
+      throw new Error("Battle profile did not initialize")
+    }
+
+    const [firstValueId, secondValueId] = projectScheduledPair(
+      initialProfile.activeDeck,
+      initialProfile.scheduler,
+    ).pair
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId: firstValueId,
+      expectedScheduler: initialProfile.scheduler,
+    })
+
+    const committedProfile = actor.getSnapshot().context.battleProfile
+    if (!committedProfile) {
+      throw new Error("Battle profile disappeared after selection")
+    }
+
+    actor.send({ type: "BATTLE.UNDO_REQUESTED" })
+    const undoneProfile = actor.getSnapshot().context.battleProfile
+    if (!undoneProfile) {
+      throw new Error("Battle profile disappeared after Undo")
+    }
+
+    expect(undoneProfile.scheduler).toEqual(initialProfile.scheduler)
+    expect(undoneProfile.progressById).toEqual(initialProfile.progressById)
+    expect(undoneProfile.history).toEqual([])
+    expect(undoneProfile.redo).toEqual([committedProfile.history[0]])
+
+    actor.send({ type: "BATTLE.UNDO_REQUESTED" })
+    expect(actor.getSnapshot().context.battleProfile).toBe(undoneProfile)
+
+    actor.send({ type: "BATTLE.REDO_REQUESTED" })
+    const redoneProfile = actor.getSnapshot().context.battleProfile
+    if (!redoneProfile) {
+      throw new Error("Battle profile disappeared after Redo")
+    }
+
+    expect(redoneProfile.scheduler).toEqual(committedProfile.scheduler)
+    expect(redoneProfile.progressById).toEqual(committedProfile.progressById)
+    expect(redoneProfile.history).toEqual(committedProfile.history)
+    expect(redoneProfile.redo).toEqual([])
+
+    actor.send({ type: "BATTLE.UNDO_REQUESTED" })
+    const branchProfile = actor.getSnapshot().context.battleProfile
+    if (!branchProfile) {
+      throw new Error("Battle profile disappeared before branching")
+    }
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId: secondValueId,
+      expectedScheduler: branchProfile.scheduler,
+    })
+
+    const replacedProfile = actor.getSnapshot().context.battleProfile
+    expect(replacedProfile?.history).toHaveLength(1)
+    expect(replacedProfile?.history[0]?.winnerId).toBe(secondValueId)
+    expect(replacedProfile?.redo).toEqual([])
+  })
 })
