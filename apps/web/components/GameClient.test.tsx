@@ -26,18 +26,17 @@ describe("GameClient Integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
 
     const winnerIndicator = await screen.findByText("[1 / A]")
-    const winnerCard = winnerIndicator.closest("div")
+    const winnerCard = winnerIndicator.closest("button")
     const winnerName = winnerCard?.querySelector("h2")?.textContent
     if (!winnerCard || !winnerName) {
       throw new Error("The projected winner card is unavailable")
     }
 
     fireEvent.click(winnerCard)
-    fireEvent.click(winnerCard)
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
 
     expect(await screen.findByText(`#1 ${winnerName}`)).toBeVisible()
-    expect(screen.getByText("LVL 2")).toBeVisible()
+    expect(screen.getByText("Level 2")).toBeVisible()
     expect(getItem).toHaveBeenCalledTimes(1)
     expect(getItem).toHaveBeenCalledWith("wayvm_uuid")
     expect(setItem).not.toHaveBeenCalled()
@@ -63,5 +62,33 @@ describe("GameClient Integration", () => {
     expect(localStorage.getItem("wayvm_uuid")).toBe(
       "00000000-0000-4000-8000-000000000043",
     )
+  })
+
+  it("opens the complete All Values ranking and returns to the unchanged Hub", async () => {
+    vi.spyOn(webStorage, "getItem").mockReturnValue("returning-player")
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000044",
+    )
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByText("Keep comparing values to reveal your Top Five."),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+    expect(screen.getByText("100 Active Values")).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(100)
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+
+    expect(await screen.findByText("Sovereign Dashboard")).toBeVisible()
+    expect(
+      screen.getByText("Keep comparing values to reveal your Top Five."),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "See All Values" })).toHaveFocus()
   })
 })

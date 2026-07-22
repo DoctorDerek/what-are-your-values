@@ -59,6 +59,29 @@ describe("Root Machine", () => {
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
   })
 
+  it("opens and closes All Values without replacing the battle profile", () => {
+    const actor = createActor(rootMachine, {
+      input: { storage: createStorage() },
+    })
+    actor.start()
+    actor.send({
+      type: "APP.HYDRATED",
+      uuid: "all-values-profile",
+      schedulerSeed: "all-values-profile-seed",
+    })
+
+    const battleCycle = actor.getSnapshot().context.battleCycle
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("AllValues")).toBe(true)
+    expect(actor.getSnapshot().context.battleCycle).toBe(battleCycle)
+
+    actor.send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+    expect(actor.getSnapshot().context.battleCycle).toBe(battleCycle)
+  })
+
   it("commits one trusted battle and ignores duplicate stale selection events", () => {
     const actor = createActor(rootMachine, {
       input: { storage: createStorage() },

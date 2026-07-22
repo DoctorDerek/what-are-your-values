@@ -19,6 +19,18 @@ export function getLevelFromXP(totalXp: number) {
   return Math.floor((1 + Math.sqrt(1 + 8 * totalXp)) / 2)
 }
 
+export function getLevelProgressFromXP(totalXp: number) {
+  const level = getLevelFromXP(totalXp)
+  const levelStartingTotalXp = ((level - 1) * level) / 2
+  const earnedXpTowardNextLevel = totalXp - levelStartingTotalXp
+
+  return Object.freeze({
+    level,
+    earnedXpTowardNextLevel,
+    requiredXpForNextLevel: level,
+  } as const)
+}
+
 export function calculateCycleSnapshotXpPayout(
   opponentLevelAtCycleStart: number,
 ) {

@@ -2,13 +2,19 @@
 
 import { getValueDisplayName } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
-import { getLevelFromXP } from "@game/utils/src/LevelMath"
+import type { Ref } from "react"
+import ValueDefinitionDisclosure from "@/components/ValueDefinitionDisclosure"
+import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 export default function Hub({
   rankedValues,
+  seeAllValuesButtonRef,
+  onSeeAllValues,
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
+  seeAllValuesButtonRef?: Ref<HTMLButtonElement>
+  onSeeAllValues: () => void
   onStartBattle: () => void
 }) {
   const hasComparisons = rankedValues.some(
@@ -22,43 +28,55 @@ export default function Hub({
         Sovereign Dashboard
       </h1>
 
-      <div className="flex w-full max-w-7xl flex-col gap-12 lg:flex-row">
-        <div className="bg-mapache-vivid-primary-blue flex flex-1 flex-col items-center justify-center border-4 border-black p-12 shadow-[12px_12px_0px_0px_#000000]">
-          <div className="mb-8 text-[14rem] leading-none drop-shadow-[8px_8px_0px_#000000]">
-            🦝
-          </div>
-          <h2 className="bg-mapache-vivid-dark border-4 border-black px-8 py-4 text-4xl font-black text-white uppercase drop-shadow-[4px_4px_0px_#000000]">
-            Avatar (Phase C)
-          </h2>
-        </div>
-
-        <div className="flex flex-1 flex-col border-4 border-black bg-white p-10 shadow-[12px_12px_0px_0px_#000000]">
-          <h2 className="text-mapache-vivid-dark mb-8 border-b-8 border-black pb-6 text-5xl font-black uppercase lg:text-6xl">
-            Top Five
-          </h2>
-          {hasComparisons ? (
-            <div className="flex flex-col gap-6">
-              {topFive.map(({ rank, definition, progress }) => (
-                <div
-                  key={definition.id}
-                  className="bg-mapache-vivid-secondary-purple flex items-center justify-between border-4 border-black p-6 shadow-[6px_6px_0px_0px_#000000]"
-                >
-                  <span className="text-3xl font-black text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
+      <section
+        aria-labelledby="top-five-heading"
+        className="flex w-full max-w-7xl flex-1 flex-col border-4 border-black bg-white p-6 shadow-[12px_12px_0px_0px_#000000] sm:p-10"
+      >
+        <h2
+          id="top-five-heading"
+          className="text-mapache-vivid-dark mb-8 border-b-8 border-black pb-6 text-5xl font-black uppercase lg:text-6xl"
+        >
+          Top Five
+        </h2>
+        {hasComparisons ? (
+          <ol className="flex flex-col gap-6">
+            {topFive.map(({ rank, definition, progress }) => (
+              <li
+                key={definition.id}
+                className="bg-mapache-vivid-secondary-purple border-4 border-black p-5 shadow-[6px_6px_0px_0px_#000000] sm:p-6"
+              >
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+                  <span className="min-w-0 text-3xl font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
                     #{rank} {getValueDisplayName(definition)}
                   </span>
-                  <span className="text-mapache-vivid-primary-raspberry border-4 border-black bg-white px-4 py-2 text-3xl font-black uppercase">
-                    LVL {getLevelFromXP(progress.totalXp)}
-                  </span>
+                  {definition.kind === "custom" ? (
+                    <span className="bg-mapache-vivid-primary-cyan border-4 border-black px-3 py-2 text-lg font-black text-black uppercase">
+                      Yours
+                    </span>
+                  ) : null}
+                  <ValueLevelProgress totalXp={progress.totalXp} />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-mapache-vivid-dark my-auto text-center text-4xl leading-tight font-black">
-              Keep comparing values to reveal your Top Five.
-            </p>
-          )}
-        </div>
-      </div>
+                <div className="mt-4">
+                  <ValueDefinitionDisclosure definition={definition} />
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-mapache-vivid-dark my-auto text-center text-4xl leading-tight font-black">
+            Keep comparing values to reveal your Top Five.
+          </p>
+        )}
+      </section>
+
+      <button
+        ref={seeAllValuesButtonRef}
+        type="button"
+        onClick={onSeeAllValues}
+        className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark mt-10 w-full max-w-7xl cursor-pointer border-4 border-black py-5 text-4xl font-black uppercase shadow-[10px_10px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[10px] active:translate-y-[10px] active:shadow-none"
+      >
+        See All Values
+      </button>
 
       <button
         onClick={onStartBattle}

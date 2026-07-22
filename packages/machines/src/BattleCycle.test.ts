@@ -11,6 +11,8 @@ import {
   createInitialBattleCycle,
   type BattleCycleState,
 } from "./BattleCycle"
+import { createBattleDelta } from "./BattleDelta"
+import { createBattleId, createCycleCompleteEventId } from "./BattleIdentity"
 import {
   createSchedulerRestorePoint,
   projectScheduledPair,
@@ -84,11 +86,20 @@ describe("Battle Cycle", () => {
     })
 
     expect(candidate.delta).toMatchObject({
+      version: 1,
       pair,
       winnerId,
       loserId,
       xpGained: 1,
+      progressGeneration: 0,
+      deckRevision: 0,
+      activeDeckFingerprint: battleCycle.activeDeck.fingerprint,
+      cycleIndex: 0,
+      priorScheduler: battleCycle.scheduler,
+      resultingScheduler: candidate.scheduler,
+      cycleBoundary: null,
     })
+    expect(candidate.delta.battleId).toBe(createBattleId(battleCycle.scheduler))
     expect(candidate.progressById.get(winnerId)).toEqual({
       totalXp: 1,
       profileWins: 1,
@@ -147,6 +158,30 @@ describe("Battle Cycle", () => {
 
     expect(candidate.delta.xpGained).toBe(1)
     expect(candidate.delta.resultingWinnerProgress.currentCycleWins).toBe(2)
+    expect(candidate.delta.priorScheduler).toBe(finalScheduler)
+    expect(candidate.delta.resultingScheduler).toBe(candidate.scheduler)
+    expect(candidate.delta.cycleBoundary).not.toBeNull()
+    expect(candidate.delta.cycleBoundary?.cycleCompleteEventId).toBe(
+      createCycleCompleteEventId(createBattleId(finalScheduler)),
+    )
+    expect(
+      candidate.delta.cycleBoundary?.priorCurrentCycleWinsById.get(winnerId),
+    ).toBe(1)
+    expect(
+      candidate.delta.cycleBoundary?.priorCurrentCycleWinsById.get(loserId),
+    ).toBe(1)
+    expect(
+      Array.from(
+        candidate.delta.cycleBoundary?.resultingCurrentCycleWinsById.values() ??
+          [],
+      ).every((currentCycleWins) => currentCycleWins === 0),
+    ).toBe(true)
+    expect(candidate.delta.cycleBoundary?.priorCycleLevelSnapshot).toEqual(
+      battleCycle.cycleLevelSnapshot,
+    )
+    expect(candidate.delta.cycleBoundary?.resultingCycleLevelSnapshot).toEqual(
+      candidate.cycleLevelSnapshot,
+    )
     expect(candidate.progressById.get(winnerId)).toEqual({
       totalXp: 4,
       profileWins: 3,
@@ -168,5 +203,14 @@ describe("Battle Cycle", () => {
     expect(candidate.scheduler.cursor).toBe(0)
     expect(candidate.cycleLevelSnapshot.get(winnerId)).toBe(getLevelFromXP(4))
     expect(candidate.cycleLevelSnapshot.get(loserId)).toBe(getLevelFromXP(210))
+    expect(() =>
+      createBattleDelta({
+        activeDeck: battleCycle.activeDeck,
+        progressDelta: candidate.delta,
+        priorScheduler: finalScheduler,
+        resultingScheduler: finalScheduler,
+        cycleBoundary: candidate.delta.cycleBoundary,
+      }),
+    ).toThrow("scheduler transition is inconsistent")
   })
 })

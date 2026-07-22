@@ -1,11 +1,7 @@
 "use client"
 
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
-import {
-  getValueDisplayDefinition,
-  getValueDisplayName,
-  type ValueId,
-} from "@game/data/src/Value"
+import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
 import {
   combatMachine,
@@ -14,8 +10,9 @@ import {
 import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { AnimatePresence, motion } from "motion/react"
-import { useCallback, useEffect } from "react"
+import { AnimatePresence } from "motion/react"
+import { useCallback, useEffect, useRef } from "react"
+import { ValueChoiceCard } from "./ValueChoiceCard"
 
 export default function Crucible({
   activeDeck,
@@ -36,6 +33,8 @@ export default function Crucible({
   const [state, send] = useMachine(combatMachine, {
     input: { onWinnerSelected },
   })
+  const firstChoiceRef = useRef<HTMLButtonElement>(null)
+  const secondChoiceRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     send({ type: "BATTLE.PROJECTED", battle })
@@ -64,19 +63,26 @@ export default function Crucible({
       if (!isAwaiting || !currentPair) return
 
       if (e.key === "1" || e.key.toLowerCase() === "a") {
+        e.preventDefault()
         handleSelect(currentPair[0])
       } else if (e.key === "2" || e.key.toLowerCase() === "d") {
+        e.preventDefault()
         handleSelect(currentPair[1])
       } else if (e.key === "Escape") {
         onExit()
       } else if (e.key === "Enter" || e.key === " ") {
         if (focusedId) {
+          e.preventDefault()
           handleSelect(focusedId)
         }
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault()
         send({ type: "VALUE.FOCUS_REQUESTED", valueId: currentPair[0] })
+        firstChoiceRef.current?.focus()
       } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault()
         send({ type: "VALUE.FOCUS_REQUESTED", valueId: currentPair[1] })
+        secondChoiceRef.current?.focus()
       }
     }
 
@@ -84,15 +90,14 @@ export default function Crucible({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isAwaiting, currentPair, focusedId, send, onExit, handleSelect])
 
-  const handleCardClick = (clickedId: ValueId) => {
-    if (!isAwaiting) return
-
-    if (focusedId === clickedId) {
-      handleSelect(clickedId)
-    } else {
-      send({ type: "VALUE.FOCUS_REQUESTED", valueId: clickedId })
-    }
-  }
+  const handleCardFocus = useCallback(
+    (valueId: ValueId) => {
+      if (isAwaiting) {
+        send({ type: "VALUE.FOCUS_REQUESTED", valueId })
+      }
+    },
+    [isAwaiting, send],
+  )
 
   if (!currentPair) {
     return (
@@ -115,100 +120,50 @@ export default function Crucible({
   const winnerId = state.context.winnerId
 
   return (
-    <div className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-none flex-col overflow-hidden lg:flex-row">
+    <main
+      aria-label="Value battle"
+      className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row"
+    >
       <button
         onClick={onExit}
-        className="bg-mapache-vivid-secondary-red absolute top-6 left-1/2 z-50 -translate-x-1/2 cursor-pointer border-4 border-black px-10 py-4 text-3xl font-black text-white uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none"
+        className="bg-mapache-vivid-secondary-red absolute top-3 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2 cursor-pointer border-4 border-black px-4 py-2 text-xl font-black [overflow-wrap:anywhere] break-words whitespace-normal text-white uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none sm:top-6 sm:px-10 sm:py-4 sm:text-3xl"
       >
         Stop [ESC]
       </button>
 
-      {/*
-       * ONE-TIME EXCEPTION TO NO CODE COMMENT RULE:
-       * Animation (React Key Prop) Note: To ensure that Motion or other animations fire correctly —
-       * and that the cards have truly unique key props — the cards use the React key props
-       * key={`Card A: ${idA} vs. ${idB}`} and key={`Card B: ${idB} vs. ${idA}`}; this prevents a
-       * fixed regression (bug) where animations wouldn’t fire if the same value appeared twice
-       * on one side (“Card A” or “Card B”), which created an edge case of an extremely confusing UX
-       * because the repeat card didn’t animate correctly.
-       */}
       <AnimatePresence mode="popLayout">
-        <motion.div
+        <ValueChoiceCard
+          ref={firstChoiceRef}
           key={`Card A: ${idA} vs. ${idB}`}
-          layout
-          initial={{ x: "-100%", opacity: 0 }}
-          animate={{
-            x: 0,
-            opacity: isAnimating && winnerId === idB ? 0.3 : 1,
-            scale:
-              isAnimating && winnerId === idA ? 1.05 : isAnimating ? 0.9 : 1,
-            filter:
-              isAnimating && winnerId === idB
-                ? "grayscale(100%)"
-                : "grayscale(0%)",
-            y: isAnimating && winnerId === idB ? -100 : 0,
-          }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          position="first"
+          value={valA}
+          level={levelA}
+          focusedId={focusedId}
+          winnerId={winnerId}
+          isEnabled={isAwaiting}
+          isAnimating={isAnimating}
+          onActivate={handleSelect}
+          onFocus={handleCardFocus}
           onAnimationComplete={handleAnimationComplete}
-          onClick={() => handleCardClick(idA)}
-          className={`bg-mapache-vivid-primary-cyan flex flex-1 cursor-pointer flex-col items-center justify-center border-b-8 border-black p-8 hover:brightness-110 lg:border-r-8 lg:border-b-0 ${focusedId === idA ? "ring-8 ring-white ring-inset" : ""}`}
-        >
-          <span className="absolute top-8 left-8 text-3xl font-black text-black/40 uppercase drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] lg:text-5xl">
-            [1 / A]
-          </span>
-          <div className="text-center">
-            <span className="mb-10 inline-block border-4 border-black bg-white px-8 py-3 text-4xl font-black text-black uppercase shadow-[6px_6px_0px_0px_#000000]">
-              LVL {levelA}
-            </span>
-            <h2 className="mb-8 max-w-4xl text-6xl leading-none font-black tracking-tighter text-white uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-9xl">
-              {getValueDisplayName(valA)}
-            </h2>
-            <p className="mx-auto max-w-2xl border-2 border-white/20 bg-black/40 p-6 text-3xl font-bold text-white drop-shadow-[2px_2px_0px_#000000]">
-              &ldquo;{getValueDisplayDefinition(valA)}&rdquo;
-            </p>
-          </div>
-        </motion.div>
+        />
       </AnimatePresence>
 
       <AnimatePresence mode="popLayout">
-        <motion.div
+        <ValueChoiceCard
+          ref={secondChoiceRef}
           key={`Card B: ${idB} vs. ${idA}`}
-          layout
-          initial={{ x: "100%", opacity: 0 }}
-          animate={{
-            x: 0,
-            opacity: isAnimating && winnerId === idA ? 0.3 : 1,
-            scale:
-              isAnimating && winnerId === idB ? 1.05 : isAnimating ? 0.9 : 1,
-            filter:
-              isAnimating && winnerId === idA
-                ? "grayscale(100%)"
-                : "grayscale(0%)",
-            y: isAnimating && winnerId === idA ? 100 : 0,
-          }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          position="second"
+          value={valB}
+          level={levelB}
+          focusedId={focusedId}
+          winnerId={winnerId}
+          isEnabled={isAwaiting}
+          isAnimating={isAnimating}
+          onActivate={handleSelect}
+          onFocus={handleCardFocus}
           onAnimationComplete={handleAnimationComplete}
-          onClick={() => handleCardClick(idB)}
-          className={`bg-mapache-vivid-primary-raspberry flex flex-1 cursor-pointer flex-col items-center justify-center p-8 hover:brightness-110 ${focusedId === idB ? "ring-8 ring-white ring-inset" : ""}`}
-        >
-          <span className="absolute top-8 right-8 text-3xl font-black text-black/40 uppercase drop-shadow-[2px_2px_0px_rgba(255,255,255,0.2)] lg:text-5xl">
-            [2 / D]
-          </span>
-          <div className="text-center">
-            <span className="mb-10 inline-block border-4 border-black bg-white px-8 py-3 text-4xl font-black text-black uppercase shadow-[6px_6px_0px_0px_#000000]">
-              LVL {levelB}
-            </span>
-            <h2 className="mb-8 max-w-4xl text-6xl leading-none font-black tracking-tighter text-white uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-9xl">
-              {getValueDisplayName(valB)}
-            </h2>
-            <p className="mx-auto max-w-2xl border-2 border-white/20 bg-black/40 p-6 text-3xl font-bold text-white drop-shadow-[2px_2px_0px_#000000]">
-              &ldquo;{getValueDisplayDefinition(valB)}&rdquo;
-            </p>
-          </div>
-        </motion.div>
+        />
       </AnimatePresence>
-    </div>
+    </main>
   )
 }

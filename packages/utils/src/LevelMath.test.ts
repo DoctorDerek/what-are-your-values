@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   calculateCycleSnapshotXpPayout,
   getLevelFromXP,
+  getLevelProgressFromXP,
   MAX_SUPPORTED_TOTAL_XP,
 } from "./LevelMath"
 
@@ -46,6 +47,35 @@ describe("getLevelFromXP", () => {
         getLevelFromXP(boundaries[i - 1]),
       )
     }
+  })
+})
+
+describe("getLevelProgressFromXP", () => {
+  it.each([
+    [0, 1, 0, 1],
+    [1, 2, 0, 2],
+    [2, 2, 1, 2],
+    [3, 3, 0, 3],
+    [5, 3, 2, 3],
+    [6, 4, 0, 4],
+  ])(
+    "projects %i total XP as level %i with %i of %i XP earned",
+    (totalXp, level, earnedXpTowardNextLevel, requiredXpForNextLevel) => {
+      expect(getLevelProgressFromXP(totalXp)).toEqual({
+        level,
+        earnedXpTowardNextLevel,
+        requiredXpForNextLevel,
+      })
+    },
+  )
+
+  it("preserves exact integral progress at the supported XP boundary", () => {
+    const progress = getLevelProgressFromXP(MAX_SUPPORTED_TOTAL_XP)
+
+    expect(Number.isSafeInteger(progress.earnedXpTowardNextLevel)).toBe(true)
+    expect(progress.earnedXpTowardNextLevel).toBeLessThan(
+      progress.requiredXpForNextLevel,
+    )
   })
 })
 

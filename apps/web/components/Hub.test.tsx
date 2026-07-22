@@ -1,4 +1,7 @@
-import { getValueDisplayName } from "@game/data/src/Value"
+import {
+  getValueDisplayDefinition,
+  getValueDisplayName,
+} from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
   createBattleCycleCandidate,
@@ -19,6 +22,7 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        onSeeAllValues={vi.fn()}
         onStartBattle={vi.fn()}
       />,
     )
@@ -27,9 +31,11 @@ describe("Hub Component Integration", () => {
       screen.getByText("Keep comparing values to reveal your Top Five."),
     ).toBeVisible()
     expect(screen.queryByText("#1 Acceptance")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Avatar|Phase C/)).not.toBeInTheDocument()
   })
 
   it("renders the exact evidence ranking and starts a battle", () => {
+    const onSeeAllValues = vi.fn()
     const onStartBattle = vi.fn()
     const initialBattleCycle = createInitialBattleCycle("ranked-hub-seed")
     const [winnerId] = projectScheduledPair(
@@ -54,12 +60,25 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        onSeeAllValues={onSeeAllValues}
         onStartBattle={onStartBattle}
       />,
     )
 
     expect(screen.getByText(`#1 ${getValueDisplayName(winner)}`)).toBeVisible()
-    expect(screen.getByText("LVL 2")).toBeVisible()
+    expect(screen.getByText("Level 2")).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(5)
+    expect(
+      screen.getByRole("progressbar", { name: "XP toward Level 3" }),
+    ).toHaveAttribute("aria-valuenow", "0")
+
+    fireEvent.click(
+      screen.getByText(`Definition of ${getValueDisplayName(winner)}`),
+    )
+    expect(screen.getByText(getValueDisplayDefinition(winner))).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
+    expect(onSeeAllValues).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
     expect(onStartBattle).toHaveBeenCalledTimes(1)

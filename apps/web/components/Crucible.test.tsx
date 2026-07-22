@@ -1,8 +1,11 @@
-import { getValueDisplayName } from "@game/data/src/Value"
+import {
+  getValueDisplayDefinition,
+  getValueDisplayName,
+} from "@game/data/src/Value"
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
-import { act, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
@@ -55,10 +58,16 @@ describe("Crucible Component Integration", () => {
     )
   })
 
-  it("focuses a card before committing its second click", async () => {
+  it("commits the first pointer activation exactly once", async () => {
     const onWinnerSelected = vi.fn()
     const { battleCycle, battle } = createBattleProps("pointer-battle-seed")
     const [winnerId] = battle.pair
+    const winner = battleCycle.activeDeck.values.find(
+      ({ id }) => id === winnerId,
+    )
+    if (!winner) {
+      throw new Error("Projected winner definition is missing")
+    }
 
     render(
       <Crucible
@@ -70,18 +79,57 @@ describe("Crucible Component Integration", () => {
       />,
     )
 
-    const cardAIndicator = await screen.findByText("[1 / A]")
-    const cardA = cardAIndicator.closest("div")
-    if (!cardA) {
-      throw new Error("Card A was not rendered")
-    }
-
-    act(() => cardA.click())
-    expect(cardA.className).toContain("ring-8")
-    expect(onWinnerSelected).not.toHaveBeenCalled()
+    const cardA = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(winner)}`,
+    })
 
     act(() => cardA.click())
     expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
+
+    act(() => cardA.click())
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+  })
+
+  it("opens a sibling definition without choosing or advancing the value", async () => {
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps("definition-battle-seed")
+    const [valueId] = battle.pair
+    const definition = battleCycle.activeDeck.values.find(
+      ({ id }) => id === valueId,
+    )
+    if (!definition) {
+      throw new Error("Projected value definition is missing")
+    }
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    const choice = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(definition)}`,
+    })
+    const definitionControl = screen.getByText(
+      `Definition of ${getValueDisplayName(definition)}`,
+    )
+
+    expect(choice).toHaveAccessibleDescription(
+      getValueDisplayDefinition(definition),
+    )
+    expect(choice).not.toContainElement(definitionControl)
+    fireEvent.click(definitionControl)
+    expect(
+      definitionControl.closest("details")?.querySelector("p"),
+    ).toHaveTextContent(getValueDisplayDefinition(definition))
+    expect(onWinnerSelected).not.toHaveBeenCalled()
+
+    fireEvent.click(choice)
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
   it("supports arrow focus, keyboard confirmation, and Escape", async () => {
@@ -100,16 +148,21 @@ describe("Crucible Component Integration", () => {
       />,
     )
 
-    const cardBIndicator = await screen.findByText("[2 / D]")
-    const cardB = cardBIndicator.closest("div")
-    if (!cardB) {
-      throw new Error("Card B was not rendered")
+    const winner = battleCycle.activeDeck.values.find(
+      ({ id }) => id === winnerId,
+    )
+    if (!winner) {
+      throw new Error("Projected winner definition is missing")
     }
+    const cardB = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(winner)}`,
+    })
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }))
     })
     expect(cardB.className).toContain("ring-8")
+    expect(cardB).toHaveFocus()
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }))
@@ -118,5 +171,65 @@ describe("Crucible Component Integration", () => {
 
     expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
     expect(onExit).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps both value cards vertically readable without horizontal overflow", async () => {
+    const { battleCycle, battle } = createBattleProps("readable-copy-seed")
+    const definitions = battle.pair.map((valueId) => {
+      const definition = battleCycle.activeDeck.values.find(
+        ({ id }) => id === valueId,
+      )
+      if (!definition) {
+        throw new Error("Projected value definition is missing")
+      }
+
+      return definition
+    })
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("main", { name: "Value battle" })).toHaveClass(
+      "overflow-hidden",
+      "overscroll-none",
+      "select-none",
+      "touch-manipulation",
+    )
+
+    for (const definition of definitions) {
+      const choice = await screen.findByRole("button", {
+        name: `Choose ${getValueDisplayName(definition)}`,
+      })
+      const heading = screen.getByRole("heading", {
+        name: getValueDisplayName(definition),
+      })
+      const definitionControl = screen.getByText(
+        `Definition of ${getValueDisplayName(definition)}`,
+      )
+      fireEvent.click(definitionControl)
+      const definitionCopy = definitionControl
+        .closest("details")
+        ?.querySelector("p")
+
+      expect(choice.parentElement).toHaveClass(
+        "min-h-0",
+        "min-w-0",
+        "overflow-x-hidden",
+        "overflow-y-auto",
+        "overscroll-contain",
+      )
+      expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
+      expect(definitionCopy).toHaveClass(
+        "break-words",
+        "[overflow-wrap:anywhere]",
+      )
+    }
   })
 })

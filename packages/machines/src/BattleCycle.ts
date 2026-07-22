@@ -6,9 +6,12 @@ import {
   type ValueProgressById,
 } from "@game/data/src/ValueProgress"
 import {
-  createBattleProgressCandidate,
-  type BattleProgressDelta,
-} from "./BattleProgress"
+  createBattleDelta,
+  createCycleBoundaryTransition,
+  type BattleDelta,
+} from "./BattleDelta"
+import { createBattleId } from "./BattleIdentity"
+import { createBattleProgressCandidate } from "./BattleProgress"
 import {
   createCycleLevelSnapshot,
   type CycleLevelSnapshot,
@@ -29,7 +32,7 @@ export type BattleCycleState = {
 }
 
 export type BattleCycleCandidate = BattleCycleState & {
-  readonly delta: BattleProgressDelta
+  readonly delta: BattleDelta
 }
 
 export function createInitialBattleCycle(seed: string) {
@@ -85,7 +88,13 @@ export function createBattleCycleCandidate({
       progressById: progressCandidate.progressById,
       cycleLevelSnapshot: battleCycle.cycleLevelSnapshot,
       scheduler: advancedScheduler,
-      delta: progressCandidate.delta,
+      delta: createBattleDelta({
+        activeDeck: battleCycle.activeDeck,
+        progressDelta: progressCandidate.delta,
+        priorScheduler: battleCycle.scheduler,
+        resultingScheduler: advancedScheduler,
+        cycleBoundary: null,
+      }),
     }) satisfies BattleCycleCandidate
   }
 
@@ -98,20 +107,37 @@ export function createBattleCycleCandidate({
     progressCandidate.progressById,
   )
 
+  const resultingCycleLevelSnapshot = createCycleLevelSnapshot(
+    battleCycle.activeDeck,
+    nextCycleProgressById,
+  )
+  const resultingScheduler = createSchedulerRestorePoint({
+    activeDeck: battleCycle.activeDeck,
+    progressGeneration: battleCycle.scheduler.progressGeneration,
+    deckRevision: battleCycle.scheduler.deckRevision,
+    seed: battleCycle.scheduler.seed,
+    cycleIndex: battleCycle.scheduler.cycleIndex + 1,
+  })
+  const battleId = createBattleId(battleCycle.scheduler)
+
   return Object.freeze({
     activeDeck: battleCycle.activeDeck,
     progressById: nextCycleProgressById,
-    cycleLevelSnapshot: createCycleLevelSnapshot(
-      battleCycle.activeDeck,
-      nextCycleProgressById,
-    ),
-    scheduler: createSchedulerRestorePoint({
+    cycleLevelSnapshot: resultingCycleLevelSnapshot,
+    scheduler: resultingScheduler,
+    delta: createBattleDelta({
       activeDeck: battleCycle.activeDeck,
-      progressGeneration: battleCycle.scheduler.progressGeneration,
-      deckRevision: battleCycle.scheduler.deckRevision,
-      seed: battleCycle.scheduler.seed,
-      cycleIndex: battleCycle.scheduler.cycleIndex + 1,
+      progressDelta: progressCandidate.delta,
+      priorScheduler: battleCycle.scheduler,
+      resultingScheduler,
+      cycleBoundary: createCycleBoundaryTransition({
+        activeDeck: battleCycle.activeDeck,
+        battleId,
+        priorCycleLevelSnapshot: battleCycle.cycleLevelSnapshot,
+        resultingCycleLevelSnapshot,
+        priorProgressById: battleCycle.progressById,
+        resultingProgressById: nextCycleProgressById,
+      }),
     }),
-    delta: progressCandidate.delta,
   }) satisfies BattleCycleCandidate
 }
