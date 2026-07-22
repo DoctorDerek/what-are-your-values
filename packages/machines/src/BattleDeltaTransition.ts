@@ -323,9 +323,12 @@ export function undoBattleDelta({
       currentCycleWinsById:
         delta.cycleBoundary?.priorCurrentCycleWinsById ?? null,
     }),
-    cycleLevelSnapshot:
-      delta.cycleBoundary?.priorCycleLevelSnapshot ??
-      battleCycle.cycleLevelSnapshot,
+    cycleLevelSnapshot: delta.cycleBoundary
+      ? validateCycleLevelSnapshot(
+          battleCycle.activeDeck,
+          delta.cycleBoundary.priorCycleLevelSnapshot,
+        )
+      : battleCycle.cycleLevelSnapshot,
     scheduler: delta.priorScheduler,
   }) satisfies BattleCycleState
 }
@@ -384,9 +387,12 @@ export function redoBattleDelta({
       currentCycleWinsById:
         delta.cycleBoundary?.resultingCurrentCycleWinsById ?? null,
     }),
-    cycleLevelSnapshot:
-      delta.cycleBoundary?.resultingCycleLevelSnapshot ??
-      battleCycle.cycleLevelSnapshot,
+    cycleLevelSnapshot: delta.cycleBoundary
+      ? validateCycleLevelSnapshot(
+          battleCycle.activeDeck,
+          delta.cycleBoundary.resultingCycleLevelSnapshot,
+        )
+      : battleCycle.cycleLevelSnapshot,
     scheduler: delta.resultingScheduler,
   }) satisfies BattleCycleState
 }
