@@ -11,6 +11,7 @@ import {
   createInitialBattleCycle,
   type BattleCycleState,
 } from "./BattleCycle"
+import { createBattleDelta } from "./BattleDelta"
 import { createBattleId, createCycleCompleteEventId } from "./BattleIdentity"
 import {
   createSchedulerRestorePoint,
@@ -202,5 +203,14 @@ describe("Battle Cycle", () => {
     expect(candidate.scheduler.cursor).toBe(0)
     expect(candidate.cycleLevelSnapshot.get(winnerId)).toBe(getLevelFromXP(4))
     expect(candidate.cycleLevelSnapshot.get(loserId)).toBe(getLevelFromXP(210))
+    expect(() =>
+      createBattleDelta({
+        activeDeck: battleCycle.activeDeck,
+        progressDelta: candidate.delta,
+        priorScheduler: finalScheduler,
+        resultingScheduler: finalScheduler,
+        cycleBoundary: candidate.delta.cycleBoundary,
+      }),
+    ).toThrow("scheduler transition is inconsistent")
   })
 })
