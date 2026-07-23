@@ -136,6 +136,7 @@ describe("Crucible Component Integration", () => {
     )
     expect(choice).toContainElement(definitionCopy)
     expect(document.querySelector("details")).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Definition of /)).not.toBeInTheDocument()
     fireEvent.click(definitionCopy)
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
