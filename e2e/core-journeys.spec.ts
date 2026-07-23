@@ -41,7 +41,7 @@ test("a new player starts immediately and reviews the complete ranking", async (
   ).toBeFocused()
 })
 
-test("a returning player keeps one committed battle across reload", async ({
+test("a returning player keeps Undo and Redo across reloads", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -66,6 +66,14 @@ test("a returning player keeps one committed battle across reload", async ({
   await expect(page.getByRole("button", { name: /^Choose / })).toHaveCount(2)
 
   await firstChoice.click()
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
+  await page.getByRole("button", { name: "Undo" }).click()
+  await expect(page.getByRole("button", { name: "Redo" })).toBeEnabled()
+  await page.reload()
+
+  await page.getByRole("button", { name: "Battle" }).click()
+  await expect(page.getByRole("button", { name: "Redo" })).toBeEnabled()
+  await page.getByRole("button", { name: "Redo" }).click()
   await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
   await page.reload()
 
