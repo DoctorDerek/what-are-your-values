@@ -21,6 +21,7 @@ export default function Crucible({
   progressById,
   canUndo,
   canRedo,
+  isPersistencePending,
   onExit,
   onUndo,
   onRedo,
@@ -31,6 +32,7 @@ export default function Crucible({
   progressById: ValueProgressById
   canUndo: boolean
   canRedo: boolean
+  isPersistencePending: boolean
   onExit: () => void
   onUndo: () => void
   onRedo: () => void
@@ -49,17 +51,18 @@ export default function Crucible({
     send({ type: "BATTLE.PROJECTED", battle })
   }, [battle, send])
 
+  const isInteractive = state.matches("AwaitingInput") && !isPersistencePending
+
   const handleSelect = useCallback(
     (winnerId: ValueId) => {
-      if (!state.matches("AwaitingInput")) return
+      if (!isInteractive) return
       send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
     },
-    [state, send],
+    [isInteractive, send],
   )
 
   const focusedId = state.context.focusedId
   const currentPair = state.context.currentBattle?.pair ?? null
-  const isAwaiting = state.matches("AwaitingInput")
   const isAnimating = state.matches("AnimatingResult")
   const handleAnimationComplete = useCallback(() => {
     if (isAnimating) {
@@ -69,7 +72,7 @@ export default function Crucible({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isAwaiting || !currentPair) return
+      if (!isInteractive || !currentPair) return
 
       const normalizedKey = e.key.toLowerCase()
       const isUndoCommand = normalizedKey === "z" && !e.shiftKey
@@ -110,7 +113,7 @@ export default function Crucible({
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [
-    isAwaiting,
+    isInteractive,
     currentPair,
     focusedId,
     canUndo,
@@ -124,11 +127,11 @@ export default function Crucible({
 
   const handleCardFocus = useCallback(
     (valueId: ValueId) => {
-      if (isAwaiting) {
+      if (isInteractive) {
         send({ type: "VALUE.FOCUS_REQUESTED", valueId })
       }
     },
-    [isAwaiting, send],
+    [isInteractive, send],
   )
 
   if (!currentPair) {
@@ -154,11 +157,13 @@ export default function Crucible({
   return (
     <main
       aria-label="Value battle"
+      aria-busy={isPersistencePending}
       className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row"
     >
       <BattleActionBar
-        canUndo={isAwaiting && canUndo}
-        canRedo={isAwaiting && canRedo}
+        canUndo={isInteractive && canUndo}
+        canRedo={isInteractive && canRedo}
+        canStop={isInteractive}
         onUndo={onUndo}
         onRedo={onRedo}
         onStop={onExit}
@@ -173,7 +178,7 @@ export default function Crucible({
           level={levelA}
           focusedId={focusedId}
           winnerId={winnerId}
-          isEnabled={isAwaiting}
+          isEnabled={isInteractive}
           isAnimating={isAnimating}
           onActivate={handleSelect}
           onFocus={handleCardFocus}
@@ -190,7 +195,7 @@ export default function Crucible({
           level={levelB}
           focusedId={focusedId}
           winnerId={winnerId}
-          isEnabled={isAwaiting}
+          isEnabled={isInteractive}
           isAnimating={isAnimating}
           onActivate={handleSelect}
           onFocus={handleCardFocus}

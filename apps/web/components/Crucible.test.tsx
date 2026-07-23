@@ -24,6 +24,7 @@ function createHistoryProps() {
   return {
     canUndo: false,
     canRedo: false,
+    isPersistencePending: false,
     onUndo: vi.fn(),
     onRedo: vi.fn(),
   }
@@ -257,6 +258,7 @@ describe("Crucible Component Integration", () => {
         progressById={battleCycle.progressById}
         canUndo
         canRedo
+        isPersistencePending={false}
         onExit={vi.fn()}
         onUndo={onUndo}
         onRedo={onRedo}
@@ -274,6 +276,50 @@ describe("Crucible Component Integration", () => {
 
     expect(onUndo).toHaveBeenCalledTimes(1)
     expect(onRedo).toHaveBeenCalledTimes(1)
+    expect(onWinnerSelected).not.toHaveBeenCalled()
+  })
+
+  it("disables every battle action while a durable write is pending", async () => {
+    const onExit = vi.fn()
+    const onUndo = vi.fn()
+    const onRedo = vi.fn()
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps(
+      "pending-persistence-seed",
+    )
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        canUndo
+        canRedo
+        isPersistencePending
+        onExit={onExit}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    await screen.findAllByRole("button", { name: /^Choose / })
+    expect(screen.getByRole("main", { name: "Value battle" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    )
+    screen.getAllByRole("button").forEach((button) => {
+      expect(button).toBeDisabled()
+      fireEvent.click(button)
+    })
+    fireEvent.keyDown(window, { key: "1" })
+    fireEvent.keyDown(window, { key: "z" })
+    fireEvent.keyDown(window, { key: "y" })
+    fireEvent.keyDown(window, { key: "Escape" })
+
+    expect(onExit).not.toHaveBeenCalled()
+    expect(onUndo).not.toHaveBeenCalled()
+    expect(onRedo).not.toHaveBeenCalled()
     expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 })

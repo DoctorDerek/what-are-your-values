@@ -12,6 +12,7 @@ describe("Battle Action Bar", () => {
       <BattleActionBar
         canUndo={false}
         canRedo={false}
+        canStop
         onUndo={onUndo}
         onRedo={onRedo}
         onStop={onStop}
@@ -34,6 +35,7 @@ describe("Battle Action Bar", () => {
       <BattleActionBar
         canUndo
         canRedo
+        canStop={false}
         onUndo={onUndo}
         onRedo={onRedo}
         onStop={onStop}
@@ -41,7 +43,10 @@ describe("Battle Action Bar", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: "Undo" }))
     fireEvent.click(screen.getByRole("button", { name: "Redo" }))
+    fireEvent.click(screen.getByRole("button", { name: "Stop" }))
     expect(onUndo).toHaveBeenCalledTimes(1)
     expect(onRedo).toHaveBeenCalledTimes(1)
+    expect(onStop).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole("button", { name: "Stop" })).toBeDisabled()
   })
 })

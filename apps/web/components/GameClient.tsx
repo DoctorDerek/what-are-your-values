@@ -142,8 +142,9 @@ export default function GameClient() {
         activeDeck={battleProfile.activeDeck}
         battle={presentedBattle}
         progressById={battleProfile.progressById}
-        canUndo={isBattleReady && battleProfile.history.length > 0}
-        canRedo={isBattleReady && battleProfile.redo.length > 0}
+        canUndo={battleProfile.history.length > 0}
+        canRedo={battleProfile.redo.length > 0}
+        isPersistencePending={!isBattleReady}
         onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
         onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
         onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
