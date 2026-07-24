@@ -54,19 +54,43 @@ export default function AllValues({
   const hasComparisons = rankedValues.some(
     ({ progress }) => progress.profileComparisons > 0,
   )
+  const normalizedValueNames = useMemo(
+    () =>
+      new Set(
+        rankedValues.map((value) =>
+          getValueDisplayName(value.definition).toLocaleLowerCase().trim(),
+        ),
+      ),
+    [rankedValues],
+  )
   const trimmedAddName = addName.trim()
   const trimmedAddDefinition = addDefinition.trim()
+  const normalizedAddName = trimmedAddName.toLocaleLowerCase()
+  const hasDuplicateAddName =
+    normalizedAddName.length > 0 && normalizedValueNames.has(normalizedAddName)
   const canSubmitAdd =
-    trimmedAddName.length > 0 && trimmedAddDefinition.length > 0
+    trimmedAddName.length > 0 &&
+    trimmedAddDefinition.length > 0 &&
+    !hasDuplicateAddName
   const editableCustomValue = rankedValues.find(
     ({ definition }) => definition.id === editingValueId,
   )?.definition
+  const normalizedEditName = editName.trim().toLocaleLowerCase()
+  const isDuplicateEditName =
+    normalizedEditName.length > 0 &&
+    rankedValues.some(
+      ({ definition }) =>
+        definition.id !== editingValueId &&
+        getValueDisplayName(definition).toLocaleLowerCase().trim() ===
+          normalizedEditName,
+    )
   const canSubmitEdit =
     editableCustomValue?.kind === "custom" &&
     editName.trim().length > 0 &&
     editDefinition.trim().length > 0 &&
     (editName.trim() !== editableCustomValue.name ||
-      editDefinition.trim() !== editableCustomValue.definition)
+      editDefinition.trim() !== editableCustomValue.definition) &&
+    !isDuplicateEditName
   const normalizedAddLabel = `add-custom-value-${normalizedQuery}`
 
   useEffect(() => {
@@ -222,6 +246,14 @@ export default function AllValues({
                   className="focus-visible:ring-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
                 />
               </label>
+              {hasDuplicateAddName ? (
+                <p
+                  role="status"
+                  className="border-mapache-vivid-secondary-red bg-mapache-vivid-secondary-red/15 text-mapache-vivid-secondary-red rounded-sm border-4 p-3 text-lg font-black uppercase"
+                >
+                  A value with this name already exists.
+                </p>
+              ) : null}
               <div className="flex gap-3">
                 <button
                   type="submit"
@@ -327,6 +359,14 @@ export default function AllValues({
                         rows={4}
                         className="focus-visible:ring-mapache-vivid-primary-cyan mb-4 w-full border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
                       />
+                      {isDuplicateEditName ? (
+                        <p
+                          role="status"
+                          className="border-mapache-vivid-secondary-red bg-mapache-vivid-secondary-red/15 text-mapache-vivid-secondary-red rounded-sm border-4 p-3 text-base font-black uppercase"
+                        >
+                          A value with this name already exists.
+                        </p>
+                      ) : null}
                       <div className="flex gap-3">
                         <button
                           type="submit"

@@ -8,7 +8,7 @@ import {
 } from "@game/data/src/Value"
 import { createInitialValueProgress } from "@game/data/src/ValueProgress"
 import { rankValues } from "@game/data/src/ValueRanking"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import AllValues from "./AllValues"
 
@@ -95,6 +95,37 @@ describe("All Values Component Integration", () => {
     )
   })
 
+  it("disables adding a custom value when a value name already exists", () => {
+    const rankedValues = createRankedValues(createActiveDeckWithIngenuity())
+    const onAddCustomValue = vi.fn()
+
+    render(
+      <AllValues
+        rankedValues={rankedValues}
+        onClose={vi.fn()}
+        onAddCustomValue={onAddCustomValue}
+        onUpdateCustomValue={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "Ingenuity" },
+    })
+    fireEvent.change(screen.getByLabelText("Custom Value Definition"), {
+      target: { value: "Another version of the same idea." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save Custom Value" }))
+
+    expect(
+      screen.getByText("A value with this name already exists."),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Save Custom Value" }),
+    ).toBeDisabled()
+    expect(onAddCustomValue).not.toHaveBeenCalled()
+  })
+
   it("edits a custom value and emits the full replacement payload", () => {
     const activeDeck = createActiveDeckWithIngenuity()
     const rankedValues = createRankedValues(activeDeck)
@@ -126,6 +157,63 @@ describe("All Values Component Integration", () => {
       "A drive to explore how things connect.",
     )
     expect(onAddCustomValue).not.toHaveBeenCalled()
+  })
+
+  it("disables editing to an existing value name", () => {
+    const activeDeck = createActiveDeckWithIngenuity()
+    const rankedValues = createRankedValues(activeDeck)
+    const onUpdateCustomValue = vi.fn()
+    const secondCustom = Object.freeze({
+      kind: "custom",
+      id: createCustomValueId("custom:00000000-0000-4000-8000-000000000002"),
+      name: "Curiosity Engine",
+      definition: "A drive to explore how things connect.",
+      creationOrdinal: 2,
+      createdAt: "2026-01-02T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
+    }) satisfies CustomValueDefinition
+    const rankedValuesWithSecond = rankValues(
+      createActiveDeck([...activeDeck.customValues, secondCustom]),
+      createInitialValueProgress(
+        createActiveDeck([...activeDeck.customValues, secondCustom]),
+      ),
+    )
+
+    render(
+      <AllValues
+        rankedValues={rankedValuesWithSecond}
+        onClose={vi.fn()}
+        onAddCustomValue={vi.fn()}
+        onUpdateCustomValue={onUpdateCustomValue}
+      />,
+    )
+
+    const firstCustomValue = rankedValuesWithSecond.find(
+      ({ definition }) => definition.id === activeDeck.customValues[0]?.id,
+    )
+    if (!firstCustomValue) {
+      throw new Error("Expected an editable custom value")
+    }
+
+    const targetListItem = screen.getByText("Ingenuity").closest("li")
+    if (!targetListItem) {
+      throw new Error("Expected Ingenuity list item in DOM")
+    }
+    const targetValueControls = within(targetListItem)
+    fireEvent.click(targetValueControls.getByRole("button", { name: "Edit" }))
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Curiosity Engine" },
+    })
+    fireEvent.change(screen.getByLabelText("Definition"), {
+      target: { value: "Try to rename into duplicate." },
+    })
+
+    expect(
+      screen.getByText("A value with this name already exists."),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled()
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(onUpdateCustomValue).not.toHaveBeenCalled()
   })
 
   it("filters without reordering ranks and restores the complete list", () => {
