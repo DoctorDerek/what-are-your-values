@@ -314,6 +314,55 @@ describe("Root Machine", () => {
     )
   })
 
+  it("removes a Custom Value through the atomic durable deck-revision flow", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "all-values-delete-seed",
+    })
+
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+
+    const afterAddSnapshot = await waitFor(actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      return (
+        candidate.matches({ AllValues: "Browsing" }) &&
+        !!profile &&
+        profile.activeDeck.customValues.length === 1
+      )
+    })
+    const customValueId =
+      afterAddSnapshot.context.battleProfile?.activeDeck.customValues[0]?.id
+    if (!customValueId) {
+      throw new Error("Custom value add did not create an id")
+    }
+
+    actor.send({
+      type: "ALL_VALUES.DELETE_REQUESTED",
+      valueId: customValueId,
+    })
+
+    const afterDeleteSnapshot = await waitFor(actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      return (
+        candidate.matches({ AllValues: "Browsing" }) &&
+        !!profile &&
+        profile.activeDeck.customValues.length === 0
+      )
+    })
+    const afterDeleteProfile = afterDeleteSnapshot.context.battleProfile
+    if (!afterDeleteProfile) {
+      throw new Error("Battle profile did not survive Custom Value delete")
+    }
+
+    expect(afterDeleteProfile.activeDeck.values).toHaveLength(100)
+    expect(afterDeleteProfile.history).toHaveLength(0)
+    expect(afterDeleteProfile.redo).toHaveLength(0)
+  })
+
   it("commits one trusted battle durably and ignores duplicate stale selection events", async () => {
     const { actor, durableStore } = await bootRootActor({
       schedulerSeed: "root-battle-seed",

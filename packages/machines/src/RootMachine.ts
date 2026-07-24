@@ -59,6 +59,7 @@ type RootMachineEvent =
       name: string
       definition: string
     }
+  | { type: "ALL_VALUES.DELETE_REQUESTED"; valueId: CustomValueId }
   | {
       type: "BATTLE.WINNER_SELECTED"
       winnerId: ValueId
@@ -202,6 +203,24 @@ function createRevisedCustomValuesForUpdate({
   )
 }
 
+function createRevisedCustomValuesForDelete({
+  profile,
+  valueId,
+}: {
+  readonly profile: BattleProfile
+  readonly valueId: CustomValueId
+}) {
+  const revisedCustomValues = profile.activeDeck.customValues.filter(
+    (value) => value.id !== valueId,
+  )
+
+  if (revisedCustomValues.length === profile.activeDeck.customValues.length) {
+    throw new Error(`Custom Value does not exist: ${valueId}`)
+  }
+
+  return Object.freeze(revisedCustomValues)
+}
+
 function createDeckRevisionCommitFromUpdate({
   context,
   valueId,
@@ -248,6 +267,22 @@ function createDeckRevisionCommitFromAdd({
     name,
     definition,
     now: context.now,
+  })
+
+  return createDeckRevisionCommit({ profile, revisedCustomValues })
+}
+
+function createDeckRevisionCommitFromDelete({
+  context,
+  valueId,
+}: {
+  readonly context: RootMachineContext
+  readonly valueId: CustomValueId
+}) {
+  const profile = requireBattleProfile(context)
+  const revisedCustomValues = createRevisedCustomValuesForDelete({
+    profile,
+    valueId,
   })
 
   return createDeckRevisionCommit({ profile, revisedCustomValues })
@@ -452,6 +487,21 @@ export const rootMachine = setup({
                     name: event.name,
                     definition: event.definition,
                     now: context.now,
+                  })
+                },
+              }),
+            },
+            "ALL_VALUES.DELETE_REQUESTED": {
+              target: "Persisting",
+              actions: assign({
+                pendingBattleProfileCommit: ({ context, event }) => {
+                  if (event.type !== "ALL_VALUES.DELETE_REQUESTED") {
+                    throw new Error("Invalid delete request event type")
+                  }
+
+                  return createDeckRevisionCommitFromDelete({
+                    context,
+                    valueId: event.valueId,
                   })
                 },
               }),
