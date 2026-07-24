@@ -26,13 +26,13 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
 
-    expect(
-      await screen.findByRole("button", { name: "Start" }),
-    ).toBeVisible()
+    expect(await screen.findByRole("button", { name: "Start" })).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
     expect(
-      await screen.findByText("Keep comparing values to reveal your Top Five."),
+      await screen.findByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
     ).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
 
@@ -49,7 +49,14 @@ describe("GameClient Integration", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
 
-    expect(await screen.findByText(`#1 ${winnerName}`)).toBeVisible()
+    expect(
+      await screen.findByRole("heading", { name: "Top Five" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: `Open ${winnerName} in All Values`,
+      }),
+    ).toBeVisible()
     expect(screen.getByText("Level 2")).toBeVisible()
     expect(setItem).not.toHaveBeenCalled()
   })
@@ -69,7 +76,9 @@ describe("GameClient Integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
-    expect(await screen.findByText("Sovereign Dashboard")).toBeVisible()
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
   })
 
   it("opens the complete All Values ranking and returns to the unchanged Hub", async () => {
@@ -79,15 +88,15 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
 
-    expect(
-      await screen.findByRole("button", { name: "Start" }),
-    ).toBeVisible()
+    expect(await screen.findByRole("button", { name: "Start" })).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
     expect(
-      await screen.findByText("Keep comparing values to reveal your Top Five."),
+      await screen.findByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
     ).toBeVisible()
-    fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
+    fireEvent.click(screen.getByRole("button", { name: "Browse All Values" }))
 
     expect(
       await screen.findByRole("heading", { name: "All Values", level: 1 }),
@@ -97,10 +106,16 @@ describe("GameClient Integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }))
 
-    expect(await screen.findByText("Sovereign Dashboard")).toBeVisible()
     expect(
-      screen.getByText("Keep comparing values to reveal your Top Five."),
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
     ).toBeVisible()
-    expect(screen.getByRole("button", { name: "See All Values" })).toHaveFocus()
+    expect(
+      screen.getByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Browse All Values" }),
+    ).toHaveFocus()
   })
 })
