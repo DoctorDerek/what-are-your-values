@@ -1,19 +1,18 @@
-import type { ValueId } from "@game/data/src/Value"
-import type { CustomValueDefinition } from "@game/data/src/Value"
+import type { CustomValueDefinition, ValueId } from "@game/data/src/Value"
 import {
   applyBattleChoice,
   applyBattleRedo,
   applyBattleUndo,
+  applyDeckRevision,
   type BattleProfile,
 } from "./BattleProfile"
 import {
   createBattleChoiceEvent,
-  createDeckRevisionEvent,
   createBattleRedoEvent,
   createBattleUndoEvent,
+  createDeckRevisionEvent,
   type BattleProfileEvent,
 } from "./BattleProfileEvent"
-import { applyDeckRevision } from "./BattleProfile"
 import type { SchedulerRestorePoint } from "./PairScheduler"
 
 export type BattleProfileCommit = {

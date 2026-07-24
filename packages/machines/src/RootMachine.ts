@@ -1,11 +1,16 @@
-import type { ValueId } from "@game/data/src/Value"
+import type {
+  CustomValueDefinition,
+  CustomValueId,
+  ValueId,
+} from "@game/data/src/Value"
+import { createCustomValueId } from "@game/data/src/Value"
 import { assign, setup } from "xstate"
 import { createInitialBattleProfile, type BattleProfile } from "./BattleProfile"
 import {
-  createDeckRevisionCommit,
   createBattleChoiceCommit,
   createBattleRedoCommit,
   createBattleUndoCommit,
+  createDeckRevisionCommit,
   type BattleProfileCommit,
 } from "./BattleProfileCommit"
 import {
@@ -14,8 +19,6 @@ import {
   initializeBattleProfileActor,
 } from "./BattleProfilePersistenceActors"
 import type { BattleProfileStoreState } from "./BattleProfileStore"
-import type { CustomValueDefinition, CustomValueId } from "@game/data/src/Value"
-import { createCustomValueId } from "@game/data/src/Value"
 import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
@@ -120,9 +123,7 @@ function createNextCustomValue({
   const nextCreationOrdinal =
     existingCustomValues.reduce(
       (maxOrdinal, value) =>
-        value.creationOrdinal > maxOrdinal
-          ? value.creationOrdinal
-          : maxOrdinal,
+        value.creationOrdinal > maxOrdinal ? value.creationOrdinal : maxOrdinal,
       0,
     ) + 1
 
@@ -224,9 +225,7 @@ function createDeckRevisionCommitFromUpdate({
   })
   if (
     !revisedCustomValues.some((value) => value.id === valueId) ||
-    profile.activeDeck.customValues.every(
-      (value) => value.id !== valueId,
-    )
+    profile.activeDeck.customValues.every((value) => value.id !== valueId)
   ) {
     throw new Error(`Custom Value does not exist: ${valueId}`)
   }

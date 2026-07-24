@@ -1,6 +1,6 @@
+import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import { type CustomValueDefinition } from "@game/data/src/Value"
-import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import {
   createBattleCycleCandidate,
   createInitialBattleCycle,
@@ -17,9 +17,9 @@ import {
   type BattleTimeline,
   type BattleTimelineLimits,
 } from "./BattleTimeline"
+import { createDeckRevisionCandidate } from "./DeckRevision"
 import type { SchedulerRestorePoint } from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
-import { createDeckRevisionCandidate } from "./DeckRevision"
 
 export type BattleProfile = BattleCycleState & BattleTimeline
 

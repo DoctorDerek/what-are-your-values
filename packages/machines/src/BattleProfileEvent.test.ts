@@ -1,3 +1,7 @@
+import {
+  createCustomValueId,
+  type CustomValueDefinition,
+} from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { encodeBattleDelta } from "./BattleDeltaCodec"
 import {
@@ -15,10 +19,6 @@ import {
   encodeBattleProfileEvent,
   replayBattleProfileEvent,
 } from "./BattleProfileEvent"
-import {
-  createCustomValueId,
-  type CustomValueDefinition,
-} from "@game/data/src/Value"
 import { projectScheduledPair } from "./PairScheduler"
 
 function chooseFirstValue(
@@ -100,6 +100,39 @@ describe("Battle Profile Event", () => {
     expect(encodeBattleProfileEvent(decoded)).toEqual(encoded)
     expect(decoded.type).toBe("deck-revision")
     expect(replayBattleProfileEvent(initial, decoded)).toEqual(revision.profile)
+  })
+
+  it("preserves existing value progress when adding a custom value", () => {
+    const initial = createInitialBattleProfile(
+      "profile-event-revision-progress-seed",
+    )
+    const choice = chooseFirstValue(initial)
+    const secondChoice = chooseFirstValue(choice.profile)
+    const beforeRevision = secondChoice.profile
+    const custom = createCustomValue()
+    const revision = createDeckRevisionCommit({
+      profile: beforeRevision,
+      revisedCustomValues: [...beforeRevision.activeDeck.customValues, custom],
+    })
+
+    const revisionProfile = revision.profile
+    for (const valueId of beforeRevision.activeDeck.valueIds) {
+      const before = beforeRevision.progressById.get(valueId)
+      const after = revisionProfile.progressById.get(valueId)
+      if (!before || !after) {
+        throw new Error(`Missing profile progress for value ${valueId}`)
+      }
+      expect(after.totalXp).toEqual(before.totalXp)
+      expect(after.profileWins).toEqual(before.profileWins)
+      expect(after.profileComparisons).toEqual(before.profileComparisons)
+      expect(after.currentCycleWins).toEqual(0)
+    }
+
+    expect(revisionProfile.progressById.get(custom.id)).toMatchObject({
+      totalXp: 0,
+      profileComparisons: 0,
+    })
+    expect(revision.event.type).toBe("deck-revision")
   })
 
   it("rejects a self-consistent payout that deterministic replay disproves", () => {

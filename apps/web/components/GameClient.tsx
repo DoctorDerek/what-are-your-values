@@ -1,7 +1,6 @@
 "use client"
 
-import type { ValueId } from "@game/data/src/Value"
-import type { CustomValueId } from "@game/data/src/Value"
+import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
@@ -126,9 +125,7 @@ export default function GameClient() {
 
   if (state.matches("Splash")) {
     return (
-      <Splash
-        onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })}
-      />
+      <Splash onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })} />
     )
   }
 
