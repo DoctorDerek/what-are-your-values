@@ -94,6 +94,18 @@ describe("All Values Component Integration", () => {
     ).toBeVisible()
   })
 
+  it("opens and closes the builder when Hub requests the custom-value action", () => {
+    renderAllValues(undefined, { openCustomValueBuilder: true })
+
+    expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close Custom Value Form" }),
+    )
+    expect(
+      screen.queryByRole("form", { name: "Add Custom Value" }),
+    ).not.toBeInTheDocument()
+  })
+
   it("adds a custom value with the private definition payload", () => {
     const onAddCustomValue = vi.fn()
 
@@ -214,6 +226,13 @@ describe("All Values Component Integration", () => {
     expect(
       screen.getByRole("alertdialog", { name: "Remove Ingenuity?" }),
     ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(
+      screen.queryByRole("alertdialog", { name: "Remove Ingenuity?" }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Delete" }),
+    )
     fireEvent.click(screen.getByRole("button", { name: "Delete Value" }))
 
     expect(onDeleteCustomValue).toHaveBeenCalledWith(
@@ -338,5 +357,17 @@ describe("All Values Component Integration", () => {
         "break-words",
       )
     })
+  })
+
+  it("reports when a literal search has no matching value or definition", () => {
+    renderAllValues()
+
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Search All Values" }),
+      { target: { value: "zzzz-no-match" } },
+    )
+
+    expect(screen.getByText("No values match your search.")).toBeVisible()
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0)
   })
 })
