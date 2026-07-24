@@ -61,6 +61,35 @@ describe("All Values Component Integration", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(100)
   })
 
+  it("matches definition text when filtering", () => {
+    const battleCycle = createInitialBattleCycle("all-values-search-definition-seed")
+    const rankedValues = rankValues(
+      battleCycle.activeDeck,
+      battleCycle.progressById,
+    )
+    const definitionSearchText = getValueDisplayDefinition(
+      rankedValues[0].definition,
+    )
+      .slice(0, 12)
+      .toLocaleLowerCase()
+    const expectedMatches = rankedValues.filter(({ definition }) =>
+      getValueDisplayDefinition(definition)
+        .toLocaleLowerCase()
+        .includes(definitionSearchText),
+    )
+
+    render(<AllValues rankedValues={rankedValues} onClose={vi.fn()} />)
+
+    const search = screen.getByRole("searchbox", { name: "Search Values" })
+    fireEvent.change(search, { target: { value: definitionSearchText } })
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(expectedMatches.length)
+    expectedMatches.forEach(({ rank, definition }) => {
+      expect(screen.getByLabelText(`Rank ${rank}`)).toBeVisible()
+      expect(screen.getByText(getValueDisplayName(definition))).toBeVisible()
+    })
+  })
+
   it("marks the earned Top Five and closes without changing data", () => {
     const onClose = vi.fn()
     const initialBattleCycle = createInitialBattleCycle(

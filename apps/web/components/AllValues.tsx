@@ -24,6 +24,9 @@ export default function AllValues({
         : rankedValues.filter(({ definition }) =>
             getValueDisplayName(definition)
               .toLocaleLowerCase()
+              .includes(normalizedQuery) ||
+            getValueDisplayDefinition(definition)
+              .toLocaleLowerCase()
               .includes(normalizedQuery),
           ),
     [normalizedQuery, rankedValues],
