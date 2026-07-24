@@ -10,7 +10,7 @@ import {
   type ValueProgress,
   type ValueProgressById,
 } from "./ValueProgress"
-import { rankValues } from "./ValueRanking"
+import { rankValues, sortRankedValuesAlphabetically } from "./ValueRanking"
 
 function createCustomValue(creationOrdinal: number): CustomValueDefinition {
   const uuidSuffix = creationOrdinal.toString().padStart(12, "0")
@@ -109,5 +109,31 @@ describe("Value Ranking", () => {
     expect(ranking.every(Object.isFrozen)).toBe(true)
     expect(activeDeck.valueIds).toEqual(originalValueIds)
     expect(Array.from(progressById.keys())).toEqual(originalProgressIds)
+  })
+
+  it("sorts an unplayed ranking alphabetically without changing evidence ranks", () => {
+    const activeDeck = createActiveDeck([
+      createCustomValue(1),
+    ])
+    const rankedValues = rankValues(
+      activeDeck,
+      createInitialValueProgress(activeDeck),
+    )
+
+    const alphabetizedValues = sortRankedValuesAlphabetically(rankedValues)
+
+    expect(alphabetizedValues[0]?.definition).toMatchObject({
+      kind: "canonical",
+      englishName: "Acceptance",
+    })
+    const customValueIndex = alphabetizedValues.findIndex(
+      ({ definition }) => definition.kind === "custom",
+    )
+
+    expect(alphabetizedValues[customValueIndex]?.definition).toMatchObject({
+      kind: "custom",
+      name: "Custom Value 1",
+    })
+    expect(alphabetizedValues[customValueIndex]?.rank).toBe(101)
   })
 })

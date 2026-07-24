@@ -145,6 +145,17 @@ describe("Active Deck", () => {
       createActiveDeck([createCustomValue(1, { definition: "" })]),
     ).toThrow("Custom Value definition is required")
   })
+
+  it("rejects Custom Values that collide with canonical names", () => {
+    expect(() =>
+      createActiveDeck([
+        createCustomValue(1, {
+          name: "  HEALTH  ",
+          definition: "A private definition.",
+        }),
+      ]),
+    ).toThrow("duplicate value names")
+  })
 })
 
 describe("pair count", () => {
