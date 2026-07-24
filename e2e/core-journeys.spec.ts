@@ -52,11 +52,12 @@ test("a new player starts immediately and reviews the complete ranking", async (
 test("a returning player keeps Undo and Redo across reloads", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("wayvm_uuid", "playwright-returning-player")
-  })
   await page.goto("/")
 
+  await page.getByRole("button", { name: "Start" }).click()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Your Values" }),
+  ).toBeVisible()
   await page.getByRole("button", { name: "Battle" }).click()
   await expect(page.getByRole("main", { name: "Value battle" })).toBeVisible()
 
@@ -85,8 +86,11 @@ test("a returning player keeps Undo and Redo across reloads", async ({
   await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
   await page.reload()
 
-  await expect(page.getByText(`#1 ${firstChoiceName}`)).toBeVisible()
-  await expect(page.getByText("Level 2")).toBeVisible()
+  const firstRankedValue = page
+    .getByRole("listitem")
+    .filter({ has: page.getByLabel("Rank 1", { exact: true }) })
+  await expect(firstRankedValue).toContainText(firstChoiceName)
+  await expect(firstRankedValue).toContainText("Level 2")
   await expect(
     page.getByRole("progressbar", { name: "XP toward Level 3" }),
   ).toHaveAttribute("aria-valuenow", "0")
