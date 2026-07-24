@@ -228,7 +228,7 @@ describe("Crucible Component Integration", () => {
       expect(choice.parentElement).toHaveClass(
         "min-h-0",
         "min-w-0",
-        "overflow-x-hidden",
+        "overflow-x-auto",
         "overflow-y-auto",
         "overscroll-contain",
       )
@@ -324,4 +324,3 @@ describe("Crucible Component Integration", () => {
     expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 })
-

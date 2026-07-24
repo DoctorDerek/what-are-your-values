@@ -40,13 +40,14 @@ export default function AllValues({
     () =>
       normalizedQuery.length === 0
         ? rankedValues
-        : rankedValues.filter(({ definition }) =>
-            getValueDisplayName(definition)
-              .toLocaleLowerCase()
-              .includes(normalizedQuery) ||
-            getValueDisplayDefinition(definition)
-              .toLocaleLowerCase()
-              .includes(normalizedQuery),
+        : rankedValues.filter(
+            ({ definition }) =>
+              getValueDisplayName(definition)
+                .toLocaleLowerCase()
+                .includes(normalizedQuery) ||
+              getValueDisplayDefinition(definition)
+                .toLocaleLowerCase()
+                .includes(normalizedQuery),
           ),
     [normalizedQuery, rankedValues],
   )
@@ -55,7 +56,8 @@ export default function AllValues({
   )
   const trimmedAddName = addName.trim()
   const trimmedAddDefinition = addDefinition.trim()
-  const canSubmitAdd = trimmedAddName.length > 0 && trimmedAddDefinition.length > 0
+  const canSubmitAdd =
+    trimmedAddName.length > 0 && trimmedAddDefinition.length > 0
   const editableCustomValue = rankedValues.find(
     ({ definition }) => definition.id === editingValueId,
   )?.definition
@@ -169,7 +171,9 @@ export default function AllValues({
         </p>
 
         <section className="mt-8">
-          <h3 className="text-2xl font-black uppercase">Custom Value Builder</h3>
+          <h3 className="text-2xl font-black uppercase">
+            Custom Value Builder
+          </h3>
           <button
             type="button"
             onClick={() => {
@@ -177,7 +181,9 @@ export default function AllValues({
             }}
             className="bg-mapache-vivid-primary-orange mt-3 border-4 border-black px-5 py-3 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[6px] active:translate-y-[6px] active:shadow-none"
           >
-            {isAddingCustomValue ? "Close Custom Value Form" : "Add Custom Value"}
+            {isAddingCustomValue
+              ? "Close Custom Value Form"
+              : "Add Custom Value"}
           </button>
 
           {isAddingCustomValue ? (
@@ -198,7 +204,7 @@ export default function AllValues({
                   type="text"
                   value={addName}
                   onChange={(event) => setAddName(event.target.value)}
-                  className="border-4 border-black px-4 py-3 text-2xl font-bold focus-visible:ring-mapache-vivid-primary-cyan outline-none focus-visible:ring-8"
+                  className="focus-visible:ring-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-2xl font-bold outline-none focus-visible:ring-8"
                 />
               </label>
               <label
@@ -213,7 +219,7 @@ export default function AllValues({
                   value={addDefinition}
                   onChange={(event) => setAddDefinition(event.target.value)}
                   rows={4}
-                  className="border-4 border-black px-4 py-3 text-xl font-bold focus-visible:ring-mapache-vivid-primary-cyan outline-none focus-visible:ring-8"
+                  className="focus-visible:ring-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
                 />
               </label>
               <div className="flex gap-3">
@@ -250,7 +256,7 @@ export default function AllValues({
               return (
                 <li
                   key={definition.id}
-                  className="overflow-x-hidden text-mapache-vivid-dark border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-7"
+                  className="text-mapache-vivid-dark overflow-x-auto overflow-y-auto border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-7"
                 >
                   <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-5">
                     <span
@@ -277,11 +283,11 @@ export default function AllValues({
                       <button
                         type="button"
                         onClick={() =>
-                        startEdit(
-                          definition.id,
-                          definition.name,
-                          definition.definition,
-                        )
+                          startEdit(
+                            definition.id,
+                            definition.name,
+                            definition.definition,
+                          )
                         }
                         className="bg-mapache-vivid-secondary-purple border-4 border-black px-3 py-2 text-lg font-black uppercase"
                       >
@@ -304,7 +310,7 @@ export default function AllValues({
                         id={`custom-value-name-${definition.id}`}
                         value={editName}
                         onChange={(event) => setEditName(event.target.value)}
-                        className="mb-3 w-full border-4 border-black px-4 py-3 text-2xl font-bold focus-visible:ring-mapache-vivid-primary-cyan outline-none focus-visible:ring-8"
+                        className="focus-visible:ring-mapache-vivid-primary-cyan mb-3 w-full border-4 border-black px-4 py-3 text-2xl font-bold outline-none focus-visible:ring-8"
                       />
                       <label
                         htmlFor={`custom-value-definition-${definition.id}`}
@@ -315,9 +321,11 @@ export default function AllValues({
                       <textarea
                         id={`custom-value-definition-${definition.id}`}
                         value={editDefinition}
-                        onChange={(event) => setEditDefinition(event.target.value)}
+                        onChange={(event) =>
+                          setEditDefinition(event.target.value)
+                        }
                         rows={4}
-                        className="mb-4 w-full border-4 border-black px-4 py-3 text-xl font-bold focus-visible:ring-mapache-vivid-primary-cyan outline-none focus-visible:ring-8"
+                        className="focus-visible:ring-mapache-vivid-primary-cyan mb-4 w-full border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
                       />
                       <div className="flex gap-3">
                         <button
@@ -337,7 +345,7 @@ export default function AllValues({
                       </div>
                     </form>
                   ) : (
-                    <p className="mt-5 border-t-4 border-black pt-4 text-xl leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap">
+                    <p className="mt-5 overflow-x-auto overflow-y-auto border-t-4 border-black pt-4 text-xl leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap">
                       “{getValueDisplayDefinition(definition)}”
                     </p>
                   )}

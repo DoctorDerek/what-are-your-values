@@ -70,7 +70,7 @@ export const ValueChoiceCard = forwardRef<
       exit={valueChoiceMotion.exit}
       transition={valueChoiceMotion.transition}
       onAnimationComplete={onAnimationComplete}
-      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain`}
+      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-auto overflow-y-auto overscroll-contain`}
     >
       <button
         ref={ref}
@@ -96,7 +96,7 @@ export const ValueChoiceCard = forwardRef<
           </h2>
           <p
             id={accessibleDefinitionId}
-            className="mx-auto mt-8 max-w-2xl border-2 border-white/20 bg-black/40 p-5 text-[clamp(1.25rem,3vw,1.875rem)] leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-white drop-shadow-[2px_2px_0px_#000000] sm:p-6"
+            className="mx-auto mt-8 max-w-2xl overflow-x-auto border-2 border-white/20 bg-black/40 p-5 text-[clamp(1.25rem,3vw,1.875rem)] leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-white drop-shadow-[2px_2px_0px_#000000] sm:p-6"
           >
             “{getValueDisplayDefinition(value)}”
           </p>

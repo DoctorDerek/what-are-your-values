@@ -245,4 +245,32 @@ describe("All Values Component Integration", () => {
     fireEvent.keyDown(window, { key: "Escape" })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it("supports readable wrapping and overflow-safe value list cells", async () => {
+    const rankedValues = createRankedValues(createActiveDeck([]))
+
+    render(
+      <AllValues
+        rankedValues={rankedValues}
+        onClose={vi.fn()}
+        onAddCustomValue={vi.fn()}
+        onUpdateCustomValue={vi.fn()}
+      />,
+    )
+
+    const listItems = await screen.findAllByRole("listitem")
+    expect(listItems).toHaveLength(CANONICAL_VALUES.length)
+    listItems.forEach((listItem) => {
+      expect(listItem).toHaveClass("overflow-x-auto", "overflow-y-auto")
+    })
+
+    const longDefinitions = screen.getAllByText(/^“/)
+    longDefinitions.forEach((definitionCopy) => {
+      expect(definitionCopy).toHaveClass(
+        "overflow-x-auto",
+        "overflow-y-auto",
+        "break-words",
+      )
+    })
+  })
 })
