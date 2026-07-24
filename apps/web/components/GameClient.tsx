@@ -8,7 +8,7 @@ import {
 } from "@game/machines/src/BattleScheduler"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
 import packageMetadata from "@/package.json"
 import AllValues from "./AllValues"
@@ -27,8 +27,10 @@ export default function GameClient() {
   })
   const browseAllValuesButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusTargetIdRef = useRef("hub-browse-all-values-button")
-  const pendingAllValuesValueIdRef = useRef<ValueId | null>(null)
-  const shouldOpenCustomValueBuilderRef = useRef(false)
+  const [pendingAllValuesValueId, setPendingAllValuesValueId] =
+    useState<ValueId | null>(null)
+  const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
+    useState(false)
   const shouldRestoreHubFocusRef = useRef(false)
   const battleProfile = state.context.battleProfile
   const rankedValues = useMemo(
@@ -75,8 +77,8 @@ export default function GameClient() {
       openCustomValueBuilder?: boolean
     }) => {
       returnFocusTargetIdRef.current = focusTargetId
-      pendingAllValuesValueIdRef.current = valueId ?? null
-      shouldOpenCustomValueBuilderRef.current = openCustomValueBuilder === true
+      setPendingAllValuesValueId(valueId ?? null)
+      setShouldOpenCustomValueBuilder(openCustomValueBuilder === true)
       shouldRestoreHubFocusRef.current = true
       send({ type: "ALL_VALUES.OPEN_REQUESTED" })
     },
@@ -174,8 +176,8 @@ export default function GameClient() {
     return (
       <AllValues
         rankedValues={rankedValues}
-        initialValueId={pendingAllValuesValueIdRef.current}
-        openCustomValueBuilder={shouldOpenCustomValueBuilderRef.current}
+        initialValueId={pendingAllValuesValueId}
+        openCustomValueBuilder={shouldOpenCustomValueBuilder}
         onClose={handleAllValuesClose}
         onAddCustomValue={handleAddCustomValue}
         onUpdateCustomValue={handleUpdateCustomValue}

@@ -155,12 +155,6 @@ export default function AllValues({
   }, [isAddingCustomValue])
 
   useEffect(() => {
-    if (openCustomValueBuilder) {
-      setIsAddingCustomValue(true)
-    }
-  }, [openCustomValueBuilder])
-
-  useEffect(() => {
     if (!highlightedValueId) {
       return
     }
