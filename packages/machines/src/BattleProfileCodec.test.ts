@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest"
 import {
   applyBattleChoice,
   applyBattleUndo,
+  applyDeckRevision,
   createInitialBattleProfile,
   type BattleProfile,
 } from "./BattleProfile"
@@ -83,6 +84,16 @@ describe("Battle Profile Codec", () => {
     const profile = createCustomProfile()
 
     expect(decodeBattleProfile(encodeBattleProfile(profile))).toEqual(profile)
+  })
+
+  it("round-trips a persisted profile while its first Custom Value Join Pass is active", () => {
+    const initial = createInitialBattleProfile("join-pass-profile-seed")
+    const revised = applyDeckRevision({
+      profile: initial,
+      revisedCustomValues: [createCustomValue()],
+    }).profile
+
+    expect(decodeBattleProfile(encodeBattleProfile(revised))).toEqual(revised)
   })
 
   it("rejects unsupported versions and noncanonical ordered maps", () => {

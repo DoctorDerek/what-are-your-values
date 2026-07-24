@@ -1,5 +1,11 @@
+import { createActiveDeck } from "@game/data/src/ActiveDeck"
+import {
+  createCustomValueId,
+  type CustomValueDefinition,
+} from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { createInitialBattleCycle } from "./BattleCycle"
+import { createDeckReconfigurationRestorePoint } from "./DeckReconfigurationScheduler"
 import {
   decodeSchedulerRestorePoint,
   encodeSchedulerRestorePoint,
@@ -13,6 +19,32 @@ describe("Scheduler Codec", () => {
     expect(
       decodeSchedulerRestorePoint(battleCycle.activeDeck, encoded, "Scheduler"),
     ).toEqual(battleCycle.scheduler)
+  })
+
+  it("round-trips Join Pass identity and compact membership state", () => {
+    const customValue = Object.freeze({
+      kind: "custom",
+      id: createCustomValueId("custom:00000000-0000-4000-8000-000000000001"),
+      name: "Ingenuity",
+      definition: "To make original solutions.",
+      creationOrdinal: 1,
+      createdAt: "2026-07-24T00:00:00.000Z",
+      updatedAt: "2026-07-24T00:00:00.000Z",
+    }) satisfies CustomValueDefinition
+    const activeDeck = createActiveDeck([customValue])
+    const scheduler = createDeckReconfigurationRestorePoint({
+      activeDeck,
+      joinedValueIds: [customValue.id],
+      progressGeneration: 0,
+      deckRevision: 1,
+      seed: "join-pass-codec-seed",
+      cycleIndex: 0,
+    })
+    const encoded = encodeSchedulerRestorePoint(scheduler)
+
+    expect(
+      decodeSchedulerRestorePoint(activeDeck, encoded, "Scheduler"),
+    ).toEqual(scheduler)
   })
 
   it("rejects unsupported algorithms, mismatched decks, and invalid cursors", () => {

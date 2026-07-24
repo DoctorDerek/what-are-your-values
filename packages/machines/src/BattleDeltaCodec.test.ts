@@ -1,4 +1,8 @@
 import { getPairCount } from "@game/data/src/ActiveDeck"
+import {
+  createCustomValueId,
+  type CustomValueDefinition,
+} from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import {
   createBattleCycleCandidate,
@@ -9,6 +13,12 @@ import {
   encodeBattleDelta,
   getEncodedBattleDeltaByteLength,
 } from "./BattleDeltaCodec"
+import {
+  applyBattleChoice,
+  applyDeckRevision,
+  createInitialBattleProfile,
+} from "./BattleProfile"
+import { projectBattlePair } from "./BattleScheduler"
 import {
   createSchedulerRestorePoint,
   projectScheduledPair,
@@ -40,6 +50,32 @@ describe("Battle Delta Codec", () => {
     expect(getEncodedBattleDeltaByteLength(delta)).toBe(
       new TextEncoder().encode(JSON.stringify(encoded)).byteLength,
     )
+  })
+
+  it("round-trips Join Pass scheduler evidence in a battle delta", () => {
+    const customValue = Object.freeze({
+      kind: "custom",
+      id: createCustomValueId("custom:00000000-0000-4000-8000-000000000001"),
+      name: "Ingenuity",
+      definition: "To make original solutions.",
+      creationOrdinal: 1,
+      createdAt: "2026-07-24T00:00:00.000Z",
+      updatedAt: "2026-07-24T00:00:00.000Z",
+    }) satisfies CustomValueDefinition
+    const initial = createInitialBattleProfile("join-pass-delta-seed")
+    const revised = applyDeckRevision({
+      profile: initial,
+      revisedCustomValues: [customValue],
+    }).profile
+    const [winnerId] = projectBattlePair(revised.activeDeck, revised.scheduler)
+    const delta = applyBattleChoice({
+      profile: revised,
+      winnerId,
+      expectedScheduler: revised.scheduler,
+    }).delta
+    const encoded = encodeBattleDelta(delta)
+
+    expect(decodeBattleDelta(revised.activeDeck, encoded)).toEqual(delta)
   })
 
   it("round-trips complete cycle-boundary snapshots and win maps", () => {

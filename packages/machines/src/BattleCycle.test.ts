@@ -1,5 +1,9 @@
 import { getPairCount } from "@game/data/src/ActiveDeck"
-import type { ValueId } from "@game/data/src/Value"
+import {
+  createCustomValueId,
+  type CustomValueDefinition,
+  type ValueId,
+} from "@game/data/src/Value"
 import {
   createValueProgressById,
   type ValueProgress,
@@ -13,6 +17,9 @@ import {
 } from "./BattleCycle"
 import { createBattleDelta } from "./BattleDelta"
 import { createBattleId, createCycleCompleteEventId } from "./BattleIdentity"
+import { applyDeckRevision, createInitialBattleProfile } from "./BattleProfile"
+import { projectBattlePair } from "./BattleScheduler"
+import { createDeckReconfigurationRestorePoint } from "./DeckReconfigurationScheduler"
 import {
   createSchedulerRestorePoint,
   projectScheduledPair,
@@ -212,5 +219,50 @@ describe("Battle Cycle", () => {
         cycleBoundary: candidate.delta.cycleBoundary,
       }),
     ).toThrow("scheduler transition is inconsistent")
+  })
+
+  it("completes a Join Pass before starting the next ordinary cycle", () => {
+    const customValue = Object.freeze({
+      kind: "custom",
+      id: createCustomValueId("custom:00000000-0000-4000-8000-000000000001"),
+      name: "Ingenuity",
+      definition: "To make original solutions.",
+      creationOrdinal: 1,
+      createdAt: "2026-07-24T00:00:00.000Z",
+      updatedAt: "2026-07-24T00:00:00.000Z",
+    }) satisfies CustomValueDefinition
+    const revisedProfile = applyDeckRevision({
+      profile: createInitialBattleProfile("join-pass-boundary-seed"),
+      revisedCustomValues: [customValue],
+    }).profile
+    const finalScheduler = createDeckReconfigurationRestorePoint({
+      activeDeck: revisedProfile.activeDeck,
+      joinedValueIds: [customValue.id],
+      progressGeneration: revisedProfile.scheduler.progressGeneration,
+      deckRevision: revisedProfile.scheduler.deckRevision,
+      seed: revisedProfile.scheduler.seed,
+      cycleIndex: revisedProfile.scheduler.cycleIndex,
+      cursor: getPairCount(revisedProfile.activeDeck.valueIds.length) - 1,
+    })
+    const battleCycle = Object.freeze({
+      activeDeck: revisedProfile.activeDeck,
+      progressById: revisedProfile.progressById,
+      cycleLevelSnapshot: revisedProfile.cycleLevelSnapshot,
+      scheduler: finalScheduler,
+    }) satisfies BattleCycleState
+    const [winnerId] = projectBattlePair(
+      battleCycle.activeDeck,
+      battleCycle.scheduler,
+    )
+    const candidate = createBattleCycleCandidate({
+      battleCycle,
+      winnerId,
+      expectedScheduler: finalScheduler,
+    })
+
+    expect(candidate.delta.cycleBoundary).not.toBeNull()
+    expect(candidate.delta.resultingScheduler.scheduleKind).toBe("full-cycle")
+    expect(candidate.delta.resultingScheduler.cycleIndex).toBe(1)
+    expect(candidate.scheduler.cursor).toBe(0)
   })
 })
