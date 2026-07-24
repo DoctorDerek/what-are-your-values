@@ -25,8 +25,11 @@ export default function GameClient() {
       now: () => new Date().toISOString(),
     },
   })
-  const seeAllValuesButtonRef = useRef<HTMLButtonElement>(null)
-  const shouldRestoreSeeAllValuesFocusRef = useRef(false)
+  const browseAllValuesButtonRef = useRef<HTMLButtonElement>(null)
+  const returnFocusTargetIdRef = useRef("hub-browse-all-values-button")
+  const pendingAllValuesValueIdRef = useRef<ValueId | null>(null)
+  const shouldOpenCustomValueBuilderRef = useRef(false)
+  const shouldRestoreHubFocusRef = useRef(false)
   const battleProfile = state.context.battleProfile
   const rankedValues = useMemo(
     () =>
@@ -59,9 +62,26 @@ export default function GameClient() {
     [send],
   )
   const handleAllValuesClose = useCallback(() => {
-    shouldRestoreSeeAllValuesFocusRef.current = true
     send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
   }, [send])
+  const openAllValues = useCallback(
+    ({
+      focusTargetId,
+      valueId,
+      openCustomValueBuilder,
+    }: {
+      focusTargetId: string
+      valueId?: ValueId | null
+      openCustomValueBuilder?: boolean
+    }) => {
+      returnFocusTargetIdRef.current = focusTargetId
+      pendingAllValuesValueIdRef.current = valueId ?? null
+      shouldOpenCustomValueBuilderRef.current = openCustomValueBuilder === true
+      shouldRestoreHubFocusRef.current = true
+      send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    },
+    [send],
+  )
   const handleAddCustomValue = useCallback(
     (name: string, definition: string) => {
       send({
@@ -92,9 +112,9 @@ export default function GameClient() {
   }, [send])
 
   useEffect(() => {
-    if (state.matches("Hub") && shouldRestoreSeeAllValuesFocusRef.current) {
-      shouldRestoreSeeAllValuesFocusRef.current = false
-      seeAllValuesButtonRef.current?.focus()
+    if (state.matches("Hub") && shouldRestoreHubFocusRef.current) {
+      shouldRestoreHubFocusRef.current = false
+      document.getElementById(returnFocusTargetIdRef.current)?.focus()
     }
   }, [state])
 
@@ -137,8 +157,14 @@ export default function GameClient() {
     return (
       <Hub
         rankedValues={rankedValues}
-        seeAllValuesButtonRef={seeAllValuesButtonRef}
-        onSeeAllValues={() => send({ type: "ALL_VALUES.OPEN_REQUESTED" })}
+        browseAllValuesButtonRef={browseAllValuesButtonRef}
+        onBrowseAllValues={(focusTargetId) => openAllValues({ focusTargetId })}
+        onAddCustomValue={(focusTargetId) =>
+          openAllValues({ focusTargetId, openCustomValueBuilder: true })
+        }
+        onOpenValue={(valueId, focusTargetId) =>
+          openAllValues({ focusTargetId, valueId })
+        }
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
       />
     )
@@ -148,9 +174,14 @@ export default function GameClient() {
     return (
       <AllValues
         rankedValues={rankedValues}
+        initialValueId={pendingAllValuesValueIdRef.current}
+        openCustomValueBuilder={shouldOpenCustomValueBuilderRef.current}
         onClose={handleAllValuesClose}
         onAddCustomValue={handleAddCustomValue}
         onUpdateCustomValue={handleUpdateCustomValue}
+        onDeleteCustomValue={(valueId) =>
+          send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
+        }
       />
     )
   }

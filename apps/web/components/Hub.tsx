@@ -1,91 +1,187 @@
 "use client"
 
+import { getValueDisplayName, type ValueId } from "@game/data/src/Value"
 import {
-  getValueDisplayDefinition,
-  getValueDisplayName,
-} from "@game/data/src/Value"
-import type { RankedValue } from "@game/data/src/ValueRanking"
+  sortRankedValuesAlphabetically,
+  type RankedValue,
+} from "@game/data/src/ValueRanking"
 import type { Ref } from "react"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
+function ValueRow({
+  rankedValue,
+  hasComparisons,
+  onOpenValue,
+}: {
+  rankedValue: RankedValue
+  hasComparisons: boolean
+  onOpenValue: (valueId: ValueId, focusTargetId: string) => void
+}) {
+  const { definition, progress, rank } = rankedValue
+  const displayName = getValueDisplayName(definition)
+  const rowId = `hub-value-${definition.id}`
+
+  return (
+    <li
+      id={rowId}
+      data-value-row="true"
+      className="text-mapache-vivid-dark border-4 border-black bg-white shadow-[6px_6px_0px_0px_#000000]"
+    >
+      <button
+        id={`${rowId}-button`}
+        type="button"
+        onClick={(event) => onOpenValue(definition.id, event.currentTarget.id)}
+        className="flex w-full min-w-0 cursor-pointer flex-wrap items-center gap-4 p-4 text-left hover:-translate-y-1 hover:shadow-[0_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black sm:gap-6 sm:p-5"
+        aria-label={`Open ${displayName} in All Values`}
+      >
+        {hasComparisons ? (
+          <span
+            aria-label={`Rank ${rank}`}
+            className="bg-mapache-vivid-secondary-purple border-4 border-black px-3 py-2 text-2xl font-black text-white uppercase"
+          >
+            #{rank}
+          </span>
+        ) : null}
+        <span className="min-w-0 flex-1 text-2xl font-black [overflow-wrap:anywhere] break-words uppercase sm:text-3xl">
+          {displayName}
+        </span>
+        <ValueLevelProgress totalXp={progress.totalXp} />
+      </button>
+    </li>
+  )
+}
+
 export default function Hub({
   rankedValues,
-  seeAllValuesButtonRef,
-  onSeeAllValues,
+  browseAllValuesButtonRef,
+  onBrowseAllValues,
+  onAddCustomValue,
+  onOpenValue,
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
-  seeAllValuesButtonRef?: Ref<HTMLButtonElement>
-  onSeeAllValues: () => void
+  browseAllValuesButtonRef?: Ref<HTMLButtonElement>
+  onBrowseAllValues: (focusTargetId: string) => void
+  onAddCustomValue: (focusTargetId: string) => void
+  onOpenValue: (valueId: ValueId, focusTargetId: string) => void
   onStartBattle: () => void
 }) {
   const hasComparisons = rankedValues.some(
     ({ progress }) => progress.profileComparisons > 0,
   )
-  const topFive = hasComparisons ? rankedValues.slice(0, 5) : []
+  const visibleValues = hasComparisons
+    ? rankedValues
+    : sortRankedValuesAlphabetically(rankedValues)
+  const topFive = visibleValues.slice(0, 5)
+  const remainingValues = visibleValues.slice(5)
 
   return (
-    <div className="bg-mapache-vivid-dark noise-bg flex min-h-[100dvh] w-[100dvw] flex-col items-center p-8">
-      <h1 className="text-mapache-vivid-primary-cyan mt-8 mb-16 text-center text-5xl font-black uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-7xl">
-        Sovereign Dashboard
+    <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 sm:p-8">
+      <h1 className="text-mapache-vivid-primary-cyan mt-8 mb-8 text-center text-5xl font-black uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-7xl">
+        Your Values
       </h1>
 
       <section
-        aria-labelledby="top-five-heading"
-        className="flex w-full max-w-7xl flex-1 flex-col border-4 border-black bg-white p-6 shadow-[12px_12px_0px_0px_#000000] sm:p-10"
+        aria-labelledby="your-values-heading"
+        className="flex min-h-0 w-full max-w-7xl flex-1 flex-col border-4 border-black bg-white p-4 shadow-[12px_12px_0px_0px_#000000] sm:p-8"
       >
         <h2
-          id="top-five-heading"
-          className="text-mapache-vivid-dark mb-8 border-b-8 border-black pb-6 text-5xl font-black uppercase lg:text-6xl"
+          id="your-values-heading"
+          className="text-mapache-vivid-dark border-b-8 border-black pb-5 text-4xl font-black uppercase sm:text-5xl"
         >
-          Top Five
+          {hasComparisons ? "Your Values" : "Included Values"}
         </h2>
+        <p
+          role="status"
+          className="text-mapache-vivid-dark py-5 text-xl font-black uppercase sm:text-2xl"
+        >
+          {hasComparisons
+            ? "Your ranking is based on your committed battles."
+            : "Not ranked yet. Browse the included values, then battle when you are ready."}
+        </p>
+
         {hasComparisons ? (
-          <ol className="flex flex-col gap-6">
-            {topFive.map(({ rank, definition, progress }) => (
-              <li
-                key={definition.id}
-                className="bg-mapache-vivid-secondary-purple overflow-x-hidden border-4 border-black p-5 shadow-[6px_6px_0px_0px_#000000] sm:p-6"
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2">
+            <section aria-labelledby="top-five-heading">
+              <h3
+                id="top-five-heading"
+                className="text-mapache-vivid-dark border-b-4 border-black py-4 text-3xl font-black uppercase"
               >
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
-                  <span className="min-w-0 text-3xl font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
-                    #{rank} {getValueDisplayName(definition)}
-                  </span>
-                  {definition.kind === "custom" ? (
-                    <span className="bg-mapache-vivid-primary-cyan border-4 border-black px-3 py-2 text-lg font-black text-black uppercase">
-                      Yours
-                    </span>
-                  ) : null}
-                  <ValueLevelProgress totalXp={progress.totalXp} />
-                </div>
-                <p className="mt-4 border-t-4 border-black bg-white p-3 text-lg leading-relaxed font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-black">
-                  “{getValueDisplayDefinition(definition)}”
-                </p>
-              </li>
+                Top Five
+              </h3>
+              <ol className="flex flex-col gap-4 py-4">
+                {topFive.map((rankedValue) => (
+                  <ValueRow
+                    key={rankedValue.definition.id}
+                    rankedValue={rankedValue}
+                    hasComparisons
+                    onOpenValue={onOpenValue}
+                  />
+                ))}
+              </ol>
+            </section>
+            <div className="bg-mapache-vivid-primary-cyan border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
+              All Other Values
+            </div>
+            <section aria-labelledby="all-other-values-heading">
+              <h3 id="all-other-values-heading" className="sr-only">
+                All Other Values
+              </h3>
+              <ol className="flex flex-col gap-4 py-4">
+                {remainingValues.map((rankedValue) => (
+                  <ValueRow
+                    key={rankedValue.definition.id}
+                    rankedValue={rankedValue}
+                    hasComparisons
+                    onOpenValue={onOpenValue}
+                  />
+                ))}
+              </ol>
+            </section>
+          </div>
+        ) : (
+          <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2">
+            {visibleValues.map((rankedValue) => (
+              <ValueRow
+                key={rankedValue.definition.id}
+                rankedValue={rankedValue}
+                hasComparisons={false}
+                onOpenValue={onOpenValue}
+              />
             ))}
           </ol>
-        ) : (
-          <p className="text-mapache-vivid-dark my-auto text-center text-4xl leading-tight font-black">
-            Keep comparing values to reveal your Top Five.
-          </p>
         )}
       </section>
 
-      <button
-        ref={seeAllValuesButtonRef}
-        type="button"
-        onClick={onSeeAllValues}
-        className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark mt-10 w-full max-w-7xl cursor-pointer border-4 border-black py-5 text-4xl font-black uppercase shadow-[10px_10px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[10px] active:translate-y-[10px] active:shadow-none"
+      <nav
+        aria-label="Value actions"
+        className="mt-8 flex w-full max-w-7xl flex-col gap-4 sm:flex-row"
       >
-        See All Values
-      </button>
-
-      <button
-        onClick={onStartBattle}
-        className="bg-mapache-vivid-primary-orange mt-16 w-full max-w-7xl cursor-pointer border-4 border-black py-10 text-7xl font-black text-white uppercase shadow-[12px_12px_0px_0px_#000000] transition-transform hover:-translate-y-2 hover:shadow-[16px_16px_0px_0px_#000000] active:translate-x-[12px] active:translate-y-[12px] active:shadow-none lg:text-8xl"
-      >
-        Battle
-      </button>
-    </div>
+        <button
+          type="button"
+          onClick={onStartBattle}
+          className="bg-mapache-vivid-primary-orange min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-4xl font-black text-white uppercase shadow-[10px_10px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[10px] active:translate-y-[10px] active:shadow-none"
+        >
+          Battle
+        </button>
+        <button
+          ref={browseAllValuesButtonRef}
+          id="hub-browse-all-values-button"
+          type="button"
+          onClick={(event) => onBrowseAllValues(event.currentTarget.id)}
+          className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
+        >
+          Browse All Values
+        </button>
+        <button
+          id="hub-add-custom-value-button"
+          type="button"
+          onClick={(event) => onAddCustomValue(event.currentTarget.id)}
+          className="bg-mapache-vivid-secondary-purple min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black text-white uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
+        >
+          Add Custom Value
+        </button>
+      </nav>
+    </main>
   )
 }
