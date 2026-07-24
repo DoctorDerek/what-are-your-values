@@ -112,9 +112,7 @@ describe("Value Ranking", () => {
   })
 
   it("sorts an unplayed ranking alphabetically without changing evidence ranks", () => {
-    const activeDeck = createActiveDeck([
-      createCustomValue(1),
-    ])
+    const activeDeck = createActiveDeck([createCustomValue(1)])
     const rankedValues = rankValues(
       activeDeck,
       createInitialValueProgress(activeDeck),
