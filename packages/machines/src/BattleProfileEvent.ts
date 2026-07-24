@@ -114,13 +114,19 @@ export function decodeBattleProfileEvent(
     throw new Error(`Unsupported Battle Profile event version: ${value[0]}`)
   }
 
-  const event = Object.freeze({
-    version: BATTLE_PROFILE_EVENT_VERSION,
-    type: readBattleProfileEventType(value[1]),
-    ...(value[1] === "deck-revision"
-      ? { activeDeck: decodeActiveDeck(value[2]) }
-      : { delta: decodeBattleDelta(activeDeck, value[2]) }),
-  }) satisfies BattleProfileEvent
+  const type = readBattleProfileEventType(value[1])
+  const event: BattleProfileEvent =
+    type === "deck-revision"
+      ? Object.freeze({
+          version: BATTLE_PROFILE_EVENT_VERSION,
+          type,
+          activeDeck: decodeActiveDeck(value[2]),
+        })
+      : Object.freeze({
+          version: BATTLE_PROFILE_EVENT_VERSION,
+          type,
+          delta: decodeBattleDelta(activeDeck, value[2]),
+        })
 
   if (
     JSON.stringify(encodeBattleProfileEvent(event)) !== JSON.stringify(value)
@@ -135,6 +141,10 @@ function assertReplayedDelta(
   transition: BattleProfileTransition,
   event: BattleProfileEvent,
 ) {
+  if (event.type === "deck-revision") {
+    throw new Error("Event type is not a battle delta: deck-revision")
+  }
+
   if (
     JSON.stringify(encodeBattleDelta(transition.delta)) !==
     JSON.stringify(encodeBattleDelta(event.delta))

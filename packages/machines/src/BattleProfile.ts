@@ -8,6 +8,7 @@ import {
 } from "./BattleCycle"
 import type { BattleDelta } from "./BattleDelta"
 import { redoBattleDelta, undoBattleDelta } from "./BattleDeltaTransition"
+import type { BattleSchedulerRestorePoint } from "./BattleScheduler"
 import {
   appendBattleTimelineDelta,
   createEmptyBattleTimeline,
@@ -18,7 +19,6 @@ import {
   type BattleTimelineLimits,
 } from "./BattleTimeline"
 import { createDeckRevisionCandidate } from "./DeckRevision"
-import type { SchedulerRestorePoint } from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 export type BattleProfile = BattleCycleState & BattleTimeline
@@ -148,7 +148,7 @@ export function applyBattleChoice({
 }: {
   readonly profile: BattleProfile
   readonly winnerId: ValueId
-  readonly expectedScheduler: SchedulerRestorePoint
+  readonly expectedScheduler: BattleSchedulerRestorePoint
   readonly timelineLimits?: BattleTimelineLimits
 }) {
   const candidate = createBattleCycleCandidate({

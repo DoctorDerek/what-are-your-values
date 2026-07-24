@@ -13,7 +13,7 @@ import {
   createDeckRevisionEvent,
   type BattleProfileEvent,
 } from "./BattleProfileEvent"
-import type { SchedulerRestorePoint } from "./PairScheduler"
+import type { BattleSchedulerRestorePoint } from "./BattleScheduler"
 
 export type BattleProfileCommit = {
   readonly profile: BattleProfile
@@ -34,7 +34,7 @@ export function createBattleChoiceCommit({
 }: {
   readonly profile: BattleProfile
   readonly winnerId: ValueId
-  readonly expectedScheduler: SchedulerRestorePoint
+  readonly expectedScheduler: BattleSchedulerRestorePoint
 }) {
   const transition = applyBattleChoice({
     profile,

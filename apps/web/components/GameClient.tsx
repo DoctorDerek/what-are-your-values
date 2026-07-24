@@ -2,13 +2,14 @@
 
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
-import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
-import { projectScheduledPair } from "@game/machines/src/PairScheduler"
+import {
+  projectBattlePair,
+  type BattleSchedulerRestorePoint,
+} from "@game/machines/src/BattleScheduler"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
-import { webStorage } from "@/lib/WebStorage"
 import packageMetadata from "@/package.json"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
@@ -19,7 +20,6 @@ export default function GameClient() {
   const durableStore = useMemo(() => createIndexedDbDurableStore(), [])
   const [state, send] = useMachine(rootMachine, {
     input: {
-      storage: webStorage,
       durableStore,
       appVersion: packageMetadata.version,
       now: () => new Date().toISOString(),
@@ -42,17 +42,17 @@ export default function GameClient() {
     () =>
       battleProfile
         ? Object.freeze({
-            pair: projectScheduledPair(
+            pair: projectBattlePair(
               battleProfile.activeDeck,
               battleProfile.scheduler,
-            ).pair,
+            ),
             scheduler: battleProfile.scheduler,
           })
         : null,
     [battleProfile],
   )
   const handleWinnerSelected = useCallback(
-    (winnerId: ValueId, expectedScheduler: SchedulerRestorePoint) => {
+    (winnerId: ValueId, expectedScheduler: BattleSchedulerRestorePoint) => {
       send({
         type: "BATTLE.WINNER_SELECTED",
         winnerId,

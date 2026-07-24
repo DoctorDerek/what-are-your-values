@@ -13,22 +13,23 @@ import {
 import { createBattleId } from "./BattleIdentity"
 import { createBattleProgressCandidate } from "./BattleProgress"
 import {
+  advanceBattleScheduler,
+  createNextCycleScheduler,
+  projectBattlePair,
+  type BattleSchedulerRestorePoint,
+} from "./BattleScheduler"
+import {
   createCycleLevelSnapshot,
   type CycleLevelSnapshot,
 } from "./CycleLevelSnapshot"
-import {
-  advanceSchedulerCursor,
-  createSchedulerRestorePoint,
-  projectScheduledPair,
-  type SchedulerRestorePoint,
-} from "./PairScheduler"
+import { createSchedulerRestorePoint } from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 export type BattleCycleState = {
   readonly activeDeck: ActiveDeck
   readonly progressById: ValueProgressById
   readonly cycleLevelSnapshot: CycleLevelSnapshot
-  readonly scheduler: SchedulerRestorePoint
+  readonly scheduler: BattleSchedulerRestorePoint
 }
 
 export type BattleCycleCandidate = BattleCycleState & {
@@ -60,16 +61,13 @@ export function createBattleCycleCandidate({
 }: {
   readonly battleCycle: BattleCycleState
   readonly winnerId: ValueId
-  readonly expectedScheduler: SchedulerRestorePoint
+  readonly expectedScheduler: BattleSchedulerRestorePoint
 }) {
   if (!areSchedulerIdentitiesEqual(battleCycle.scheduler, expectedScheduler)) {
     throw new Error("Battle command does not match the current scheduler")
   }
 
-  const pair = projectScheduledPair(
-    battleCycle.activeDeck,
-    battleCycle.scheduler,
-  ).pair
+  const pair = projectBattlePair(battleCycle.activeDeck, battleCycle.scheduler)
   const progressCandidate = createBattleProgressCandidate({
     activeDeck: battleCycle.activeDeck,
     progressById: battleCycle.progressById,
@@ -77,7 +75,7 @@ export function createBattleCycleCandidate({
     pair,
     winnerId,
   })
-  const advancedScheduler = advanceSchedulerCursor(
+  const advancedScheduler = advanceBattleScheduler(
     battleCycle.activeDeck,
     battleCycle.scheduler,
   )
@@ -98,10 +96,6 @@ export function createBattleCycleCandidate({
     }) satisfies BattleCycleCandidate
   }
 
-  if (battleCycle.scheduler.cycleIndex === Number.MAX_SAFE_INTEGER) {
-    throw new Error("Pair cycle index cannot be incremented safely")
-  }
-
   const nextCycleProgressById = beginNextValueProgressCycle(
     battleCycle.activeDeck,
     progressCandidate.progressById,
@@ -111,13 +105,10 @@ export function createBattleCycleCandidate({
     battleCycle.activeDeck,
     nextCycleProgressById,
   )
-  const resultingScheduler = createSchedulerRestorePoint({
-    activeDeck: battleCycle.activeDeck,
-    progressGeneration: battleCycle.scheduler.progressGeneration,
-    deckRevision: battleCycle.scheduler.deckRevision,
-    seed: battleCycle.scheduler.seed,
-    cycleIndex: battleCycle.scheduler.cycleIndex + 1,
-  })
+  const resultingScheduler = createNextCycleScheduler(
+    battleCycle.activeDeck,
+    battleCycle.scheduler,
+  )
   const battleId = createBattleId(battleCycle.scheduler)
 
   return Object.freeze({

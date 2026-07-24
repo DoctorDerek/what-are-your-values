@@ -20,13 +20,13 @@ import {
 } from "./BattleProfilePersistenceActors"
 import type { BattleProfileStoreState } from "./BattleProfileStore"
 import {
+  projectBattlePair,
+  type BattleSchedulerRestorePoint,
+} from "./BattleScheduler"
+import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
 } from "./DurableStoreAdapter"
-import {
-  projectScheduledPair,
-  type SchedulerRestorePoint,
-} from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 type RootMachineContext = {
@@ -63,7 +63,7 @@ type RootMachineEvent =
   | {
       type: "BATTLE.WINNER_SELECTED"
       winnerId: ValueId
-      expectedScheduler: SchedulerRestorePoint
+      expectedScheduler: BattleSchedulerRestorePoint
     }
   | { type: "BATTLE.UNDO_REQUESTED" }
   | { type: "BATTLE.REDO_REQUESTED" }
@@ -318,10 +318,10 @@ export const rootMachine = setup({
         return false
       }
 
-      return projectScheduledPair(
+      return projectBattlePair(
         context.battleProfile.activeDeck,
         context.battleProfile.scheduler,
-      ).pair.includes(event.winnerId)
+      ).includes(event.winnerId)
     },
     canUndoBattle: ({ context }) =>
       (context.battleProfile?.history.length ?? 0) > 0,

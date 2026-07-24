@@ -1,19 +1,28 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import {
-  createSchedulerRestorePoint,
-  type SchedulerRestorePoint,
-} from "./PairScheduler"
+  createCustomValueId,
+  type CustomValueId,
+  type ValueId,
+} from "@game/data/src/Value"
+import type { BattleSchedulerRestorePoint } from "./BattleScheduler"
 import {
+  createDeckReconfigurationRestorePoint,
+  type DeckReconfigurationRestorePoint,
+} from "./DeckReconfigurationScheduler"
+import { createSchedulerRestorePoint } from "./PairScheduler"
+import {
+  readActiveValueId,
   readNonNegativeSafeInteger,
   readString,
   readTuple,
 } from "./PersistenceValidation"
 import {
   FULL_CYCLE_SCHEDULE_KIND,
+  JOIN_PASS_SCHEDULE_KIND,
   PAIR_SCHEDULER_ALGORITHM_VERSION,
 } from "./SchedulerIdentity"
 
-export type EncodedSchedulerRestorePoint = readonly [
+type EncodedSchedulerIdentity = readonly [
   algorithmVersion: number,
   activeDeckFingerprint: string,
   progressGeneration: number,
@@ -24,10 +33,21 @@ export type EncodedSchedulerRestorePoint = readonly [
   cursor: number,
 ]
 
+export type EncodedSchedulerRestorePoint =
+  | EncodedSchedulerIdentity
+  | readonly [
+      ...identity: EncodedSchedulerIdentity,
+      retainedValueIds: readonly string[],
+      joinedValueIds: readonly string[],
+      joinPairCount: number,
+      retainedPairCount: number,
+      pairCount: number,
+    ]
+
 export function encodeSchedulerRestorePoint(
-  scheduler: SchedulerRestorePoint,
+  scheduler: BattleSchedulerRestorePoint,
 ): EncodedSchedulerRestorePoint {
-  return [
+  const identity: EncodedSchedulerIdentity = [
     scheduler.algorithmVersion,
     scheduler.activeDeckFingerprint,
     scheduler.progressGeneration,
@@ -37,6 +57,17 @@ export function encodeSchedulerRestorePoint(
     scheduler.cycleIndex,
     scheduler.cursor,
   ]
+
+  return scheduler.scheduleKind === JOIN_PASS_SCHEDULE_KIND
+    ? [
+        ...identity,
+        scheduler.retainedValueIds,
+        scheduler.joinedValueIds,
+        scheduler.joinPairCount,
+        scheduler.retainedPairCount,
+        scheduler.pairCount,
+      ]
+    : identity
 }
 
 export function decodeSchedulerRestorePoint(
@@ -44,7 +75,11 @@ export function decodeSchedulerRestorePoint(
   value: unknown,
   label: string,
 ) {
-  const tuple = readTuple(value, 8, label)
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid ${label}`)
+  }
+
+  const tuple = readTuple(value.slice(0, 8), 8, label)
   const algorithmVersion = readNonNegativeSafeInteger(
     tuple[0],
     `${label} algorithm version`,
@@ -75,16 +110,102 @@ export function decodeSchedulerRestorePoint(
   if (activeDeckFingerprint !== activeDeck.fingerprint) {
     throw new Error(`${label} Active Deck fingerprint does not match`)
   }
-  if (scheduleKind !== FULL_CYCLE_SCHEDULE_KIND) {
+  if (scheduleKind === FULL_CYCLE_SCHEDULE_KIND) {
+    if (value.length !== 8) {
+      throw new Error(`Invalid ${label}`)
+    }
+    return createSchedulerRestorePoint({
+      activeDeck,
+      progressGeneration,
+      deckRevision,
+      seed,
+      cycleIndex,
+      cursor,
+    })
+  }
+
+  if (scheduleKind !== JOIN_PASS_SCHEDULE_KIND || value.length !== 13) {
     throw new Error(`Unsupported ${label} schedule kind`)
   }
 
-  return createSchedulerRestorePoint({
+  const retainedValueIds = readEncodedValueIds(
     activeDeck,
+    value[8],
+    `${label} retained value IDs`,
+  )
+  const joinedValueIds = readEncodedCustomValueIds(
+    activeDeck,
+    value[9],
+    `${label} joined value IDs`,
+  )
+  const joinPairCount = readNonNegativeSafeInteger(
+    value[10],
+    `${label} join pair count`,
+  )
+  const retainedPairCount = readNonNegativeSafeInteger(
+    value[11],
+    `${label} retained pair count`,
+  )
+  const pairCount = readNonNegativeSafeInteger(value[12], `${label} pair count`)
+  const scheduler = createDeckReconfigurationRestorePoint({
+    activeDeck,
+    joinedValueIds,
     progressGeneration,
     deckRevision,
     seed,
     cycleIndex,
     cursor,
   })
+
+  if (
+    JSON.stringify(encodeSchedulerRestorePoint(scheduler)) !==
+      JSON.stringify(value) ||
+    JSON.stringify(scheduler.retainedValueIds) !==
+      JSON.stringify(retainedValueIds) ||
+    scheduler.joinPairCount !== joinPairCount ||
+    scheduler.retainedPairCount !== retainedPairCount ||
+    scheduler.pairCount !== pairCount
+  ) {
+    throw new Error(`${label} encoding is not canonical`)
+  }
+
+  return scheduler
+}
+
+function readEncodedValueIds(
+  activeDeck: ActiveDeck,
+  value: unknown,
+  label: string,
+) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid ${label}`)
+  }
+
+  return Object.freeze(
+    value.map((candidate, index) =>
+      readActiveValueId(activeDeck, candidate, `${label} ${index}`),
+    ),
+  ) satisfies readonly ValueId[]
+}
+
+function readEncodedCustomValueIds(
+  activeDeck: ActiveDeck,
+  value: unknown,
+  label: string,
+) {
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid ${label}`)
+  }
+
+  return Object.freeze(
+    value.map((candidate, index) => {
+      const valueId = createCustomValueId(
+        readString(candidate, `${label} ${index}`),
+      )
+      if (!activeDeck.customValues.some(({ id }) => id === valueId)) {
+        throw new Error(`${label} is not in the Active Deck: ${valueId}`)
+      }
+      return valueId
+    }),
+  ) satisfies readonly CustomValueId[]
 }

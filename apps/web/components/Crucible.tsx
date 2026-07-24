@@ -3,11 +3,11 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
+import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
   type PresentedBattle,
 } from "@game/machines/src/CombatMachine"
-import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
@@ -38,7 +38,7 @@ export default function Crucible({
   onRedo: () => void
   onWinnerSelected: (
     winnerId: ValueId,
-    expectedScheduler: SchedulerRestorePoint,
+    expectedScheduler: BattleSchedulerRestorePoint,
   ) => void
 }) {
   const [state, send] = useMachine(combatMachine, {
