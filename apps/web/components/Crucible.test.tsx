@@ -228,11 +228,11 @@ describe("Crucible Component Integration", () => {
       expect(choice.parentElement).toHaveClass(
         "min-h-0",
         "min-w-0",
-        "overflow-x-auto",
+        "overflow-x-hidden",
         "overflow-y-auto",
         "overscroll-contain",
       )
-      expect(heading).toHaveClass("break-all", "[overflow-wrap:anywhere]")
+      expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
       expect(definitionCopy).toHaveClass(
         "break-words",
         "[overflow-wrap:anywhere]",
@@ -324,3 +324,4 @@ describe("Crucible Component Integration", () => {
     expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 })
+
