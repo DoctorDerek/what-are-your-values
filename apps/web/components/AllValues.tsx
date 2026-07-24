@@ -104,7 +104,7 @@ export default function AllValues({
               return (
                 <li
                   key={definition.id}
-                  className="text-mapache-vivid-dark border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-7"
+                  className="overflow-x-hidden text-mapache-vivid-dark border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-7"
                 >
                   <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-5">
                     <span
