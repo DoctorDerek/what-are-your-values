@@ -45,7 +45,7 @@ export default function Hub({
             {topFive.map(({ rank, definition, progress }) => (
               <li
                 key={definition.id}
-                className="bg-mapache-vivid-secondary-purple border-4 border-black p-5 shadow-[6px_6px_0px_0px_#000000] sm:p-6"
+                className="overflow-x-hidden bg-mapache-vivid-secondary-purple border-4 border-black p-5 shadow-[6px_6px_0px_0px_#000000] sm:p-6"
               >
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
                   <span className="min-w-0 text-3xl font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[2px_2px_0px_#000000]">
