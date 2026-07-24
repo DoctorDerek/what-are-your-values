@@ -9,6 +9,7 @@ import {
 import { createInitialValueProgress } from "@game/data/src/ValueProgress"
 import { rankValues } from "@game/data/src/ValueRanking"
 import { fireEvent, render, screen, within } from "@testing-library/react"
+import type { ComponentProps } from "react"
 import { describe, expect, it, vi } from "vitest"
 import AllValues from "./AllValues"
 
@@ -30,21 +31,27 @@ function createActiveDeckWithIngenuity() {
   ])
 }
 
+function renderAllValues(
+  rankedValues = createRankedValues(createActiveDeck([])),
+  overrides: Partial<ComponentProps<typeof AllValues>> = {},
+) {
+  return render(
+    <AllValues
+      rankedValues={rankedValues}
+      onClose={vi.fn()}
+      onAddCustomValue={vi.fn()}
+      onUpdateCustomValue={vi.fn()}
+      onDeleteCustomValue={vi.fn()}
+      {...overrides}
+    />,
+  )
+}
+
 describe("All Values Component Integration", () => {
-  it("shows the complete fresh canonical ranking without fabricating a Top Five", () => {
+  it("shows every fresh value alphabetically with definitions visible and no fabricated Top Five", () => {
     const rankedValues = createRankedValues(createActiveDeck([]))
 
-    const onAddCustomValue = vi.fn()
-    const onUpdateCustomValue = vi.fn()
-
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={onAddCustomValue}
-        onUpdateCustomValue={onUpdateCustomValue}
-      />,
-    )
+    renderAllValues(rankedValues)
 
     expect(
       screen.getByRole("heading", { name: "All Values", level: 1 }),
@@ -62,32 +69,44 @@ describe("All Values Component Integration", () => {
       ),
     ).toBeVisible()
     expect(
+      screen.queryByRole("button", { name: "Show definition" }),
+    ).not.toBeInTheDocument()
+    expect(
       screen.queryByRole("button", { name: "Edit" }),
     ).not.toBeInTheDocument()
   })
 
-  it("adds a custom value with required callbacks and fields", () => {
-    const rankedValues = createRankedValues(createActiveDeck([]))
-    const onAddCustomValue = vi.fn()
-    const onUpdateCustomValue = vi.fn()
+  it("prefills each canonical starter example as an unsaved editable draft", () => {
+    renderAllValues()
 
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={onAddCustomValue}
-        onUpdateCustomValue={onUpdateCustomValue}
-      />,
+    fireEvent.click(
+      screen.getByRole("button", { name: /Start with Ingenuity/ }),
     )
+
+    expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
+    expect(screen.getByLabelText("Custom Value Name")).toHaveValue("Ingenuity")
+    expect(screen.getByLabelText("Personal Definition")).toHaveValue(
+      "To solve problems in original, resourceful, and practical ways.",
+    )
+    expect(screen.getByRole("button", { name: "Save Value" })).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: /Mapachito’s example/ }),
+    ).toBeVisible()
+  })
+
+  it("adds a custom value with the private definition payload", () => {
+    const onAddCustomValue = vi.fn()
+
+    renderAllValues(undefined, { onAddCustomValue })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
     fireEvent.change(screen.getByLabelText("Custom Value Name"), {
       target: { value: "   Ingenuity   " },
     })
-    fireEvent.change(screen.getByLabelText("Custom Value Definition"), {
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
       target: { value: "  Inventions and original ideas matter. " },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Save Custom Value" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
 
     expect(onAddCustomValue).toHaveBeenCalledWith(
       "Ingenuity",
@@ -95,102 +114,115 @@ describe("All Values Component Integration", () => {
     )
   })
 
-  it("disables adding a custom value when a value name already exists", () => {
+  it("shows exact collisions with an open-existing-value path", () => {
     const rankedValues = createRankedValues(createActiveDeckWithIngenuity())
     const onAddCustomValue = vi.fn()
 
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={onAddCustomValue}
-        onUpdateCustomValue={vi.fn()}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
-      target: { value: "Ingenuity" },
-    })
-    fireEvent.change(screen.getByLabelText("Custom Value Definition"), {
-      target: { value: "Another version of the same idea." },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Save Custom Value" }))
-
-    expect(
-      screen.getByText("A value with this name already exists."),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: "Save Custom Value" }),
-    ).toBeDisabled()
-    expect(onAddCustomValue).not.toHaveBeenCalled()
-  })
-
-  it("normalizes add-value names for duplicate detection", () => {
-    const rankedValues = createRankedValues(createActiveDeckWithIngenuity())
-    const onAddCustomValue = vi.fn()
-
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={onAddCustomValue}
-        onUpdateCustomValue={vi.fn()}
-      />,
-    )
+    renderAllValues(rankedValues, { onAddCustomValue })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
     fireEvent.change(screen.getByLabelText("Custom Value Name"), {
       target: { value: "  INGENUITY  " },
     })
-    fireEvent.change(screen.getByLabelText("Custom Value Definition"), {
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
       target: { value: "Another form of creativity." },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Save Custom Value" }))
 
     expect(
-      screen.getByText("A value with this name already exists."),
+      screen.getByText("This value already exists. Open it instead."),
     ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Save Value" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Open Ingenuity" })).toBeVisible()
     expect(onAddCustomValue).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Ingenuity" }))
+    expect(
+      screen.queryByRole("form", { name: "Add Custom Value" }),
+    ).not.toBeInTheDocument()
+    const openedValueRow = screen.getByText("Ingenuity").closest("li")
+    if (!openedValueRow) {
+      throw new Error("Expected the existing value row to remain open")
+    }
+    expect(openedValueRow).toHaveClass("ring-8")
   })
 
-  it("edits a custom value and emits the full replacement payload", () => {
+  it("shows partial literal matches without semantic or synonym inference", () => {
+    const rankedValues = createRankedValues(createActiveDeckWithIngenuity())
+
+    renderAllValues(rankedValues)
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "ingen" },
+    })
+
+    expect(screen.getByText("Matching values")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Open Ingenuity" })).toBeVisible()
+    expect(
+      screen.queryByText("This value already exists. Open it instead."),
+    ).not.toBeInTheDocument()
+  })
+
+  it("edits a Custom Value only after an explicit review step", () => {
     const activeDeck = createActiveDeckWithIngenuity()
-    const rankedValues = createRankedValues(activeDeck)
-    const onAddCustomValue = vi.fn()
     const onUpdateCustomValue = vi.fn()
 
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={onAddCustomValue}
-        onUpdateCustomValue={onUpdateCustomValue}
-      />,
+    renderAllValues(createRankedValues(activeDeck), { onUpdateCustomValue })
+
+    const targetListItem = screen.getByText("Ingenuity").closest("li")
+    if (!targetListItem) {
+      throw new Error("Expected Ingenuity list item in DOM")
+    }
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }))
-
-    fireEvent.change(screen.getByLabelText("Name"), {
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
       target: { value: " Curiosity Engine " },
     })
-    fireEvent.change(screen.getByLabelText("Definition"), {
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
       target: { value: "  A drive to explore how things connect. " },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
 
+    expect(
+      screen.getByRole("alertdialog", { name: "Update Ingenuity?" }),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Update Value" })).toBeVisible()
+    expect(onUpdateCustomValue).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
     expect(onUpdateCustomValue).toHaveBeenCalledWith(
       activeDeck.customValues[0].id,
       "Curiosity Engine",
       "A drive to explore how things connect.",
     )
-    expect(onAddCustomValue).not.toHaveBeenCalled()
   })
 
-  it("disables editing to an existing value name", () => {
+  it("confirms Custom Value deletion through the supplied durable callback", () => {
     const activeDeck = createActiveDeckWithIngenuity()
-    const rankedValues = createRankedValues(activeDeck)
-    const onUpdateCustomValue = vi.fn()
+    const onDeleteCustomValue = vi.fn()
+
+    renderAllValues(createRankedValues(activeDeck), { onDeleteCustomValue })
+
+    const targetListItem = screen.getByText("Ingenuity").closest("li")
+    if (!targetListItem) {
+      throw new Error("Expected Ingenuity list item in DOM")
+    }
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Delete" }),
+    )
+    expect(
+      screen.getByRole("alertdialog", { name: "Remove Ingenuity?" }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Delete Value" }))
+
+    expect(onDeleteCustomValue).toHaveBeenCalledWith(
+      activeDeck.customValues[0].id,
+    )
+  })
+
+  it("disables editing into an existing value name", () => {
+    const firstCustom = createActiveDeckWithIngenuity().customValues[0]
     const secondCustom = Object.freeze({
       kind: "custom",
       id: createCustomValueId("custom:00000000-0000-4000-8000-000000000002"),
@@ -200,74 +232,57 @@ describe("All Values Component Integration", () => {
       createdAt: "2026-01-02T00:00:00.000Z",
       updatedAt: "2026-01-02T00:00:00.000Z",
     }) satisfies CustomValueDefinition
-    const rankedValuesWithSecond = rankValues(
-      createActiveDeck([...activeDeck.customValues, secondCustom]),
-      createInitialValueProgress(
-        createActiveDeck([...activeDeck.customValues, secondCustom]),
-      ),
-    )
+    const activeDeck = createActiveDeck([firstCustom, secondCustom])
 
-    render(
-      <AllValues
-        rankedValues={rankedValuesWithSecond}
-        onClose={vi.fn()}
-        onAddCustomValue={vi.fn()}
-        onUpdateCustomValue={onUpdateCustomValue}
-      />,
-    )
-
-    const firstCustomValue = rankedValuesWithSecond.find(
-      ({ definition }) => definition.id === activeDeck.customValues[0]?.id,
-    )
-    if (!firstCustomValue) {
-      throw new Error("Expected an editable custom value")
-    }
+    renderAllValues(createRankedValues(activeDeck))
 
     const targetListItem = screen.getByText("Ingenuity").closest("li")
     if (!targetListItem) {
       throw new Error("Expected Ingenuity list item in DOM")
     }
-    const targetValueControls = within(targetListItem)
-    fireEvent.click(targetValueControls.getByRole("button", { name: "Edit" }))
-    fireEvent.change(screen.getByLabelText("Name"), {
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
+    )
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.change(screen.getByLabelText("Definition"), {
-      target: { value: "Try to rename into duplicate." },
-    })
-
     expect(
-      screen.getByText("A value with this name already exists."),
+      screen.getByText("This value already exists. Open it instead."),
     ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled()
-    fireEvent.click(screen.getByRole("button", { name: "Save" }))
-    expect(onUpdateCustomValue).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Review Update" })).toBeDisabled()
   })
 
-  it("filters without reordering ranks and restores the complete list", () => {
+  it("filters literal name and definition text while preserving the current presentation order", () => {
     const activeDeck = createActiveDeck([])
     const rankedValues = createRankedValues(activeDeck)
+
+    renderAllValues(rankedValues)
+
+    const search = screen.getByRole("searchbox", { name: "Search All Values" })
+    fireEvent.change(search, { target: { value: "health" } })
+
     const expectedMatches = rankedValues.filter(({ definition }) =>
       getValueDisplayName(definition).toLocaleLowerCase().includes("health"),
     )
-
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={vi.fn()}
-        onUpdateCustomValue={vi.fn()}
-      />,
-    )
-
-    const search = screen.getByRole("searchbox", { name: "Search Values" })
-    fireEvent.change(search, { target: { value: "health" } })
-
     expect(screen.getAllByRole("listitem")).toHaveLength(expectedMatches.length)
-    expectedMatches.forEach(({ rank, definition }) => {
-      expect(screen.getByLabelText(`Rank ${rank}`)).toBeVisible()
+    expectedMatches.forEach(({ definition }) => {
       expect(screen.getByText(getValueDisplayName(definition))).toBeVisible()
     })
+
+    const definitionSearchText = getValueDisplayDefinition(
+      rankedValues[0].definition,
+    )
+      .slice(0, 12)
+      .toLocaleLowerCase()
+    fireEvent.change(search, { target: { value: definitionSearchText } })
+    const expectedDefinitionMatches = rankedValues.filter(({ definition }) =>
+      getValueDisplayDefinition(definition)
+        .toLocaleLowerCase()
+        .includes(definitionSearchText),
+    )
+    expect(screen.getAllByRole("listitem")).toHaveLength(
+      expectedDefinitionMatches.length,
+    )
 
     fireEvent.change(search, { target: { value: "" } })
     expect(screen.getAllByRole("listitem")).toHaveLength(
@@ -275,50 +290,18 @@ describe("All Values Component Integration", () => {
     )
   })
 
-  it("matches definition text when filtering", () => {
-    const activeDeck = createActiveDeck([])
-    const rankedValues = createRankedValues(activeDeck)
-    const definitionSearchText = rankedValues[0].definition.sourceDefinition
-      .slice(0, 12)
-      .toLocaleLowerCase()
-    const expectedMatches = rankedValues.filter(({ definition }) =>
-      getValueDisplayDefinition(definition)
-        .toLocaleLowerCase()
-        .includes(definitionSearchText),
-    )
-
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={vi.fn()}
-        onUpdateCustomValue={vi.fn()}
-      />,
-    )
-
-    const search = screen.getByRole("searchbox", { name: "Search Values" })
-    fireEvent.change(search, { target: { value: definitionSearchText } })
-
-    expect(screen.getAllByRole("listitem")).toHaveLength(expectedMatches.length)
-    expectedMatches.forEach(({ rank, definition }) => {
-      expect(screen.getByLabelText(`Rank ${rank}`)).toBeVisible()
-      expect(screen.getByText(getValueDisplayName(definition))).toBeVisible()
-    })
-  })
-
-  it("marks the earned Top Five and closes without changing data", () => {
+  it("marks the earned Top Five once and closes without changing data", () => {
     const activeDeck = createActiveDeck([])
     const rankedValues = rankValues(
       activeDeck,
       createInitialValueProgress(activeDeck),
     )
-
     const onClose = vi.fn()
-    render(
-      <AllValues
-        rankedValues={rankedValues.map((value, index) => {
-          if (index < 1) {
-            return {
+
+    renderAllValues(
+      rankedValues.map((value, index) =>
+        index < 1
+          ? {
               ...value,
               progress: {
                 ...value.progress,
@@ -327,61 +310,28 @@ describe("All Values Component Integration", () => {
                 profileWins: value.progress.profileWins + 2,
               },
             }
-          }
-          return value
-        })}
-        onClose={onClose}
-        onAddCustomValue={vi.fn()}
-        onUpdateCustomValue={vi.fn()}
-      />,
+          : value,
+      ),
+      { onClose },
     )
 
-    expect(screen.getAllByText("Top Five")).toHaveLength(5)
+    expect(screen.getAllByText("Top Five")).toHaveLength(1)
     fireEvent.click(screen.getByRole("button", { name: "Close" }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it("closes through Escape without changing the visible ranking first", () => {
-    const activeDeck = createActiveDeck([])
-    const rankedValues = createRankedValues(activeDeck)
+  it("closes through Escape and keeps long value cells overflow-safe", () => {
     const onClose = vi.fn()
 
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={onClose}
-        onAddCustomValue={vi.fn()}
-        onUpdateCustomValue={vi.fn()}
-      />,
-    )
+    renderAllValues(undefined, { onClose })
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(
-      CANONICAL_VALUES.length,
-    )
     fireEvent.keyDown(window, { key: "Escape" })
     expect(onClose).toHaveBeenCalledTimes(1)
-  })
 
-  it("supports readable wrapping and overflow-safe value list cells", async () => {
-    const rankedValues = createRankedValues(createActiveDeck([]))
-
-    render(
-      <AllValues
-        rankedValues={rankedValues}
-        onClose={vi.fn()}
-        onAddCustomValue={vi.fn()}
-        onUpdateCustomValue={vi.fn()}
-      />,
-    )
-
-    const listItems = await screen.findAllByRole("listitem")
-    expect(listItems).toHaveLength(CANONICAL_VALUES.length)
-    listItems.forEach((listItem) => {
+    screen.getAllByRole("listitem").forEach((listItem) => {
       expect(listItem).toHaveClass("overflow-x-auto", "overflow-y-auto")
     })
-
-    const longDefinitions = screen.getAllByText(/^“/)
-    longDefinitions.forEach((definitionCopy) => {
+    screen.getAllByText(/^“/).forEach((definitionCopy) => {
       expect(definitionCopy).toHaveClass(
         "overflow-x-auto",
         "overflow-y-auto",
