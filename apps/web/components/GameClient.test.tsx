@@ -27,6 +27,11 @@ describe("GameClient Integration", () => {
     render(<GameClient />)
 
     expect(
+      await screen.findByRole("button", { name: "Start" }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+
+    expect(
       await screen.findByText("Keep comparing values to reveal your Top Five."),
     ).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
@@ -73,6 +78,11 @@ describe("GameClient Integration", () => {
     )
 
     render(<GameClient />)
+
+    expect(
+      await screen.findByRole("button", { name: "Start" }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
     expect(
       await screen.findByText("Keep comparing values to reveal your Top Five."),
