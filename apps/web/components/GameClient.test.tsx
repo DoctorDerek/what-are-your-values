@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
@@ -117,5 +123,68 @@ describe("GameClient Integration", () => {
     expect(
       screen.getByRole("button", { name: "Browse All Values" }),
     ).toHaveFocus()
+  })
+
+  it("adds, edits, and deletes a Custom Value without resetting retained rankings", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000045",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Add Custom Value" }),
+    )
+
+    fireEvent.change(await screen.findByLabelText("Custom Value Name"), {
+      target: { value: "Ingenuity" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "To make original solutions." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
+
+    const customValueRow = await waitFor(() => {
+      const valueText = screen
+        .getAllByText("Ingenuity")
+        .find((element) => element.closest("li"))
+      const valueRow = valueText?.closest("li")
+      if (!valueRow) {
+        throw new Error("The added Custom Value row is unavailable")
+      }
+      return valueRow
+    })
+    fireEvent.click(
+      within(customValueRow).getByRole("button", { name: "Edit" }),
+    )
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "Curiosity Engine" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "To explore how things connect." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
+    fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
+
+    const updatedValueRow = await waitFor(() => {
+      const valueText = screen
+        .getAllByText("Curiosity Engine")
+        .find((element) => element.closest("li"))
+      const valueRow = valueText?.closest("li")
+      if (!valueRow) {
+        throw new Error("The updated Custom Value row is unavailable")
+      }
+      return valueRow
+    })
+    fireEvent.click(
+      within(updatedValueRow).getByRole("button", { name: "Delete" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete Value" }))
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("listitem")).toHaveLength(100),
+    )
+    expect(screen.getByText("100 Active Values")).toBeVisible()
   })
 })
