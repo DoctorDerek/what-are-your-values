@@ -70,7 +70,7 @@ export const ValueChoiceCard = forwardRef<
       exit={valueChoiceMotion.exit}
       transition={valueChoiceMotion.transition}
       onAnimationComplete={onAnimationComplete}
-      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-auto overflow-y-auto overscroll-contain`}
+      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain`}
     >
       <button
         ref={ref}
@@ -91,7 +91,7 @@ export const ValueChoiceCard = forwardRef<
           <span className="mb-6 inline-block max-w-full border-4 border-black bg-white px-4 py-2 text-[clamp(1.25rem,4vw,2.25rem)] font-black [overflow-wrap:anywhere] break-words text-black uppercase shadow-[6px_6px_0px_0px_#000000] sm:mb-10 sm:px-8 sm:py-3">
             LVL {level}
           </span>
-          <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(2.25rem,8vw,8rem)] leading-none font-black [overflow-wrap:anywhere] break-all text-white uppercase drop-shadow-[6px_6px_0px_#000000]">
+          <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(1.75rem,6vw,6rem)] leading-snug font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[6px_6px_0px_#000000] sm:text-[clamp(2rem,5vw,4.25rem)] lg:text-[clamp(2.5rem,4vw,4.75rem)]">
             {displayName}
           </h2>
           <p
