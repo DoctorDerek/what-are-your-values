@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import { createActor, waitFor } from "xstate"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
@@ -7,45 +7,34 @@ import { rootMachine } from "./RootMachine"
 
 const TEST_TIMESTAMP = "2026-07-21T00:00:00.000Z"
 
-function createStorage() {
-  return {
-    getItem: vi.fn(() => null),
-    setItem: vi.fn(),
-  }
-}
-
 function createRootActor({
   durableStore = createInMemoryDurableStore(),
 }: {
   readonly durableStore?: DurableStoreAdapter
 } = {}) {
-  const storage = createStorage()
   const actor = createActor(rootMachine, {
     input: {
-      storage,
       durableStore,
       appVersion: "0.1.0",
       now: () => TEST_TIMESTAMP,
     },
   })
 
-  return { actor, storage, durableStore }
+  return { actor, durableStore }
 }
 
 async function bootRootActor({
-  uuid = "returning-profile",
   schedulerSeed = "root-machine-seed",
   durableStore,
 }: {
-  readonly uuid?: string | null
   readonly schedulerSeed?: string
   readonly durableStore?: DurableStoreAdapter
 } = {}) {
   const root = createRootActor({ durableStore })
   root.actor.start()
-  root.actor.send({ type: "APP.HYDRATED", uuid, schedulerSeed })
+  root.actor.send({ type: "APP.HYDRATED", schedulerSeed })
   await waitFor(root.actor, (snapshot) =>
-    uuid === null ? snapshot.matches("Splash") : snapshot.matches("Hub"),
+    snapshot.matches("Hub") || snapshot.matches("Splash"),
   )
 
   return root
@@ -58,8 +47,8 @@ async function waitForReadyCrucible(
 }
 
 describe("Root Machine", () => {
-  it("hydrates a fresh canonical profile and persists only introduction completion", async () => {
-    const { actor, storage, durableStore } = await bootRootActor({ uuid: null })
+  it("hydrates a fresh canonical profile and initializes after introduction", async () => {
+    const { actor, durableStore } = await bootRootActor()
 
     let snapshot = actor.getSnapshot()
     expect(snapshot.matches("Splash")).toBe(true)
@@ -68,40 +57,26 @@ describe("Root Machine", () => {
     )
     expect(snapshot.context.battleProfile?.history).toEqual([])
     expect(snapshot.context.battleProfile?.redo).toEqual([])
-    expect(storage.setItem).not.toHaveBeenCalled()
     await expect(durableStore.readAll()).resolves.toEqual(new Map())
 
     actor.send({
       type: "INTRODUCTION.COMPLETED",
-      uuid: "profile-uuid",
     })
     snapshot = await waitFor(actor, (candidate) => candidate.matches("Hub"))
 
     expect(snapshot.context.battleProfileStoreState?.head.profile).toBe(
       snapshot.context.battleProfile,
     )
-    expect(storage.setItem).toHaveBeenCalledTimes(1)
-    expect(storage.setItem).toHaveBeenCalledWith("wayvm_uuid", "profile-uuid")
-    expect(storage.setItem).not.toHaveBeenCalledWith(
-      "wayvm_values_xp",
-      expect.any(String),
-    )
-    expect(storage.setItem).not.toHaveBeenCalledWith(
-      "wayvm_queue",
-      expect.any(String),
-    )
     expect((await durableStore.readAll()).size).toBe(2)
   })
 
   it("initializes an empty durable profile before routing a returning introduction to the Hub", async () => {
-    const { actor, storage, durableStore } = await bootRootActor({
-      uuid: "returning-profile",
+    const { actor, durableStore } = await bootRootActor({
       schedulerSeed: "returning-profile-seed",
     })
 
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
     expect(actor.getSnapshot().context.battleProfileStoreState).not.toBeNull()
-    expect(storage.setItem).not.toHaveBeenCalled()
     expect((await durableStore.readAll()).size).toBe(2)
   })
 
@@ -307,7 +282,6 @@ describe("Root Machine", () => {
     actor.start()
     actor.send({
       type: "APP.HYDRATED",
-      uuid: "returning-profile",
       schedulerSeed: "failed-hydration-seed",
     })
 

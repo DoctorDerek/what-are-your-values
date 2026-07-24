@@ -66,7 +66,6 @@ export default function GameClient() {
   useEffect(() => {
     send({
       type: "APP.HYDRATED",
-      uuid: webStorage.getItem("wayvm_uuid"),
       schedulerSeed: crypto.randomUUID(),
     })
   }, [send])
@@ -106,9 +105,7 @@ export default function GameClient() {
   if (state.matches("Splash")) {
     return (
       <Splash
-        onComplete={() =>
-          send({ type: "INTRODUCTION.COMPLETED", uuid: crypto.randomUUID() })
-        }
+        onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })}
       />
     )
   }

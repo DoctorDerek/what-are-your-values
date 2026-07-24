@@ -22,28 +22,23 @@ import {
   type SchedulerRestorePoint,
 } from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
-import type { StorageAdapter } from "./StorageAdapter"
 
 type RootMachineContext = {
-  readonly storage: StorageAdapter
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
   readonly now: () => string
-  uuid: string | null
   battleProfile: BattleProfile | null
   battleProfileStoreState: BattleProfileStoreState | null
   pendingBattleProfileCommit: BattleProfileCommit | null
   persistenceIssue: string | null
-  shouldSaveIntroductionId: boolean
 }
 
 type RootMachineEvent =
   | {
       type: "APP.HYDRATED"
-      uuid: string | null
       schedulerSeed: string
     }
-  | { type: "INTRODUCTION.COMPLETED"; uuid: string }
+  | { type: "INTRODUCTION.COMPLETED" }
   | { type: "BATTLE.START_REQUESTED" }
   | { type: "ALL_VALUES.OPEN_REQUESTED" }
   | { type: "ALL_VALUES.CLOSE_REQUESTED" }
@@ -57,7 +52,6 @@ type RootMachineEvent =
   | { type: "BATTLE.EXIT_REQUESTED" }
 
 type RootMachineInput = {
-  readonly storage: StorageAdapter
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
   readonly now: () => string
@@ -127,30 +121,14 @@ export const rootMachine = setup({
     canRedoBattle: ({ context }) =>
       (context.battleProfile?.redo.length ?? 0) > 0,
   },
-  actions: {
-    saveIntroductionId: ({ context }) => {
-      if (!context.shouldSaveIntroductionId) {
-        return
-      }
-
-      if (!context.uuid) {
-        throw new Error("Introduction completion is missing a UUID")
-      }
-
-      context.storage.setItem("wayvm_uuid", context.uuid)
-    },
-  },
 }).createMachine({
   id: "root",
   initial: "Hydrating",
   context: ({ input }) => ({
-    uuid: null,
     battleProfile: null,
     battleProfileStoreState: null,
     pendingBattleProfileCommit: null,
     persistenceIssue: null,
-    shouldSaveIntroductionId: false,
-    storage: input.storage,
     durableStore: input.durableStore,
     appVersion: input.appVersion,
     now: input.now,
@@ -161,11 +139,9 @@ export const rootMachine = setup({
         "APP.HYDRATED": {
           target: "LoadingProfile",
           actions: assign({
-            uuid: ({ event }) => event.uuid,
             battleProfile: ({ event }) =>
               createInitialBattleProfile(event.schedulerSeed),
             persistenceIssue: null,
-            shouldSaveIntroductionId: false,
           }),
         },
       },
@@ -210,8 +186,7 @@ export const rootMachine = setup({
             }),
           },
           {
-            guard: ({ context, event }) =>
-              event.output.status === "empty" && context.uuid === null,
+            guard: ({ event }) => event.output.status === "empty",
             target: "Splash",
           },
           { target: "InitializingProfile" },
@@ -226,13 +201,7 @@ export const rootMachine = setup({
     },
     Splash: {
       on: {
-        "INTRODUCTION.COMPLETED": {
-          target: "InitializingProfile",
-          actions: assign({
-            uuid: ({ event }) => event.uuid,
-            shouldSaveIntroductionId: true,
-          }),
-        },
+        "INTRODUCTION.COMPLETED": { target: "InitializingProfile" },
       },
     },
     InitializingProfile: {
@@ -252,8 +221,6 @@ export const rootMachine = setup({
               battleProfileStoreState: ({ event }) => event.output,
               persistenceIssue: null,
             }),
-            "saveIntroductionId",
-            assign({ shouldSaveIntroductionId: false }),
           ],
         },
         onError: [

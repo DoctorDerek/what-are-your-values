@@ -19,9 +19,6 @@ describe("GameClient Integration", () => {
   })
 
   it("carries one canonical battle result back to the earned Hub ranking", async () => {
-    const getItem = vi
-      .spyOn(webStorage, "getItem")
-      .mockReturnValue("returning-player")
     const setItem = vi.spyOn(webStorage, "setItem")
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000041",
@@ -49,15 +46,13 @@ describe("GameClient Integration", () => {
 
     expect(await screen.findByText(`#1 ${winnerName}`)).toBeVisible()
     expect(screen.getByText("Level 2")).toBeVisible()
-    expect(getItem).toHaveBeenCalledTimes(1)
-    expect(getItem).toHaveBeenCalledWith("wayvm_uuid")
     expect(setItem).not.toHaveBeenCalled()
   })
 
   it("persists a first-run profile only after introduction completion", async () => {
-    vi.spyOn(crypto, "randomUUID")
-      .mockReturnValueOnce("00000000-0000-4000-8000-000000000042")
-      .mockReturnValueOnce("00000000-0000-4000-8000-000000000043")
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000042",
+    )
 
     render(<GameClient />)
 
@@ -66,18 +61,13 @@ describe("GameClient Integration", () => {
         name: "What Are Your Values, Mapache?",
       }),
     ).toBeVisible()
-    expect(localStorage.getItem("wayvm_uuid")).toBeNull()
 
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
     expect(await screen.findByText("Sovereign Dashboard")).toBeVisible()
-    expect(localStorage.getItem("wayvm_uuid")).toBe(
-      "00000000-0000-4000-8000-000000000043",
-    )
   })
 
   it("opens the complete All Values ranking and returns to the unchanged Hub", async () => {
-    vi.spyOn(webStorage, "getItem").mockReturnValue("returning-player")
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000044",
     )
