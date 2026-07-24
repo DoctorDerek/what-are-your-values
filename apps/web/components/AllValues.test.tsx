@@ -126,6 +126,34 @@ describe("All Values Component Integration", () => {
     expect(onAddCustomValue).not.toHaveBeenCalled()
   })
 
+  it("normalizes add-value names for duplicate detection", () => {
+    const rankedValues = createRankedValues(createActiveDeckWithIngenuity())
+    const onAddCustomValue = vi.fn()
+
+    render(
+      <AllValues
+        rankedValues={rankedValues}
+        onClose={vi.fn()}
+        onAddCustomValue={onAddCustomValue}
+        onUpdateCustomValue={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "  INGENUITY  " },
+    })
+    fireEvent.change(screen.getByLabelText("Custom Value Definition"), {
+      target: { value: "Another form of creativity." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save Custom Value" }))
+
+    expect(
+      screen.getByText("A value with this name already exists."),
+    ).toBeInTheDocument()
+    expect(onAddCustomValue).not.toHaveBeenCalled()
+  })
+
   it("edits a custom value and emits the full replacement payload", () => {
     const activeDeck = createActiveDeckWithIngenuity()
     const rankedValues = createRankedValues(activeDeck)
