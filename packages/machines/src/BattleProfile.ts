@@ -1,4 +1,6 @@
 import type { ValueId } from "@game/data/src/Value"
+import { type CustomValueDefinition } from "@game/data/src/Value"
+import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import {
   createBattleCycleCandidate,
   createInitialBattleCycle,
@@ -17,12 +19,18 @@ import {
 } from "./BattleTimeline"
 import type { SchedulerRestorePoint } from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
+import { createDeckRevisionCandidate } from "./DeckRevision"
 
 export type BattleProfile = BattleCycleState & BattleTimeline
 
 export type BattleProfileTransition = {
   readonly profile: BattleProfile
   readonly delta: BattleDelta
+}
+
+export type BattleProfileDeckRevisionTransition = {
+  readonly profile: BattleProfile
+  readonly activeDeck: ActiveDeck
 }
 
 function createBattleProfile(
@@ -188,4 +196,32 @@ export function applyBattleRedo(profile: BattleProfile) {
     timelineTransition.timeline,
     timelineTransition.delta,
   )
+}
+
+export function applyDeckRevision({
+  profile,
+  revisedCustomValues,
+}: {
+  readonly profile: BattleProfile
+  readonly revisedCustomValues: readonly CustomValueDefinition[]
+}) {
+  const candidate = createDeckRevisionCandidate({
+    priorActiveDeck: profile.activeDeck,
+    revisedCustomValues,
+    progressById: profile.progressById,
+    deckRevision: profile.scheduler.deckRevision,
+    progressGeneration: profile.scheduler.progressGeneration,
+    seed: profile.scheduler.seed,
+  })
+  return Object.freeze({
+    profile: Object.freeze({
+      activeDeck: candidate.activeDeck,
+      progressById: candidate.progressById,
+      cycleLevelSnapshot: candidate.cycleLevelSnapshot,
+      scheduler: candidate.scheduler,
+      history: [],
+      redo: [],
+    }) satisfies BattleProfile,
+    activeDeck: candidate.activeDeck,
+  }) satisfies BattleProfileDeckRevisionTransition
 }

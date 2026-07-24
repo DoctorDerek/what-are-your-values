@@ -1,4 +1,5 @@
 import type { ValueId } from "@game/data/src/Value"
+import type { CustomValueDefinition } from "@game/data/src/Value"
 import {
   applyBattleChoice,
   applyBattleRedo,
@@ -7,10 +8,12 @@ import {
 } from "./BattleProfile"
 import {
   createBattleChoiceEvent,
+  createDeckRevisionEvent,
   createBattleRedoEvent,
   createBattleUndoEvent,
   type BattleProfileEvent,
 } from "./BattleProfileEvent"
+import { applyDeckRevision } from "./BattleProfile"
 import type { SchedulerRestorePoint } from "./PairScheduler"
 
 export type BattleProfileCommit = {
@@ -66,4 +69,22 @@ export function createBattleRedoCommit(profile: BattleProfile) {
         createBattleRedoEvent(transition),
       )
     : null
+}
+
+export function createDeckRevisionCommit({
+  profile,
+  revisedCustomValues,
+}: {
+  readonly profile: BattleProfile
+  readonly revisedCustomValues: readonly CustomValueDefinition[]
+}) {
+  const transition = applyDeckRevision({
+    profile,
+    revisedCustomValues,
+  })
+
+  return createBattleProfileCommit(
+    transition.profile,
+    createDeckRevisionEvent(transition),
+  )
 }

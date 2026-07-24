@@ -2,6 +2,7 @@ import type { ValueId } from "@game/data/src/Value"
 import { assign, setup } from "xstate"
 import { createInitialBattleProfile, type BattleProfile } from "./BattleProfile"
 import {
+  createDeckRevisionCommit,
   createBattleChoiceCommit,
   createBattleRedoCommit,
   createBattleUndoCommit,
@@ -13,6 +14,8 @@ import {
   initializeBattleProfileActor,
 } from "./BattleProfilePersistenceActors"
 import type { BattleProfileStoreState } from "./BattleProfileStore"
+import type { CustomValueDefinition, CustomValueId } from "@game/data/src/Value"
+import { createCustomValueId } from "@game/data/src/Value"
 import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
@@ -42,6 +45,17 @@ type RootMachineEvent =
   | { type: "BATTLE.START_REQUESTED" }
   | { type: "ALL_VALUES.OPEN_REQUESTED" }
   | { type: "ALL_VALUES.CLOSE_REQUESTED" }
+  | {
+      type: "ALL_VALUES.ADD_REQUESTED"
+      name: string
+      definition: string
+    }
+  | {
+      type: "ALL_VALUES.UPDATE_REQUESTED"
+      valueId: CustomValueId
+      name: string
+      definition: string
+    }
   | {
       type: "BATTLE.WINNER_SELECTED"
       winnerId: ValueId
@@ -79,6 +93,165 @@ function requirePendingBattleProfileCommit(context: RootMachineContext) {
   }
 
   return context.pendingBattleProfileCommit
+}
+
+function createNextCustomValue({
+  existingCustomValues,
+  name,
+  definition,
+  now,
+}: {
+  readonly existingCustomValues: readonly CustomValueDefinition[]
+  readonly name: string
+  readonly definition: string
+  readonly now: () => string
+}) {
+  const trimmedName = name.trim()
+  const trimmedDefinition = definition.trim()
+
+  if (trimmedName.length === 0) {
+    throw new Error("Custom Value name is required")
+  }
+
+  if (trimmedDefinition.length === 0) {
+    throw new Error("Custom Value definition is required")
+  }
+
+  const nextCreationOrdinal =
+    existingCustomValues.reduce(
+      (maxOrdinal, value) =>
+        value.creationOrdinal > maxOrdinal
+          ? value.creationOrdinal
+          : maxOrdinal,
+      0,
+    ) + 1
+
+  return Object.freeze({
+    kind: "custom",
+    id: createCustomValueId(`custom:${crypto.randomUUID()}`),
+    name: trimmedName,
+    definition: trimmedDefinition,
+    creationOrdinal: nextCreationOrdinal,
+    createdAt: now(),
+    updatedAt: now(),
+  }) satisfies CustomValueDefinition
+}
+
+function createRevisedCustomValuesForAdd({
+  profile,
+  name,
+  definition,
+  now,
+}: {
+  readonly profile: BattleProfile
+  readonly name: string
+  readonly definition: string
+  readonly now: () => string
+}) {
+  const customValues = Object.freeze([
+    ...profile.activeDeck.customValues,
+    createNextCustomValue({
+      existingCustomValues: profile.activeDeck.customValues,
+      name,
+      definition,
+      now,
+    }),
+  ])
+
+  return customValues
+}
+
+function createRevisedCustomValuesForUpdate({
+  profile,
+  valueId,
+  name,
+  definition,
+  now,
+}: {
+  readonly profile: BattleProfile
+  readonly valueId: CustomValueId
+  readonly name: string
+  readonly definition: string
+  readonly now: () => string
+}) {
+  const trimmedName = name.trim()
+  const trimmedDefinition = definition.trim()
+
+  if (trimmedName.length === 0) {
+    throw new Error("Custom Value name is required")
+  }
+
+  if (trimmedDefinition.length === 0) {
+    throw new Error("Custom Value definition is required")
+  }
+
+  return Object.freeze(
+    profile.activeDeck.customValues.map((value) => {
+      if (value.id !== valueId) {
+        return value
+      }
+
+      return Object.freeze({
+        ...value,
+        name: trimmedName,
+        definition: trimmedDefinition,
+        updatedAt: now(),
+      })
+    }),
+  )
+}
+
+function createDeckRevisionCommitFromUpdate({
+  context,
+  valueId,
+  name,
+  definition,
+  now,
+}: {
+  readonly context: RootMachineContext
+  readonly valueId: CustomValueId
+  readonly name: string
+  readonly definition: string
+  readonly now: () => string
+}) {
+  const profile = requireBattleProfile(context)
+  const revisedCustomValues = createRevisedCustomValuesForUpdate({
+    profile,
+    valueId,
+    name,
+    definition,
+    now,
+  })
+  if (
+    !revisedCustomValues.some((value) => value.id === valueId) ||
+    profile.activeDeck.customValues.every(
+      (value) => value.id !== valueId,
+    )
+  ) {
+    throw new Error(`Custom Value does not exist: ${valueId}`)
+  }
+
+  return createDeckRevisionCommit({ profile, revisedCustomValues })
+}
+
+function createDeckRevisionCommitFromAdd({
+  context,
+  name,
+  definition,
+}: {
+  readonly context: RootMachineContext
+  readonly name: string
+  readonly definition: string
+}) {
+  const profile = requireBattleProfile(context)
+  const revisedCustomValues = createRevisedCustomValuesForAdd({
+    profile,
+    name,
+    definition,
+    now: context.now,
+  })
+
+  return createDeckRevisionCommit({ profile, revisedCustomValues })
 }
 
 function getErrorMessage(error: unknown) {
@@ -245,8 +418,73 @@ export const rootMachine = setup({
       },
     },
     AllValues: {
-      on: {
-        "ALL_VALUES.CLOSE_REQUESTED": { target: "Hub" },
+      initial: "Browsing",
+      states: {
+        Browsing: {
+          on: {
+            "ALL_VALUES.CLOSE_REQUESTED": { target: "#root.Hub" },
+            "ALL_VALUES.ADD_REQUESTED": {
+              target: "Persisting",
+              actions: assign({
+                pendingBattleProfileCommit: ({ context, event }) => {
+                  if (event.type !== "ALL_VALUES.ADD_REQUESTED") {
+                    throw new Error("Invalid add request event type")
+                  }
+
+                  return createDeckRevisionCommitFromAdd({
+                    context,
+                    name: event.name,
+                    definition: event.definition,
+                  })
+                },
+              }),
+            },
+            "ALL_VALUES.UPDATE_REQUESTED": {
+              target: "Persisting",
+              actions: assign({
+                pendingBattleProfileCommit: ({ context, event }) => {
+                  if (event.type !== "ALL_VALUES.UPDATE_REQUESTED") {
+                    throw new Error("Invalid update request event type")
+                  }
+
+                  return createDeckRevisionCommitFromUpdate({
+                    context,
+                    valueId: event.valueId,
+                    name: event.name,
+                    definition: event.definition,
+                    now: context.now,
+                  })
+                },
+              }),
+            },
+          },
+        },
+        Persisting: {
+          invoke: {
+            src: "commitBattleProfileEvent",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+              event: requirePendingBattleProfileCommit(context).event,
+              committedAt: context.now(),
+            }),
+            onDone: {
+              target: "Browsing",
+              actions: assign({
+                battleProfile: ({ event }) => event.output.head.profile,
+                battleProfileStoreState: ({ event }) => event.output,
+                pendingBattleProfileCommit: null,
+              }),
+            },
+            onError: {
+              target: "#root.PersistenceFailure",
+              actions: assign({
+                pendingBattleProfileCommit: null,
+                persistenceIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
       },
     },
     Crucible: {

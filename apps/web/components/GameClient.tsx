@@ -1,6 +1,7 @@
 "use client"
 
 import type { ValueId } from "@game/data/src/Value"
+import type { CustomValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
@@ -62,6 +63,27 @@ export default function GameClient() {
     shouldRestoreSeeAllValuesFocusRef.current = true
     send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
   }, [send])
+  const handleAddCustomValue = useCallback(
+    (name: string, definition: string) => {
+      send({
+        type: "ALL_VALUES.ADD_REQUESTED",
+        name,
+        definition,
+      })
+    },
+    [send],
+  )
+  const handleUpdateCustomValue = useCallback(
+    (valueId: CustomValueId, name: string, definition: string) => {
+      send({
+        type: "ALL_VALUES.UPDATE_REQUESTED",
+        valueId,
+        name,
+        definition,
+      })
+    },
+    [send],
+  )
 
   useEffect(() => {
     send({
@@ -127,7 +149,12 @@ export default function GameClient() {
 
   if (state.matches("AllValues")) {
     return (
-      <AllValues rankedValues={rankedValues} onClose={handleAllValuesClose} />
+      <AllValues
+        rankedValues={rankedValues}
+        onClose={handleAllValuesClose}
+        onAddCustomValue={handleAddCustomValue}
+        onUpdateCustomValue={handleUpdateCustomValue}
+      />
     )
   }
 

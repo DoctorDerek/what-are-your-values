@@ -1,4 +1,9 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
+import {
+  decodeActiveDeck,
+  encodeActiveDeck,
+  type EncodedActiveDeck,
+} from "./ActiveDeckCodec"
 import type { BattleDelta } from "./BattleDelta"
 import {
   decodeBattleDelta,
@@ -9,29 +14,40 @@ import {
   applyBattleChoice,
   applyBattleRedo,
   applyBattleUndo,
+  applyDeckRevision,
   type BattleProfile,
+  type BattleProfileDeckRevisionTransition,
   type BattleProfileTransition,
 } from "./BattleProfile"
 
 export const BATTLE_PROFILE_EVENT_VERSION = 1 as const
 
 export type BattleProfileEventType =
-  "battle-choice" | "battle-undo" | "battle-redo"
+  "battle-choice" | "battle-undo" | "battle-redo" | "deck-revision"
 
-export type BattleProfileEvent = {
+type BattleProfileChoiceEvent = {
   readonly version: typeof BATTLE_PROFILE_EVENT_VERSION
-  readonly type: BattleProfileEventType
+  readonly type: "battle-choice" | "battle-undo" | "battle-redo"
   readonly delta: BattleDelta
 }
+
+type BattleProfileDeckRevisionEvent = {
+  readonly version: typeof BATTLE_PROFILE_EVENT_VERSION
+  readonly type: "deck-revision"
+  readonly activeDeck: ActiveDeck
+}
+
+export type BattleProfileEvent =
+  BattleProfileChoiceEvent | BattleProfileDeckRevisionEvent
 
 export type EncodedBattleProfileEvent = readonly [
   version: number,
   type: string,
-  delta: EncodedBattleDelta,
+  payload: EncodedBattleDelta | EncodedActiveDeck,
 ]
 
 function createBattleProfileEvent(
-  type: BattleProfileEventType,
+  type: BattleProfileChoiceEvent["type"],
   transition: BattleProfileTransition,
 ) {
   return Object.freeze({
@@ -53,9 +69,23 @@ export function createBattleRedoEvent(transition: BattleProfileTransition) {
   return createBattleProfileEvent("battle-redo", transition)
 }
 
+export function createDeckRevisionEvent(
+  transition: BattleProfileDeckRevisionTransition,
+) {
+  return Object.freeze({
+    version: BATTLE_PROFILE_EVENT_VERSION,
+    type: "deck-revision",
+    activeDeck: transition.activeDeck,
+  }) satisfies BattleProfileDeckRevisionEvent
+}
+
 export function encodeBattleProfileEvent(
   event: BattleProfileEvent,
 ): EncodedBattleProfileEvent {
+  if (event.type === "deck-revision") {
+    return [event.version, event.type, encodeActiveDeck(event.activeDeck)]
+  }
+
   return [event.version, event.type, encodeBattleDelta(event.delta)]
 }
 
@@ -63,7 +93,8 @@ function readBattleProfileEventType(value: unknown) {
   if (
     value !== "battle-choice" &&
     value !== "battle-undo" &&
-    value !== "battle-redo"
+    value !== "battle-redo" &&
+    value !== "deck-revision"
   ) {
     throw new Error(`Unsupported Battle Profile event type: ${String(value)}`)
   }
@@ -86,7 +117,9 @@ export function decodeBattleProfileEvent(
   const event = Object.freeze({
     version: BATTLE_PROFILE_EVENT_VERSION,
     type: readBattleProfileEventType(value[1]),
-    delta: decodeBattleDelta(activeDeck, value[2]),
+    ...(value[1] === "deck-revision"
+      ? { activeDeck: decodeActiveDeck(value[2]) }
+      : { delta: decodeBattleDelta(activeDeck, value[2]) }),
   }) satisfies BattleProfileEvent
 
   if (
@@ -114,6 +147,25 @@ function assertReplayedDelta(
   return transition.profile
 }
 
+function assertReplayedDeckRevision(
+  transition: BattleProfileDeckRevisionTransition,
+  event: BattleProfileEvent,
+) {
+  if (event.type !== "deck-revision") {
+    throw new Error(`Event type is not deck-revision: ${event.type}`)
+  }
+  if (
+    JSON.stringify(encodeActiveDeck(transition.activeDeck)) !==
+    JSON.stringify(encodeActiveDeck(event.activeDeck))
+  ) {
+    throw new Error(
+      "Persisted deck-revision event does not match its deterministic transition",
+    )
+  }
+
+  return transition.profile
+}
+
 export function replayBattleProfileEvent(
   profile: BattleProfile,
   event: BattleProfileEvent,
@@ -121,6 +173,16 @@ export function replayBattleProfileEvent(
   if (event.version !== BATTLE_PROFILE_EVENT_VERSION) {
     throw new Error(
       `Unsupported Battle Profile event version: ${event.version}`,
+    )
+  }
+
+  if (event.type === "deck-revision") {
+    return assertReplayedDeckRevision(
+      applyDeckRevision({
+        profile,
+        revisedCustomValues: event.activeDeck.customValues,
+      }),
+      event,
     )
   }
 

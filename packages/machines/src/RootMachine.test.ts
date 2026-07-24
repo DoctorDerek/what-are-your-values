@@ -26,16 +26,23 @@ function createRootActor({
 async function bootRootActor({
   schedulerSeed = "root-machine-seed",
   durableStore,
+  skipIntroduction = false,
 }: {
   readonly schedulerSeed?: string
   readonly durableStore?: DurableStoreAdapter
+  readonly skipIntroduction?: boolean
 } = {}) {
   const root = createRootActor({ durableStore })
   root.actor.start()
   root.actor.send({ type: "APP.HYDRATED", schedulerSeed })
-  await waitFor(root.actor, (snapshot) =>
-    snapshot.matches("Hub") || snapshot.matches("Splash"),
+  await waitFor(
+    root.actor,
+    (snapshot) => snapshot.matches("Hub") || snapshot.matches("Splash"),
   )
+  if (!skipIntroduction && root.actor.getSnapshot().matches("Splash")) {
+    root.actor.send({ type: "INTRODUCTION.COMPLETED" })
+    await waitFor(root.actor, (snapshot) => snapshot.matches("Hub"))
+  }
 
   return root
 }
@@ -48,7 +55,9 @@ async function waitForReadyCrucible(
 
 describe("Root Machine", () => {
   it("hydrates a fresh canonical profile and initializes after introduction", async () => {
-    const { actor, durableStore } = await bootRootActor()
+    const { actor, durableStore } = await bootRootActor({
+      skipIntroduction: true,
+    })
 
     let snapshot = actor.getSnapshot()
     expect(snapshot.matches("Splash")).toBe(true)
@@ -95,6 +104,214 @@ describe("Root Machine", () => {
 
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
     expect(actor.getSnapshot().context.battleProfile).toBe(battleProfile)
+  })
+
+  it("adds a custom value through the All Values durable update flow", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "all-values-add-seed",
+    })
+
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+
+    const afterAddSnapshot = await waitFor(actor, (candidate) => {
+      if (!candidate.matches({ AllValues: "Browsing" })) {
+        return false
+      }
+
+      const profile = candidate.context.battleProfile
+      if (!profile) {
+        return false
+      }
+
+      const customValue = profile.activeDeck.customValues[0]
+      return customValue?.name === "Ingenuity"
+    })
+    const afterAddProfile = afterAddSnapshot.context.battleProfile
+    if (!afterAddProfile) {
+      throw new Error("Battle profile did not survive custom value add")
+    }
+    const addedValue = afterAddProfile.activeDeck.customValues[0]
+    if (!addedValue) {
+      throw new Error("Custom value add did not create a value")
+    }
+
+    expect(addedValue.id.startsWith("custom:")).toBe(true)
+    expect(addedValue.definition).toBe(
+      "The disciplined practice of creating new solutions.",
+    )
+    expect(afterAddProfile.activeDeck.customValues).toHaveLength(1)
+  })
+
+  it("trims custom value input in All Values durable updates", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "all-values-trim-seed",
+    })
+
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "   Ingenuity   ",
+      definition: "   The disciplined practice of creating new solutions.   ",
+    })
+
+    const afterTrimmedAddSnapshot = await waitFor(actor, (candidate) => {
+      if (!candidate.matches({ AllValues: "Browsing" })) {
+        return false
+      }
+
+      const profile = candidate.context.battleProfile
+      if (!profile) {
+        return false
+      }
+
+      return (
+        profile.activeDeck.customValues.length === 1 &&
+        profile.activeDeck.customValues[0]?.name === "Ingenuity" &&
+        profile.activeDeck.customValues[0]?.definition ===
+          "The disciplined practice of creating new solutions."
+      )
+    })
+
+    const addedValue =
+      afterTrimmedAddSnapshot.context.battleProfile?.activeDeck.customValues[0]
+    if (!addedValue) {
+      throw new Error("Custom value add did not trim inputs")
+    }
+
+    expect(addedValue.name).toBe("Ingenuity")
+    expect(addedValue.definition).toBe(
+      "The disciplined practice of creating new solutions.",
+    )
+  })
+
+  it("edits a custom value through the All Values durable update flow", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "all-values-edit-seed",
+    })
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+
+    const afterAddSnapshot = await waitFor(actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      return (
+        candidate.matches({ AllValues: "Browsing" }) &&
+        !!profile &&
+        profile.activeDeck.customValues.some(
+          (value) => value.name === "Ingenuity",
+        )
+      )
+    })
+
+    const customValueId =
+      afterAddSnapshot.context.battleProfile?.activeDeck.customValues[0]?.id
+    if (!customValueId) {
+      throw new Error("Custom value add did not create an id")
+    }
+
+    actor.send({
+      type: "ALL_VALUES.UPDATE_REQUESTED",
+      valueId: customValueId,
+      name: "Curiosity Engine",
+      definition: "A drive to explore how things connect.",
+    })
+
+    const afterUpdateSnapshot = await waitFor(actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      if (!candidate.matches({ AllValues: "Browsing" }) || !profile) {
+        return false
+      }
+      return profile.activeDeck.customValues.some(
+        (value) =>
+          value.id === customValueId && value.name === "Curiosity Engine",
+      )
+    })
+
+    const afterUpdateProfile = afterUpdateSnapshot.context.battleProfile
+    if (!afterUpdateProfile) {
+      throw new Error("Battle profile did not survive custom value edit")
+    }
+    const updatedValue = afterUpdateProfile.activeDeck.customValues[0]
+    if (!updatedValue) {
+      throw new Error("Custom value edit removed the value")
+    }
+
+    expect(updatedValue.name).toBe("Curiosity Engine")
+    expect(updatedValue.definition).toBe(
+      "A drive to explore how things connect.",
+    )
+    expect(updatedValue.updatedAt).toBe(TEST_TIMESTAMP)
+  })
+
+  it("trims edited custom value input in All Values durable updates", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "all-values-edit-trim-seed",
+    })
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+
+    const afterAddSnapshot = await waitFor(actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      return (
+        candidate.matches({ AllValues: "Browsing" }) &&
+        !!profile &&
+        profile.activeDeck.customValues.some(
+          (value) => value.name === "Ingenuity",
+        )
+      )
+    })
+
+    const customValueId =
+      afterAddSnapshot.context.battleProfile?.activeDeck.customValues?.[0]?.id
+    if (!customValueId) {
+      throw new Error("Custom value add did not create an id")
+    }
+
+    actor.send({
+      type: "ALL_VALUES.UPDATE_REQUESTED",
+      valueId: customValueId,
+      name: "   Curiosity Engine   ",
+      definition: "   A drive to explore how things connect.   ",
+    })
+
+    const afterUpdateSnapshot = await waitFor(actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      if (!candidate.matches({ AllValues: "Browsing" }) || !profile) {
+        return false
+      }
+
+      return profile.activeDeck.customValues.some(
+        (value) =>
+          value.id === customValueId &&
+          value.name === "Curiosity Engine" &&
+          value.definition === "A drive to explore how things connect.",
+      )
+    })
+
+    const updatedValue =
+      afterUpdateSnapshot.context.battleProfile?.activeDeck.customValues.find(
+        (value) => value.id === customValueId,
+      )
+    if (!updatedValue) {
+      throw new Error("Custom value edit did not return expected value")
+    }
+
+    expect(updatedValue.name).toBe("Curiosity Engine")
+    expect(updatedValue.definition).toBe(
+      "A drive to explore how things connect.",
+    )
   })
 
   it("commits one trusted battle durably and ignores duplicate stale selection events", async () => {

@@ -6,6 +6,7 @@ import {
   applyBattleUndo,
   createInitialBattleProfile,
 } from "./BattleProfile"
+import { createDeckRevisionCommit } from "./BattleProfileCommit"
 import {
   createBattleChoiceEvent,
   createBattleRedoEvent,
@@ -14,6 +15,10 @@ import {
   encodeBattleProfileEvent,
   replayBattleProfileEvent,
 } from "./BattleProfileEvent"
+import {
+  createCustomValueId,
+  type CustomValueDefinition,
+} from "@game/data/src/Value"
 import { projectScheduledPair } from "./PairScheduler"
 
 function chooseFirstValue(
@@ -29,6 +34,18 @@ function chooseFirstValue(
     winnerId,
     expectedScheduler: profile.scheduler,
   })
+}
+
+function createCustomValue() {
+  return Object.freeze({
+    kind: "custom",
+    id: createCustomValueId("custom:00000000-0000-4000-8000-000000000001"),
+    name: "Ingenuity",
+    definition: "A custom value for experimentation.",
+    creationOrdinal: 1,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  }) satisfies CustomValueDefinition
 }
 
 describe("Battle Profile Event", () => {
@@ -69,6 +86,20 @@ describe("Battle Profile Event", () => {
 
     expect(encodeBattleProfileEvent(decoded)).toEqual(encoded)
     expect(decoded).toEqual(event)
+  })
+
+  it("round-trips deck-revision events with deterministic replay", () => {
+    const initial = createInitialBattleProfile("profile-event-revision-seed")
+    const revision = createDeckRevisionCommit({
+      profile: initial,
+      revisedCustomValues: [createCustomValue()],
+    })
+    const encoded = encodeBattleProfileEvent(revision.event)
+    const decoded = decodeBattleProfileEvent(initial.activeDeck, encoded)
+
+    expect(encodeBattleProfileEvent(decoded)).toEqual(encoded)
+    expect(decoded.type).toBe("deck-revision")
+    expect(replayBattleProfileEvent(initial, decoded)).toEqual(revision.profile)
   })
 
   it("rejects a self-consistent payout that deterministic replay disproves", () => {
