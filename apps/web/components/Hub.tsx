@@ -51,6 +51,50 @@ function ValueRow({
   )
 }
 
+function ValueActionRail({
+  browseAllValuesButtonRef,
+  onBrowseAllValues,
+  onAddCustomValue,
+  onStartBattle,
+}: {
+  browseAllValuesButtonRef?: Ref<HTMLButtonElement>
+  onBrowseAllValues: (focusTargetId: string) => void
+  onAddCustomValue: (focusTargetId: string) => void
+  onStartBattle: () => void
+}) {
+  return (
+    <nav
+      aria-label="Value actions"
+      className="mt-6 flex w-full flex-col gap-4 sm:flex-row"
+    >
+      <button
+        type="button"
+        onClick={onStartBattle}
+        className="bg-mapache-vivid-primary-orange min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-4xl font-black text-white uppercase shadow-[10px_10px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[10px] active:translate-y-[10px] active:shadow-none"
+      >
+        Battle
+      </button>
+      <button
+        ref={browseAllValuesButtonRef}
+        id="hub-browse-all-values-button"
+        type="button"
+        onClick={(event) => onBrowseAllValues(event.currentTarget.id)}
+        className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
+      >
+        Browse All Values
+      </button>
+      <button
+        id="hub-add-custom-value-button"
+        type="button"
+        onClick={(event) => onAddCustomValue(event.currentTarget.id)}
+        className="bg-mapache-vivid-secondary-purple min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black text-white uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
+      >
+        Add Custom Value
+      </button>
+    </nav>
+  )
+}
+
 export default function Hub({
   rankedValues,
   browseAllValuesButtonRef,
@@ -120,6 +164,12 @@ export default function Hub({
                 ))}
               </ol>
             </section>
+            <ValueActionRail
+              browseAllValuesButtonRef={browseAllValuesButtonRef}
+              onBrowseAllValues={onBrowseAllValues}
+              onAddCustomValue={onAddCustomValue}
+              onStartBattle={onStartBattle}
+            />
             <div className="bg-mapache-vivid-primary-cyan border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
               All Other Values
             </div>
@@ -140,48 +190,26 @@ export default function Hub({
             </section>
           </div>
         ) : (
-          <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2">
-            {visibleValues.map((rankedValue) => (
-              <ValueRow
-                key={rankedValue.definition.id}
-                rankedValue={rankedValue}
-                hasComparisons={false}
-                onOpenValue={onOpenValue}
-              />
-            ))}
-          </ol>
+          <>
+            <ValueActionRail
+              browseAllValuesButtonRef={browseAllValuesButtonRef}
+              onBrowseAllValues={onBrowseAllValues}
+              onAddCustomValue={onAddCustomValue}
+              onStartBattle={onStartBattle}
+            />
+            <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2">
+              {visibleValues.map((rankedValue) => (
+                <ValueRow
+                  key={rankedValue.definition.id}
+                  rankedValue={rankedValue}
+                  hasComparisons={false}
+                  onOpenValue={onOpenValue}
+                />
+              ))}
+            </ol>
+          </>
         )}
       </section>
-
-      <nav
-        aria-label="Value actions"
-        className="mt-8 flex w-full max-w-7xl flex-col gap-4 sm:flex-row"
-      >
-        <button
-          type="button"
-          onClick={onStartBattle}
-          className="bg-mapache-vivid-primary-orange min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-4xl font-black text-white uppercase shadow-[10px_10px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[10px] active:translate-y-[10px] active:shadow-none"
-        >
-          Battle
-        </button>
-        <button
-          ref={browseAllValuesButtonRef}
-          id="hub-browse-all-values-button"
-          type="button"
-          onClick={(event) => onBrowseAllValues(event.currentTarget.id)}
-          className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
-        >
-          Browse All Values
-        </button>
-        <button
-          id="hub-add-custom-value-button"
-          type="button"
-          onClick={(event) => onAddCustomValue(event.currentTarget.id)}
-          className="bg-mapache-vivid-secondary-purple min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black text-white uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
-        >
-          Add Custom Value
-        </button>
-      </nav>
     </main>
   )
 }
