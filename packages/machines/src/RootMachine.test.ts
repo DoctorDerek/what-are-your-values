@@ -633,9 +633,7 @@ describe("Root Machine", () => {
     const snapshot = await waitFor(actor, (candidate) =>
       candidate.matches("PersistenceFailure"),
     )
-    expect(snapshot.context.persistenceIssue).toBe(
-      "Custom Value commit failed",
-    )
+    expect(snapshot.context.persistenceIssue).toBe("Custom Value commit failed")
     expect(snapshot.context.battleProfile?.activeDeck.customValues).toEqual([])
     expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
   })
