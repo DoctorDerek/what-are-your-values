@@ -295,6 +295,45 @@ describe("Battle Profile Hydration", () => {
     await expect(store.readAll()).resolves.toEqual(damagedEntries)
   })
 
+  it("requires explicit recovery when journal replay encounters malformed data", async () => {
+    const store = createInMemoryDurableStore()
+    await initializeBattleProfileStore({
+      store,
+      profile: createInitialBattleProfile("malformed-journal-seed"),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const entries = await store.readAll()
+    const manifestBytes = entries.get(BATTLE_PROFILE_MANIFEST_KEY)
+    if (!manifestBytes) {
+      throw new Error("The manifest fixture is missing")
+    }
+    const manifest = createBattleProfileManifest({
+      activeSlot: "a",
+      checkpointGeneration: 0,
+      checkpointRevision: 0,
+      headGeneration: 1,
+      headRevision: 1,
+    })
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_MANIFEST_KEY, manifestBytes]],
+      putEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, serializeBattleProfileManifest(manifest)],
+        [getBattleProfileJournalKey(1), "malformed-journal"],
+      ],
+      deleteKeys: [],
+    })
+
+    const damagedEntries = await store.readAll()
+    await expect(
+      hydrateBattleProfileStore({ store, appVersion: "0.1.0" }),
+    ).resolves.toMatchObject({
+      status: "recovery-required",
+      issue: expect.stringContaining("Persisted JSON is malformed"),
+    })
+    await expect(store.readAll()).resolves.toEqual(damagedEntries)
+  })
+
   it("requires explicit recovery when quarantine bytes exceed the persisted limit", async () => {
     const { store } = await createCommittedStore(
       "oversized-quarantine-seed",
