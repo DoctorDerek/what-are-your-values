@@ -3,16 +3,22 @@ import { applyBattleChoice, createInitialBattleProfile } from "./BattleProfile"
 import { createBattleChoiceEvent } from "./BattleProfileEvent"
 import { hydrateBattleProfileStore } from "./BattleProfileHydration"
 import {
+  createBattleProfileManifest,
+  serializeBattleProfileManifest,
+} from "./BattleProfileManifest"
+import {
   BATTLE_PROFILE_JOURNAL_KEY_PREFIX,
   BATTLE_PROFILE_MANIFEST_KEY,
   BATTLE_PROFILE_QUARANTINE_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
   commitBattleProfileStoreEvent,
+  getBattleProfileJournalKey,
   initializeBattleProfileStore,
 } from "./BattleProfileStore"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
+import { MAX_PERSISTED_JSON_BYTES } from "./PersistedJson"
 
 function createChoiceEvent(
   profile: ReturnType<typeof createInitialBattleProfile>,
@@ -238,6 +244,81 @@ describe("Battle Profile Hydration", () => {
       status: "recovery-required",
       issue: expect.stringContaining(
         "Existing quarantine must be exported or discarded first",
+      ),
+    })
+    await expect(store.readAll()).resolves.toEqual(damagedEntries)
+  })
+
+  it("requires explicit recovery when journal retention exceeds its bound", async () => {
+    const store = createInMemoryDurableStore()
+    await initializeBattleProfileStore({
+      store,
+      profile: createInitialBattleProfile("unbounded-journal-seed"),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const entries = await store.readAll()
+    const manifestBytes = entries.get(BATTLE_PROFILE_MANIFEST_KEY)
+    if (!manifestBytes) {
+      throw new Error("The manifest fixture is missing")
+    }
+    const manifest = createBattleProfileManifest({
+      activeSlot: "a",
+      checkpointGeneration: 0,
+      checkpointRevision: 0,
+      headGeneration: 1,
+      headRevision: 1,
+    })
+    const journalEntries = Array.from(
+      { length: 64 },
+      (_, index) =>
+        [getBattleProfileJournalKey(index + 1), "corrupt-journal"] as const,
+    )
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_MANIFEST_KEY, manifestBytes]],
+      putEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, serializeBattleProfileManifest(manifest)],
+        ...journalEntries,
+      ],
+      deleteKeys: [],
+    })
+
+    const damagedEntries = await store.readAll()
+    await expect(
+      hydrateBattleProfileStore({ store, appVersion: "0.1.0" }),
+    ).resolves.toMatchObject({
+      status: "recovery-required",
+      issue: expect.stringContaining(
+        "Battle Profile journal retention is unbounded",
+      ),
+    })
+    await expect(store.readAll()).resolves.toEqual(damagedEntries)
+  })
+
+  it("requires explicit recovery when quarantine bytes exceed the persisted limit", async () => {
+    const { store } = await createCommittedStore(
+      "oversized-quarantine-seed",
+      32,
+    )
+    const entries = await store.readAll()
+    const snapshotBBytes = entries.get(BATTLE_PROFILE_SNAPSHOT_B_KEY)
+    if (!snapshotBBytes) {
+      throw new Error("The slot B fixture is missing")
+    }
+    const oversizedCheckpoint = "x".repeat(MAX_PERSISTED_JSON_BYTES + 1)
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_SNAPSHOT_B_KEY, snapshotBBytes]],
+      putEntries: [[BATTLE_PROFILE_SNAPSHOT_B_KEY, oversizedCheckpoint]],
+      deleteKeys: [],
+    })
+    const damagedEntries = await store.readAll()
+
+    await expect(
+      hydrateBattleProfileStore({ store, appVersion: "0.1.0" }),
+    ).resolves.toMatchObject({
+      status: "recovery-required",
+      issue: expect.stringContaining(
+        "Unreadable checkpoint exceeds the quarantine byte limit",
       ),
     })
     await expect(store.readAll()).resolves.toEqual(damagedEntries)
