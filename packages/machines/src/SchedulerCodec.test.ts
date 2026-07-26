@@ -73,4 +73,56 @@ describe("Scheduler Codec", () => {
       ),
     ).toThrow("Invalid scheduler cursor")
   })
+
+  it("rejects malformed Join Pass membership arrays and noncanonical counts", () => {
+    const customValue = Object.freeze({
+      kind: "custom",
+      id: createCustomValueId("custom:00000000-0000-4000-8000-000000000002"),
+      name: "Ingenuity",
+      definition: "To make original solutions.",
+      creationOrdinal: 1,
+      createdAt: "2026-07-24T00:00:00.000Z",
+      updatedAt: "2026-07-24T00:00:00.000Z",
+    }) satisfies CustomValueDefinition
+    const activeDeck = createActiveDeck([customValue])
+    const scheduler = createDeckReconfigurationRestorePoint({
+      activeDeck,
+      joinedValueIds: [customValue.id],
+      progressGeneration: 0,
+      deckRevision: 1,
+      seed: "scheduler-codec-errors-seed",
+      cycleIndex: 0,
+    })
+    const encoded = encodeSchedulerRestorePoint(scheduler)
+
+    const invalidRetainedValueIds = [...encoded] as unknown[]
+    invalidRetainedValueIds[8] = null
+    expect(() =>
+      decodeSchedulerRestorePoint(
+        activeDeck,
+        invalidRetainedValueIds,
+        "Scheduler",
+      ),
+    ).toThrow("Invalid Scheduler retained value IDs")
+
+    const invalidJoinedValueIds = [...encoded] as unknown[]
+    invalidJoinedValueIds[9] = null
+    expect(() =>
+      decodeSchedulerRestorePoint(
+        activeDeck,
+        invalidJoinedValueIds,
+        "Scheduler",
+      ),
+    ).toThrow("Invalid Scheduler joined value IDs")
+
+    const noncanonicalPairCount = [...encoded] as unknown[]
+    noncanonicalPairCount[12] = 0
+    expect(() =>
+      decodeSchedulerRestorePoint(
+        activeDeck,
+        noncanonicalPairCount,
+        "Scheduler",
+      ),
+    ).toThrow("Scheduler encoding is not canonical")
+  })
 })
