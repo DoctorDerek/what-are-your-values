@@ -68,6 +68,42 @@ describe("Battle Profile Hydration", () => {
     ).resolves.toEqual({ status: "empty" })
   })
 
+  it("repairs a missing manifest from a readable checkpoint", async () => {
+    const store = createInMemoryDurableStore()
+    await initializeBattleProfileStore({
+      store,
+      profile: createInitialBattleProfile("missing-manifest-seed"),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const entries = await store.readAll()
+    const manifestBytes = entries.get(BATTLE_PROFILE_MANIFEST_KEY)
+    if (!manifestBytes) {
+      throw new Error("The manifest fixture is missing")
+    }
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_MANIFEST_KEY, manifestBytes]],
+      putEntries: [],
+      deleteKeys: [BATTLE_PROFILE_MANIFEST_KEY],
+    })
+
+    const result = await hydrateBattleProfileStore({
+      store,
+      appVersion: "0.2.0",
+    })
+
+    expect(result).toMatchObject({
+      status: "ready",
+      state: { head: { generation: 0, revision: 0 } },
+      recoveryNotice: expect.stringContaining(
+        "Battle Profile manifest is missing",
+      ),
+    })
+    expect(
+      (await store.readAll()).get(BATTLE_PROFILE_MANIFEST_KEY),
+    ).toBeTruthy()
+  })
+
   it("reconstructs the manifest head from its active checkpoint and journals", async () => {
     const { store, state } = await createCommittedStore("hydration-seed", 40)
 
@@ -185,6 +221,43 @@ describe("Battle Profile Hydration", () => {
     expect(recoveredEntries.get(BATTLE_PROFILE_SNAPSHOT_A_KEY)).toBe(
       entries.get(BATTLE_PROFILE_SNAPSHOT_A_KEY),
     )
+  })
+
+  it("repairs a missing active checkpoint from the fallback slot", async () => {
+    const { store } = await createCommittedStore(
+      "missing-active-checkpoint-seed",
+      32,
+    )
+    const entries = await store.readAll()
+    const snapshotBBytes = entries.get(BATTLE_PROFILE_SNAPSHOT_B_KEY)
+    if (!snapshotBBytes) {
+      throw new Error("The active checkpoint fixture is missing")
+    }
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_SNAPSHOT_B_KEY, snapshotBBytes]],
+      putEntries: [],
+      deleteKeys: [BATTLE_PROFILE_SNAPSHOT_B_KEY],
+    })
+
+    const result = await hydrateBattleProfileStore({
+      store,
+      appVersion: "0.2.0",
+    })
+
+    expect(result).toMatchObject({
+      status: "ready",
+      state: {
+        head: { generation: 32, revision: 32 },
+        manifest: {
+          activeSlot: "b",
+          checkpointGeneration: 32,
+          headGeneration: 32,
+        },
+      },
+      recoveryNotice: expect.stringContaining(
+        "Active Battle Profile checkpoint is missing",
+      ),
+    })
   })
 
   it("requires explicit recovery when neither checkpoint is readable", async () => {
