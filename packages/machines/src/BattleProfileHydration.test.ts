@@ -334,6 +334,54 @@ describe("Battle Profile Hydration", () => {
     await expect(store.readAll()).resolves.toEqual(damagedEntries)
   })
 
+  it("selects the newest contiguous checkpoint when the manifest is stale", async () => {
+    const { store } = await createCommittedStore("stale-manifest-seed", 40)
+    const entries = await store.readAll()
+    const manifestBytes = entries.get(BATTLE_PROFILE_MANIFEST_KEY)
+    if (!manifestBytes) {
+      throw new Error("The manifest fixture is missing")
+    }
+    const staleManifest = createBattleProfileManifest({
+      activeSlot: "b",
+      checkpointGeneration: 0,
+      checkpointRevision: 0,
+      headGeneration: 0,
+      headRevision: 0,
+    })
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_MANIFEST_KEY, manifestBytes]],
+      putEntries: [
+        [
+          BATTLE_PROFILE_MANIFEST_KEY,
+          serializeBattleProfileManifest(staleManifest),
+        ],
+      ],
+      deleteKeys: [],
+    })
+
+    const result = await hydrateBattleProfileStore({
+      store,
+      appVersion: "0.1.0",
+    })
+
+    expect(result).toMatchObject({
+      status: "ready",
+      state: {
+        head: { generation: 40, revision: 40 },
+        manifest: {
+          activeSlot: "b",
+          checkpointGeneration: 32,
+          checkpointRevision: 32,
+          headGeneration: 40,
+          headRevision: 40,
+        },
+      },
+      recoveryNotice: expect.stringContaining(
+        "Active checkpoint does not match the manifest",
+      ),
+    })
+  })
+
   it("requires explicit recovery when quarantine bytes exceed the persisted limit", async () => {
     const { store } = await createCommittedStore(
       "oversized-quarantine-seed",
