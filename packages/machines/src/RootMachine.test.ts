@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { createActor, waitFor } from "xstate"
-import type { DurableStoreAdapter } from "./DurableStoreAdapter"
+import {
+  DurableStoreConflictError,
+  type DurableStoreAdapter,
+} from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
 import { rootMachine } from "./RootMachine"
@@ -556,5 +559,151 @@ describe("Root Machine", () => {
     )
     expect(snapshot.context.persistenceIssue).toBe("IndexedDB unavailable")
     expect(snapshot.context.battleProfileStoreState).toBeNull()
+  })
+
+  it("surfaces a durable battle commit failure without mutating the prior profile", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let shouldFail = false
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFail) {
+          throw new Error("Battle commit failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "root-battle-failure-seed",
+    })
+
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    const priorProfile = actor.getSnapshot().context.battleProfile
+    if (!priorProfile) {
+      throw new Error("Battle profile did not initialize")
+    }
+
+    const [winnerId] = projectScheduledPair(
+      priorProfile.activeDeck,
+      priorProfile.scheduler,
+    ).pair
+    shouldFail = true
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId,
+      expectedScheduler: priorProfile.scheduler,
+    })
+
+    const snapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("PersistenceFailure"),
+    )
+    expect(snapshot.context.persistenceIssue).toBe("Battle commit failed")
+    expect(snapshot.context.battleProfile).toBe(priorProfile)
+    expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
+  })
+
+  it("surfaces a durable Custom Value commit failure without saving the draft", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let shouldFail = false
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFail) {
+          throw new Error("Custom Value commit failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "root-custom-value-failure-seed",
+    })
+
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    shouldFail = true
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+
+    const snapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("PersistenceFailure"),
+    )
+    expect(snapshot.context.persistenceIssue).toBe(
+      "Custom Value commit failed",
+    )
+    expect(snapshot.context.battleProfile?.activeDeck.customValues).toEqual([])
+    expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
+  })
+
+  it("retries initialization after a durable conflict and hydrates the persisted profile", async () => {
+    const persistedStore = createInMemoryDurableStore()
+    await bootRootActor({
+      durableStore: persistedStore,
+      schedulerSeed: "persisted-profile-seed",
+    })
+    const persistedEntries = await persistedStore.readAll()
+    let readCount = 0
+    let compareAndSwapCount = 0
+    const durableStore = Object.freeze({
+      readAll: async () => {
+        readCount += 1
+        return readCount === 1 ? new Map() : persistedEntries
+      },
+      compareAndSwapVerified: async (transaction) => {
+        compareAndSwapCount += 1
+        if (compareAndSwapCount === 1) {
+          throw new DurableStoreConflictError("wayvm.snapshot.manifest")
+        }
+
+        return persistedStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "conflicting-initialization-seed",
+    })
+
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+    expect(readCount).toBe(2)
+    expect(compareAndSwapCount).toBe(1)
+    expect(actor.getSnapshot().context.battleProfile?.scheduler.seed).toBe(
+      "persisted-profile-seed",
+    )
+  })
+
+  it("ignores a winner that is not in the currently projected pair", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-invalid-selection-seed",
+    })
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    const profile = actor.getSnapshot().context.battleProfile
+    if (!profile) {
+      throw new Error("Battle profile did not initialize")
+    }
+
+    const pair = projectScheduledPair(
+      profile.activeDeck,
+      profile.scheduler,
+    ).pair
+    const invalidWinnerId = profile.activeDeck.valueIds.find(
+      (valueId) => !pair.includes(valueId),
+    )
+    if (!invalidWinnerId) {
+      throw new Error("Expected a value outside the projected pair")
+    }
+
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId: invalidWinnerId,
+      expectedScheduler: profile.scheduler,
+    })
+
+    expect(actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(true)
+    expect(actor.getSnapshot().context.battleProfile).toBe(profile)
   })
 })
