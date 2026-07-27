@@ -277,6 +277,46 @@ describe("Root Machine", () => {
       "Custom Value name is required",
     )
 
+    const blankDefinitionUpdateRoot = await bootRootActor({
+      schedulerSeed: "all-values-blank-definition-update-seed",
+    })
+    blankDefinitionUpdateRoot.actor.send({
+      type: "ALL_VALUES.OPEN_REQUESTED",
+    })
+    blankDefinitionUpdateRoot.actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+    const blankDefinitionAddedSnapshot = await waitFor(
+      blankDefinitionUpdateRoot.actor,
+      (candidate) => {
+        const profile = candidate.context.battleProfile
+        return (
+          candidate.matches({ AllValues: "Browsing" }) &&
+          !!profile &&
+          profile.activeDeck.customValues.length === 1
+        )
+      },
+    )
+    const blankDefinitionValueId =
+      blankDefinitionAddedSnapshot.context.battleProfile?.activeDeck
+        .customValues[0]?.id
+    if (!blankDefinitionValueId) {
+      throw new Error("Custom value add did not create an id")
+    }
+
+    expectActorEventError(
+      blankDefinitionUpdateRoot.actor,
+      {
+        type: "ALL_VALUES.UPDATE_REQUESTED",
+        valueId: blankDefinitionValueId,
+        name: "Ingenuity",
+        definition: "   ",
+      },
+      "Custom Value definition is required",
+    )
+
     const unknownValueId = createCustomValueId(
       "custom:00000000-0000-4000-8000-000000000099",
     )
@@ -340,6 +380,25 @@ describe("Root Machine", () => {
     }
 
     actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Meaning",
+      definition: "A sense of purpose in what matters.",
+    })
+    const afterSecondAddSnapshot = await waitFor(actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      return (
+        candidate.matches({ AllValues: "Browsing" }) &&
+        !!profile &&
+        profile.activeDeck.customValues.length === 2
+      )
+    })
+    const secondCustomValue =
+      afterSecondAddSnapshot.context.battleProfile?.activeDeck.customValues[1]
+    if (!secondCustomValue) {
+      throw new Error("Second custom value add did not create a value")
+    }
+
+    actor.send({
       type: "ALL_VALUES.UPDATE_REQUESTED",
       valueId: customValueId,
       name: "Curiosity Engine",
@@ -371,6 +430,12 @@ describe("Root Machine", () => {
       "A drive to explore how things connect.",
     )
     expect(updatedValue.updatedAt).toBe(TEST_TIMESTAMP)
+    expect(secondCustomValue.creationOrdinal).toBe(2)
+    expect(
+      afterUpdateProfile.activeDeck.customValues.find(
+        (value) => value.id === secondCustomValue.id,
+      ),
+    ).toEqual(secondCustomValue)
   })
 
   it("trims edited custom value input in All Values durable updates", async () => {
