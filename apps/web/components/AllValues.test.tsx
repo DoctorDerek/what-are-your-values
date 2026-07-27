@@ -267,6 +267,46 @@ describe("All Values Component Integration", () => {
     expect(onUpdateCustomValue).not.toHaveBeenCalled()
   })
 
+  it("keeps an invalid Custom Value update local and unconfirmed", () => {
+    const activeDeck = createActiveDeckWithIngenuity()
+    const onUpdateCustomValue = vi.fn()
+
+    renderAllValues(createRankedValues(activeDeck), { onUpdateCustomValue })
+
+    const targetListItem = screen.getByText("Ingenuity").closest("li")
+    if (!targetListItem) {
+      throw new Error("Expected Ingenuity list item in DOM")
+    }
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
+    )
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "" },
+    })
+    fireEvent.submit(targetListItem.querySelector("form"))
+
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "Curiosity Engine" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "A drive to explore how things connect." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
+
+    expect(screen.getByRole("alertdialog", { name: "Update Ingenuity?" })).toBeVisible()
+    expect(onUpdateCustomValue).not.toHaveBeenCalled()
+  })
+
   it("confirms Custom Value deletion through the supplied durable callback", () => {
     const activeDeck = createActiveDeckWithIngenuity()
     const onDeleteCustomValue = vi.fn()
