@@ -52,6 +52,9 @@ describe("Battle Profile Store", () => {
       "Invalid Battle Profile journal generation",
     )
     expect(() =>
+      readBattleProfileJournalKeyGeneration("not-a-journal-key"),
+    ).toThrow("Invalid Battle Profile journal key")
+    expect(() =>
       readBattleProfileJournalKeyGeneration(
         `${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}0`,
       ),
