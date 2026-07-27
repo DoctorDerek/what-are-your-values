@@ -284,7 +284,11 @@ describe("All Values Component Integration", () => {
     fireEvent.change(screen.getByLabelText("Personal Definition"), {
       target: { value: "" },
     })
-    fireEvent.submit(targetListItem.querySelector("form"))
+    const editForm = targetListItem.querySelector("form")
+    if (!editForm) {
+      throw new Error("Expected Custom Value edit form in DOM")
+    }
+    fireEvent.submit(editForm)
 
     fireEvent.change(screen.getByLabelText("Custom Value Name"), {
       target: { value: "Curiosity Engine" },
