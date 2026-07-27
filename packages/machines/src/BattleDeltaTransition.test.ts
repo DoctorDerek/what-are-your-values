@@ -11,12 +11,12 @@ import {
   type BattleCycleState,
 } from "./BattleCycle"
 import { createBattleDelta, type BattleDelta } from "./BattleDelta"
-import { createCycleCompleteEventId } from "./BattleIdentity"
 import {
   redoBattleDelta,
   undoBattleDelta,
   validateBattleDelta,
 } from "./BattleDeltaTransition"
+import { createCycleCompleteEventId } from "./BattleIdentity"
 import {
   createSchedulerRestorePoint,
   projectScheduledPair,
