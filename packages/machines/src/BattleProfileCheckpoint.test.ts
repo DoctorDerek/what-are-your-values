@@ -6,7 +6,10 @@ import {
   serializeBattleProfileCheckpoint,
 } from "./BattleProfileCheckpoint"
 import { projectScheduledPair } from "./PairScheduler"
-import { parsePersistedJson } from "./PersistedJson"
+import {
+  parsePersistedJson,
+  serializePersistedJson,
+} from "./PersistedJson"
 
 async function createCheckpoint() {
   const initial = createInitialBattleProfile("checkpoint-seed")
@@ -75,6 +78,47 @@ describe("Battle Profile Checkpoint", () => {
     await expect(
       decodeBattleProfileCheckpoint(serialized.replace("[", "[ ")),
     ).rejects.toThrow("Battle Profile Checkpoint encoding is not canonical")
+  })
+
+  it("rejects unsupported schema and catalog versions before content validation", async () => {
+    const checkpoint = await createCheckpoint()
+    const serialized = serializeBattleProfileCheckpoint(checkpoint)
+    const tuple = parsePersistedJson(serialized)
+    if (!Array.isArray(tuple)) {
+      throw new Error("The checkpoint fixture is not a tuple")
+    }
+
+    const unsupportedSchema = [...tuple]
+    unsupportedSchema[1] = 2
+    const unsupportedCatalog = [...tuple]
+    unsupportedCatalog[7] = "future-catalog"
+
+    await expect(
+      decodeBattleProfileCheckpoint(
+        serializePersistedJson(unsupportedSchema),
+      ),
+    ).rejects.toThrow("Unsupported checkpoint schema version: 2")
+    await expect(
+      decodeBattleProfileCheckpoint(
+        serializePersistedJson(unsupportedCatalog),
+      ),
+    ).rejects.toThrow("Unsupported checkpoint catalog version: future-catalog")
+  })
+
+  it("rejects an empty app version before checking checkpoint integrity", async () => {
+    const checkpoint = await createCheckpoint()
+    const serialized = serializeBattleProfileCheckpoint(checkpoint)
+    const tuple = parsePersistedJson(serialized)
+    if (!Array.isArray(tuple)) {
+      throw new Error("The checkpoint fixture is not a tuple")
+    }
+
+    const emptyAppVersion = [...tuple]
+    emptyAppVersion[6] = ""
+
+    await expect(
+      decodeBattleProfileCheckpoint(serializePersistedJson(emptyAppVersion)),
+    ).rejects.toThrow("Checkpoint app version is required")
   })
 
   it("rejects invalid metadata before hashing", async () => {
