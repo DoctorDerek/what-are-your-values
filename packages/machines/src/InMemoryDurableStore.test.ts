@@ -57,4 +57,37 @@ describe("In-Memory Durable Store", () => {
       new Map([["manifest", "generation-0"]]),
     )
   })
+
+  it("rejects empty and duplicate durable-store keys before mutation", async () => {
+    const store = createInMemoryDurableStore([["manifest", "generation-0"]])
+
+    await expect(
+      store.compareAndSwapVerified({
+        expectedEntries: [["", null]],
+        putEntries: [],
+        deleteKeys: [],
+      }),
+    ).rejects.toThrow("Durable store expectations contains an empty key")
+    await expect(
+      store.compareAndSwapVerified({
+        expectedEntries: [
+          ["manifest", "generation-0"],
+          ["manifest", "generation-0"],
+        ],
+        putEntries: [],
+        deleteKeys: [],
+      }),
+    ).rejects.toThrow("Durable store expectations contains duplicate keys")
+    await expect(
+      store.compareAndSwapVerified({
+        expectedEntries: [],
+        putEntries: [],
+        deleteKeys: ["manifest", "manifest"],
+      }),
+    ).rejects.toThrow("Durable store deletes contains duplicate keys")
+
+    await expect(store.readAll()).resolves.toEqual(
+      new Map([["manifest", "generation-0"]]),
+    )
+  })
 })
