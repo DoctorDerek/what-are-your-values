@@ -136,4 +136,17 @@ describe("Battle Profile Codec", () => {
       decodeBattleProfile([...encoded.slice(0, 5), repeatedHistory, []]),
     ).toThrow("Battle Profile timeline exceeds its delta capacity")
   })
+
+  it("rejects non-array History and Redo encodings", () => {
+    const encoded = encodeBattleProfile(
+      createInitialBattleProfile("profile-timeline-shape-seed"),
+    )
+
+    expect(() =>
+      decodeBattleProfile([...encoded.slice(0, 5), "invalid-history", encoded[6]]),
+    ).toThrow("Invalid Battle Profile History")
+    expect(() =>
+      decodeBattleProfile([...encoded.slice(0, 6), "invalid-redo"]),
+    ).toThrow("Invalid Battle Profile Redo")
+  })
 })
