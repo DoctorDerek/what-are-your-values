@@ -38,6 +38,26 @@ function createOrdinaryDelta() {
   }).delta
 }
 
+function createBoundaryEncodedDelta() {
+  const initial = createInitialBattleCycle("boundary-metadata-codec-seed")
+  const scheduler = createSchedulerRestorePoint({
+    activeDeck: initial.activeDeck,
+    progressGeneration: initial.scheduler.progressGeneration,
+    deckRevision: initial.scheduler.deckRevision,
+    seed: initial.scheduler.seed,
+    cycleIndex: initial.scheduler.cycleIndex,
+    cursor: getPairCount(initial.activeDeck.valueIds.length) - 1,
+  })
+  const [winnerId] = projectScheduledPair(initial.activeDeck, scheduler).pair
+  const delta = createBattleCycleCandidate({
+    battleCycle: Object.freeze({ ...initial, scheduler }),
+    winnerId,
+    expectedScheduler: scheduler,
+  }).delta
+
+  return { activeDeck: initial.activeDeck, encoded: encodeBattleDelta(delta) }
+}
+
 describe("Battle Delta Codec", () => {
   it("round-trips canonical ordinary evidence through compact tuples", () => {
     const battleCycle = createInitialBattleCycle("delta-codec-seed")
@@ -168,5 +188,37 @@ describe("Battle Delta Codec", () => {
     expect(() => decodeBattleDelta(initial.activeDeck, reorderedDelta)).toThrow(
       "Battle Delta encoding is not canonical",
     )
+  })
+
+  it("rejects malformed cycle-boundary and encoded identity metadata", () => {
+    const { activeDeck, encoded } = createBoundaryEncodedDelta()
+    const boundary = encoded[16]
+    if (!boundary) {
+      throw new Error("Boundary metadata fixture is missing its transition")
+    }
+
+    const unsupportedBoundaryVersion = [
+      ...encoded.slice(0, 16),
+      [2, ...boundary.slice(1)],
+    ]
+    const mismatchedCycleIdentity = [
+      ...encoded.slice(0, 16),
+      [boundary[0], `${boundary[1]}:tampered`, ...boundary.slice(2)],
+    ]
+    const mismatchedBattleIdentity = [
+      encoded[0],
+      `${encoded[1]}:tampered`,
+      ...encoded.slice(2),
+    ]
+
+    expect(() =>
+      decodeBattleDelta(activeDeck, unsupportedBoundaryVersion),
+    ).toThrow("Unsupported Cycle Boundary Transition version")
+    expect(() =>
+      decodeBattleDelta(activeDeck, mismatchedCycleIdentity),
+    ).toThrow("Cycle-complete event identity is inconsistent")
+    expect(() =>
+      decodeBattleDelta(activeDeck, mismatchedBattleIdentity),
+    ).toThrow("Battle Delta identity does not match its encoded evidence")
   })
 })
