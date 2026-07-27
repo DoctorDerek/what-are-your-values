@@ -135,9 +135,7 @@ describe("All Values Component Integration", () => {
     fireEvent.submit(screen.getByRole("form", { name: "Add Custom Value" }))
 
     expect(onAddCustomValue).not.toHaveBeenCalled()
-    expect(
-      screen.getByRole("form", { name: "Add Custom Value" }),
-    ).toBeVisible()
+    expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
   })
 
   it("cancels an unsaved custom value draft", () => {
@@ -303,7 +301,9 @@ describe("All Values Component Integration", () => {
     })
     fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
 
-    expect(screen.getByRole("alertdialog", { name: "Update Ingenuity?" })).toBeVisible()
+    expect(
+      screen.getByRole("alertdialog", { name: "Update Ingenuity?" }),
+    ).toBeVisible()
     expect(onUpdateCustomValue).not.toHaveBeenCalled()
   })
 
