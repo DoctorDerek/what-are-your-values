@@ -74,6 +74,31 @@ describe("Scheduler Codec", () => {
     ).toThrow("Invalid scheduler cursor")
   })
 
+  it("rejects malformed scheduler tuple shapes and unsupported schedule kinds", () => {
+    const battleCycle = createInitialBattleCycle("scheduler-codec-shape-seed")
+    const encoded = encodeSchedulerRestorePoint(battleCycle.scheduler)
+
+    expect(() =>
+      decodeSchedulerRestorePoint(battleCycle.activeDeck, null, "Scheduler"),
+    ).toThrow("Invalid Scheduler")
+
+    expect(() =>
+      decodeSchedulerRestorePoint(
+        battleCycle.activeDeck,
+        [...encoded, "unexpected-field"],
+        "Scheduler",
+      ),
+    ).toThrow("Invalid Scheduler")
+
+    expect(() =>
+      decodeSchedulerRestorePoint(
+        battleCycle.activeDeck,
+        [...encoded.slice(0, 4), "unknown-schedule", ...encoded.slice(5)],
+        "Scheduler",
+      ),
+    ).toThrow("Unsupported Scheduler schedule kind")
+  })
+
   it("rejects malformed Join Pass membership arrays and noncanonical counts", () => {
     const customValue = Object.freeze({
       kind: "custom",
