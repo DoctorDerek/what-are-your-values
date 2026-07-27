@@ -18,6 +18,7 @@ import {
   decodeBattleProfileEvent,
   encodeBattleProfileEvent,
   replayBattleProfileEvent,
+  type BattleProfileEvent,
 } from "./BattleProfileEvent"
 import { projectScheduledPair } from "./PairScheduler"
 
@@ -186,5 +187,25 @@ describe("Battle Profile Event", () => {
     expect(() =>
       replayBattleProfileEvent(initial, createBattleUndoEvent(undo)),
     ).toThrow("Persisted battle-undo event is unavailable")
+  })
+
+  it("rejects malformed event tuples and unsupported replay versions", () => {
+    const initial = createInitialBattleProfile("profile-event-shape-seed")
+    const event = createBattleChoiceEvent(chooseFirstValue(initial))
+
+    expect(() => decodeBattleProfileEvent(initial.activeDeck, null)).toThrow(
+      "Invalid Battle Profile event",
+    )
+    expect(() =>
+      decodeBattleProfileEvent(initial.activeDeck, [event.version, event.type]),
+    ).toThrow("Invalid Battle Profile event")
+
+    const unsupportedVersion = {
+      ...event,
+      version: 2,
+    } as BattleProfileEvent
+    expect(() => replayBattleProfileEvent(initial, unsupportedVersion)).toThrow(
+      "Unsupported Battle Profile event version",
+    )
   })
 })
