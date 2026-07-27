@@ -6,10 +6,7 @@ import {
   serializeBattleProfileCheckpoint,
 } from "./BattleProfileCheckpoint"
 import { projectScheduledPair } from "./PairScheduler"
-import {
-  parsePersistedJson,
-  serializePersistedJson,
-} from "./PersistedJson"
+import { parsePersistedJson, serializePersistedJson } from "./PersistedJson"
 
 async function createCheckpoint() {
   const initial = createInitialBattleProfile("checkpoint-seed")
@@ -94,14 +91,10 @@ describe("Battle Profile Checkpoint", () => {
     unsupportedCatalog[7] = "future-catalog"
 
     await expect(
-      decodeBattleProfileCheckpoint(
-        serializePersistedJson(unsupportedSchema),
-      ),
+      decodeBattleProfileCheckpoint(serializePersistedJson(unsupportedSchema)),
     ).rejects.toThrow("Unsupported checkpoint schema version: 2")
     await expect(
-      decodeBattleProfileCheckpoint(
-        serializePersistedJson(unsupportedCatalog),
-      ),
+      decodeBattleProfileCheckpoint(serializePersistedJson(unsupportedCatalog)),
     ).rejects.toThrow("Unsupported checkpoint catalog version: future-catalog")
   })
 
