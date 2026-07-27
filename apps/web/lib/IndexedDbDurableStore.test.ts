@@ -3,7 +3,7 @@ import {
   type DurableStoreTransaction,
 } from "@game/machines/src/DurableStoreAdapter"
 import { IDBFactory } from "fake-indexeddb"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { createIndexedDbDurableStore } from "./IndexedDbDurableStore"
 
 function createRawStore(indexedDb: IDBFactory) {
@@ -19,6 +19,43 @@ function createTransaction(
 }
 
 describe("IndexedDB durable store", () => {
+  it("rejects blocked database upgrades and closes a late success", async () => {
+    const close = vi.fn()
+    const indexedDb = {
+      open: vi.fn(() => {
+        const request = {
+          result: { close },
+        } as unknown as IDBOpenDBRequest
+        queueMicrotask(() => {
+          request.onblocked?.(new Event("blocked") as IDBVersionChangeEvent)
+          request.onsuccess?.(new Event("success"))
+        })
+        return request
+      }),
+    } as unknown as IDBFactory
+    const store = createRawStore(indexedDb)
+
+    await expect(store.readAll()).rejects.toThrow(
+      "Durable storage upgrade is blocked",
+    )
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it("surfaces an IndexedDB open error when the browser provides none", async () => {
+    const indexedDb = {
+      open: vi.fn(() => {
+        const request = { error: null } as unknown as IDBOpenDBRequest
+        queueMicrotask(() => request.onerror?.(new Event("error")))
+        return request
+      }),
+    } as unknown as IDBFactory
+    const store = createRawStore(indexedDb)
+
+    await expect(store.readAll()).rejects.toThrow(
+      "Unable to open durable storage",
+    )
+  })
+
   it("queues writes immediately when no expectations are required", async () => {
     const indexedDb = new IDBFactory()
     const store = createRawStore(indexedDb)
