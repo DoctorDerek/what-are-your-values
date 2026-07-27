@@ -9,19 +9,50 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
 
+const durableStoreFailure = vi.hoisted(() => ({ enabled: false }))
+
 vi.mock("@/lib/IndexedDbDurableStore", async () => {
   const { createInMemoryDurableStore } =
     await import("@game/machines/src/InMemoryDurableStore")
 
   return {
-    createIndexedDbDurableStore: () => createInMemoryDurableStore(),
+    createIndexedDbDurableStore: () => {
+      if (durableStoreFailure.enabled) {
+        return {
+          readAll: async () => {
+            throw new Error("IndexedDB unavailable")
+          },
+          compareAndSwapVerified: async () => undefined,
+        }
+      }
+
+      return createInMemoryDurableStore()
+    },
   }
 })
 
 describe("GameClient Integration", () => {
   afterEach(() => {
+    durableStoreFailure.enabled = false
     localStorage.clear()
     vi.restoreAllMocks()
+  })
+
+  it("renders the safe persistence failure screen without exposing saved data", async () => {
+    durableStoreFailure.enabled = true
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "We couldn’t safely load your values.",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Your saved data was left unchanged. Reload this page to try again.",
+      ),
+    ).toBeVisible()
   })
 
   it("carries one canonical battle result back to the earned Hub ranking", async () => {
@@ -65,6 +96,34 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
     expect(screen.getByText("Level 2")).toBeVisible()
     expect(setItem).not.toHaveBeenCalled()
+  })
+
+  it("routes app-level Undo and Redo actions through the durable history", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000043",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) {
+      throw new Error("The projected winner card is unavailable")
+    }
+    fireEvent.click(winnerCard)
+
+    const undoButton = await screen.findByRole("button", { name: "Undo" })
+    await waitFor(() => expect(undoButton).toBeEnabled())
+    fireEvent.click(undoButton)
+
+    const redoButton = screen.getByRole("button", { name: "Redo" })
+    await waitFor(() => expect(redoButton).toBeEnabled())
+    fireEvent.click(redoButton)
+
+    await waitFor(() => expect(redoButton).toBeDisabled())
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled()
   })
 
   it("persists a first-run profile only after introduction completion", async () => {
