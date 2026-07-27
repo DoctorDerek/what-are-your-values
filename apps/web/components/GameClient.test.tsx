@@ -184,6 +184,36 @@ describe("GameClient Integration", () => {
     ).toHaveFocus()
   })
 
+  it("opens a specific Hub value in All Values and restores focus on return", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000046",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Open Acceptance in All Values",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+    expect(screen.getByText("Acceptance").closest("li")).toHaveClass("ring-8")
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "Open Acceptance in All Values",
+      }),
+    ).toHaveFocus()
+  })
+
   it("adds, edits, and deletes a Custom Value without resetting retained rankings", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000045",
