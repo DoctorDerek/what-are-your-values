@@ -1,3 +1,4 @@
+import { createCustomValueId } from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { createActor, waitFor } from "xstate"
 import {
@@ -54,6 +55,23 @@ async function waitForReadyCrucible(
   actor: ReturnType<typeof createRootActor>["actor"],
 ) {
   return waitFor(actor, (snapshot) => snapshot.matches({ Crucible: "Ready" }))
+}
+
+function expectActorEventError(
+  actor: ReturnType<typeof createRootActor>["actor"],
+  event: Parameters<ReturnType<typeof createRootActor>["actor"]["send"]>[0],
+  message: string,
+) {
+  let observedError: unknown
+  actor.subscribe({
+    error: (error: unknown) => {
+      observedError = error
+    },
+  })
+  actor.send(event)
+  expect(observedError).toMatchObject({
+    message: expect.stringContaining(message),
+  })
 }
 
 describe("Root Machine", () => {
@@ -189,6 +207,107 @@ describe("Root Machine", () => {
     expect(addedValue.name).toBe("Ingenuity")
     expect(addedValue.definition).toBe(
       "The disciplined practice of creating new solutions.",
+    )
+  })
+
+  it("rejects blank Custom Value names and definitions before persistence", async () => {
+    const blankNameRoot = await bootRootActor({
+      schedulerSeed: "all-values-blank-name-seed",
+    })
+    blankNameRoot.actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+
+    expectActorEventError(
+      blankNameRoot.actor,
+      {
+        type: "ALL_VALUES.ADD_REQUESTED",
+        name: "   ",
+        definition: "A definition that should never persist.",
+      },
+      "Custom Value name is required",
+    )
+
+    const blankDefinitionRoot = await bootRootActor({
+      schedulerSeed: "all-values-blank-definition-seed",
+    })
+    blankDefinitionRoot.actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+
+    expectActorEventError(
+      blankDefinitionRoot.actor,
+      {
+        type: "ALL_VALUES.ADD_REQUESTED",
+        name: "A value without a definition",
+        definition: "   ",
+      },
+      "Custom Value definition is required",
+    )
+  })
+
+  it("rejects blank edits and unknown Custom Value mutations", async () => {
+    const blankEditRoot = await bootRootActor({
+      schedulerSeed: "all-values-blank-edit-seed",
+    })
+    blankEditRoot.actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    blankEditRoot.actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+    const addedSnapshot = await waitFor(blankEditRoot.actor, (candidate) => {
+      const profile = candidate.context.battleProfile
+      return (
+        candidate.matches({ AllValues: "Browsing" }) &&
+        !!profile &&
+        profile.activeDeck.customValues.length === 1
+      )
+    })
+    const customValueId =
+      addedSnapshot.context.battleProfile?.activeDeck.customValues[0]?.id
+    if (!customValueId) {
+      throw new Error("Custom value add did not create an id")
+    }
+
+    expectActorEventError(
+      blankEditRoot.actor,
+      {
+        type: "ALL_VALUES.UPDATE_REQUESTED",
+        valueId: customValueId,
+        name: "   ",
+        definition: "A valid definition.",
+      },
+      "Custom Value name is required",
+    )
+
+    const unknownValueId = createCustomValueId(
+      "custom:00000000-0000-4000-8000-000000000099",
+    )
+    const unknownUpdateRoot = await bootRootActor({
+      schedulerSeed: "all-values-unknown-update-seed",
+    })
+    unknownUpdateRoot.actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+
+    expectActorEventError(
+      unknownUpdateRoot.actor,
+      {
+        type: "ALL_VALUES.UPDATE_REQUESTED",
+        valueId: unknownValueId,
+        name: "Missing Value",
+        definition: "This value does not exist.",
+      },
+      "Custom Value does not exist",
+    )
+
+    const unknownDeleteRoot = await bootRootActor({
+      schedulerSeed: "all-values-unknown-delete-seed",
+    })
+    unknownDeleteRoot.actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+
+    expectActorEventError(
+      unknownDeleteRoot.actor,
+      {
+        type: "ALL_VALUES.DELETE_REQUESTED",
+        valueId: unknownValueId,
+      },
+      "Custom Value does not exist",
     )
   })
 
