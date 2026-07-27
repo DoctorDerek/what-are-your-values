@@ -22,6 +22,12 @@ describe("Battle Profile Manifest", () => {
 
   it("rejects invalid slots, divergent ranges, and unbounded journals", () => {
     expect(() =>
+      decodeBattleProfileManifest('["future-manifest",1,"a",0,0,0,0]'),
+    ).toThrow("Unsupported Manifest format")
+    expect(() =>
+      decodeBattleProfileManifest('["wayvm-manifest",2,"a",0,0,0,0]'),
+    ).toThrow("Unsupported Manifest version")
+    expect(() =>
       decodeBattleProfileManifest('["wayvm-manifest",1,"c",0,0,0,0]'),
     ).toThrow("Invalid Manifest active checkpoint slot")
     expect(() =>
