@@ -47,4 +47,10 @@ describe("Persisted JSON", () => {
       "Persisted JSON exceeds its byte limit",
     )
   })
+
+  it("rejects values that JSON cannot serialize", () => {
+    expect(() => serializePersistedJson(() => undefined)).toThrow(
+      "Persisted value is not JSON serializable",
+    )
+  })
 })
