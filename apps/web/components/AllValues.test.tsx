@@ -126,6 +126,35 @@ describe("All Values Component Integration", () => {
     )
   })
 
+  it("keeps an incomplete add draft open without submitting it", () => {
+    const onAddCustomValue = vi.fn()
+
+    renderAllValues(undefined, { onAddCustomValue })
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.submit(screen.getByRole("form", { name: "Add Custom Value" }))
+
+    expect(onAddCustomValue).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole("form", { name: "Add Custom Value" }),
+    ).toBeVisible()
+  })
+
+  it("cancels an unsaved custom value draft", () => {
+    renderAllValues()
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "Ingenuity" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(
+      screen.queryByRole("form", { name: "Add Custom Value" }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("Ingenuity")).not.toBeInTheDocument()
+  })
+
   it("shows exact collisions with an open-existing-value path", () => {
     const rankedValues = createRankedValues(createActiveDeckWithIngenuity())
     const onAddCustomValue = vi.fn()
@@ -208,6 +237,34 @@ describe("All Values Component Integration", () => {
       "Curiosity Engine",
       "A drive to explore how things connect.",
     )
+  })
+
+  it("allows cancelling the explicit Custom Value update review", () => {
+    const activeDeck = createActiveDeckWithIngenuity()
+    const onUpdateCustomValue = vi.fn()
+
+    renderAllValues(createRankedValues(activeDeck), { onUpdateCustomValue })
+
+    const targetListItem = screen.getByText("Ingenuity").closest("li")
+    if (!targetListItem) {
+      throw new Error("Expected Ingenuity list item in DOM")
+    }
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
+    )
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "Curiosity Engine" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "A drive to explore how things connect." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(
+      screen.queryByRole("alertdialog", { name: "Update Ingenuity?" }),
+    ).not.toBeInTheDocument()
+    expect(onUpdateCustomValue).not.toHaveBeenCalled()
   })
 
   it("confirms Custom Value deletion through the supplied durable callback", () => {
