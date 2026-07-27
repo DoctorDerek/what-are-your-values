@@ -745,6 +745,32 @@ describe("Root Machine", () => {
     expect(snapshot.context.battleProfileStoreState).toBeNull()
   })
 
+  it("surfaces durable first-run initialization failure without persisting a profile", async () => {
+    const durableStore = Object.freeze({
+      readAll: async () => new Map<string, string>(),
+      compareAndSwapVerified: async () => {
+        throw new Error("Profile initialization failed")
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = createRootActor({ durableStore })
+    actor.start()
+    actor.send({
+      type: "APP.HYDRATED",
+      schedulerSeed: "failed-initialization-seed",
+    })
+
+    await waitFor(actor, (candidate) => candidate.matches("Splash"))
+    actor.send({ type: "INTRODUCTION.COMPLETED" })
+
+    const snapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("PersistenceFailure"),
+    )
+    expect(snapshot.context.persistenceIssue).toBe(
+      "Profile initialization failed",
+    )
+    expect(snapshot.context.battleProfileStoreState).toBeNull()
+  })
+
   it("surfaces a durable battle commit failure without mutating the prior profile", async () => {
     const memoryStore = createInMemoryDurableStore()
     let shouldFail = false
