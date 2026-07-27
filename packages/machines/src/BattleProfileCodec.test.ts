@@ -143,7 +143,11 @@ describe("Battle Profile Codec", () => {
     )
 
     expect(() =>
-      decodeBattleProfile([...encoded.slice(0, 5), "invalid-history", encoded[6]]),
+      decodeBattleProfile([
+        ...encoded.slice(0, 5),
+        "invalid-history",
+        encoded[6],
+      ]),
     ).toThrow("Invalid Battle Profile History")
     expect(() =>
       decodeBattleProfile([...encoded.slice(0, 6), "invalid-redo"]),
