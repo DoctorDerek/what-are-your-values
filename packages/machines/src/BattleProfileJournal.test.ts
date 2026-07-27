@@ -15,6 +15,7 @@ import {
   serializeBattleProfileJournalRecord,
 } from "./BattleProfileJournal"
 import { projectScheduledPair } from "./PairScheduler"
+import { serializePersistedJson } from "./PersistedJson"
 
 function createChoiceTransition() {
   const profile = createInitialBattleProfile("journal-seed")
@@ -132,5 +133,52 @@ describe("Battle Profile Journal", () => {
         committedAt: "2026-07-21T00:01:00.000Z",
       }),
     ).rejects.toThrow("Journal generation cannot be incremented safely")
+  })
+
+  it("rejects unsupported metadata, noncontiguous revisions, timestamps, and hashes", async () => {
+    const { profile, transition } = createChoiceTransition()
+    const commit = await createBattleProfileJournalCommit({
+      head: { generation: 0, revision: 0, profile },
+      event: createBattleChoiceEvent(transition),
+      committedAt: "2026-07-21T00:01:00.000Z",
+    })
+    const encoded = JSON.parse(
+      serializeBattleProfileJournalRecord(commit.record),
+    ) as unknown[]
+    const decodeTuple = (tuple: readonly unknown[]) =>
+      decodeBattleProfileJournalRecord(
+        profile.activeDeck,
+        serializePersistedJson(tuple),
+      )
+
+    const unsupportedFormat = [...encoded]
+    unsupportedFormat[0] = "future-journal"
+    await expect(decodeTuple(unsupportedFormat)).rejects.toThrow(
+      "Unsupported journal format",
+    )
+
+    const unsupportedSchema = [...encoded]
+    unsupportedSchema[1] = 2
+    await expect(decodeTuple(unsupportedSchema)).rejects.toThrow(
+      "Unsupported journal schema version",
+    )
+
+    const noncontiguousRevision = [...encoded]
+    noncontiguousRevision[5] = 2
+    await expect(decodeTuple(noncontiguousRevision)).rejects.toThrow(
+      "Journal revision is not contiguous",
+    )
+
+    const invalidTimestamp = [...encoded]
+    invalidTimestamp[6] = "not-a-timestamp"
+    await expect(decodeTuple(invalidTimestamp)).rejects.toThrow(
+      "Invalid Journal commit timestamp",
+    )
+
+    const invalidHash = [...encoded]
+    invalidHash[8] = "not-a-hash"
+    await expect(decodeTuple(invalidHash)).rejects.toThrow(
+      "Invalid Journal content hash",
+    )
   })
 })
