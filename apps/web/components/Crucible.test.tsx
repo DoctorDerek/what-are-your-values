@@ -280,6 +280,53 @@ describe("Crucible Component Integration", () => {
     expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 
+  it("routes keyboard history shortcuts and second-card selection", async () => {
+    const onUndo = vi.fn()
+    const onRedo = vi.fn()
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps(
+      "keyboard-history-shortcuts-seed",
+    )
+    const [, secondValueId] = battle.pair
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        canUndo
+        canRedo
+        isPersistencePending={false}
+        onExit={vi.fn()}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    await screen.findAllByRole("button", { name: /^Choose / })
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z" }))
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "z",
+          shiftKey: true,
+          ctrlKey: true,
+        }),
+      )
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "2" }))
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }))
+    })
+
+    expect(onUndo).toHaveBeenCalledTimes(1)
+    expect(onRedo).toHaveBeenCalledTimes(1)
+    expect(onWinnerSelected).toHaveBeenCalledWith(
+      secondValueId,
+      battle.scheduler,
+    )
+  })
+
   it("disables every battle action while a durable write is pending", async () => {
     const onExit = vi.fn()
     const onUndo = vi.fn()
