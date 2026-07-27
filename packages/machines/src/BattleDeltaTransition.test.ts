@@ -308,14 +308,17 @@ describe("Battle Delta transitions", () => {
       }),
     }) as unknown as BattleDelta
 
-    expect(() => validateBattleDelta(battleCycle.activeDeck, unsupportedDelta))
-      .toThrow("Unsupported Battle Delta version")
+    expect(() =>
+      validateBattleDelta(battleCycle.activeDeck, unsupportedDelta),
+    ).toThrow("Unsupported Battle Delta version")
     expect(() =>
       validateBattleDelta(battleCycle.activeDeck, unsupportedBoundaryDelta),
     ).toThrow("Unsupported Battle Delta version")
     expect(() =>
       redoBattleDelta({ battleCycle, delta: incompleteBoundaryDelta }),
-    ).toThrow("Battle Delta current-cycle wins do not cover the complete Active Deck")
+    ).toThrow(
+      "Battle Delta current-cycle wins do not cover the complete Active Deck",
+    )
   })
 
   it("rejects invalid current-cycle wins and cycle snapshots without mutation", () => {
@@ -326,9 +329,7 @@ describe("Battle Delta transitions", () => {
     }
 
     const [firstValueId] = battleCycle.activeDeck.valueIds
-    const invalidCurrentCycleWins = new Map(
-      boundary.priorCurrentCycleWinsById,
-    )
+    const invalidCurrentCycleWins = new Map(boundary.priorCurrentCycleWinsById)
     invalidCurrentCycleWins.set(firstValueId, -1)
     const invalidCurrentCycleWinsDelta = Object.freeze({
       ...candidate.delta,
