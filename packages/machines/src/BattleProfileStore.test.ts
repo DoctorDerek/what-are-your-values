@@ -12,6 +12,7 @@ import {
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
   commitBattleProfileStoreEvent,
+  getBattleProfileJournalKey,
   initializeBattleProfileStore,
   readBattleProfileJournalKeyGeneration,
 } from "./BattleProfileStore"
@@ -47,6 +48,14 @@ describe("Battle Profile Store", () => {
         `${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}42`,
       ),
     ).toBe(42)
+    expect(() => getBattleProfileJournalKey(0)).toThrow(
+      "Invalid Battle Profile journal generation",
+    )
+    expect(() =>
+      readBattleProfileJournalKeyGeneration(
+        `${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}0`,
+      ),
+    ).toThrow("Invalid Battle Profile journal key")
     expect(() =>
       readBattleProfileJournalKeyGeneration(
         `${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}042`,
