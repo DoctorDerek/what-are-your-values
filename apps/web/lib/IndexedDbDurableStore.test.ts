@@ -19,6 +19,19 @@ function createTransaction(
 }
 
 describe("IndexedDB durable store", () => {
+  it("queues writes immediately when no expectations are required", async () => {
+    const indexedDb = new IDBFactory()
+    const store = createRawStore(indexedDb)
+
+    await store.compareAndSwapVerified(
+      createTransaction([], [["first-write", "ready"]], []),
+    )
+
+    await expect(store.readAll()).resolves.toEqual(
+      new Map([["first-write", "ready"]]),
+    )
+  })
+
   it("round-trips values through read and compare-and-swap updates", async () => {
     const indexedDb = new IDBFactory()
     const store = createRawStore(indexedDb)
