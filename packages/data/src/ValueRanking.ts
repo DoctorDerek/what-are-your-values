@@ -1,5 +1,9 @@
 import type { ActiveDeck } from "./ActiveDeck"
-import type { ActiveValueDefinition } from "./Value"
+import {
+  getValueDisplayName,
+  normalizeValueNameForComparison,
+  type ActiveValueDefinition,
+} from "./Value"
 import {
   createValueProgressById,
   type ValueProgress,
@@ -79,4 +83,29 @@ export function rankValues(
       Object.freeze({ rank: index + 1, ...value }),
     ),
   ) satisfies readonly RankedValue[]
+}
+
+export function sortRankedValuesAlphabetically(
+  rankedValues: readonly RankedValue[],
+) {
+  return Object.freeze(
+    [...rankedValues].sort((first, second) => {
+      const firstName = normalizeValueNameForComparison(
+        getValueDisplayName(first.definition),
+      )
+      const secondName = normalizeValueNameForComparison(
+        getValueDisplayName(second.definition),
+      )
+
+      if (firstName !== secondName) {
+        return firstName < secondName ? -1 : 1
+      }
+
+      return first.definition.id < second.definition.id
+        ? -1
+        : first.definition.id > second.definition.id
+          ? 1
+          : 0
+    }),
+  )
 }

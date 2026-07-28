@@ -1,18 +1,61 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
 
+const durableStoreFailure = vi.hoisted(() => ({ enabled: false }))
+
+vi.mock("@/lib/IndexedDbDurableStore", async () => {
+  const { createInMemoryDurableStore } =
+    await import("@game/machines/src/InMemoryDurableStore")
+
+  return {
+    createIndexedDbDurableStore: () => {
+      if (durableStoreFailure.enabled) {
+        return {
+          readAll: async () => {
+            throw new Error("IndexedDB unavailable")
+          },
+          compareAndSwapVerified: async () => undefined,
+        }
+      }
+
+      return createInMemoryDurableStore()
+    },
+  }
+})
+
 describe("GameClient Integration", () => {
   afterEach(() => {
+    durableStoreFailure.enabled = false
     localStorage.clear()
     vi.restoreAllMocks()
   })
 
+  it("renders the safe persistence failure screen without exposing saved data", async () => {
+    durableStoreFailure.enabled = true
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "We couldn’t safely load your values.",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Your saved data was left unchanged. Reload this page to try again.",
+      ),
+    ).toBeVisible()
+  })
+
   it("carries one canonical battle result back to the earned Hub ranking", async () => {
-    const getItem = vi
-      .spyOn(webStorage, "getItem")
-      .mockReturnValue("returning-player")
     const setItem = vi.spyOn(webStorage, "setItem")
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000041",
@@ -20,8 +63,13 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
 
+    expect(await screen.findByRole("button", { name: "Start" })).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+
     expect(
-      await screen.findByText("Keep comparing values to reveal your Top Five."),
+      await screen.findByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
     ).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
 
@@ -33,19 +81,55 @@ describe("GameClient Integration", () => {
     }
 
     fireEvent.click(winnerCard)
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
+    )
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
 
-    expect(await screen.findByText(`#1 ${winnerName}`)).toBeVisible()
+    expect(
+      await screen.findByRole("heading", { name: "Top Five" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: `Open ${winnerName} in All Values`,
+      }),
+    ).toBeVisible()
     expect(screen.getByText("Level 2")).toBeVisible()
-    expect(getItem).toHaveBeenCalledTimes(1)
-    expect(getItem).toHaveBeenCalledWith("wayvm_uuid")
     expect(setItem).not.toHaveBeenCalled()
   })
 
+  it("routes app-level Undo and Redo actions through the durable history", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000043",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) {
+      throw new Error("The projected winner card is unavailable")
+    }
+    fireEvent.click(winnerCard)
+
+    const undoButton = await screen.findByRole("button", { name: "Undo" })
+    await waitFor(() => expect(undoButton).toBeEnabled())
+    fireEvent.click(undoButton)
+
+    const redoButton = screen.getByRole("button", { name: "Redo" })
+    await waitFor(() => expect(redoButton).toBeEnabled())
+    fireEvent.click(redoButton)
+
+    await waitFor(() => expect(redoButton).toBeDisabled())
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled()
+  })
+
   it("persists a first-run profile only after introduction completion", async () => {
-    vi.spyOn(crypto, "randomUUID")
-      .mockReturnValueOnce("00000000-0000-4000-8000-000000000042")
-      .mockReturnValueOnce("00000000-0000-4000-8000-000000000043")
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000042",
+    )
 
     render(<GameClient />)
 
@@ -54,28 +138,30 @@ describe("GameClient Integration", () => {
         name: "What Are Your Values, Mapache?",
       }),
     ).toBeVisible()
-    expect(localStorage.getItem("wayvm_uuid")).toBeNull()
 
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
 
-    expect(await screen.findByText("Sovereign Dashboard")).toBeVisible()
-    expect(localStorage.getItem("wayvm_uuid")).toBe(
-      "00000000-0000-4000-8000-000000000043",
-    )
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
   })
 
   it("opens the complete All Values ranking and returns to the unchanged Hub", async () => {
-    vi.spyOn(webStorage, "getItem").mockReturnValue("returning-player")
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000044",
     )
 
     render(<GameClient />)
 
+    expect(await screen.findByRole("button", { name: "Start" })).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+
     expect(
-      await screen.findByText("Keep comparing values to reveal your Top Five."),
+      await screen.findByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
     ).toBeVisible()
-    fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
+    fireEvent.click(screen.getByRole("button", { name: "Browse All Values" }))
 
     expect(
       await screen.findByRole("heading", { name: "All Values", level: 1 }),
@@ -85,10 +171,109 @@ describe("GameClient Integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }))
 
-    expect(await screen.findByText("Sovereign Dashboard")).toBeVisible()
     expect(
-      screen.getByText("Keep comparing values to reveal your Top Five."),
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
     ).toBeVisible()
-    expect(screen.getByRole("button", { name: "See All Values" })).toHaveFocus()
+    expect(
+      screen.getByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Browse All Values" }),
+    ).toHaveFocus()
+  })
+
+  it("opens a specific Hub value in All Values and restores focus on return", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000046",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Open Acceptance in All Values",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+    expect(screen.getByText("Acceptance").closest("li")).toHaveClass("ring-8")
+
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "Open Acceptance in All Values",
+      }),
+    ).toHaveFocus()
+  })
+
+  it("adds, edits, and deletes a Custom Value without resetting retained rankings", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000045",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Add Custom Value" }),
+    )
+
+    fireEvent.change(await screen.findByLabelText("Custom Value Name"), {
+      target: { value: "Ingenuity" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "To make original solutions." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
+
+    const customValueRow = await waitFor(() => {
+      const valueText = screen
+        .getAllByText("Ingenuity")
+        .find((element) => element.closest("li"))
+      const valueRow = valueText?.closest("li")
+      if (!valueRow) {
+        throw new Error("The added Custom Value row is unavailable")
+      }
+      return valueRow
+    })
+    fireEvent.click(
+      within(customValueRow).getByRole("button", { name: "Edit" }),
+    )
+    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+      target: { value: "Curiosity Engine" },
+    })
+    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+      target: { value: "To explore how things connect." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
+    fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
+
+    const updatedValueRow = await waitFor(() => {
+      const valueText = screen
+        .getAllByText("Curiosity Engine")
+        .find((element) => element.closest("li"))
+      const valueRow = valueText?.closest("li")
+      if (!valueRow) {
+        throw new Error("The updated Custom Value row is unavailable")
+      }
+      return valueRow
+    })
+    fireEvent.click(
+      within(updatedValueRow).getByRole("button", { name: "Delete" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete Value" }))
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("listitem")).toHaveLength(100),
+    )
+    expect(screen.getByText("100 Active Values")).toBeVisible()
   })
 })

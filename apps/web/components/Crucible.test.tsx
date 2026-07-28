@@ -20,6 +20,16 @@ function createBattleProps(seed: string) {
   return { battleCycle, battle }
 }
 
+function createHistoryProps() {
+  return {
+    canUndo: false,
+    canRedo: false,
+    isPersistencePending: false,
+    onUndo: vi.fn(),
+    onRedo: vi.fn(),
+  }
+}
+
 describe("Crucible Component Integration", () => {
   it("renders semantic canonical values and commits a keyboard selection once", async () => {
     const onWinnerSelected = vi.fn()
@@ -35,6 +45,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -71,6 +82,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -90,7 +102,7 @@ describe("Crucible Component Integration", () => {
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
-  it("opens a sibling definition without choosing or advancing the value", async () => {
+  it("shows the definition inside the one-tap value choice", async () => {
     const onWinnerSelected = vi.fn()
     const { battleCycle, battle } = createBattleProps("definition-battle-seed")
     const [valueId] = battle.pair
@@ -103,6 +115,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -114,21 +127,17 @@ describe("Crucible Component Integration", () => {
     const choice = await screen.findByRole("button", {
       name: `Choose ${getValueDisplayName(definition)}`,
     })
-    const definitionControl = screen.getByText(
-      `Definition of ${getValueDisplayName(definition)}`,
+    const definitionCopy = screen.getByText(
+      `“${getValueDisplayDefinition(definition)}”`,
     )
 
     expect(choice).toHaveAccessibleDescription(
-      getValueDisplayDefinition(definition),
+      `“${getValueDisplayDefinition(definition)}”`,
     )
-    expect(choice).not.toContainElement(definitionControl)
-    fireEvent.click(definitionControl)
-    expect(
-      definitionControl.closest("details")?.querySelector("p"),
-    ).toHaveTextContent(getValueDisplayDefinition(definition))
-    expect(onWinnerSelected).not.toHaveBeenCalled()
-
-    fireEvent.click(choice)
+    expect(choice).toContainElement(definitionCopy)
+    expect(document.querySelector("details")).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Definition of /)).not.toBeInTheDocument()
+    fireEvent.click(definitionCopy)
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
@@ -140,6 +149,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -188,6 +198,7 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
@@ -210,18 +221,14 @@ describe("Crucible Component Integration", () => {
       const heading = screen.getByRole("heading", {
         name: getValueDisplayName(definition),
       })
-      const definitionControl = screen.getByText(
-        `Definition of ${getValueDisplayName(definition)}`,
+      const definitionCopy = screen.getByText(
+        `“${getValueDisplayDefinition(definition)}”`,
       )
-      fireEvent.click(definitionControl)
-      const definitionCopy = definitionControl
-        .closest("details")
-        ?.querySelector("p")
 
       expect(choice.parentElement).toHaveClass(
         "min-h-0",
         "min-w-0",
-        "overflow-x-hidden",
+        "overflow-x-auto",
         "overflow-y-auto",
         "overscroll-contain",
       )
@@ -231,5 +238,136 @@ describe("Crucible Component Integration", () => {
         "[overflow-wrap:anywhere]",
       )
     }
+  })
+
+  it("routes available Undo and Redo controls without selecting a value", async () => {
+    const onUndo = vi.fn()
+    const onRedo = vi.fn()
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps("history-control-seed")
+    const firstDefinition = battleCycle.activeDeck.values.find(
+      ({ id }) => id === battle.pair[0],
+    )
+    if (!firstDefinition) {
+      throw new Error("Projected value definition is missing")
+    }
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        canUndo
+        canRedo
+        isPersistencePending={false}
+        onExit={vi.fn()}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }))
+    fireEvent.keyDown(window, { key: "y" })
+    fireEvent.keyDown(window, { key: "z", repeat: true })
+
+    expect(onUndo).toHaveBeenCalledTimes(1)
+    expect(onRedo).toHaveBeenCalledTimes(1)
+    expect(onWinnerSelected).not.toHaveBeenCalled()
+  })
+
+  it("routes keyboard history shortcuts and second-card selection", async () => {
+    const onUndo = vi.fn()
+    const onRedo = vi.fn()
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps(
+      "keyboard-history-shortcuts-seed",
+    )
+    const [, secondValueId] = battle.pair
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        canUndo
+        canRedo
+        isPersistencePending={false}
+        onExit={vi.fn()}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    await screen.findAllByRole("button", { name: /^Choose / })
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z" }))
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "z",
+          shiftKey: true,
+          ctrlKey: true,
+        }),
+      )
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "2" }))
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }))
+    })
+
+    expect(onUndo).toHaveBeenCalledTimes(1)
+    expect(onRedo).toHaveBeenCalledTimes(1)
+    expect(onWinnerSelected).toHaveBeenCalledWith(
+      secondValueId,
+      battle.scheduler,
+    )
+  })
+
+  it("disables every battle action while a durable write is pending", async () => {
+    const onExit = vi.fn()
+    const onUndo = vi.fn()
+    const onRedo = vi.fn()
+    const onWinnerSelected = vi.fn()
+    const { battleCycle, battle } = createBattleProps(
+      "pending-persistence-seed",
+    )
+
+    render(
+      <Crucible
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        canUndo
+        canRedo
+        isPersistencePending
+        onExit={onExit}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+
+    await screen.findAllByRole("button", { name: /^Choose / })
+    expect(screen.getByRole("main", { name: "Value battle" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    )
+    screen.getAllByRole("button").forEach((button) => {
+      expect(button).toBeDisabled()
+      fireEvent.click(button)
+    })
+    fireEvent.keyDown(window, { key: "1" })
+    fireEvent.keyDown(window, { key: "z" })
+    fireEvent.keyDown(window, { key: "y" })
+    fireEvent.keyDown(window, { key: "Escape" })
+
+    expect(onExit).not.toHaveBeenCalled()
+    expect(onUndo).not.toHaveBeenCalled()
+    expect(onRedo).not.toHaveBeenCalled()
+    expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 })

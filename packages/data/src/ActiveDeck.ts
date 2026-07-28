@@ -2,6 +2,7 @@ import { CANONICAL_VALUES } from "./CanonicalValues"
 import {
   CANONICAL_CATALOG_VERSION,
   isCustomValueId,
+  normalizeValueNameForComparison,
   type ActiveValueDefinition,
   type CustomValueDefinition,
   type ValueId,
@@ -88,6 +89,20 @@ export function createActiveDeck(
     throw new Error(
       "Active Deck contains duplicate Custom Value creation ordinals",
     )
+  }
+
+  const valueNameKeys = new Set(
+    [...CANONICAL_VALUES, ...candidateCustomValues].map((value) =>
+      normalizeValueNameForComparison(
+        value.kind === "canonical" ? value.englishName : value.name,
+      ),
+    ),
+  )
+  if (
+    valueNameKeys.size !==
+    CANONICAL_VALUES.length + candidateCustomValues.length
+  ) {
+    throw new Error("Active Deck contains duplicate value names")
   }
 
   const customValues = Object.freeze(

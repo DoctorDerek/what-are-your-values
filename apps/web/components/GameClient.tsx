@@ -1,47 +1,60 @@
 "use client"
 
-import type { ValueId } from "@game/data/src/Value"
+import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
-import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
-import { projectScheduledPair } from "@game/machines/src/PairScheduler"
+import {
+  projectBattlePair,
+  type BattleSchedulerRestorePoint,
+} from "@game/machines/src/BattleScheduler"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
-import { useCallback, useEffect, useMemo, useRef } from "react"
-import { webStorage } from "@/lib/WebStorage"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
+import packageMetadata from "@/package.json"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import Hub from "./Hub"
 import Splash from "./Splash"
 
 export default function GameClient() {
+  const durableStore = useMemo(() => createIndexedDbDurableStore(), [])
   const [state, send] = useMachine(rootMachine, {
-    input: { storage: webStorage },
+    input: {
+      durableStore,
+      appVersion: packageMetadata.version,
+      now: () => new Date().toISOString(),
+    },
   })
-  const seeAllValuesButtonRef = useRef<HTMLButtonElement>(null)
-  const shouldRestoreSeeAllValuesFocusRef = useRef(false)
-  const battleCycle = state.context.battleCycle
+  const browseAllValuesButtonRef = useRef<HTMLButtonElement>(null)
+  const returnFocusTargetIdRef = useRef("hub-browse-all-values-button")
+  const [pendingAllValuesValueId, setPendingAllValuesValueId] =
+    useState<ValueId | null>(null)
+  const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
+    useState(false)
+  const shouldRestoreHubFocusRef = useRef(false)
+  const battleProfile = state.context.battleProfile
   const rankedValues = useMemo(
     () =>
-      battleCycle
-        ? rankValues(battleCycle.activeDeck, battleCycle.progressById)
+      battleProfile
+        ? rankValues(battleProfile.activeDeck, battleProfile.progressById)
         : [],
-    [battleCycle],
+    [battleProfile],
   )
   const presentedBattle = useMemo(
     () =>
-      battleCycle
+      battleProfile
         ? Object.freeze({
-            pair: projectScheduledPair(
-              battleCycle.activeDeck,
-              battleCycle.scheduler,
-            ).pair,
-            scheduler: battleCycle.scheduler,
+            pair: projectBattlePair(
+              battleProfile.activeDeck,
+              battleProfile.scheduler,
+            ),
+            scheduler: battleProfile.scheduler,
           })
         : null,
-    [battleCycle],
+    [battleProfile],
   )
   const handleWinnerSelected = useCallback(
-    (winnerId: ValueId, expectedScheduler: SchedulerRestorePoint) => {
+    (winnerId: ValueId, expectedScheduler: BattleSchedulerRestorePoint) => {
       send({
         type: "BATTLE.WINNER_SELECTED",
         winnerId,
@@ -51,26 +64,67 @@ export default function GameClient() {
     [send],
   )
   const handleAllValuesClose = useCallback(() => {
-    shouldRestoreSeeAllValuesFocusRef.current = true
     send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
   }, [send])
+  const openAllValues = useCallback(
+    ({
+      focusTargetId,
+      valueId,
+      openCustomValueBuilder,
+    }: {
+      focusTargetId: string
+      valueId?: ValueId | null
+      openCustomValueBuilder?: boolean
+    }) => {
+      returnFocusTargetIdRef.current = focusTargetId
+      setPendingAllValuesValueId(valueId ?? null)
+      setShouldOpenCustomValueBuilder(openCustomValueBuilder === true)
+      shouldRestoreHubFocusRef.current = true
+      send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    },
+    [send],
+  )
+  const handleAddCustomValue = useCallback(
+    (name: string, definition: string) => {
+      send({
+        type: "ALL_VALUES.ADD_REQUESTED",
+        name,
+        definition,
+      })
+    },
+    [send],
+  )
+  const handleUpdateCustomValue = useCallback(
+    (valueId: CustomValueId, name: string, definition: string) => {
+      send({
+        type: "ALL_VALUES.UPDATE_REQUESTED",
+        valueId,
+        name,
+        definition,
+      })
+    },
+    [send],
+  )
 
   useEffect(() => {
     send({
       type: "APP.HYDRATED",
-      uuid: webStorage.getItem("wayvm_uuid"),
       schedulerSeed: crypto.randomUUID(),
     })
   }, [send])
 
   useEffect(() => {
-    if (state.matches("Hub") && shouldRestoreSeeAllValuesFocusRef.current) {
-      shouldRestoreSeeAllValuesFocusRef.current = false
-      seeAllValuesButtonRef.current?.focus()
+    if (state.matches("Hub") && shouldRestoreHubFocusRef.current) {
+      shouldRestoreHubFocusRef.current = false
+      document.getElementById(returnFocusTargetIdRef.current)?.focus()
     }
   }, [state])
 
-  if (state.matches("Hydrating")) {
+  if (
+    state.matches("Hydrating") ||
+    state.matches("LoadingProfile") ||
+    state.matches("InitializingProfile")
+  ) {
     return (
       <div className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex h-[100dvh] w-[100dvw] items-center justify-center text-6xl font-black uppercase drop-shadow-[4px_4px_0px_#000000]">
         Booting Machine...
@@ -78,17 +132,26 @@ export default function GameClient() {
     )
   }
 
-  if (state.matches("Splash")) {
+  if (state.matches("PersistenceFailure")) {
     return (
-      <Splash
-        onComplete={() =>
-          send({ type: "INTRODUCTION.COMPLETED", uuid: crypto.randomUUID() })
-        }
-      />
+      <main className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex min-h-[100dvh] w-full flex-col items-center justify-center gap-6 p-8 text-center">
+        <h1 className="max-w-4xl text-4xl font-black uppercase drop-shadow-[4px_4px_0px_#000000] sm:text-6xl">
+          We couldn’t safely load your values.
+        </h1>
+        <p className="max-w-2xl text-xl font-bold text-white sm:text-2xl">
+          Your saved data was left unchanged. Reload this page to try again.
+        </p>
+      </main>
     )
   }
 
-  if (!battleCycle || !presentedBattle) {
+  if (state.matches("Splash")) {
+    return (
+      <Splash onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })} />
+    )
+  }
+
+  if (!battleProfile || !presentedBattle) {
     throw new Error("Battle profile is unavailable after hydration")
   }
 
@@ -96,8 +159,14 @@ export default function GameClient() {
     return (
       <Hub
         rankedValues={rankedValues}
-        seeAllValuesButtonRef={seeAllValuesButtonRef}
-        onSeeAllValues={() => send({ type: "ALL_VALUES.OPEN_REQUESTED" })}
+        browseAllValuesButtonRef={browseAllValuesButtonRef}
+        onBrowseAllValues={(focusTargetId) => openAllValues({ focusTargetId })}
+        onAddCustomValue={(focusTargetId) =>
+          openAllValues({ focusTargetId, openCustomValueBuilder: true })
+        }
+        onOpenValue={(valueId, focusTargetId) =>
+          openAllValues({ focusTargetId, valueId })
+        }
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
       />
     )
@@ -105,17 +174,34 @@ export default function GameClient() {
 
   if (state.matches("AllValues")) {
     return (
-      <AllValues rankedValues={rankedValues} onClose={handleAllValuesClose} />
+      <AllValues
+        rankedValues={rankedValues}
+        initialValueId={pendingAllValuesValueId}
+        openCustomValueBuilder={shouldOpenCustomValueBuilder}
+        onClose={handleAllValuesClose}
+        onAddCustomValue={handleAddCustomValue}
+        onUpdateCustomValue={handleUpdateCustomValue}
+        onDeleteCustomValue={(valueId) =>
+          send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
+        }
+      />
     )
   }
 
   if (state.matches("Crucible")) {
+    const isBattleReady = state.matches({ Crucible: "Ready" })
+
     return (
       <Crucible
-        activeDeck={battleCycle.activeDeck}
+        activeDeck={battleProfile.activeDeck}
         battle={presentedBattle}
-        progressById={battleCycle.progressById}
+        progressById={battleProfile.progressById}
+        canUndo={battleProfile.history.length > 0}
+        canRedo={battleProfile.redo.length > 0}
+        isPersistencePending={!isBattleReady}
         onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
+        onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
+        onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
         onWinnerSelected={handleWinnerSelected}
       />
     )

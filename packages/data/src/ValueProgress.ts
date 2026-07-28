@@ -27,7 +27,7 @@ function validateCounter(
   }
 }
 
-function freezeValueProgress(valueId: ValueId, progress: ValueProgress) {
+export function createValueProgress(valueId: ValueId, progress: ValueProgress) {
   validateCounter(progress.totalXp, "total XP", valueId, MAX_SUPPORTED_TOTAL_XP)
   validateCounter(progress.profileWins, "profile wins", valueId)
   validateCounter(progress.profileComparisons, "profile comparisons", valueId)
@@ -68,7 +68,7 @@ export function createValueProgressById(
       throw new Error(`Duplicate Value Progress ID: ${valueId}`)
     }
 
-    candidateProgressById.set(valueId, freezeValueProgress(valueId, progress))
+    candidateProgressById.set(valueId, createValueProgress(valueId, progress))
   })
 
   if (candidateProgressById.size !== activeDeck.valueIds.length) {

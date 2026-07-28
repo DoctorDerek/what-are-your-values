@@ -1,20 +1,20 @@
-import {
-  getValueDisplayDefinition,
-  getValueDisplayName,
-} from "@game/data/src/Value"
+import { getValueDisplayName } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
   createBattleCycleCandidate,
   createInitialBattleCycle,
 } from "@game/machines/src/BattleCycle"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import Hub from "./Hub"
 
 describe("Hub Component Integration", () => {
-  it("withholds an unearned Top Five until the first comparison", () => {
+  it("shows every included value alphabetically before the first comparison", () => {
     const battleCycle = createInitialBattleCycle("empty-hub-seed")
+    const onBrowseAllValues = vi.fn()
+    const onAddCustomValue = vi.fn()
+    const onOpenValue = vi.fn()
 
     render(
       <Hub
@@ -22,21 +22,53 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
-        onSeeAllValues={vi.fn()}
+        onBrowseAllValues={onBrowseAllValues}
+        onAddCustomValue={onAddCustomValue}
+        onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
     )
 
     expect(
-      screen.getByText("Keep comparing values to reveal your Top Five."),
+      screen.getByRole("heading", { name: "Your Values", level: 1 }),
     ).toBeVisible()
-    expect(screen.queryByText("#1 Acceptance")).not.toBeInTheDocument()
-    expect(screen.queryByText(/Avatar|Phase C/)).not.toBeInTheDocument()
+    expect(screen.getByText("Included Values")).toBeVisible()
+    expect(screen.getByText(/Not ranked yet\./)).toBeVisible()
+    const firstRow = screen.getAllByRole("listitem")[0]
+    expect(within(firstRow).getByText("Acceptance")).toBeVisible()
   })
 
-  it("renders the exact evidence ranking and starts a battle", () => {
-    const onSeeAllValues = vi.fn()
-    const onStartBattle = vi.fn()
+  it("renders all fresh rows without fabricated ranks and exposes the action rail", () => {
+    const battleCycle = createInitialBattleCycle("fresh-hub-seed")
+
+    render(
+      <Hub
+        rankedValues={rankValues(
+          battleCycle.activeDeck,
+          battleCycle.progressById,
+        )}
+        onBrowseAllValues={vi.fn()}
+        onAddCustomValue={vi.fn()}
+        onOpenValue={vi.fn()}
+        onStartBattle={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(100)
+    expect(screen.queryByText("#1")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Browse All Values" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Add Custom Value" }),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Battle" })).toBeVisible()
+  })
+
+  it("renders the earned Top Five and full ranked list after a comparison", () => {
+    const onBrowseAllValues = vi.fn()
+    const onAddCustomValue = vi.fn()
+    const onOpenValue = vi.fn()
     const initialBattleCycle = createInitialBattleCycle("ranked-hub-seed")
     const [winnerId] = projectScheduledPair(
       initialBattleCycle.activeDeck,
@@ -60,27 +92,56 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
-        onSeeAllValues={onSeeAllValues}
-        onStartBattle={onStartBattle}
+        onBrowseAllValues={onBrowseAllValues}
+        onAddCustomValue={onAddCustomValue}
+        onOpenValue={onOpenValue}
+        onStartBattle={vi.fn()}
       />,
     )
 
-    expect(screen.getByText(`#1 ${getValueDisplayName(winner)}`)).toBeVisible()
-    expect(screen.getByText("Level 2")).toBeVisible()
-    expect(screen.getAllByRole("listitem")).toHaveLength(5)
+    expect(screen.getByRole("heading", { name: "Top Five" })).toBeVisible()
+    expect(screen.getAllByText("All Other Values")).toHaveLength(2)
+    expect(screen.getAllByRole("listitem")).toHaveLength(100)
     expect(
-      screen.getByRole("progressbar", { name: "XP toward Level 3" }),
-    ).toHaveAttribute("aria-valuenow", "0")
+      screen.getByRole("button", {
+        name: `Open ${getValueDisplayName(winner)} in All Values`,
+      }),
+    ).toBeVisible()
+    expect(screen.getByText("Level 2")).toBeVisible()
+  })
 
-    fireEvent.click(
-      screen.getByText(`Definition of ${getValueDisplayName(winner)}`),
+  it("routes action and row presses with stable focus target identifiers", () => {
+    const onBrowseAllValues = vi.fn()
+    const onAddCustomValue = vi.fn()
+    const onOpenValue = vi.fn()
+    const battleCycle = createInitialBattleCycle("action-hub-seed")
+
+    render(
+      <Hub
+        rankedValues={rankValues(
+          battleCycle.activeDeck,
+          battleCycle.progressById,
+        )}
+        onBrowseAllValues={onBrowseAllValues}
+        onAddCustomValue={onAddCustomValue}
+        onOpenValue={onOpenValue}
+        onStartBattle={vi.fn()}
+      />,
     )
-    expect(screen.getByText(getValueDisplayDefinition(winner))).toBeVisible()
 
-    fireEvent.click(screen.getByRole("button", { name: "See All Values" }))
-    expect(onSeeAllValues).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole("button", { name: "Browse All Values" }))
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Acceptance in All Values" }),
+    )
 
-    fireEvent.click(screen.getByRole("button", { name: "Battle" }))
-    expect(onStartBattle).toHaveBeenCalledTimes(1)
+    expect(onBrowseAllValues).toHaveBeenCalledWith(
+      "hub-browse-all-values-button",
+    )
+    expect(onAddCustomValue).toHaveBeenCalledWith("hub-add-custom-value-button")
+    expect(onOpenValue).toHaveBeenCalledWith(
+      "pvcs-2011:acceptance",
+      "hub-value-pvcs-2011:acceptance-button",
+    )
   })
 })

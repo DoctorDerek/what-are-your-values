@@ -1,10 +1,10 @@
 import type { ValueId, ValuePair } from "@game/data/src/Value"
 import { assign, setup } from "xstate"
-import type { SchedulerRestorePoint } from "./PairScheduler"
+import type { BattleSchedulerRestorePoint } from "./BattleScheduler"
 
 export type PresentedBattle = {
   readonly pair: ValuePair
-  readonly scheduler: SchedulerRestorePoint
+  readonly scheduler: BattleSchedulerRestorePoint
 }
 
 export const combatMachine = setup({
@@ -16,7 +16,7 @@ export const combatMachine = setup({
       focusedId: ValueId | null
       onWinnerSelected: (
         winnerId: ValueId,
-        expectedScheduler: SchedulerRestorePoint,
+        expectedScheduler: BattleSchedulerRestorePoint,
       ) => void
     },
     events: {} as
@@ -27,7 +27,7 @@ export const combatMachine = setup({
     input: {} as {
       onWinnerSelected: (
         winnerId: ValueId,
-        expectedScheduler: SchedulerRestorePoint,
+        expectedScheduler: BattleSchedulerRestorePoint,
       ) => void
     },
   },

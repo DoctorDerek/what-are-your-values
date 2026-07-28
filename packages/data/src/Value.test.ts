@@ -4,6 +4,7 @@ import {
   createCustomValueId,
   getValueDisplayDefinition,
   getValueDisplayName,
+  normalizeValueNameForComparison,
   type CustomValueDefinition,
 } from "./Value"
 
@@ -31,6 +32,13 @@ describe("Value presentation copy", () => {
     expect(getValueDisplayName(ingenuity)).toBe("Ingenuity")
     expect(getValueDisplayDefinition(ingenuity)).toBe(
       "To solve problems in original and resourceful ways.",
+    )
+  })
+
+  it("normalizes exact value-name comparisons without changing player copy", () => {
+    expect(normalizeValueNameForComparison("  Ingenuity  ")).toBe("ingenuity")
+    expect(normalizeValueNameForComparison("INGEN\u2009UITY")).toBe(
+      "ingen uity",
     )
   })
 })

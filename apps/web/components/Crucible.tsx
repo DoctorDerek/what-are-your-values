@@ -3,31 +3,42 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
+import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
   type PresentedBattle,
 } from "@game/machines/src/CombatMachine"
-import type { SchedulerRestorePoint } from "@game/machines/src/PairScheduler"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
 import { useCallback, useEffect, useRef } from "react"
+import BattleActionBar from "./BattleActionBar"
 import { ValueChoiceCard } from "./ValueChoiceCard"
 
 export default function Crucible({
   activeDeck,
   battle,
   progressById,
+  canUndo,
+  canRedo,
+  isPersistencePending,
   onExit,
+  onUndo,
+  onRedo,
   onWinnerSelected,
 }: {
   activeDeck: ActiveDeck
   battle: PresentedBattle
   progressById: ValueProgressById
+  canUndo: boolean
+  canRedo: boolean
+  isPersistencePending: boolean
   onExit: () => void
+  onUndo: () => void
+  onRedo: () => void
   onWinnerSelected: (
     winnerId: ValueId,
-    expectedScheduler: SchedulerRestorePoint,
+    expectedScheduler: BattleSchedulerRestorePoint,
   ) => void
 }) {
   const [state, send] = useMachine(combatMachine, {
@@ -40,17 +51,18 @@ export default function Crucible({
     send({ type: "BATTLE.PROJECTED", battle })
   }, [battle, send])
 
+  const isInteractive = state.matches("AwaitingInput") && !isPersistencePending
+
   const handleSelect = useCallback(
     (winnerId: ValueId) => {
-      if (!state.matches("AwaitingInput")) return
+      if (!isInteractive) return
       send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
     },
-    [state, send],
+    [isInteractive, send],
   )
 
   const focusedId = state.context.focusedId
   const currentPair = state.context.currentBattle?.pair ?? null
-  const isAwaiting = state.matches("AwaitingInput")
   const isAnimating = state.matches("AnimatingResult")
   const handleAnimationComplete = useCallback(() => {
     if (isAnimating) {
@@ -60,12 +72,24 @@ export default function Crucible({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isAwaiting || !currentPair) return
+      if (!isInteractive || !currentPair) return
 
-      if (e.key === "1" || e.key.toLowerCase() === "a") {
+      const normalizedKey = e.key.toLowerCase()
+      const isUndoCommand = normalizedKey === "z" && !e.shiftKey
+      const isRedoCommand =
+        normalizedKey === "y" ||
+        (normalizedKey === "z" && e.shiftKey && (e.metaKey || e.ctrlKey))
+
+      if (isUndoCommand && canUndo && !e.repeat) {
+        e.preventDefault()
+        onUndo()
+      } else if (isRedoCommand && canRedo && !e.repeat) {
+        e.preventDefault()
+        onRedo()
+      } else if (e.key === "1" || normalizedKey === "a") {
         e.preventDefault()
         handleSelect(currentPair[0])
-      } else if (e.key === "2" || e.key.toLowerCase() === "d") {
+      } else if (e.key === "2" || normalizedKey === "d") {
         e.preventDefault()
         handleSelect(currentPair[1])
       } else if (e.key === "Escape") {
@@ -88,15 +112,26 @@ export default function Crucible({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isAwaiting, currentPair, focusedId, send, onExit, handleSelect])
+  }, [
+    isInteractive,
+    currentPair,
+    focusedId,
+    canUndo,
+    canRedo,
+    send,
+    onExit,
+    onUndo,
+    onRedo,
+    handleSelect,
+  ])
 
   const handleCardFocus = useCallback(
     (valueId: ValueId) => {
-      if (isAwaiting) {
+      if (isInteractive) {
         send({ type: "VALUE.FOCUS_REQUESTED", valueId })
       }
     },
-    [isAwaiting, send],
+    [isInteractive, send],
   )
 
   if (!currentPair) {
@@ -122,14 +157,17 @@ export default function Crucible({
   return (
     <main
       aria-label="Value battle"
+      aria-busy={isPersistencePending}
       className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row"
     >
-      <button
-        onClick={onExit}
-        className="bg-mapache-vivid-secondary-red absolute top-3 left-1/2 z-50 max-w-[calc(100%-1.5rem)] -translate-x-1/2 cursor-pointer border-4 border-black px-4 py-2 text-xl font-black [overflow-wrap:anywhere] break-words whitespace-normal text-white uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] active:translate-y-[2px] active:shadow-none sm:top-6 sm:px-10 sm:py-4 sm:text-3xl"
-      >
-        Stop [ESC]
-      </button>
+      <BattleActionBar
+        canUndo={isInteractive && canUndo}
+        canRedo={isInteractive && canRedo}
+        canStop={isInteractive}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onStop={onExit}
+      />
 
       <AnimatePresence mode="popLayout">
         <ValueChoiceCard
@@ -140,7 +178,7 @@ export default function Crucible({
           level={levelA}
           focusedId={focusedId}
           winnerId={winnerId}
-          isEnabled={isAwaiting}
+          isEnabled={isInteractive}
           isAnimating={isAnimating}
           onActivate={handleSelect}
           onFocus={handleCardFocus}
@@ -157,7 +195,7 @@ export default function Crucible({
           level={levelB}
           focusedId={focusedId}
           winnerId={winnerId}
-          isEnabled={isAwaiting}
+          isEnabled={isInteractive}
           isAnimating={isAnimating}
           onActivate={handleSelect}
           onFocus={handleCardFocus}

@@ -162,8 +162,8 @@ function assertBattleProgressDelta(delta: BattleDelta) {
   }
 }
 
-function assertBattleDeltaIdentity(
-  battleCycle: BattleCycleState,
+export function validateBattleDelta(
+  activeDeck: ActiveDeck,
   delta: BattleDelta,
 ) {
   if (
@@ -176,7 +176,7 @@ function assertBattleDeltaIdentity(
 
   assertBattleProgressDelta(delta)
   const validatedDelta = createBattleDelta({
-    activeDeck: battleCycle.activeDeck,
+    activeDeck,
     progressDelta: delta,
     priorScheduler: delta.priorScheduler,
     resultingScheduler: delta.resultingScheduler,
@@ -184,7 +184,7 @@ function assertBattleDeltaIdentity(
   })
 
   if (
-    battleCycle.activeDeck.fingerprint !== delta.activeDeckFingerprint ||
+    activeDeck.fingerprint !== delta.activeDeckFingerprint ||
     delta.progressGeneration !== delta.priorScheduler.progressGeneration ||
     delta.deckRevision !== delta.priorScheduler.deckRevision ||
     delta.cycleIndex !== delta.priorScheduler.cycleIndex ||
@@ -192,6 +192,8 @@ function assertBattleDeltaIdentity(
   ) {
     throw new Error("Battle Delta identity does not match its profile boundary")
   }
+
+  return validatedDelta
 }
 
 function replaceAffectedProgress({
@@ -249,7 +251,7 @@ export function undoBattleDelta({
   readonly battleCycle: BattleCycleState
   readonly delta: BattleDelta
 }) {
-  assertBattleDeltaIdentity(battleCycle, delta)
+  validateBattleDelta(battleCycle.activeDeck, delta)
 
   if (
     !areSchedulerIdentitiesEqual(
@@ -340,7 +342,7 @@ export function redoBattleDelta({
   readonly battleCycle: BattleCycleState
   readonly delta: BattleDelta
 }) {
-  assertBattleDeltaIdentity(battleCycle, delta)
+  validateBattleDelta(battleCycle.activeDeck, delta)
 
   if (
     !areSchedulerIdentitiesEqual(battleCycle.scheduler, delta.priorScheduler)

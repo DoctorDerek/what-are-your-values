@@ -10,8 +10,13 @@ import {
   createInitialBattleCycle,
   type BattleCycleState,
 } from "./BattleCycle"
-import type { BattleDelta } from "./BattleDelta"
-import { redoBattleDelta, undoBattleDelta } from "./BattleDeltaTransition"
+import { createBattleDelta, type BattleDelta } from "./BattleDelta"
+import {
+  redoBattleDelta,
+  undoBattleDelta,
+  validateBattleDelta,
+} from "./BattleDeltaTransition"
+import { createCycleCompleteEventId } from "./BattleIdentity"
 import {
   createSchedulerRestorePoint,
   projectScheduledPair,
@@ -64,6 +69,39 @@ function expectBattleCycleToEqual(
   expect(actual.scheduler).toEqual(expected.scheduler)
 }
 
+function createBoundaryCandidate() {
+  const initialBattleCycle = createInitialBattleCycle(
+    "boundary-validation-seed",
+  )
+  const finalScheduler = createSchedulerRestorePoint({
+    activeDeck: initialBattleCycle.activeDeck,
+    progressGeneration: initialBattleCycle.scheduler.progressGeneration,
+    deckRevision: initialBattleCycle.scheduler.deckRevision,
+    seed: initialBattleCycle.scheduler.seed,
+    cycleIndex: initialBattleCycle.scheduler.cycleIndex,
+    cursor: getPairCount(initialBattleCycle.activeDeck.valueIds.length) - 1,
+  })
+  const [winnerId] = projectScheduledPair(
+    initialBattleCycle.activeDeck,
+    finalScheduler,
+  ).pair
+  const battleCycle = Object.freeze({
+    ...initialBattleCycle,
+    scheduler: finalScheduler,
+  }) satisfies BattleCycleState
+  const candidate = createBattleCycleCandidate({
+    battleCycle,
+    winnerId,
+    expectedScheduler: finalScheduler,
+  })
+
+  if (!candidate.delta.cycleBoundary) {
+    throw new Error("Boundary validation fixture did not create a boundary")
+  }
+
+  return { battleCycle, candidate }
+}
+
 describe("Battle Delta transitions", () => {
   it("round-trips one ordinary battle exactly without recalculating its stored payout", () => {
     const initialBattleCycle = createInitialBattleCycle(
@@ -95,6 +133,10 @@ describe("Battle Delta transitions", () => {
       expectedScheduler: battleCycle.scheduler,
     })
     const resultingProgressEntries = Array.from(candidate.progressById)
+
+    expect(validateBattleDelta(candidate.activeDeck, candidate.delta)).toEqual(
+      candidate.delta,
+    )
 
     expect(candidate.delta.xpGained).toBe(15)
 
@@ -236,6 +278,201 @@ describe("Battle Delta transitions", () => {
     ).toEqual(candidate.delta.pair)
   })
 
+  it("rejects unsupported versions and incomplete boundary evidence", () => {
+    const { battleCycle, candidate } = createBoundaryCandidate()
+    const boundary = candidate.delta.cycleBoundary
+    if (!boundary) {
+      throw new Error("Boundary validation fixture lost its boundary")
+    }
+
+    const unsupportedDelta = Object.freeze({
+      ...candidate.delta,
+      version: 2,
+    }) as unknown as BattleDelta
+    const unsupportedBoundaryDelta = Object.freeze({
+      ...candidate.delta,
+      cycleBoundary: Object.freeze({
+        ...boundary,
+        version: 2,
+      }),
+    }) as unknown as BattleDelta
+    const incompleteCurrentCycleWins = new Map(
+      boundary.priorCurrentCycleWinsById,
+    )
+    const [missingValueId] = battleCycle.activeDeck.valueIds
+    incompleteCurrentCycleWins.delete(missingValueId)
+    const incompleteBoundaryDelta = Object.freeze({
+      ...candidate.delta,
+      cycleBoundary: Object.freeze({
+        ...boundary,
+        priorCurrentCycleWinsById: incompleteCurrentCycleWins,
+      }),
+    }) as unknown as BattleDelta
+
+    expect(() =>
+      validateBattleDelta(battleCycle.activeDeck, unsupportedDelta),
+    ).toThrow("Unsupported Battle Delta version")
+    expect(() =>
+      validateBattleDelta(battleCycle.activeDeck, unsupportedBoundaryDelta),
+    ).toThrow("Unsupported Battle Delta version")
+    expect(() =>
+      redoBattleDelta({ battleCycle, delta: incompleteBoundaryDelta }),
+    ).toThrow(
+      "Battle Delta current-cycle wins do not cover the complete Active Deck",
+    )
+  })
+
+  it("rejects invalid current-cycle wins and cycle snapshots without mutation", () => {
+    const { battleCycle, candidate } = createBoundaryCandidate()
+    const boundary = candidate.delta.cycleBoundary
+    if (!boundary) {
+      throw new Error("Boundary validation fixture lost its boundary")
+    }
+
+    const [firstValueId] = battleCycle.activeDeck.valueIds
+    const invalidCurrentCycleWins = new Map(boundary.priorCurrentCycleWinsById)
+    invalidCurrentCycleWins.set(firstValueId, -1)
+    const invalidCurrentCycleWinsDelta = Object.freeze({
+      ...candidate.delta,
+      cycleBoundary: Object.freeze({
+        ...boundary,
+        priorCurrentCycleWinsById: invalidCurrentCycleWins,
+      }),
+    }) as unknown as BattleDelta
+
+    const mismatchedCurrentCycleWins = new Map(
+      boundary.priorCurrentCycleWinsById,
+    )
+    mismatchedCurrentCycleWins.set(firstValueId, 1)
+    const mismatchedCurrentCycleWinsDelta = Object.freeze({
+      ...candidate.delta,
+      cycleBoundary: Object.freeze({
+        ...boundary,
+        priorCurrentCycleWinsById: mismatchedCurrentCycleWins,
+      }),
+    }) as unknown as BattleDelta
+
+    const mismatchedSnapshot = new Map(boundary.priorCycleLevelSnapshot)
+    mismatchedSnapshot.set(
+      firstValueId,
+      (mismatchedSnapshot.get(firstValueId) ?? 0) + 1,
+    )
+    const mismatchedSnapshotDelta = Object.freeze({
+      ...candidate.delta,
+      cycleBoundary: Object.freeze({
+        ...boundary,
+        priorCycleLevelSnapshot: mismatchedSnapshot,
+      }),
+    }) as unknown as BattleDelta
+
+    expect(() =>
+      redoBattleDelta({
+        battleCycle,
+        delta: invalidCurrentCycleWinsDelta,
+      }),
+    ).toThrow(`Invalid Battle Delta current-cycle wins for ${firstValueId}`)
+    expect(() =>
+      redoBattleDelta({
+        battleCycle,
+        delta: mismatchedCurrentCycleWinsDelta,
+      }),
+    ).toThrow(
+      `Redo current-cycle wins do not match Battle Delta for ${firstValueId}`,
+    )
+    expect(() =>
+      redoBattleDelta({
+        battleCycle,
+        delta: mismatchedSnapshotDelta,
+      }),
+    ).toThrow("Redo cycle-level snapshot does not match Battle Delta")
+  })
+
+  it("rejects Battle Delta pair, profile, scheduler, and cycle identities", () => {
+    const battleCycle = createInitialBattleCycle("delta-construction-guards")
+    const [winnerId, loserId] = projectScheduledPair(
+      battleCycle.activeDeck,
+      battleCycle.scheduler,
+    ).pair
+    const candidate = createBattleCycleCandidate({
+      battleCycle,
+      winnerId,
+      expectedScheduler: battleCycle.scheduler,
+    })
+    const reversedPairDelta = Object.freeze({
+      ...candidate.delta,
+      pair: [loserId, winnerId],
+    }) as unknown as BattleDelta
+    const incompatibleScheduler = createSchedulerRestorePoint({
+      activeDeck: battleCycle.activeDeck,
+      progressGeneration: 1,
+      deckRevision: battleCycle.scheduler.deckRevision,
+      seed: battleCycle.scheduler.seed,
+      cycleIndex: battleCycle.scheduler.cycleIndex,
+    })
+
+    expect(() =>
+      createBattleDelta({
+        activeDeck: battleCycle.activeDeck,
+        progressDelta: reversedPairDelta,
+        priorScheduler: battleCycle.scheduler,
+        resultingScheduler: candidate.scheduler,
+        cycleBoundary: null,
+      }),
+    ).toThrow("Battle delta pair does not match its prior scheduler")
+    expect(() =>
+      createBattleDelta({
+        activeDeck: battleCycle.activeDeck,
+        progressDelta: candidate.delta,
+        priorScheduler: battleCycle.scheduler,
+        resultingScheduler: incompatibleScheduler,
+        cycleBoundary: null,
+      }),
+    ).toThrow("Battle delta crosses an incompatible profile identity")
+    expect(() =>
+      createBattleDelta({
+        activeDeck: battleCycle.activeDeck,
+        progressDelta: candidate.delta,
+        priorScheduler: battleCycle.scheduler,
+        resultingScheduler: battleCycle.scheduler,
+        cycleBoundary: null,
+      }),
+    ).toThrow("Battle delta scheduler transition is inconsistent")
+
+    const { battleCycle: boundaryBattleCycle, candidate: boundaryCandidate } =
+      createBoundaryCandidate()
+    const boundary = boundaryCandidate.delta.cycleBoundary
+    if (!boundary) {
+      throw new Error("Boundary construction fixture lost its boundary")
+    }
+    expect(() =>
+      createBattleDelta({
+        activeDeck: boundaryBattleCycle.activeDeck,
+        progressDelta: boundaryCandidate.delta,
+        priorScheduler: boundaryBattleCycle.scheduler,
+        resultingScheduler: boundaryBattleCycle.scheduler,
+        cycleBoundary: null,
+      }),
+    ).toThrow("Battle delta scheduler transition is inconsistent")
+
+    const mismatchedCycleIdentity = Object.freeze({
+      ...boundary,
+      cycleCompleteEventId:
+        `${boundary.cycleCompleteEventId}:tampered` as typeof boundary.cycleCompleteEventId,
+    })
+    expect(() =>
+      createBattleDelta({
+        activeDeck: boundaryBattleCycle.activeDeck,
+        progressDelta: boundaryCandidate.delta,
+        priorScheduler: boundaryBattleCycle.scheduler,
+        resultingScheduler: boundaryCandidate.scheduler,
+        cycleBoundary: mismatchedCycleIdentity,
+      }),
+    ).toThrow("Cycle-complete event identity is inconsistent")
+    expect(createCycleCompleteEventId(boundaryCandidate.delta.battleId)).toBe(
+      boundary.cycleCompleteEventId,
+    )
+  })
+
   it("rejects stale Undo and Redo source schedulers without mutating either state", () => {
     const battleCycle = createInitialBattleCycle("stale-delta-source-seed")
     const [winnerId] = projectScheduledPair(
@@ -298,6 +535,18 @@ describe("Battle Delta transitions", () => {
     const mismatchedProgressEntries = Array.from(
       mismatchedCandidate.progressById,
     )
+    const unrelatedValueId = candidate.activeDeck.valueIds.find(
+      (valueId) => valueId !== winnerId && valueId !== candidate.delta.loserId,
+    )
+    if (!unrelatedValueId) {
+      throw new Error("Progress validation fixture requires another value")
+    }
+    const incompleteProgressById = new Map(candidate.progressById)
+    incompleteProgressById.delete(unrelatedValueId)
+    const incompleteCandidate = Object.freeze({
+      ...candidate,
+      progressById: incompleteProgressById,
+    }) satisfies BattleCycleState
 
     expect(() =>
       undoBattleDelta({
@@ -317,6 +566,12 @@ describe("Battle Delta transitions", () => {
         delta: candidate.delta,
       }),
     ).toThrow(`Undo progress does not match Battle Delta for ${winnerId}`)
+    expect(() =>
+      undoBattleDelta({
+        battleCycle: incompleteCandidate,
+        delta: candidate.delta,
+      }),
+    ).toThrow(`Value Progress is missing ${unrelatedValueId}`)
     expect(Array.from(candidate.progressById)).toEqual(resultingProgressEntries)
     expect(Array.from(mismatchedCandidate.progressById)).toEqual(
       mismatchedProgressEntries,

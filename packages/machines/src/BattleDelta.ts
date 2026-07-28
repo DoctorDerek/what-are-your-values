@@ -12,15 +12,15 @@ import {
 } from "./BattleIdentity"
 import type { BattleProgressDelta } from "./BattleProgress"
 import {
+  advanceBattleScheduler,
+  createNextCycleScheduler,
+  projectBattlePair,
+  type BattleSchedulerRestorePoint,
+} from "./BattleScheduler"
+import {
   validateCycleLevelSnapshot,
   type CycleLevelSnapshot,
 } from "./CycleLevelSnapshot"
-import {
-  advanceSchedulerCursor,
-  createSchedulerRestorePoint,
-  projectScheduledPair,
-  type SchedulerRestorePoint,
-} from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 export const BATTLE_DELTA_VERSION = 1 as const
@@ -44,8 +44,8 @@ export type BattleDelta = BattleProgressDelta & {
   readonly deckRevision: number
   readonly activeDeckFingerprint: ActiveDeckFingerprint
   readonly cycleIndex: number
-  readonly priorScheduler: SchedulerRestorePoint
-  readonly resultingScheduler: SchedulerRestorePoint
+  readonly priorScheduler: BattleSchedulerRestorePoint
+  readonly resultingScheduler: BattleSchedulerRestorePoint
   readonly cycleBoundary: CycleBoundaryTransition | null
 }
 
@@ -112,11 +112,11 @@ export function createBattleDelta({
 }: {
   readonly activeDeck: ActiveDeck
   readonly progressDelta: BattleProgressDelta
-  readonly priorScheduler: SchedulerRestorePoint
-  readonly resultingScheduler: SchedulerRestorePoint
+  readonly priorScheduler: BattleSchedulerRestorePoint
+  readonly resultingScheduler: BattleSchedulerRestorePoint
   readonly cycleBoundary: CycleBoundaryTransition | null
 }) {
-  const projectedPair = projectScheduledPair(activeDeck, priorScheduler).pair
+  const projectedPair = projectBattlePair(activeDeck, priorScheduler)
   if (
     projectedPair[0] !== progressDelta.pair[0] ||
     projectedPair[1] !== progressDelta.pair[1]
@@ -124,18 +124,23 @@ export function createBattleDelta({
     throw new Error("Battle delta pair does not match its prior scheduler")
   }
 
+  const scheduleKindTransitionIsCompatible =
+    priorScheduler.scheduleKind === resultingScheduler.scheduleKind ||
+    (cycleBoundary &&
+      priorScheduler.scheduleKind === "join-pass" &&
+      resultingScheduler.scheduleKind === "full-cycle")
   if (
     priorScheduler.activeDeckFingerprint !==
       resultingScheduler.activeDeckFingerprint ||
     priorScheduler.progressGeneration !==
       resultingScheduler.progressGeneration ||
     priorScheduler.deckRevision !== resultingScheduler.deckRevision ||
-    priorScheduler.scheduleKind !== resultingScheduler.scheduleKind
+    !scheduleKindTransitionIsCompatible
   ) {
     throw new Error("Battle delta crosses an incompatible profile identity")
   }
 
-  const ordinaryResultingScheduler = advanceSchedulerCursor(
+  const ordinaryResultingScheduler = advanceBattleScheduler(
     activeDeck,
     priorScheduler,
   )
@@ -154,17 +159,10 @@ export function createBattleDelta({
       throw new Error("Battle delta scheduler transition is inconsistent")
     }
 
-    if (priorScheduler.cycleIndex === Number.MAX_SAFE_INTEGER) {
-      throw new Error("Pair cycle index cannot be incremented safely")
-    }
-
-    const expectedResultingScheduler = createSchedulerRestorePoint({
+    const expectedResultingScheduler = createNextCycleScheduler(
       activeDeck,
-      progressGeneration: priorScheduler.progressGeneration,
-      deckRevision: priorScheduler.deckRevision,
-      seed: priorScheduler.seed,
-      cycleIndex: priorScheduler.cycleIndex + 1,
-    })
+      priorScheduler,
+    )
     if (
       !areSchedulerIdentitiesEqual(
         expectedResultingScheduler,

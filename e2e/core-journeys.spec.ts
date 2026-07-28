@@ -18,37 +18,46 @@ test("a new player starts immediately and reviews the complete ranking", async (
   ).toBeVisible()
 
   await page.getByRole("button", { name: "Start" }).click()
-  await expect(page.getByText("Sovereign Dashboard")).toBeVisible()
   await expect(
-    page.getByText("Keep comparing values to reveal your Top Five."),
+    page.getByRole("heading", { level: 1, name: "Your Values" }),
+  ).toBeVisible()
+  await expect(
+    page.getByText(
+      "Not ranked yet. Browse the included values, then battle when you are ready.",
+    ),
   ).toBeVisible()
 
-  await page.getByRole("button", { name: "See All Values" }).click()
+  await page.getByRole("button", { name: "Browse All Values" }).click()
   await expect(
     page.getByRole("heading", { level: 1, name: "All Values" }),
   ).toBeVisible()
   await expect(page.getByText("100 Active Values")).toBeVisible()
   await expect(page.getByRole("listitem")).toHaveCount(100)
 
-  await page.getByRole("searchbox", { name: "Search Values" }).fill("health")
+  await page
+    .getByRole("searchbox", { name: "Search All Values" })
+    .fill("health")
   await expect(page.getByRole("listitem")).toHaveCount(1)
   await expect(page.getByRole("heading", { name: "Health" })).toBeVisible()
 
   await page.getByRole("button", { name: "Close" }).click()
-  await expect(page.getByText("Sovereign Dashboard")).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "See All Values" }),
+    page.getByRole("heading", { level: 1, name: "Your Values" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Browse All Values" }),
   ).toBeFocused()
 })
 
-test("a returning player inspects a definition and commits one battle", async ({
+test("a returning player keeps Undo and Redo across reloads", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("wayvm_uuid", "playwright-returning-player")
-  })
   await page.goto("/")
 
+  await page.getByRole("button", { name: "Start" }).click()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Your Values" }),
+  ).toBeVisible()
   await page.getByRole("button", { name: "Battle" }).click()
   await expect(page.getByRole("main", { name: "Value battle" })).toBeVisible()
 
@@ -60,17 +69,28 @@ test("a returning player inspects a definition and commits one battle", async ({
     throw new Error("The first projected value is missing its accessible name")
   }
 
-  await page
-    .getByText(`Definition of ${firstChoiceName}`, { exact: true })
-    .click()
-  await expect(firstChoice).toBeEnabled()
+  await expect(firstChoice).toHaveAccessibleDescription(/^“.+”$/)
+  await expect(firstChoice.locator("p")).toBeVisible()
+  await expect(page.locator("details")).toHaveCount(0)
   await expect(page.getByRole("button", { name: /^Choose / })).toHaveCount(2)
 
   await firstChoice.click()
-  await page.getByRole("button", { name: /^Stop/ }).click()
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
+  await page.getByRole("button", { name: "Undo" }).click()
+  await expect(page.getByRole("button", { name: "Redo" })).toBeEnabled()
+  await page.reload()
 
-  await expect(page.getByText(`#1 ${firstChoiceName}`)).toBeVisible()
-  await expect(page.getByText("Level 2")).toBeVisible()
+  await page.getByRole("button", { name: "Battle" }).click()
+  await expect(page.getByRole("button", { name: "Redo" })).toBeEnabled()
+  await page.getByRole("button", { name: "Redo" }).click()
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
+  await page.reload()
+
+  const firstRankedValue = page
+    .getByRole("listitem")
+    .filter({ has: page.getByLabel("Rank 1", { exact: true }) })
+  await expect(firstRankedValue).toContainText(firstChoiceName)
+  await expect(firstRankedValue).toContainText("Level 2")
   await expect(
     page.getByRole("progressbar", { name: "XP toward Level 3" }),
   ).toHaveAttribute("aria-valuenow", "0")

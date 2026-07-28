@@ -46,6 +46,14 @@ export function getValueDisplayDefinition(value: ActiveValueDefinition) {
   return value.kind === "canonical" ? value.sourceDefinition : value.definition
 }
 
+export function normalizeValueNameForComparison(value: string) {
+  return value
+    .normalize("NFKC")
+    .trim()
+    .replace(/\s+/gu, " ")
+    .toLocaleLowerCase("en-US")
+}
+
 const canonicalValueIdPattern = /^pvcs-2011:[a-z0-9]+(?:-[a-z0-9]+)*$/
 const customValueIdPattern =
   /^custom:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
