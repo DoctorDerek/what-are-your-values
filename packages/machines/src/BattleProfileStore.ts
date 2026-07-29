@@ -1,4 +1,3 @@
-import type { BattleProfile } from "./BattleProfile"
 import {
   createBattleProfileCheckpoint,
   serializeBattleProfileCheckpoint,
@@ -17,6 +16,7 @@ import {
   type BattleProfileManifest,
 } from "./BattleProfileManifest"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
+import type { PlayerData } from "./PlayerData"
 
 export const BATTLE_PROFILE_SNAPSHOT_A_KEY = "wayvm.snapshot.a" as const
 export const BATTLE_PROFILE_SNAPSHOT_B_KEY = "wayvm.snapshot.b" as const
@@ -29,7 +29,7 @@ export type BattleProfileStoreState = {
   readonly head: BattleProfilePersistenceHead
   readonly manifest: BattleProfileManifest
   readonly manifestBytes: string
-  readonly profileCreatedAt: string
+  readonly playerDataCreatedAt: string
   readonly appVersion: string
   readonly journalKeys: readonly string[]
 }
@@ -95,12 +95,12 @@ export function getSortedBattleProfileJournalKeys(
 
 export async function initializeBattleProfileStore({
   store,
-  profile,
+  playerData,
   createdAt,
   appVersion,
 }: {
   readonly store: DurableStoreAdapter
-  readonly profile: BattleProfile
+  readonly playerData: PlayerData
   readonly createdAt: string
   readonly appVersion: string
 }) {
@@ -110,7 +110,7 @@ export async function initializeBattleProfileStore({
     createdAt,
     updatedAt: createdAt,
     appVersion,
-    profile,
+    playerData,
   })
   const manifest = createBattleProfileManifest({
     activeSlot: "a",
@@ -139,11 +139,11 @@ export async function initializeBattleProfileStore({
     head: Object.freeze({
       generation: 0,
       revision: 0,
-      profile: checkpoint.profile,
+      playerData: checkpoint.playerData,
     }),
     manifest,
     manifestBytes,
-    profileCreatedAt: createdAt,
+    playerDataCreatedAt: createdAt,
     appVersion,
     journalKeys: [],
   })
@@ -209,10 +209,10 @@ export async function commitBattleProfileStoreEvent({
   const checkpoint = await createBattleProfileCheckpoint({
     generation: commit.head.generation,
     revision: commit.head.revision,
-    createdAt: state.profileCreatedAt,
+    createdAt: state.playerDataCreatedAt,
     updatedAt: committedAt,
     appVersion: state.appVersion,
-    profile: commit.head.profile,
+    playerData: commit.head.playerData,
   })
   const manifest = createBattleProfileManifest({
     activeSlot,

@@ -1,7 +1,6 @@
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { assign, setup } from "xstate"
-import { createInitialBattleProfile, type BattleProfile } from "./BattleProfile"
 import {
   createBattleChoiceCommit,
   createBattleRedoCommit,
@@ -27,13 +26,14 @@ import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
 } from "./DurableStoreAdapter"
+import { createInitialPlayerData, type PlayerData } from "./PlayerData"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 type RootMachineContext = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
   readonly now: () => string
-  battleProfile: BattleProfile | null
+  playerData: PlayerData | null
   battleProfileStoreState: BattleProfileStoreState | null
   pendingBattleProfileCommit: BattleProfileCommit | null
   persistenceIssue: string | null
@@ -75,12 +75,16 @@ type RootMachineInput = {
   readonly now: () => string
 }
 
-function requireBattleProfile(context: RootMachineContext) {
-  if (!context.battleProfile) {
-    throw new Error("Battle profile is not initialized")
+function requirePlayerData(context: RootMachineContext) {
+  if (!context.playerData) {
+    throw new Error("Player data is not initialized")
   }
 
-  return context.battleProfile
+  return context.playerData
+}
+
+function requireBattleProfile(context: RootMachineContext) {
+  return requirePlayerData(context).profile
 }
 
 function requireBattleProfileStoreState(context: RootMachineContext) {
@@ -112,13 +116,13 @@ export const rootMachine = setup({
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
-      if (event.type !== "BATTLE.WINNER_SELECTED" || !context.battleProfile) {
+      if (event.type !== "BATTLE.WINNER_SELECTED" || !context.playerData) {
         return false
       }
 
       if (
         !areSchedulerIdentitiesEqual(
-          context.battleProfile.scheduler,
+          context.playerData.profile.scheduler,
           event.expectedScheduler,
         )
       ) {
@@ -126,20 +130,20 @@ export const rootMachine = setup({
       }
 
       return projectBattlePair(
-        context.battleProfile.activeDeck,
-        context.battleProfile.scheduler,
+        context.playerData.profile.activeDeck,
+        context.playerData.profile.scheduler,
       ).includes(event.winnerId)
     },
     canUndoBattle: ({ context }) =>
-      (context.battleProfile?.history.length ?? 0) > 0,
+      (context.playerData?.profile.history.length ?? 0) > 0,
     canRedoBattle: ({ context }) =>
-      (context.battleProfile?.redo.length ?? 0) > 0,
+      (context.playerData?.profile.redo.length ?? 0) > 0,
   },
 }).createMachine({
   id: "root",
   initial: "Hydrating",
   context: ({ input }) => ({
-    battleProfile: null,
+    playerData: null,
     battleProfileStoreState: null,
     pendingBattleProfileCommit: null,
     persistenceIssue: null,
@@ -153,8 +157,11 @@ export const rootMachine = setup({
         "APP.HYDRATED": {
           target: "LoadingProfile",
           actions: assign({
-            battleProfile: ({ event }) =>
-              createInitialBattleProfile(event.schedulerSeed),
+            playerData: ({ context, event }) =>
+              createInitialPlayerData({
+                schedulerSeed: event.schedulerSeed,
+                createdAt: context.now(),
+              }),
             persistenceIssue: null,
           }),
         },
@@ -172,12 +179,12 @@ export const rootMachine = setup({
             guard: ({ event }) => event.output.status === "ready",
             target: "Hub",
             actions: assign({
-              battleProfile: ({ event }) => {
+              playerData: ({ event }) => {
                 if (event.output.status !== "ready") {
                   throw new Error("Hydrated Battle Profile is unavailable")
                 }
 
-                return event.output.state.head.profile
+                return event.output.state.head.playerData
               },
               battleProfileStoreState: ({ event }) => {
                 if (event.output.status !== "ready") {
@@ -223,7 +230,7 @@ export const rootMachine = setup({
         src: "initializeBattleProfile",
         input: ({ context }) => ({
           store: context.durableStore,
-          profile: requireBattleProfile(context),
+          playerData: requirePlayerData(context),
           createdAt: context.now(),
           appVersion: context.appVersion,
         }),
@@ -231,7 +238,7 @@ export const rootMachine = setup({
           target: "Hub",
           actions: [
             assign({
-              battleProfile: ({ event }) => event.output.head.profile,
+              playerData: ({ event }) => event.output.head.playerData,
               battleProfileStoreState: ({ event }) => event.output,
               persistenceIssue: null,
             }),
@@ -331,7 +338,7 @@ export const rootMachine = setup({
             onDone: {
               target: "Browsing",
               actions: assign({
-                battleProfile: ({ event }) => event.output.head.profile,
+                playerData: ({ event }) => event.output.head.playerData,
                 battleProfileStoreState: ({ event }) => event.output,
                 pendingBattleProfileCommit: null,
                 persistenceIssue: null,
@@ -412,7 +419,7 @@ export const rootMachine = setup({
             onDone: {
               target: "Ready",
               actions: assign({
-                battleProfile: ({ event }) => event.output.head.profile,
+                playerData: ({ event }) => event.output.head.playerData,
                 battleProfileStoreState: ({ event }) => event.output,
                 pendingBattleProfileCommit: null,
               }),
