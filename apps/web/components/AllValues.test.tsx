@@ -226,7 +226,9 @@ describe("All Values Component Integration", () => {
     expect(
       screen.getByRole("alertdialog", { name: "Update Ingenuity?" }),
     ).toBeVisible()
-    expect(screen.getByRole("button", { name: "Update Value" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Update Value" })).toHaveClass(
+      "text-black",
+    )
     expect(onUpdateCustomValue).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
@@ -321,9 +323,11 @@ describe("All Values Component Integration", () => {
     if (!targetListItem) {
       throw new Error("Expected Ingenuity list item in DOM")
     }
-    fireEvent.click(
-      within(targetListItem).getByRole("button", { name: "Delete" }),
-    )
+    const deleteButton = within(targetListItem).getByRole("button", {
+      name: "Delete",
+    })
+    expect(deleteButton).toHaveClass("text-black")
+    fireEvent.click(deleteButton)
     expect(
       screen.getByRole("alertdialog", { name: "Remove Ingenuity?" }),
     ).toBeVisible()
@@ -334,7 +338,11 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Delete" }),
     )
-    fireEvent.click(screen.getByRole("button", { name: "Delete Value" }))
+    const deleteValueButton = screen.getByRole("button", {
+      name: "Delete Value",
+    })
+    expect(deleteValueButton).toHaveClass("text-black")
+    fireEvent.click(deleteValueButton)
 
     expect(onDeleteCustomValue).toHaveBeenCalledWith(
       activeDeck.customValues[0].id,
@@ -368,7 +376,7 @@ describe("All Values Component Integration", () => {
     })
     expect(
       screen.getByText("This value already exists. Open it instead."),
-    ).toBeInTheDocument()
+    ).toHaveClass("text-black")
     expect(screen.getByRole("button", { name: "Review Update" })).toBeDisabled()
   })
 

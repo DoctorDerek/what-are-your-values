@@ -31,7 +31,9 @@ describe("Battle Action Bar", () => {
     expect(onUndo).not.toHaveBeenCalled()
     expect(onRedo).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole("button", { name: "Stop" }))
+    const stop = screen.getByRole("button", { name: "Stop" })
+    expect(stop).toHaveClass("text-black")
+    fireEvent.click(stop)
     expect(onStop).toHaveBeenCalledTimes(1)
 
     rerender(
