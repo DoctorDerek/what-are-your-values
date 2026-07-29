@@ -4,6 +4,7 @@ import type {
   ValueId,
 } from "@game/data/src/Value"
 import { createCustomValueId } from "@game/data/src/Value"
+import { getErrorMessage } from "@game/utils/src/Errors"
 import { assign, setup } from "xstate"
 import { createInitialBattleProfile, type BattleProfile } from "./BattleProfile"
 import {
@@ -286,10 +287,6 @@ function createDeckRevisionCommitFromDelete({
   })
 
   return createDeckRevisionCommit({ profile, revisedCustomValues })
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
 }
 
 export const rootMachine = setup({
