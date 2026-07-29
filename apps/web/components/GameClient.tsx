@@ -181,6 +181,7 @@ export default function GameClient() {
         initialValueId={pendingAllValuesValueId}
         openCustomValueBuilder={shouldOpenCustomValueBuilder}
         isPersistencePending={state.matches({ AllValues: "Persisting" })}
+        persistenceIssue={state.context.persistenceIssue}
         onClose={handleAllValuesClose}
         onAddCustomValue={handleAddCustomValue}
         onUpdateCustomValue={handleUpdateCustomValue}
