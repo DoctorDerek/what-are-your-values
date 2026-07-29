@@ -3,7 +3,6 @@
 import {
   getValueDisplayDefinition,
   getValueDisplayName,
-  normalizeValueNameForComparison,
   type CustomValueId,
   type ValueId,
 } from "@game/data/src/Value"
@@ -11,6 +10,11 @@ import {
   sortRankedValuesAlphabetically,
   type RankedValue,
 } from "@game/data/src/ValueRanking"
+import {
+  filterRankedValuesByQuery,
+  findRankedValueNameMatches,
+  hasExactRankedValueNameCollision,
+} from "@game/data/src/ValueSearch"
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
@@ -81,47 +85,20 @@ export default function AllValues({
   const orderedValues = hasComparisons
     ? rankedValues
     : sortRankedValuesAlphabetically(rankedValues)
-  const normalizedQuery = normalizeValueNameForComparison(searchQuery)
   const visibleValues = useMemo(
-    () =>
-      normalizedQuery.length === 0
-        ? orderedValues
-        : orderedValues.filter(
-            ({ definition }) =>
-              normalizeValueNameForComparison(
-                getValueDisplayName(definition),
-              ).includes(normalizedQuery) ||
-              getValueDisplayDefinition(definition)
-                .toLocaleLowerCase("en-US")
-                .includes(normalizedQuery),
-          ),
-    [normalizedQuery, orderedValues],
-  )
-  const normalizedValueNames = useMemo(
-    () =>
-      new Set(
-        rankedValues.map(({ definition }) =>
-          normalizeValueNameForComparison(getValueDisplayName(definition)),
-        ),
-      ),
-    [rankedValues],
+    () => filterRankedValuesByQuery(orderedValues, searchQuery),
+    [orderedValues, searchQuery],
   )
   const trimmedAddName = addName.trim()
   const trimmedAddDefinition = addDefinition.trim()
-  const normalizedAddName = normalizeValueNameForComparison(trimmedAddName)
   const matchingAddValues = useMemo(
-    () =>
-      normalizedAddName.length === 0
-        ? []
-        : rankedValues.filter(({ definition }) =>
-            normalizeValueNameForComparison(
-              getValueDisplayName(definition),
-            ).includes(normalizedAddName),
-          ),
-    [normalizedAddName, rankedValues],
+    () => findRankedValueNameMatches(rankedValues, trimmedAddName),
+    [rankedValues, trimmedAddName],
   )
-  const hasDuplicateAddName =
-    normalizedAddName.length > 0 && normalizedValueNames.has(normalizedAddName)
+  const hasDuplicateAddName = hasExactRankedValueNameCollision({
+    rankedValues,
+    name: trimmedAddName,
+  })
   const canSubmitAdd =
     trimmedAddName.length > 0 &&
     trimmedAddDefinition.length > 0 &&
@@ -129,15 +106,11 @@ export default function AllValues({
   const editableCustomValue = rankedValues.find(
     ({ definition }) => definition.id === editingValueId,
   )?.definition
-  const normalizedEditName = normalizeValueNameForComparison(editName)
-  const isDuplicateEditName =
-    normalizedEditName.length > 0 &&
-    rankedValues.some(
-      ({ definition }) =>
-        definition.id !== editingValueId &&
-        normalizeValueNameForComparison(getValueDisplayName(definition)) ===
-          normalizedEditName,
-    )
+  const isDuplicateEditName = hasExactRankedValueNameCollision({
+    rankedValues,
+    name: editName,
+    excludedValueId: editingValueId,
+  })
   const canSubmitEdit =
     editableCustomValue?.kind === "custom" &&
     editName.trim().length > 0 &&
