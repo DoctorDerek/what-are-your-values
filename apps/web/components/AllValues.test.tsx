@@ -138,6 +138,68 @@ describe("All Values Component Integration", () => {
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
   })
 
+  it("explains required fields after interaction and counts grapheme clusters", () => {
+    renderAllValues()
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    const nameInput = screen.getByLabelText("Custom Value Name")
+    const definitionInput = screen.getByLabelText("Personal Definition")
+
+    expect(screen.getByText("0 / 60 characters")).toBeVisible()
+    expect(screen.getByText("0 / 280 characters")).toBeVisible()
+    expect(
+      screen.queryByText("Enter a name for this value."),
+    ).not.toBeInTheDocument()
+
+    fireEvent.blur(nameInput)
+    fireEvent.blur(definitionInput)
+
+    expect(screen.getByText("Enter a name for this value.")).toBeVisible()
+    expect(
+      screen.getByText("Enter a short personal definition for this value."),
+    ).toBeVisible()
+    expect(nameInput).toHaveAttribute("aria-invalid", "true")
+    expect(definitionInput).toHaveAttribute("aria-invalid", "true")
+
+    fireEvent.change(nameInput, { target: { value: "👨‍👩‍👧‍👦" } })
+    fireEvent.change(definitionInput, {
+      target: { value: "Caring for family with intention." },
+    })
+
+    expect(screen.getByText("1 / 60 characters")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Save Value" })).toBeEnabled()
+  })
+
+  it("keeps overlong or controlled Custom Value drafts visible and unsaved", () => {
+    const onAddCustomValue = vi.fn()
+
+    renderAllValues(undefined, { onAddCustomValue })
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    const nameInput = screen.getByLabelText("Custom Value Name")
+    const definitionInput = screen.getByLabelText("Personal Definition")
+    fireEvent.change(nameInput, { target: { value: "🦝".repeat(61) } })
+    fireEvent.change(definitionInput, {
+      target: { value: "Purpose\u202e" },
+    })
+    fireEvent.blur(nameInput)
+    fireEvent.blur(definitionInput)
+
+    expect(
+      screen.getByText("Use 60 or fewer characters for the value name."),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Remove invisible or control characters from the personal definition.",
+      ),
+    ).toBeVisible()
+    expect(screen.getByText("61 / 60 characters")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Save Value" })).toBeDisabled()
+    expect(onAddCustomValue).not.toHaveBeenCalled()
+    expect(nameInput).toHaveValue("🦝".repeat(61))
+    expect(definitionInput).toHaveValue("Purpose\u202e")
+  })
+
   it("cancels an unsaved custom value draft", () => {
     renderAllValues()
 
@@ -374,9 +436,14 @@ describe("All Values Component Integration", () => {
     fireEvent.change(screen.getByLabelText("Custom Value Name"), {
       target: { value: "Curiosity Engine" },
     })
+    fireEvent.blur(screen.getByLabelText("Custom Value Name"))
     expect(
       screen.getByText("This value already exists. Open it instead."),
     ).toHaveClass("text-black")
+    expect(screen.getByLabelText("Custom Value Name")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
     expect(screen.getByRole("button", { name: "Review Update" })).toBeDisabled()
   })
 
