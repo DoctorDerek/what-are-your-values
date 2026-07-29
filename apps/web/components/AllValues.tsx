@@ -260,7 +260,7 @@ export default function AllValues({
                     setDeletingValueId(definition.id)
                     setEditingValueId(null)
                   }}
-                  className="bg-mapache-vivid-secondary-red border-4 border-black px-3 py-2 text-lg font-black text-white uppercase focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="bg-mapache-vivid-secondary-red border-4 border-black px-3 py-2 text-lg font-black text-black uppercase focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
                   Delete
                 </button>
@@ -295,7 +295,7 @@ export default function AllValues({
                     onDeleteCustomValue(customValueId)
                     setDeletingValueId(null)
                   }}
-                  className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-white uppercase"
+                  className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-black uppercase"
                 >
                   Delete Value
                 </button>
@@ -335,7 +335,7 @@ export default function AllValues({
               {isDuplicateEditName ? (
                 <p
                   role="status"
-                  className="border-mapache-vivid-secondary-red bg-mapache-vivid-secondary-red/15 text-mapache-vivid-secondary-red rounded-sm border-4 p-3 text-base font-black uppercase"
+                  className="border-mapache-vivid-secondary-red bg-mapache-vivid-secondary-red/15 rounded-sm border-4 p-3 text-base font-black text-black uppercase"
                 >
                   This value already exists. Open it instead.
                 </p>
@@ -362,7 +362,7 @@ export default function AllValues({
                     <button
                       type="button"
                       onClick={confirmUpdateCustomValue}
-                      className="bg-mapache-vivid-primary-orange border-4 border-black px-4 py-2 font-black text-white uppercase"
+                      className="bg-mapache-vivid-primary-orange border-4 border-black px-4 py-2 font-black text-black uppercase"
                     >
                       Update Value
                     </button>
@@ -381,7 +381,7 @@ export default function AllValues({
                   <button
                     type="button"
                     onClick={cancelEdit}
-                    className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-white uppercase"
+                    className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-black uppercase"
                   >
                     Cancel
                   </button>
