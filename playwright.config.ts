@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test"
 
 const vercelTrustedOidcToken = process.env.PLAYWRIGHT_VERCEL_TRUSTED_OIDC_TOKEN
+const localBaseUrl = "http://localhost:3037"
 
 export default defineConfig({
   testDir: "./e2e",
@@ -10,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || "http://localhost:3000",
+    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || localBaseUrl,
     extraHTTPHeaders: vercelTrustedOidcToken
       ? { "x-vercel-trusted-oidc-idp-token": vercelTrustedOidcToken }
       : undefined,
@@ -35,7 +36,7 @@ export default defineConfig({
     : {
         webServer: {
           command: "pnpm run dev",
-          url: "http://localhost:3000",
+          url: localBaseUrl,
           reuseExistingServer: !process.env.CI,
         },
       }),
