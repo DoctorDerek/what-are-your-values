@@ -13,6 +13,11 @@ import type { BattleId } from "./BattleIdentity"
 import type { BattleProfile } from "./BattleProfile"
 import type { BattleProfileEvent } from "./BattleProfileEvent"
 
+type BattleChoiceAchievementEvent = Extract<
+  BattleProfileEvent,
+  { readonly type: "battle-choice" }
+>
+
 function incrementSafeInteger(value: number, label: string) {
   if (value === Number.MAX_SAFE_INTEGER) {
     throw new Error(`${label} cannot be incremented safely`)
@@ -69,7 +74,7 @@ function getNewlySatisfiedAchievements({
   readonly priorState: AchievementState
   readonly priorProfile: BattleProfile
   readonly resultingProfile: BattleProfile
-  readonly event: Extract<BattleProfileEvent, { type: "battle-choice" }>
+  readonly event: BattleChoiceAchievementEvent
   readonly lifetimeBattleCount: number
   readonly completedCycleCount: number
   readonly isNewBattle: boolean
@@ -132,7 +137,7 @@ function isAchievementSatisfied({
   readonly priorState: AchievementState
   readonly priorProfile: BattleProfile
   readonly resultingProfile: BattleProfile
-  readonly event: Extract<BattleProfileEvent, { type: "battle-choice" }>
+  readonly event: BattleChoiceAchievementEvent
   readonly lifetimeBattleCount: number
   readonly completedCycleCount: number
   readonly isNewBattle: boolean
@@ -195,7 +200,7 @@ function applyBattleChoiceAchievementTransition({
   readonly state: AchievementState
   readonly priorProfile: BattleProfile
   readonly resultingProfile: BattleProfile
-  readonly event: Extract<BattleProfileEvent, { type: "battle-choice" }>
+  readonly event: BattleChoiceAchievementEvent
   readonly occurredAt: string
 }) {
   const isNewBattle = !state.progress.countedBattleWindow.includes(
