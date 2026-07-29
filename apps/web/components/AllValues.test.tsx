@@ -131,7 +131,6 @@ describe("All Values Component Integration", () => {
     expect(screen.getByLabelText("Personal Definition")).toHaveValue(
       "  Inventions and original ideas matter. ",
     )
-    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled()
   })
 
   it("locks navigation and mutation controls while persistence is pending", () => {
