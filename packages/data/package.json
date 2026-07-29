@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@game/utils": "workspace:*"
+    "@game/utils": "workspace:*",
+    "unicode-case-folding": "^1"
   },
   "devDependencies": {
     "typescript": "^6"
