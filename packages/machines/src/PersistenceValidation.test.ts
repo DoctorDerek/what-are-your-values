@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { createInitialBattleProfile } from "./BattleProfile"
 import {
   readActiveValueId,
+  readBoolean,
   readIsoTimestamp,
   readNonNegativeSafeInteger,
   readPositiveSafeInteger,
@@ -31,6 +32,8 @@ describe("Persistence Validation", () => {
     )
     expect(() => readTuple(["one"], 2, "Record")).toThrow("Invalid Record")
     expect(() => readString(42, "Name")).toThrow("Invalid Name")
+    expect(readBoolean(true, "Enabled")).toBe(true)
+    expect(() => readBoolean("true", "Enabled")).toThrow("Invalid Enabled")
     expect(() => readNonNegativeSafeInteger(-1, "Generation")).toThrow(
       "Invalid Generation",
     )
