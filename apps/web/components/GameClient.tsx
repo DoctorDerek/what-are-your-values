@@ -87,6 +87,7 @@ export default function GameClient() {
   )
   const handleAddCustomValue = useCallback(
     (name: string, definition: string) => {
+      setShouldOpenCustomValueBuilder(false)
       send({
         type: "ALL_VALUES.ADD_REQUESTED",
         name,
@@ -176,9 +177,11 @@ export default function GameClient() {
   if (state.matches("AllValues")) {
     return (
       <AllValues
+        key={battleProfile.scheduler.deckRevision}
         rankedValues={rankedValues}
         initialValueId={pendingAllValuesValueId}
         openCustomValueBuilder={shouldOpenCustomValueBuilder}
+        isPersistencePending={state.matches({ AllValues: "Persisting" })}
         onClose={handleAllValuesClose}
         onAddCustomValue={handleAddCustomValue}
         onUpdateCustomValue={handleUpdateCustomValue}
