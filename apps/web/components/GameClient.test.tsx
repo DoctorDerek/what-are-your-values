@@ -244,6 +244,9 @@ describe("GameClient Integration", () => {
       }
       return valueRow
     })
+    expect(
+      screen.queryByRole("form", { name: "Add Custom Value" }),
+    ).not.toBeInTheDocument()
     fireEvent.click(
       within(customValueRow).getByRole("button", { name: "Edit" }),
     )
@@ -266,6 +269,9 @@ describe("GameClient Integration", () => {
       }
       return valueRow
     })
+    expect(
+      screen.queryByRole("alertdialog", { name: "Update Ingenuity?" }),
+    ).not.toBeInTheDocument()
     fireEvent.click(
       within(updatedValueRow).getByRole("button", { name: "Delete" }),
     )

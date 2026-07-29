@@ -124,6 +124,32 @@ describe("All Values Component Integration", () => {
       "Ingenuity",
       "Inventions and original ideas matter.",
     )
+    expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
+    expect(screen.getByLabelText("Custom Value Name")).toHaveValue(
+      "   Ingenuity   ",
+    )
+    expect(screen.getByLabelText("Personal Definition")).toHaveValue(
+      "  Inventions and original ideas matter. ",
+    )
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled()
+  })
+
+  it("locks navigation and mutation controls while persistence is pending", () => {
+    renderAllValues(undefined, {
+      openCustomValueBuilder: true,
+      isPersistencePending: true,
+    })
+
+    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Close Custom Value Form" }),
+    ).toBeDisabled()
+    expect(screen.getByLabelText("Custom Value Name")).toBeDisabled()
+    expect(screen.getByLabelText("Personal Definition")).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: /Start with Ingenuity/ }),
+    ).toBeDisabled()
   })
 
   it("keeps an incomplete add draft open without submitting it", () => {
