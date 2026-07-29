@@ -40,5 +40,9 @@ describe("Value presentation copy", () => {
     expect(normalizeValueNameForComparison("INGEN\u2009UITY")).toBe(
       "ingen uity",
     )
+    expect(normalizeValueNameForComparison("Straße")).toBe(
+      normalizeValueNameForComparison("STRASSE"),
+    )
+    expect(normalizeValueNameForComparison("ＦＵＮ")).toBe("fun")
   })
 })

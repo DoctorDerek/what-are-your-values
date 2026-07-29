@@ -1,3 +1,5 @@
+import { caseFold } from "unicode-case-folding"
+
 declare const canonicalValueIdBrand: unique symbol
 declare const customValueIdBrand: unique symbol
 
@@ -47,11 +49,7 @@ export function getValueDisplayDefinition(value: ActiveValueDefinition) {
 }
 
 export function normalizeValueNameForComparison(value: string) {
-  return value
-    .normalize("NFKC")
-    .trim()
-    .replace(/\s+/gu, " ")
-    .toLocaleLowerCase("en-US")
+  return caseFold(value.trim().replace(/\s+/gu, " ").normalize("NFKC"))
 }
 
 const canonicalValueIdPattern = /^pvcs-2011:[a-z0-9]+(?:-[a-z0-9]+)*$/
