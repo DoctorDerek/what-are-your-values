@@ -23,6 +23,9 @@ describe("Battle Action Bar", () => {
     const redo = screen.getByRole("button", { name: "Redo" })
     expect(undo).toBeDisabled()
     expect(redo).toBeDisabled()
+    for (const shortcut of ["[Z]", "[Y]", "[ESC]"]) {
+      expect(screen.getByText(shortcut)).toHaveClass("hidden", "sm:inline")
+    }
     fireEvent.click(undo)
     fireEvent.click(redo)
     expect(onUndo).not.toHaveBeenCalled()
