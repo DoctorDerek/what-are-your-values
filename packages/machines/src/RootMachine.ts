@@ -270,6 +270,7 @@ export const rootMachine = setup({
             "ALL_VALUES.ADD_REQUESTED": {
               target: "Persisting",
               actions: assign({
+                persistenceIssue: null,
                 pendingBattleProfileCommit: ({ context, event }) => {
                   if (event.type !== "ALL_VALUES.ADD_REQUESTED") {
                     throw new Error("Invalid add request event type")
@@ -288,6 +289,7 @@ export const rootMachine = setup({
             "ALL_VALUES.UPDATE_REQUESTED": {
               target: "Persisting",
               actions: assign({
+                persistenceIssue: null,
                 pendingBattleProfileCommit: ({ context, event }) => {
                   if (event.type !== "ALL_VALUES.UPDATE_REQUESTED") {
                     throw new Error("Invalid update request event type")
@@ -306,6 +308,7 @@ export const rootMachine = setup({
             "ALL_VALUES.DELETE_REQUESTED": {
               target: "Persisting",
               actions: assign({
+                persistenceIssue: null,
                 pendingBattleProfileCommit: ({ context, event }) => {
                   if (event.type !== "ALL_VALUES.DELETE_REQUESTED") {
                     throw new Error("Invalid delete request event type")
@@ -335,10 +338,11 @@ export const rootMachine = setup({
                 battleProfile: ({ event }) => event.output.head.profile,
                 battleProfileStoreState: ({ event }) => event.output,
                 pendingBattleProfileCommit: null,
+                persistenceIssue: null,
               }),
             },
             onError: {
-              target: "#root.PersistenceFailure",
+              target: "Browsing",
               actions: assign({
                 pendingBattleProfileCommit: null,
                 persistenceIssue: ({ event }) => getErrorMessage(event.error),

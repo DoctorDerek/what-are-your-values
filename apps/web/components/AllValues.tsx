@@ -48,6 +48,7 @@ export default function AllValues({
   initialValueId,
   openCustomValueBuilder,
   isPersistencePending = false,
+  persistenceIssue = null,
   onClose,
   onAddCustomValue,
   onUpdateCustomValue,
@@ -57,6 +58,7 @@ export default function AllValues({
   initialValueId?: ValueId | null
   openCustomValueBuilder?: boolean
   isPersistencePending?: boolean
+  persistenceIssue?: string | null
   onClose: () => void
   onAddCustomValue: (name: string, definition: string) => void
   onUpdateCustomValue: (
@@ -71,10 +73,6 @@ export default function AllValues({
   const [addDefinition, setAddDefinition] = useState("")
   const [isAddNameTouched, setIsAddNameTouched] = useState(false)
   const [isAddDefinitionTouched, setIsAddDefinitionTouched] = useState(false)
-  const [pendingAddDraft, setPendingAddDraft] = useState<Readonly<{
-    name: string
-    definition: string
-  }> | null>(null)
   const [editingValueId, setEditingValueId] = useState<CustomValueId | null>(
     null,
   )
@@ -82,11 +80,6 @@ export default function AllValues({
   const [editDefinition, setEditDefinition] = useState("")
   const [isEditNameTouched, setIsEditNameTouched] = useState(false)
   const [isEditDefinitionTouched, setIsEditDefinitionTouched] = useState(false)
-  const [pendingEditDraft, setPendingEditDraft] = useState<Readonly<{
-    valueId: CustomValueId
-    name: string
-    definition: string
-  }> | null>(null)
   const [isConfirmingEdit, setIsConfirmingEdit] = useState(false)
   const [deletingValueId, setDeletingValueId] = useState<CustomValueId | null>(
     null,
@@ -186,7 +179,7 @@ export default function AllValues({
 
   const handleAddCustomValue = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!canSubmitAdd || pendingAddDraft || isPersistencePending) {
+    if (!canSubmitAdd || isPersistencePending) {
       return
     }
 
@@ -194,7 +187,6 @@ export default function AllValues({
       name: addValidation.name.value,
       definition: addValidation.definition.value,
     })
-    setPendingAddDraft(draft)
     onAddCustomValue(draft.name, draft.definition)
   }
 
@@ -208,7 +200,6 @@ export default function AllValues({
     setEditDefinition(definition)
     setIsEditNameTouched(false)
     setIsEditDefinitionTouched(false)
-    setPendingEditDraft(null)
     setIsConfirmingEdit(false)
   }
 
@@ -223,12 +214,7 @@ export default function AllValues({
 
   const handleUpdateCustomValue = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (
-      !canSubmitEdit ||
-      !editingValueId ||
-      pendingEditDraft ||
-      isPersistencePending
-    ) {
+    if (!canSubmitEdit || !editingValueId || isPersistencePending) {
       return
     }
 
@@ -236,12 +222,7 @@ export default function AllValues({
   }
 
   const confirmUpdateCustomValue = () => {
-    if (
-      !canSubmitEdit ||
-      !editingValueId ||
-      pendingEditDraft ||
-      isPersistencePending
-    ) {
+    if (!canSubmitEdit || !editingValueId || isPersistencePending) {
       return
     }
 
@@ -250,7 +231,6 @@ export default function AllValues({
       name: editValidation.name.value,
       definition: editValidation.definition.value,
     })
-    setPendingEditDraft(draft)
     onUpdateCustomValue(draft.valueId, draft.name, draft.definition)
   }
 
@@ -373,7 +353,7 @@ export default function AllValues({
               <input
                 id={`custom-value-name-${definition.id}`}
                 value={editName}
-                disabled={isPersistencePending || pendingEditDraft !== null}
+                disabled={isPersistencePending}
                 onChange={(event) => setEditName(event.target.value)}
                 onBlur={() => setIsEditNameTouched(true)}
                 aria-invalid={
@@ -402,7 +382,7 @@ export default function AllValues({
               <textarea
                 id={`custom-value-definition-${definition.id}`}
                 value={editDefinition}
-                disabled={isPersistencePending || pendingEditDraft !== null}
+                disabled={isPersistencePending}
                 onChange={(event) => setEditDefinition(event.target.value)}
                 onBlur={() => setIsEditDefinitionTouched(true)}
                 aria-invalid={
@@ -434,9 +414,7 @@ export default function AllValues({
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
-                      disabled={
-                        isPersistencePending || pendingEditDraft !== null
-                      }
+                      disabled={isPersistencePending}
                       onClick={() => setIsConfirmingEdit(false)}
                       className="bg-mapache-vivid-secondary-purple border-4 border-black px-4 py-2 font-black text-white uppercase"
                     >
@@ -444,9 +422,7 @@ export default function AllValues({
                     </button>
                     <button
                       type="button"
-                      disabled={
-                        isPersistencePending || pendingEditDraft !== null
-                      }
+                      disabled={isPersistencePending}
                       onClick={confirmUpdateCustomValue}
                       className="bg-mapache-vivid-primary-orange border-4 border-black px-4 py-2 font-black text-black uppercase"
                     >
@@ -459,18 +435,14 @@ export default function AllValues({
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    disabled={
-                      !canSubmitEdit ||
-                      isPersistencePending ||
-                      pendingEditDraft !== null
-                    }
+                    disabled={!canSubmitEdit || isPersistencePending}
                     className="bg-mapache-vivid-secondary-green border-4 border-black px-4 py-2 font-black uppercase disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Review Update
                   </button>
                   <button
                     type="button"
-                    disabled={isPersistencePending || pendingEditDraft !== null}
+                    disabled={isPersistencePending}
                     onClick={cancelEdit}
                     className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-black uppercase"
                   >
@@ -540,6 +512,21 @@ export default function AllValues({
           {visibleValues.length}{" "}
           {visibleValues.length === 1 ? "Value" : "Values"} Shown
         </p>
+        {persistenceIssue ? (
+          <div
+            role="alert"
+            aria-label="Custom Value save failed"
+            className="bg-mapache-vivid-primary-orange mt-6 border-4 border-black p-5 text-black shadow-[8px_8px_0px_0px_#000000]"
+          >
+            <h2 className="text-2xl font-black uppercase">
+              That change wasn’t saved.
+            </h2>
+            <p className="mt-2 text-lg font-bold">
+              Your current data and draft are unchanged. Review them and try
+              again.
+            </p>
+          </div>
+        ) : null}
 
         <section className="mt-8">
           <h2 className="text-2xl font-black uppercase">
@@ -558,7 +545,7 @@ export default function AllValues({
                 <button
                   key={name}
                   type="button"
-                  disabled={isPersistencePending || pendingAddDraft !== null}
+                  disabled={isPersistencePending}
                   onClick={() => {
                     setAddName(name)
                     setAddDefinition(definition)
@@ -576,7 +563,7 @@ export default function AllValues({
           </div>
           <button
             type="button"
-            disabled={isPersistencePending || pendingAddDraft !== null}
+            disabled={isPersistencePending}
             onClick={() => setIsAddingCustomValue((value) => !value)}
             className="bg-mapache-vivid-primary-orange mt-5 border-4 border-black px-5 py-3 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[6px] active:translate-y-[6px] active:shadow-none"
           >
@@ -602,7 +589,7 @@ export default function AllValues({
                   id="custom-value-name"
                   type="text"
                   value={addName}
-                  disabled={isPersistencePending || pendingAddDraft !== null}
+                  disabled={isPersistencePending}
                   onChange={(event) => setAddName(event.target.value)}
                   onBlur={() => setIsAddNameTouched(true)}
                   aria-invalid={
@@ -633,7 +620,7 @@ export default function AllValues({
                   ref={addDefinitionRef}
                   id="custom-value-definition"
                   value={addDefinition}
-                  disabled={isPersistencePending || pendingAddDraft !== null}
+                  disabled={isPersistencePending}
                   onChange={(event) => setAddDefinition(event.target.value)}
                   onBlur={() => setIsAddDefinitionTouched(true)}
                   aria-invalid={
@@ -668,9 +655,7 @@ export default function AllValues({
                       <li key={definition.id}>
                         <button
                           type="button"
-                          disabled={
-                            isPersistencePending || pendingAddDraft !== null
-                          }
+                          disabled={isPersistencePending}
                           onClick={() => openMatchingValue(definition.id)}
                           className="hover:text-mapache-vivid-secondary-purple border-b-4 border-black text-left text-lg font-black uppercase focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
                         >
@@ -684,20 +669,14 @@ export default function AllValues({
               <div className="flex flex-wrap gap-3">
                 <button
                   type="submit"
-                  disabled={
-                    !canSubmitAdd ||
-                    isPersistencePending ||
-                    pendingAddDraft !== null
-                  }
+                  disabled={!canSubmitAdd || isPersistencePending}
                   className="bg-mapache-vivid-secondary-green border-4 border-black px-5 py-3 text-xl font-black uppercase disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {isPersistencePending || pendingAddDraft
-                    ? "Saving…"
-                    : "Save Value"}
+                  {isPersistencePending ? "Saving…" : "Save Value"}
                 </button>
                 <button
                   type="button"
-                  disabled={isPersistencePending || pendingAddDraft !== null}
+                  disabled={isPersistencePending}
                   onClick={() => {
                     setAddName("")
                     setAddDefinition("")
