@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { createInitialBattleCycle } from "./BattleCycle"
-import { createBattleId, createCycleCompleteEventId } from "./BattleIdentity"
+import {
+  createBattleId,
+  createCycleCompleteEventId,
+  readBattleId,
+} from "./BattleIdentity"
 import {
   advanceSchedulerCursor,
   createSchedulerRestorePoint,
@@ -62,5 +66,29 @@ describe("Battle Identity", () => {
       createCycleCompleteEventId(battleId),
     )
     expect(createCycleCompleteEventId(battleId)).not.toBe(battleId)
+  })
+
+  it("reads only canonical battle identities with supported scheduler fields", () => {
+    const battleCycle = createInitialBattleCycle(
+      "persisted-battle-identity-seed",
+    )
+    const battleId = createBattleId(battleCycle.scheduler)
+
+    expect(readBattleId(battleId, "Battle ID")).toBe(battleId)
+    expect(() => readBattleId("not-json", "Battle ID")).toThrow(
+      "Invalid Battle ID",
+    )
+    expect(() =>
+      readBattleId(JSON.stringify(["battle-v1"]), "Battle ID"),
+    ).toThrow("Invalid Battle ID")
+    expect(() =>
+      readBattleId(
+        battleId.replace('"full-cycle"', '"future-schedule"'),
+        "Battle ID",
+      ),
+    ).toThrow("Invalid Battle ID")
+    expect(() => readBattleId(` ${battleId}`, "Battle ID")).toThrow(
+      "Invalid Battle ID",
+    )
   })
 })
