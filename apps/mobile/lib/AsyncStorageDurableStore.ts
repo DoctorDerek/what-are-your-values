@@ -83,12 +83,6 @@ async function readRequestedEntries(
     entries.set(key, value)
   })
 
-  requestedKeys.forEach((key) => {
-    if (!entries.has(key)) {
-      throw new Error(`AsyncStorage omitted a requested key: ${key}`)
-    }
-  })
-
   return entries
 }
 
