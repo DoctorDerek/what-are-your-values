@@ -22,6 +22,8 @@ export default function GameClient() {
     input: {
       durableStore,
       appVersion: packageMetadata.version,
+      sourceBuild:
+        process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "development",
       now: () => new Date().toISOString(),
       randomUuid: () => crypto.randomUUID(),
     },
