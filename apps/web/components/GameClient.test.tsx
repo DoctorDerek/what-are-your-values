@@ -1,5 +1,18 @@
-import type { DurableStoreTransaction } from "@game/machines/src/DurableStoreAdapter"
+import {
+  BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  BATTLE_PROFILE_SNAPSHOT_A_KEY,
+} from "@game/machines/src/BattleProfileStore"
+import type {
+  DurableStoreEntry,
+  DurableStoreTransaction,
+} from "@game/machines/src/DurableStoreAdapter"
+import { createInitialPlayerData } from "@game/machines/src/PlayerData"
 import type { PreparedWayvmDownload } from "@game/machines/src/PlayerDataPortabilityActors"
+import {
+  createWayvmExport,
+  serializeWayvmExport,
+} from "@game/machines/src/WayvmExport"
 import {
   fireEvent,
   render,
@@ -12,6 +25,7 @@ import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
 
 const durableStoreFailure = vi.hoisted(() => ({
+  initialEntries: [] as DurableStoreEntry[],
   readEnabled: false,
   writeEnabled: false,
 }))
@@ -25,7 +39,9 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
 
   return {
     createIndexedDbDurableStore: () => {
-      const durableStore = createInMemoryDurableStore()
+      const durableStore = createInMemoryDurableStore(
+        durableStoreFailure.initialEntries,
+      )
 
       return {
         readAll: async () => {
@@ -60,6 +76,7 @@ vi.mock("@/lib/PlayerDataFiles", async (importOriginal) => {
 
 describe("GameClient Integration", () => {
   afterEach(() => {
+    durableStoreFailure.initialEntries = []
     durableStoreFailure.readEnabled = false
     durableStoreFailure.writeEnabled = false
     playerDataFileSpies.download.mockReset()
@@ -81,6 +98,70 @@ describe("GameClient Integration", () => {
       screen.getByText(
         "Your saved data was left unchanged. Reload this page to try again.",
       ),
+    ).toBeVisible()
+  })
+
+  it("exports captured corruption and restores the retained last-known-good save through validated review", async () => {
+    const retainedPlayerData = createInitialPlayerData({
+      schedulerSeed: "game-client-retained-recovery",
+      createdAt: "2026-07-29T12:34:56.000Z",
+    })
+    const serializedBackup = serializeWayvmExport(
+      await createWayvmExport({
+        exportedAt: "2026-07-29T12:34:56.000Z",
+        sourceAppVersion: "0.1.0",
+        sourceBuild: "retained-game-client-build",
+        playerData: retainedPlayerData,
+      }),
+    )
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, serializedBackup],
+    ]
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your Saved Data Needs Attention",
+      }),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Export Unreadable Data" }),
+    )
+    await waitFor(() =>
+      expect(playerDataFileSpies.download).toHaveBeenCalledOnce(),
+    )
+    expect(playerDataFileSpies.download.mock.calls[0]?.[0]).toMatchObject({
+      filename: expect.stringContaining("mapache-recovery"),
+      serialized: expect.stringContaining("corrupt-checkpoint"),
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Restore Last Known-Good Save",
+      }),
+    )
+    expect(
+      await screen.findByRole("heading", { name: "Review Import" }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Restore the last known-good save? The unreadable current save will be preserved until restoration succeeds.",
+      ),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Restore Last Known-Good Save",
+      }),
+    )
+
+    expect(
+      await screen.findByText("Last known-good save restored."),
+    ).toHaveAttribute("role", "status")
+    expect(
+      screen.getByRole("heading", { name: "Your Values", level: 1 }),
     ).toBeVisible()
   })
 
