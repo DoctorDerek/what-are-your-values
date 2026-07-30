@@ -9,6 +9,7 @@ import {
 import {
   BATTLE_PROFILE_JOURNAL_KEY_PREFIX,
   BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
   commitBattleProfileStoreEvent,
@@ -238,6 +239,7 @@ describe("Battle Profile Store", () => {
       store,
       state: committedState,
       playerData: importedPlayerData,
+      preImportBackupBytes: "verified-pre-import-backup",
       replacedAt: "2026-07-21T00:02:00.000Z",
     })
     const entriesAfterImport = await store.readAll()
@@ -257,6 +259,9 @@ describe("Battle Profile Store", () => {
       entriesBeforeImport.get(BATTLE_PROFILE_SNAPSHOT_A_KEY),
     )
     expect(entriesAfterImport.has(getBattleProfileJournalKey(1))).toBe(false)
+    expect(entriesAfterImport.get(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY)).toBe(
+      "verified-pre-import-backup",
+    )
     await expect(
       decodeBattleProfileCheckpoint(
         entriesAfterImport.get(BATTLE_PROFILE_SNAPSHOT_B_KEY) ?? "",
@@ -291,6 +296,7 @@ describe("Battle Profile Store", () => {
           schedulerSeed: "rejected-import-seed",
           createdAt: "2026-07-20T00:00:00.000Z",
         }),
+        preImportBackupBytes: "rejected-pre-import-backup",
         replacedAt: "2026-07-21T00:02:00.000Z",
       }),
     ).rejects.toBeInstanceOf(DurableStoreConflictError)
@@ -317,6 +323,7 @@ describe("Battle Profile Store", () => {
       store,
       state: initialState,
       playerData: importedPlayerData,
+      preImportBackupBytes: "continued-pre-import-backup",
       replacedAt: "2026-07-21T00:01:00.000Z",
     })
     const committedState = await commitBattleProfileStoreEvent({
