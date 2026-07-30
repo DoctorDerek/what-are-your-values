@@ -1,14 +1,7 @@
 "use client"
 
+import { formatWayvmImportTimestamp } from "@game/machines/src/WayvmImportPresentation"
 import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
-
-function formatUtcTimestamp(timestamp: string) {
-  return `${new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(timestamp))} UTC`
-}
 
 export default function PlayerDataImportPreview({
   confirmLabel,
@@ -44,7 +37,7 @@ export default function PlayerDataImportPreview({
           <dt className="font-black uppercase">Exported</dt>
           <dd>
             <time dateTime={preview.exportedAt}>
-              {formatUtcTimestamp(preview.exportedAt)}
+              {formatWayvmImportTimestamp(preview.exportedAt)}
             </time>
           </dd>
         </div>
