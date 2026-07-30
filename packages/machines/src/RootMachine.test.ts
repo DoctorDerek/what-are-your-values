@@ -20,6 +20,7 @@ function createRootActor({
     input: {
       durableStore,
       appVersion: "0.1.0",
+      sourceBuild: "test-build",
       now: () => TEST_TIMESTAMP,
     },
   })
