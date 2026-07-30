@@ -1,58 +1,12 @@
 "use client"
 
+import { ACHIEVEMENT_CATALOG } from "@game/machines/src/AchievementCatalog"
 import {
-  ACHIEVEMENT_CATALOG,
-  type AchievementDefinition,
-} from "@game/machines/src/AchievementCatalog"
+  formatAchievementUnlockedDate,
+  getAchievementProgress,
+} from "@game/machines/src/AchievementPresentation"
 import type { AchievementState } from "@game/machines/src/AchievementState"
 import type { BattleProfile } from "@game/machines/src/BattleProfile"
-import { getLevelFromXP } from "@game/utils/src/LevelMath"
-
-function formatUnlockedDate(timestamp: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(new Date(timestamp))
-}
-
-function getAchievementProgress({
-  achievement,
-  achievementState,
-  battleProfile,
-}: {
-  readonly achievement: AchievementDefinition
-  readonly achievementState: AchievementState
-  readonly battleProfile: BattleProfile
-}) {
-  const { condition } = achievement
-  if (condition.kind === "battle-count") {
-    return `${Math.min(
-      achievementState.progress.lifetimeBattleCount,
-      condition.threshold,
-    ).toLocaleString("en-US")} of ${condition.threshold.toLocaleString(
-      "en-US",
-    )} comparisons`
-  }
-  if (condition.kind === "cycle-complete") {
-    return `${Math.min(
-      achievementState.progress.completedCycleCount,
-      1,
-    )} of 1 pair cycles`
-  }
-  if (condition.kind === "top-five") {
-    const valuesWithExperience = Array.from(
-      battleProfile.progressById.values(),
-    ).filter(({ totalXp }) => totalXp > 0).length
-    return `${Math.min(valuesWithExperience, 5)} of 5 values at Level 2`
-  }
-
-  const highestLevel = Math.max(
-    ...Array.from(battleProfile.progressById.values(), ({ totalXp }) =>
-      getLevelFromXP(totalXp),
-    ),
-  )
-  return `Highest value: Level ${highestLevel} of Level ${condition.threshold}`
-}
 
 export default function Achievements({
   achievementState,
@@ -129,7 +83,7 @@ export default function Achievements({
                   <p className="mt-2 font-black">
                     Unlocked{" "}
                     <time dateTime={unlock.unlockedAt}>
-                      {formatUnlockedDate(unlock.unlockedAt)}
+                      {formatAchievementUnlockedDate(unlock.unlockedAt)}
                     </time>
                   </p>
                 ) : null}
