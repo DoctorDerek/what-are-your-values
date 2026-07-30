@@ -2,6 +2,7 @@
 
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
+import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "@game/machines/src/BattleProfileStore"
 import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
@@ -20,6 +21,7 @@ import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import DataManagement, { type DataManagementActivity } from "./DataManagement"
 import Hub from "./Hub"
+import Recovery, { type RecoveryActivity } from "./Recovery"
 import Splash from "./Splash"
 
 export default function GameClient() {
@@ -33,6 +35,7 @@ export default function GameClient() {
       now: () => new Date().toISOString(),
     },
   })
+  const isPersistenceFailure = state.matches("PersistenceFailure")
   const browseAllValuesButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusTargetIdRef = useRef("hub-browse-all-values-button")
   const [pendingAllValuesValueId, setPendingAllValuesValueId] =
@@ -123,18 +126,32 @@ export default function GameClient() {
     [send],
   )
   const handleImportFile = useCallback(
-    async (file: File) => {
+    async (file: File, destination: "data-management" | "recovery") => {
       try {
         const serialized = await readPlayerDataFile(file)
-        send({
-          type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
-          serialized,
-        })
+        send(
+          destination === "recovery"
+            ? {
+                type: "RECOVERY.IMPORT_PREPARE_REQUESTED",
+                serialized,
+              }
+            : {
+                type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+                serialized,
+              },
+        )
       } catch (error: unknown) {
-        send({
-          type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
-          issue: getErrorMessage(error),
-        })
+        send(
+          destination === "recovery"
+            ? {
+                type: "RECOVERY.PLATFORM_FAILURE_REPORTED",
+                issue: getErrorMessage(error),
+              }
+            : {
+                type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+                issue: getErrorMessage(error),
+              },
+        )
       }
     },
     [send],
@@ -155,14 +172,25 @@ export default function GameClient() {
 
     try {
       downloadPlayerDataFile(preparedDownload)
-      send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+      send(
+        isPersistenceFailure
+          ? { type: "RECOVERY.EXPORT_CONSUMED" }
+          : { type: "DATA_MANAGEMENT.EXPORT_CONSUMED" },
+      )
     } catch (error: unknown) {
-      send({
-        type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
-        issue: getErrorMessage(error),
-      })
+      send(
+        isPersistenceFailure
+          ? {
+              type: "RECOVERY.PLATFORM_FAILURE_REPORTED",
+              issue: getErrorMessage(error),
+            }
+          : {
+              type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+              issue: getErrorMessage(error),
+            },
+      )
     }
-  }, [send, state.context.preparedDownload])
+  }, [isPersistenceFailure, send, state.context.preparedDownload])
 
   useEffect(() => {
     if (state.matches("Hub") && shouldRestoreHubFocusRef.current) {
@@ -183,16 +211,54 @@ export default function GameClient() {
     )
   }
 
-  if (state.matches("PersistenceFailure")) {
+  if (isPersistenceFailure) {
+    let activity: RecoveryActivity | null = null
+    if (
+      state.matches({ PersistenceFailure: "PreparingStoredBackup" }) ||
+      state.matches({ PersistenceFailure: "PreparingImport" })
+    ) {
+      activity = "Checking backup…"
+    } else if (state.matches({ PersistenceFailure: "ExportingEvidence" })) {
+      activity = "Exporting unreadable data…"
+    } else if (state.matches({ PersistenceFailure: "ReplacingPlayerData" })) {
+      activity = "Replacing unreadable data…"
+    } else if (state.matches({ PersistenceFailure: "DeletingAllData" })) {
+      activity = "Deleting local data…"
+    }
+
     return (
-      <main className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex min-h-[100dvh] w-full flex-col items-center justify-center gap-6 p-8 text-center">
-        <h1 className="max-w-4xl text-4xl font-black uppercase drop-shadow-[4px_4px_0px_#000000] sm:text-6xl">
-          We couldn’t safely load your values.
-        </h1>
-        <p className="max-w-2xl text-xl font-bold text-white sm:text-2xl">
-          Your saved data was left unchanged. Reload this page to try again.
-        </p>
-      </main>
+      <Recovery
+        activity={activity}
+        hasCapturedData={state.context.recoveryEntries !== null}
+        hasLastKnownGoodSave={
+          state.context.recoveryEntries?.has(
+            BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+          ) ?? false
+        }
+        importSource={state.context.pendingRecoveryImportSource}
+        issue={state.context.portabilityIssue}
+        notice={state.context.portabilityNotice}
+        preview={state.context.pendingImport?.preview ?? null}
+        onCancelImport={() =>
+          send({ type: "RECOVERY.IMPORT_CANCEL_REQUESTED" })
+        }
+        onConfirmImport={() =>
+          send({ type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" })
+        }
+        onDeleteAllData={(acknowledged) =>
+          send({
+            type: "RECOVERY.DELETE_ALL_REQUESTED",
+            acknowledged,
+          })
+        }
+        onExportUnreadableData={() =>
+          send({ type: "RECOVERY.EXPORT_REQUESTED" })
+        }
+        onImportFile={(file) => handleImportFile(file, "recovery")}
+        onRestoreLastKnownGoodSave={() =>
+          send({ type: "RECOVERY.RESTORE_BACKUP_REQUESTED" })
+        }
+      />
     )
   }
 
@@ -212,6 +278,7 @@ export default function GameClient() {
   if (state.matches("Hub")) {
     return (
       <Hub
+        notice={state.context.portabilityNotice}
         rankedValues={rankedValues}
         browseAllValuesButtonRef={browseAllValuesButtonRef}
         onBrowseAllValues={(focusTargetId) => openAllValues({ focusTargetId })}
@@ -270,7 +337,7 @@ export default function GameClient() {
           })
         }
         onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
-        onImportFile={handleImportFile}
+        onImportFile={(file) => handleImportFile(file, "data-management")}
         onOpenReset={(resetKind) =>
           send({
             type: "DATA_MANAGEMENT.RESET_OPEN_REQUESTED",
