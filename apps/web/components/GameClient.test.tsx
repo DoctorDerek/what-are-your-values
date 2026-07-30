@@ -296,6 +296,84 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
   })
 
+  it("returns an earned ranking to the all-tied Hub through the reviewed levels-and-experience reset", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000055",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) {
+      throw new Error("Progress reset winner card is unavailable")
+    }
+    fireEvent.click(winnerCard)
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
+    )
+    fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
+    expect(
+      await screen.findByRole("heading", { name: "Top Five" }),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Manage Data" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset Levels & Experience" }),
+    )
+    expect(
+      screen.getByRole("heading", { name: "Reset Levels & Experience?" }),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset Levels & Experience" }),
+    )
+
+    expect(
+      await screen.findByText(
+        "Levels and experience were reset. Custom Values, achievements, and settings were kept.",
+      ),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Included Values" }),
+    ).toBeVisible()
+    expect(screen.queryByRole("heading", { name: "Top Five" })).toBeNull()
+    expect(screen.getAllByText("Level 1").length).toBeGreaterThan(0)
+  })
+
+  it("requires acknowledgment before deleting all local data and returns through a fresh Introduction", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000056",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Manage Data" }))
+    fireEvent.click(screen.getByRole("button", { name: "Delete All Data" }))
+    const deleteButton = screen.getByRole("button", {
+      name: "Delete All Data",
+    })
+    expect(deleteButton).toBeDisabled()
+
+    fireEvent.click(
+      screen.getByLabelText("I understand that this cannot be undone."),
+    )
+    fireEvent.click(deleteButton)
+
+    expect(
+      await screen.findByText("All local WAYVM player data was deleted."),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Included Values" }),
+    ).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(100)
+  })
+
   it("persists a first-run profile only after introduction completion", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000042",
