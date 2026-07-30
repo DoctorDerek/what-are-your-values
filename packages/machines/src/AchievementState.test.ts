@@ -9,6 +9,7 @@ import {
   createBoundedBattleIdSet,
   createInitialAchievementState,
   getPendingAchievementUnlocks,
+  markAchievementPresented,
 } from "./AchievementState"
 import { createBattleId } from "./BattleIdentity"
 import { createSchedulerRestorePoint } from "./PairScheduler"
@@ -84,6 +85,51 @@ describe("Achievement State", () => {
       firstBattleId,
       tenBattlesId,
     ])
+  })
+
+  it("marks only unlocked achievements as presented in stable order and remains idempotent", () => {
+    const activeDeck = createActiveDeck([])
+    const firstBattleId = readAchievementId("battle.first", "Achievement ID")
+    const tenBattlesId = readAchievementId("battle.10", "Achievement ID")
+    const initial = createInitialAchievementState(activeDeck)
+    const unlocked = createAchievementState({
+      activeDeck,
+      unlocks: [
+        {
+          id: firstBattleId,
+          unlockedAt: "2026-07-29T00:00:00.000Z",
+          eventToken: "first-event",
+        },
+      ],
+      presentedAchievementIds: [],
+      progress: {
+        ...initial.progress,
+        lifetimeBattleCount: 1,
+      },
+    })
+    const presented = markAchievementPresented({
+      activeDeck,
+      state: unlocked,
+      achievementId: firstBattleId,
+    })
+
+    expect(presented.presentedAchievementIds).toEqual([firstBattleId])
+    expect(presented.unlocks).toEqual(unlocked.unlocks)
+    expect(presented.progress).toEqual(unlocked.progress)
+    expect(
+      markAchievementPresented({
+        activeDeck,
+        state: presented,
+        achievementId: firstBattleId,
+      }),
+    ).toBe(presented)
+    expect(() =>
+      markAchievementPresented({
+        activeDeck,
+        state: presented,
+        achievementId: tenBattlesId,
+      }),
+    ).toThrow("Presented Achievement is not unlocked")
   })
 
   it("rejects duplicate, missing, and inconsistent unlock evidence", () => {
