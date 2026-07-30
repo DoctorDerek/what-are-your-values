@@ -4,6 +4,7 @@ import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
 import { ScrollView, StyleSheet, Text, View } from "react-native"
 import MapacheButton from "@/components/MapacheButton"
 import MapacheScreen from "@/components/MapacheScreen"
+import NativeOperationMessages from "@/components/NativeOperationMessages"
 import NativePlayerDataImportPreview from "@/components/NativePlayerDataImportPreview"
 import NativeResetReview from "@/components/NativeResetReview"
 import {
@@ -72,21 +73,11 @@ export default function NativeDataManagement({
         keyboardShouldPersistTaps="handled"
       >
         <View accessibilityState={{ busy: isBusy }} style={styles.content}>
-          {activity ? (
-            <Text accessibilityLiveRegion="polite" style={styles.activity}>
-              {activity}
-            </Text>
-          ) : null}
-          {notice ? (
-            <Text accessibilityLiveRegion="polite" style={styles.notice}>
-              {notice}
-            </Text>
-          ) : null}
-          {issue ? (
-            <Text accessibilityRole="alert" style={styles.issue}>
-              {issue}
-            </Text>
-          ) : null}
+          <NativeOperationMessages
+            activity={activity}
+            issue={issue}
+            notice={notice}
+          />
 
           {preview ? (
             <NativePlayerDataImportPreview
@@ -178,16 +169,6 @@ const styles = StyleSheet.create({
   actions: {
     gap: mapacheSpacing.standard,
   },
-  activity: {
-    backgroundColor: mapacheColors.cyan,
-    borderColor: mapacheColors.black,
-    borderWidth: mapacheLayout.borderWidth,
-    color: mapacheColors.white,
-    fontSize: 18,
-    fontWeight: "900",
-    padding: mapacheSpacing.standard,
-    textTransform: "uppercase",
-  },
   content: {
     gap: mapacheSpacing.standard,
     paddingBottom: mapacheLayout.panelShadowOffset,
@@ -206,24 +187,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     paddingBottom: mapacheSpacing.standard,
     textTransform: "uppercase",
-  },
-  issue: {
-    backgroundColor: mapacheColors.orange,
-    borderColor: mapacheColors.black,
-    borderWidth: mapacheLayout.borderWidth,
-    color: mapacheColors.white,
-    fontSize: 18,
-    fontWeight: "900",
-    padding: mapacheSpacing.standard,
-  },
-  notice: {
-    backgroundColor: mapacheColors.green,
-    borderColor: mapacheColors.black,
-    borderWidth: mapacheLayout.borderWidth,
-    color: mapacheColors.white,
-    fontSize: 18,
-    fontWeight: "900",
-    padding: mapacheSpacing.standard,
   },
   panel: {
     backgroundColor: mapacheColors.white,
