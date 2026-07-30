@@ -1,30 +1,5 @@
-import type {
-  CustomValueFieldValidation,
-  CustomValueValidationCode,
-} from "@game/data/src/CustomValueValidation"
-
-const validationMessages = Object.freeze({
-  name: Object.freeze({
-    required: "Enter a name for this value.",
-    too_many_graphemes: "Use 60 or fewer characters for the value name.",
-    prohibited_characters:
-      "Remove invisible or control characters from the value name.",
-    duplicate_name: "This value already exists. Open it instead.",
-  }),
-  definition: Object.freeze({
-    required: "Enter a short personal definition for this value.",
-    too_many_graphemes:
-      "Use 280 or fewer characters for the personal definition.",
-    prohibited_characters:
-      "Remove invisible or control characters from the personal definition.",
-    duplicate_name: "",
-  }),
-}) satisfies Readonly<
-  Record<
-    "name" | "definition",
-    Readonly<Record<CustomValueValidationCode, string>>
-  >
->
+import type { CustomValueFieldValidation } from "@game/data/src/CustomValueValidation"
+import { customValueValidationMessages } from "@game/data/src/CustomValueValidationMessages"
 
 export default function CustomValueFieldFeedback({
   id,
@@ -40,7 +15,7 @@ export default function CustomValueFieldFeedback({
   readonly showValidationMessage: boolean
 }) {
   const validationMessage = validation.validationCode
-    ? validationMessages[field][validation.validationCode]
+    ? customValueValidationMessages[field][validation.validationCode]
     : null
 
   return (
