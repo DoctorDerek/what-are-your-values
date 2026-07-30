@@ -3,6 +3,8 @@ import {
   StyleSheet,
   Text,
   type GestureResponderEvent,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native"
 import {
   mapacheColors,
@@ -25,12 +27,14 @@ const buttonBackgroundByTone = Object.freeze({
 
 export default function MapacheButton({
   accessibilityHint,
+  containerStyle,
   disabled = false,
   label,
   onPress,
   tone = "orange",
 }: {
   readonly accessibilityHint?: string
+  readonly containerStyle?: StyleProp<ViewStyle>
   readonly disabled?: boolean
   readonly label: string
   readonly onPress: (event: GestureResponderEvent) => void
@@ -47,6 +51,7 @@ export default function MapacheButton({
       style={({ pressed }) => [
         styles.button,
         { backgroundColor: buttonBackgroundByTone[tone] },
+        containerStyle,
         pressed && !disabled ? styles.pressed : null,
         disabled ? styles.disabled : null,
       ]}
