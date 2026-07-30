@@ -19,6 +19,14 @@ import {
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
 import { MAX_PERSISTED_JSON_BYTES } from "./PersistedJson"
+import { createInitialPlayerData } from "./PlayerData"
+
+function createTestPlayerData(schedulerSeed: string) {
+  return createInitialPlayerData({
+    schedulerSeed,
+    createdAt: "2026-07-21T00:00:00.000Z",
+  })
+}
 
 function createChoiceEvent(
   profile: ReturnType<typeof createInitialBattleProfile>,
@@ -41,7 +49,7 @@ async function createCommittedStore(seed: string, generationCount: number) {
   const store = createInMemoryDurableStore()
   let state = await initializeBattleProfileStore({
     store,
-    profile: createInitialBattleProfile(seed),
+    playerData: createTestPlayerData(seed),
     createdAt: "2026-07-21T00:00:00.000Z",
     appVersion: "0.1.0",
   })
@@ -50,7 +58,7 @@ async function createCommittedStore(seed: string, generationCount: number) {
     state = await commitBattleProfileStoreEvent({
       store,
       state,
-      event: createChoiceEvent(state.head.profile),
+      event: createChoiceEvent(state.head.playerData.profile),
       committedAt: new Date(Date.UTC(2026, 6, 21, 0, generation)).toISOString(),
     })
   }
@@ -72,7 +80,7 @@ describe("Battle Profile Hydration", () => {
     const store = createInMemoryDurableStore()
     await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("missing-manifest-seed"),
+      playerData: createTestPlayerData("missing-manifest-seed"),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
@@ -119,14 +127,14 @@ describe("Battle Profile Hydration", () => {
     const store = createInMemoryDurableStore()
     let state = await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("missing-journal-seed"),
+      playerData: createTestPlayerData("missing-journal-seed"),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
     state = await commitBattleProfileStoreEvent({
       store,
       state,
-      event: createChoiceEvent(state.head.profile),
+      event: createChoiceEvent(state.head.playerData.profile),
       committedAt: "2026-07-21T00:01:00.000Z",
     })
     const beforeDamage = await store.readAll()
@@ -159,7 +167,7 @@ describe("Battle Profile Hydration", () => {
     const store = createInMemoryDurableStore()
     await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("corrupt-manifest-seed"),
+      playerData: createTestPlayerData("corrupt-manifest-seed"),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
@@ -264,7 +272,7 @@ describe("Battle Profile Hydration", () => {
     const store = createInMemoryDurableStore()
     await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("unreadable-slots-seed"),
+      playerData: createTestPlayerData("unreadable-slots-seed"),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
@@ -326,7 +334,7 @@ describe("Battle Profile Hydration", () => {
     const store = createInMemoryDurableStore()
     await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("unbounded-journal-seed"),
+      playerData: createTestPlayerData("unbounded-journal-seed"),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
@@ -372,7 +380,7 @@ describe("Battle Profile Hydration", () => {
     const store = createInMemoryDurableStore()
     await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("malformed-journal-seed"),
+      playerData: createTestPlayerData("malformed-journal-seed"),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })

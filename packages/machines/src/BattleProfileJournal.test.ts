@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  applyBattleChoice,
-  applyBattleUndo,
-  createInitialBattleProfile,
-} from "./BattleProfile"
+import { applyBattleChoice, applyBattleUndo } from "./BattleProfile"
 import {
   createBattleChoiceEvent,
   createBattleUndoEvent,
@@ -16,15 +12,21 @@ import {
 } from "./BattleProfileJournal"
 import { projectScheduledPair } from "./PairScheduler"
 import { serializePersistedJson } from "./PersistedJson"
+import { createInitialPlayerData } from "./PlayerData"
 
 function createChoiceTransition() {
-  const profile = createInitialBattleProfile("journal-seed")
+  const playerData = createInitialPlayerData({
+    schedulerSeed: "journal-seed",
+    createdAt: "2026-07-21T00:00:00.000Z",
+  })
+  const profile = playerData.profile
   const [winnerId] = projectScheduledPair(
     profile.activeDeck,
     profile.scheduler,
   ).pair
 
   return {
+    playerData,
     profile,
     transition: applyBattleChoice({
       profile,
@@ -36,8 +38,8 @@ function createChoiceTransition() {
 
 describe("Battle Profile Journal", () => {
   it("round-trips and replays a contiguous checksummed battle event", async () => {
-    const { profile, transition } = createChoiceTransition()
-    const initialHead = { generation: 0, revision: 0, profile }
+    const { playerData, profile, transition } = createChoiceTransition()
+    const initialHead = { generation: 0, revision: 0, playerData }
     const commit = await createBattleProfileJournalCommit({
       head: initialHead,
       event: createBattleChoiceEvent(transition),
@@ -56,23 +58,32 @@ describe("Battle Profile Journal", () => {
     expect(commit.head).toEqual({
       generation: 1,
       revision: 1,
-      profile: transition.profile,
+      playerData: expect.objectContaining({
+        profile: transition.profile,
+        achievements: expect.objectContaining({
+          unlocks: [
+            expect.objectContaining({
+              id: "battle.first",
+            }),
+          ],
+        }),
+      }),
     })
   })
 
   it("replays Undo through the same monotonic journal contract", async () => {
-    const { transition } = createChoiceTransition()
+    const { playerData, transition } = createChoiceTransition()
+    const firstCommit = await createBattleProfileJournalCommit({
+      head: { generation: 0, revision: 0, playerData },
+      event: createBattleChoiceEvent(transition),
+      committedAt: "2026-07-21T00:01:00.000Z",
+    })
     const undone = applyBattleUndo(transition.profile)
     if (!undone) {
       throw new Error("The committed battle cannot be undone")
     }
-    const priorHead = {
-      generation: 1,
-      revision: 1,
-      profile: transition.profile,
-    }
     const commit = await createBattleProfileJournalCommit({
-      head: priorHead,
+      head: firstCommit.head,
       event: createBattleUndoEvent(undone),
       committedAt: "2026-07-21T00:02:00.000Z",
     })
@@ -80,13 +91,16 @@ describe("Battle Profile Journal", () => {
     expect(commit.head).toEqual({
       generation: 2,
       revision: 2,
-      profile: undone.profile,
+      playerData: expect.objectContaining({
+        profile: undone.profile,
+        achievements: firstCommit.head.playerData.achievements,
+      }),
     })
   })
 
   it("rejects stale heads and altered journal bytes", async () => {
-    const { profile, transition } = createChoiceTransition()
-    const initialHead = { generation: 0, revision: 0, profile }
+    const { playerData, profile, transition } = createChoiceTransition()
+    const initialHead = { generation: 0, revision: 0, playerData }
     const commit = await createBattleProfileJournalCommit({
       head: initialHead,
       event: createBattleChoiceEvent(transition),
@@ -120,14 +134,14 @@ describe("Battle Profile Journal", () => {
   })
 
   it("blocks unsafe generation and revision increments", async () => {
-    const { profile, transition } = createChoiceTransition()
+    const { playerData, transition } = createChoiceTransition()
 
     await expect(
       createBattleProfileJournalCommit({
         head: {
           generation: Number.MAX_SAFE_INTEGER,
           revision: Number.MAX_SAFE_INTEGER,
-          profile,
+          playerData,
         },
         event: createBattleChoiceEvent(transition),
         committedAt: "2026-07-21T00:01:00.000Z",
@@ -136,9 +150,9 @@ describe("Battle Profile Journal", () => {
   })
 
   it("rejects unsupported metadata, noncontiguous revisions, timestamps, and hashes", async () => {
-    const { profile, transition } = createChoiceTransition()
+    const { playerData, profile, transition } = createChoiceTransition()
     const commit = await createBattleProfileJournalCommit({
-      head: { generation: 0, revision: 0, profile },
+      head: { generation: 0, revision: 0, playerData },
       event: createBattleChoiceEvent(transition),
       committedAt: "2026-07-21T00:01:00.000Z",
     })
