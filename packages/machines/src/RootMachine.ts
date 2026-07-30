@@ -33,6 +33,7 @@ type RootMachineContext = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
   readonly now: () => string
+  readonly randomUuid: () => string
   battleProfile: BattleProfile | null
   battleProfileStoreState: BattleProfileStoreState | null
   pendingBattleProfileCommit: BattleProfileCommit | null
@@ -73,6 +74,7 @@ type RootMachineInput = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
   readonly now: () => string
+  readonly randomUuid: () => string
 }
 
 function requireBattleProfile(context: RootMachineContext) {
@@ -146,6 +148,7 @@ export const rootMachine = setup({
     durableStore: input.durableStore,
     appVersion: input.appVersion,
     now: input.now,
+    randomUuid: input.randomUuid,
   }),
   states: {
     Hydrating: {
@@ -277,6 +280,7 @@ export const rootMachine = setup({
                     name: event.name,
                     definition: event.definition,
                     now: context.now,
+                    randomUuid: context.randomUuid,
                   })
                 },
               }),

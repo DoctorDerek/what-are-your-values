@@ -1,5 +1,5 @@
 import { createCustomValueId } from "@game/data/src/Value"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { createActor, waitFor } from "xstate"
 import {
   DurableStoreConflictError,
@@ -13,14 +13,17 @@ const TEST_TIMESTAMP = "2026-07-21T00:00:00.000Z"
 
 function createRootActor({
   durableStore = createInMemoryDurableStore(),
+  randomUuid = () => crypto.randomUUID(),
 }: {
   readonly durableStore?: DurableStoreAdapter
+  readonly randomUuid?: () => string
 } = {}) {
   const actor = createActor(rootMachine, {
     input: {
       durableStore,
       appVersion: "0.1.0",
       now: () => TEST_TIMESTAMP,
+      randomUuid,
     },
   })
 
@@ -30,13 +33,15 @@ function createRootActor({
 async function bootRootActor({
   schedulerSeed = "root-machine-seed",
   durableStore,
+  randomUuid,
   skipIntroduction = false,
 }: {
   readonly schedulerSeed?: string
   readonly durableStore?: DurableStoreAdapter
+  readonly randomUuid?: () => string
   readonly skipIntroduction?: boolean
 } = {}) {
-  const root = createRootActor({ durableStore })
+  const root = createRootActor({ durableStore, randomUuid })
   root.actor.start()
   root.actor.send({ type: "APP.HYDRATED", schedulerSeed })
   await waitFor(
@@ -128,8 +133,12 @@ describe("Root Machine", () => {
   })
 
   it("adds a custom value through the All Values durable update flow", async () => {
+    const randomUuid = vi.fn(
+      () => "00000000-0000-4000-8000-000000000001",
+    )
     const { actor } = await bootRootActor({
       schedulerSeed: "all-values-add-seed",
+      randomUuid,
     })
 
     actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
@@ -166,6 +175,10 @@ describe("Root Machine", () => {
       "The disciplined practice of creating new solutions.",
     )
     expect(afterAddProfile.activeDeck.customValues).toHaveLength(1)
+    expect(afterAddProfile.activeDeck.customValues[0]?.id).toBe(
+      createCustomValueId("custom:00000000-0000-4000-8000-000000000001"),
+    )
+    expect(randomUuid).toHaveBeenCalledOnce()
   })
 
   it("trims custom value input in All Values durable updates", async () => {

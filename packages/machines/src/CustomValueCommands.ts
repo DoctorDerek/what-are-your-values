@@ -8,11 +8,13 @@ function createNextCustomValue({
   name,
   definition,
   now,
+  randomUuid,
 }: {
   readonly existingCustomValues: readonly CustomValueDefinition[]
   readonly name: string
   readonly definition: string
   readonly now: () => string
+  readonly randomUuid: () => string
 }) {
   const trimmedName = name.trim()
   const trimmedDefinition = definition.trim()
@@ -31,15 +33,16 @@ function createNextCustomValue({
         value.creationOrdinal > maxOrdinal ? value.creationOrdinal : maxOrdinal,
       0,
     ) + 1
+  const timestamp = now()
 
   return Object.freeze({
     kind: "custom",
-    id: createCustomValueId(`custom:${crypto.randomUUID()}`),
+    id: createCustomValueId(`custom:${randomUuid()}`),
     name: trimmedName,
     definition: trimmedDefinition,
     creationOrdinal: nextCreationOrdinal,
-    createdAt: now(),
-    updatedAt: now(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
   }) satisfies CustomValueDefinition
 }
 
@@ -48,11 +51,13 @@ export function createCustomValueAddCommit({
   name,
   definition,
   now,
+  randomUuid,
 }: {
   readonly profile: BattleProfile
   readonly name: string
   readonly definition: string
   readonly now: () => string
+  readonly randomUuid: () => string
 }) {
   const revisedCustomValues = Object.freeze([
     ...profile.activeDeck.customValues,
@@ -61,6 +66,7 @@ export function createCustomValueAddCommit({
       name,
       definition,
       now,
+      randomUuid,
     }),
   ])
 
