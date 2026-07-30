@@ -117,7 +117,8 @@ describe("Data Management", () => {
   })
 
   it("routes each available destructive action into its own review flow", () => {
-    const props = renderDataManagement({ canDeleteCustomValues: true })
+    const onOpenReset = vi.fn()
+    renderDataManagement({ canDeleteCustomValues: true, onOpenReset })
 
     fireEvent.click(
       screen.getByRole("button", { name: "Delete All Custom Values" }),
@@ -128,7 +129,7 @@ describe("Data Management", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
     fireEvent.click(screen.getByRole("button", { name: "Delete All Data" }))
 
-    expect(props.onOpenReset.mock.calls).toEqual([
+    expect(onOpenReset.mock.calls).toEqual([
       ["delete-all-custom-values"],
       ["reset-levels-and-experience"],
       ["reset-achievements"],
