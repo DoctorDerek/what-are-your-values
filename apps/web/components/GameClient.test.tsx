@@ -254,6 +254,31 @@ describe("GameClient Integration", () => {
     expect(setItem).not.toHaveBeenCalled()
   })
 
+  it("opens the complete local Achievements catalog and restores Hub focus on return", async () => {
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    const achievementsButton = await screen.findByRole("button", {
+      name: "Achievements",
+    })
+    fireEvent.click(achievementsButton)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Achievements",
+        level: 1,
+      }),
+    ).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(109)
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Achievements" }),
+      ).toHaveFocus(),
+    )
+  })
+
   it("routes app-level Undo and Redo actions through the durable history", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000043",
