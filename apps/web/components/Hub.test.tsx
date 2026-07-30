@@ -18,6 +18,7 @@ describe("Hub Component Integration", () => {
 
     render(
       <Hub
+        notice="Last known-good save restored."
         rankedValues={rankValues(
           battleCycle.activeDeck,
           battleCycle.progressById,
@@ -35,6 +36,10 @@ describe("Hub Component Integration", () => {
     ).toBeVisible()
     expect(screen.getByText("Included Values")).toBeVisible()
     expect(screen.getByText(/Not ranked yet\./)).toBeVisible()
+    expect(screen.getByText("Last known-good save restored.")).toHaveAttribute(
+      "role",
+      "status",
+    )
     const firstRow = screen.getAllByRole("listitem")[0]
     expect(within(firstRow).getByText("Acceptance")).toBeVisible()
   })
