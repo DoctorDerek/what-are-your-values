@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "build": "expo export --platform android --output-dir dist",
-    "doctor": "expo-doctor"
+    "doctor": "pnpm dlx expo-doctor"
   },
   "dependencies": {
     "@game/data": "workspace:*",
