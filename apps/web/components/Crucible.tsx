@@ -21,6 +21,7 @@ export default function Crucible({
   progressById,
   canUndo,
   canRedo,
+  hasAchievementBanner,
   isPersistencePending,
   onExit,
   onUndo,
@@ -32,6 +33,7 @@ export default function Crucible({
   progressById: ValueProgressById
   canUndo: boolean
   canRedo: boolean
+  hasAchievementBanner: boolean
   isPersistencePending: boolean
   onExit: () => void
   onUndo: () => void
@@ -158,7 +160,9 @@ export default function Crucible({
     <main
       aria-label="Value battle"
       aria-busy={isPersistencePending}
-      className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row"
+      className={`noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row ${
+        hasAchievementBanner ? "pb-44 sm:pb-36" : ""
+      }`}
     >
       <BattleActionBar
         canUndo={isInteractive && canUndo}

@@ -2,6 +2,8 @@
 
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
+import type { AchievementId } from "@game/machines/src/AchievementCatalog"
+import { getPendingAchievementUnlocks } from "@game/machines/src/AchievementState"
 import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "@game/machines/src/BattleProfileStore"
 import {
   projectBattlePair,
@@ -17,6 +19,7 @@ import {
   readPlayerDataFile,
 } from "@/lib/PlayerDataFiles"
 import packageMetadata from "@/package.json"
+import AchievementBanner from "./AchievementBanner"
 import Achievements from "./Achievements"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
@@ -44,7 +47,8 @@ export default function GameClient() {
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
     useState(false)
   const shouldRestoreHubFocusRef = useRef(false)
-  const battleProfile = state.context.playerData?.profile ?? null
+  const playerData = state.context.playerData
+  const battleProfile = playerData?.profile ?? null
   const rankedValues = useMemo(
     () =>
       battleProfile
@@ -131,6 +135,12 @@ export default function GameClient() {
       returnFocusTargetIdRef.current = focusTargetId
       shouldRestoreHubFocusRef.current = true
       send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+    },
+    [send],
+  )
+  const handleAchievementPresented = useCallback(
+    (achievementId: AchievementId) => {
+      send({ type: "ACHIEVEMENT.PRESENTED", achievementId })
     },
     [send],
   )
@@ -298,37 +308,72 @@ export default function GameClient() {
     )
   }
 
-  if (!battleProfile || !presentedBattle) {
+  if (!playerData || !battleProfile || !presentedBattle) {
     throw new Error("Battle profile is unavailable after hydration")
   }
 
-  if (state.matches("Hub")) {
+  const isRecordingAchievementPresentation = state.matches(
+    "RecordingAchievementPresentation",
+  )
+  const achievementPresentationReturnTarget =
+    state.context.achievementPresentationReturnTarget
+  const pendingAchievementUnlock =
+    getPendingAchievementUnlocks(playerData.achievements)[0] ?? null
+  const achievementBanner = (
+    <AchievementBanner
+      unlock={pendingAchievementUnlock}
+      isPresentationPersistencePending={isRecordingAchievementPresentation}
+      onPresented={handleAchievementPresented}
+    />
+  )
+  const isHubSurface =
+    state.matches("Hub") ||
+    (isRecordingAchievementPresentation &&
+      achievementPresentationReturnTarget === "hub")
+  const isAchievementsSurface =
+    state.matches("Achievements") ||
+    (isRecordingAchievementPresentation &&
+      achievementPresentationReturnTarget === "achievements")
+  const isCrucibleSurface =
+    state.matches("Crucible") ||
+    (isRecordingAchievementPresentation &&
+      achievementPresentationReturnTarget === "crucible")
+
+  if (isHubSurface) {
     return (
-      <Hub
-        notice={state.context.portabilityNotice}
-        rankedValues={rankedValues}
-        browseAllValuesButtonRef={browseAllValuesButtonRef}
-        onBrowseAllValues={(focusTargetId) => openAllValues({ focusTargetId })}
-        onAddCustomValue={(focusTargetId) =>
-          openAllValues({ focusTargetId, openCustomValueBuilder: true })
-        }
-        onOpenAchievements={openAchievements}
-        onManageData={openDataManagement}
-        onOpenValue={(valueId, focusTargetId) =>
-          openAllValues({ focusTargetId, valueId })
-        }
-        onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
-      />
+      <>
+        <Hub
+          notice={state.context.portabilityNotice}
+          rankedValues={rankedValues}
+          browseAllValuesButtonRef={browseAllValuesButtonRef}
+          onBrowseAllValues={(focusTargetId) =>
+            openAllValues({ focusTargetId })
+          }
+          onAddCustomValue={(focusTargetId) =>
+            openAllValues({ focusTargetId, openCustomValueBuilder: true })
+          }
+          onOpenAchievements={openAchievements}
+          onManageData={openDataManagement}
+          onOpenValue={(valueId, focusTargetId) =>
+            openAllValues({ focusTargetId, valueId })
+          }
+          onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+        />
+        {achievementBanner}
+      </>
     )
   }
 
-  if (state.matches("Achievements")) {
+  if (isAchievementsSurface) {
     return (
-      <Achievements
-        achievementState={state.context.playerData.achievements}
-        battleProfile={battleProfile}
-        onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
-      />
+      <>
+        <Achievements
+          achievementState={playerData.achievements}
+          battleProfile={battleProfile}
+          onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
+        />
+        {achievementBanner}
+      </>
     )
   }
 
@@ -405,22 +450,26 @@ export default function GameClient() {
     )
   }
 
-  if (state.matches("Crucible")) {
+  if (isCrucibleSurface) {
     const isBattleReady = state.matches({ Crucible: "Ready" })
 
     return (
-      <Crucible
-        activeDeck={battleProfile.activeDeck}
-        battle={presentedBattle}
-        progressById={battleProfile.progressById}
-        canUndo={battleProfile.history.length > 0}
-        canRedo={battleProfile.redo.length > 0}
-        isPersistencePending={!isBattleReady}
-        onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
-        onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
-        onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
-        onWinnerSelected={handleWinnerSelected}
-      />
+      <>
+        <Crucible
+          activeDeck={battleProfile.activeDeck}
+          battle={presentedBattle}
+          progressById={battleProfile.progressById}
+          canUndo={battleProfile.history.length > 0}
+          canRedo={battleProfile.redo.length > 0}
+          hasAchievementBanner={pendingAchievementUnlock !== null}
+          isPersistencePending={!isBattleReady}
+          onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
+          onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
+          onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
+          onWinnerSelected={handleWinnerSelected}
+        />
+        {achievementBanner}
+      </>
     )
   }
 
