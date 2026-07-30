@@ -1,7 +1,7 @@
 import { fromPromise } from "xstate"
 import {
   deleteAllBattleProfileStoreData,
-  replaceBattleProfileStorePlayerDataForReset,
+  replaceBattleProfileStorePlayerDataForLocalMutation,
   type BattleProfileStoreState,
 } from "./BattleProfileStore"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
@@ -26,7 +26,7 @@ type DeleteAllPlayerDataInput = {
 
 export const applyScopedPlayerDataResetActor = fromPromise(
   async ({ input }: { input: ApplyScopedPlayerDataResetInput }) =>
-    replaceBattleProfileStorePlayerDataForReset({
+    replaceBattleProfileStorePlayerDataForLocalMutation({
       store: input.store,
       state: input.state,
       playerData: createScopedPlayerDataResetCandidate(input),

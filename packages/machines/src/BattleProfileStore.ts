@@ -382,7 +382,7 @@ export async function replaceBattleProfileStorePlayerData({
   })
 }
 
-export async function replaceBattleProfileStorePlayerDataForReset({
+export async function replaceBattleProfileStorePlayerDataForLocalMutation({
   store,
   state,
   playerData,

@@ -19,7 +19,7 @@ import {
   initializeBattleProfileStore,
   readBattleProfileJournalKeyGeneration,
   replaceBattleProfileStorePlayerData,
-  replaceBattleProfileStorePlayerDataForReset,
+  replaceBattleProfileStorePlayerDataForLocalMutation,
   replaceUnrecoverableBattleProfileStorePlayerData,
 } from "./BattleProfileStore"
 import { DurableStoreConflictError } from "./DurableStoreAdapter"
@@ -377,12 +377,13 @@ describe("Battle Profile Store", () => {
       createdAt: createCommitTimestamp(2),
     })
 
-    const resetState = await replaceBattleProfileStorePlayerDataForReset({
-      store,
-      state: importedState,
-      playerData: resetPlayerData,
-      replacedAt: createCommitTimestamp(2),
-    })
+    const resetState =
+      await replaceBattleProfileStorePlayerDataForLocalMutation({
+        store,
+        state: importedState,
+        playerData: resetPlayerData,
+        replacedAt: createCommitTimestamp(2),
+      })
 
     expect(resetState.head).toMatchObject({
       generation: 2,
@@ -427,7 +428,7 @@ describe("Battle Profile Store", () => {
       createdAt: createCommitTimestamp(0),
       appVersion: "0.1.0",
     })
-    await replaceBattleProfileStorePlayerDataForReset({
+    await replaceBattleProfileStorePlayerDataForLocalMutation({
       store,
       state: staleState,
       playerData: createInitialPlayerData({
