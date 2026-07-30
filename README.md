@@ -16,16 +16,26 @@ The public web application currently includes:
 - A deterministic XState state machine and lazy pair scheduler.
 - First-run browsing, rank-preserving search, All Values, Top Five, and visible definitions.
 - Undo and Redo for battle history.
+- Local achievements with durable unlock history.
+- Versioned JSON backup, reviewed import, scoped resets, and recovery paths.
 - Responsive keyboard- and touch-friendly web UI.
+
+The Expo application uses the same values, ranking, battle, achievement, and
+backup contracts with native React Native screens, AsyncStorage, file picking,
+sharing, and Reanimated transitions.
 
 ## Release status
 
-The current public release is web-only. iOS and Android releases, JSON import/export, and local achievements are planned next. The README will be updated when those features are shipped.
+The public release remains web-only. The Expo SDK 57 application is configured
+for Expo Go and development-build testing, but iOS and Android store releases
+still require physical-device QA, manual bidirectional backup-transfer QA, EAS
+project and channel validation, and signed release candidates.
 
 ## Technology
 
 - TypeScript 6, pnpm, and Turborepo.
 - Next.js 16 App Router and React 19.
+- Expo SDK 57, React Native 0.86, Expo Router, and React Native Reanimated.
 - Tailwind CSS 4.
 - XState 5 for application state and Motion for web animation.
 - Vitest, Testing Library, Playwright, Codecov, GitHub Actions, and Vercel.
@@ -41,6 +51,22 @@ pnpm install
 pnpm dev
 ```
 
+For early native iteration in a matching Expo Go client:
+
+```powershell
+pnpm mobile:go
+```
+
+For production-grade native development after installing a development build:
+
+```powershell
+pnpm mobile:dev-client
+```
+
+Expo Go is an iteration surface, not evidence of a signed store build. SDK
+availability differs by platform; use the development client when a matching
+Expo Go build is unavailable.
+
 ## Verification
 
 ```powershell
@@ -48,6 +74,7 @@ pnpm lint
 pnpm format
 pnpm test
 pnpm test:coverage
+pnpm mobile:doctor
 pnpm test:e2e
 pnpm build
 ```
