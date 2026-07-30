@@ -16,6 +16,7 @@ import {
   type BattleProfileManifest,
 } from "./BattleProfileManifest"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
+import { MAX_PERSISTED_JSON_BYTES } from "./PersistedJson"
 import type { PlayerData } from "./PlayerData"
 
 export const BATTLE_PROFILE_SNAPSHOT_A_KEY = "wayvm.snapshot.a" as const
@@ -24,6 +25,8 @@ export const BATTLE_PROFILE_MANIFEST_KEY = "wayvm.snapshot.manifest" as const
 export const BATTLE_PROFILE_JOURNAL_KEY_PREFIX = "wayvm.journal." as const
 export const BATTLE_PROFILE_QUARANTINE_KEY =
   "wayvm.recovery.quarantine" as const
+export const BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY =
+  "wayvm.import.pre-replacement-backup" as const
 
 export type BattleProfileStoreState = {
   readonly head: BattleProfilePersistenceHead
@@ -273,13 +276,22 @@ export async function replaceBattleProfileStorePlayerData({
   store,
   state,
   playerData,
+  preImportBackupBytes,
   replacedAt,
 }: {
   readonly store: DurableStoreAdapter
   readonly state: BattleProfileStoreState
   readonly playerData: PlayerData
+  readonly preImportBackupBytes: string
   readonly replacedAt: string
 }) {
+  if (
+    new TextEncoder().encode(preImportBackupBytes).byteLength >
+    MAX_PERSISTED_JSON_BYTES
+  ) {
+    throw new Error("Pre-import backup exceeds the persisted byte limit")
+  }
+
   const generation = incrementStoreIdentity(
     state.head.generation,
     "Store generation",
@@ -289,6 +301,8 @@ export async function replaceBattleProfileStorePlayerData({
   const checkpointKey = getSnapshotKey(activeSlot)
   const entries = await store.readAll()
   const replacedCheckpointBytes = entries.get(checkpointKey) ?? null
+  const priorPreImportBackupBytes =
+    entries.get(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY) ?? null
   const checkpoint = await createBattleProfileCheckpoint({
     generation,
     revision,
@@ -310,10 +324,12 @@ export async function replaceBattleProfileStorePlayerData({
     expectedEntries: [
       [BATTLE_PROFILE_MANIFEST_KEY, state.manifestBytes],
       [checkpointKey, replacedCheckpointBytes],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, priorPreImportBackupBytes],
     ],
     putEntries: [
       [checkpointKey, serializeBattleProfileCheckpoint(checkpoint)],
       [BATTLE_PROFILE_MANIFEST_KEY, manifestBytes],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, preImportBackupBytes],
     ],
     deleteKeys: state.journalKeys,
   })
