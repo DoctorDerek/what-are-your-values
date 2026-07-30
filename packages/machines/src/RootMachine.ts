@@ -80,6 +80,8 @@ type RootMachineEvent =
     }
   | { type: "INTRODUCTION.COMPLETED" }
   | { type: "BATTLE.START_REQUESTED" }
+  | { type: "ACHIEVEMENTS.OPEN_REQUESTED" }
+  | { type: "ACHIEVEMENTS.CLOSE_REQUESTED" }
   | { type: "ALL_VALUES.OPEN_REQUESTED" }
   | { type: "ALL_VALUES.CLOSE_REQUESTED" }
   | {
@@ -476,8 +478,14 @@ export const rootMachine = setup({
     Hub: {
       on: {
         "BATTLE.START_REQUESTED": { target: "Crucible" },
+        "ACHIEVEMENTS.OPEN_REQUESTED": { target: "Achievements" },
         "ALL_VALUES.OPEN_REQUESTED": { target: "AllValues" },
         "DATA_MANAGEMENT.OPEN_REQUESTED": { target: "DataManagement" },
+      },
+    },
+    Achievements: {
+      on: {
+        "ACHIEVEMENTS.CLOSE_REQUESTED": { target: "Hub" },
       },
     },
     DataManagement: {
