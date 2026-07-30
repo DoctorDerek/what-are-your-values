@@ -55,19 +55,21 @@ function ValueActionRail({
   browseAllValuesButtonRef,
   onBrowseAllValues,
   onAddCustomValue,
+  onOpenAchievements,
   onManageData,
   onStartBattle,
 }: {
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
+  onOpenAchievements: (focusTargetId: string) => void
   onManageData: (focusTargetId: string) => void
   onStartBattle: () => void
 }) {
   return (
     <nav
       aria-label="Value actions"
-      className="mt-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      className="mt-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5"
     >
       <button
         type="button"
@@ -94,6 +96,14 @@ function ValueActionRail({
         Add Custom Value
       </button>
       <button
+        id="hub-achievements-button"
+        type="button"
+        onClick={(event) => onOpenAchievements(event.currentTarget.id)}
+        className="bg-mapache-vivid-primary-yellow text-mapache-vivid-dark min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
+      >
+        Achievements
+      </button>
+      <button
         id="hub-manage-data-button"
         type="button"
         onClick={(event) => onManageData(event.currentTarget.id)}
@@ -111,6 +121,7 @@ export default function Hub({
   browseAllValuesButtonRef,
   onBrowseAllValues,
   onAddCustomValue,
+  onOpenAchievements,
   onManageData,
   onOpenValue,
   onStartBattle,
@@ -120,6 +131,7 @@ export default function Hub({
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
+  onOpenAchievements: (focusTargetId: string) => void
   onManageData: (focusTargetId: string) => void
   onOpenValue: (valueId: ValueId, focusTargetId: string) => void
   onStartBattle: () => void
@@ -191,6 +203,7 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
+              onOpenAchievements={onOpenAchievements}
               onManageData={onManageData}
               onStartBattle={onStartBattle}
             />
@@ -219,6 +232,7 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
+              onOpenAchievements={onOpenAchievements}
               onManageData={onManageData}
               onStartBattle={onStartBattle}
             />
