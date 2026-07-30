@@ -15,7 +15,10 @@ import {
   type BattleProfileCheckpointSlot,
   type BattleProfileManifest,
 } from "./BattleProfileManifest"
-import type { DurableStoreAdapter } from "./DurableStoreAdapter"
+import {
+  DurableStoreConflictError,
+  type DurableStoreAdapter,
+} from "./DurableStoreAdapter"
 import { MAX_PERSISTED_JSON_BYTES } from "./PersistedJson"
 import type { PlayerData } from "./PlayerData"
 
@@ -272,7 +275,7 @@ function incrementStoreIdentity(value: number, label: string) {
   return value + 1
 }
 
-export async function replaceBattleProfileStorePlayerData({
+async function replaceBattleProfileStorePlayerDataAtomically({
   store,
   state,
   playerData,
@@ -282,12 +285,13 @@ export async function replaceBattleProfileStorePlayerData({
   readonly store: DurableStoreAdapter
   readonly state: BattleProfileStoreState
   readonly playerData: PlayerData
-  readonly preImportBackupBytes: string
+  readonly preImportBackupBytes: string | null
   readonly replacedAt: string
 }) {
   if (
+    preImportBackupBytes !== null &&
     new TextEncoder().encode(preImportBackupBytes).byteLength >
-    MAX_PERSISTED_JSON_BYTES
+      MAX_PERSISTED_JSON_BYTES
   ) {
     throw new Error("Pre-import backup exceeds the persisted byte limit")
   }
@@ -329,7 +333,14 @@ export async function replaceBattleProfileStorePlayerData({
     putEntries: [
       [checkpointKey, serializeBattleProfileCheckpoint(checkpoint)],
       [BATTLE_PROFILE_MANIFEST_KEY, manifestBytes],
-      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, preImportBackupBytes],
+      ...(preImportBackupBytes === null
+        ? []
+        : [
+            [
+              BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+              preImportBackupBytes,
+            ] as const,
+          ]),
     ],
     deleteKeys: state.journalKeys,
   })
@@ -345,5 +356,68 @@ export async function replaceBattleProfileStorePlayerData({
     playerDataCreatedAt: replacedAt,
     appVersion: state.appVersion,
     journalKeys: [],
+  })
+}
+
+export async function replaceBattleProfileStorePlayerData({
+  store,
+  state,
+  playerData,
+  preImportBackupBytes,
+  replacedAt,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly state: BattleProfileStoreState
+  readonly playerData: PlayerData
+  readonly preImportBackupBytes: string
+  readonly replacedAt: string
+}) {
+  return replaceBattleProfileStorePlayerDataAtomically({
+    store,
+    state,
+    playerData,
+    preImportBackupBytes,
+    replacedAt,
+  })
+}
+
+export async function replaceBattleProfileStorePlayerDataForReset({
+  store,
+  state,
+  playerData,
+  replacedAt,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly state: BattleProfileStoreState
+  readonly playerData: PlayerData
+  readonly replacedAt: string
+}) {
+  return replaceBattleProfileStorePlayerDataAtomically({
+    store,
+    state,
+    playerData,
+    preImportBackupBytes: null,
+    replacedAt,
+  })
+}
+
+export async function deleteAllBattleProfileStoreData({
+  store,
+  state,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly state: BattleProfileStoreState
+}) {
+  const entries = await store.readAll()
+  if (
+    (entries.get(BATTLE_PROFILE_MANIFEST_KEY) ?? null) !== state.manifestBytes
+  ) {
+    throw new DurableStoreConflictError(BATTLE_PROFILE_MANIFEST_KEY)
+  }
+
+  await store.compareAndSwapVerified({
+    expectedEntries: Array.from(entries),
+    putEntries: [],
+    deleteKeys: Array.from(entries.keys()),
   })
 }
