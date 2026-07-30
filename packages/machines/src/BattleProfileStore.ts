@@ -18,6 +18,7 @@ import {
 import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
+  type DurableStoreExpectation,
 } from "./DurableStoreAdapter"
 import { MAX_PERSISTED_JSON_BYTES } from "./PersistedJson"
 import type { PlayerData } from "./PlayerData"
@@ -415,6 +416,84 @@ export async function deleteAllBattleProfileStoreData({
     throw new DurableStoreConflictError(BATTLE_PROFILE_MANIFEST_KEY)
   }
 
+  await store.compareAndSwapVerified({
+    expectedEntries: Array.from(entries),
+    putEntries: [],
+    deleteKeys: Array.from(entries.keys()),
+  })
+}
+
+export async function replaceUnrecoverableBattleProfileStorePlayerData({
+  store,
+  entries,
+  playerData,
+  replacedAt,
+  appVersion,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly entries: ReadonlyMap<string, string>
+  readonly playerData: PlayerData
+  readonly replacedAt: string
+  readonly appVersion: string
+}) {
+  const checkpoint = await createBattleProfileCheckpoint({
+    generation: 0,
+    revision: 0,
+    createdAt: replacedAt,
+    updatedAt: replacedAt,
+    appVersion,
+    playerData,
+  })
+  const manifest = createBattleProfileManifest({
+    activeSlot: "a",
+    checkpointGeneration: 0,
+    checkpointRevision: 0,
+    headGeneration: 0,
+    headRevision: 0,
+  })
+  const manifestBytes = serializeBattleProfileManifest(manifest)
+  const putEntries = [
+    [
+      BATTLE_PROFILE_SNAPSHOT_A_KEY,
+      serializeBattleProfileCheckpoint(checkpoint),
+    ],
+    [BATTLE_PROFILE_MANIFEST_KEY, manifestBytes],
+  ] as const
+  const putKeys: ReadonlySet<string> = new Set(putEntries.map(([key]) => key))
+  const expectedEntries: DurableStoreExpectation[] = Array.from(entries)
+  putEntries.forEach(([key]) => {
+    if (!entries.has(key)) {
+      expectedEntries.push([key, null])
+    }
+  })
+
+  await store.compareAndSwapVerified({
+    expectedEntries,
+    putEntries,
+    deleteKeys: Array.from(entries.keys()).filter((key) => !putKeys.has(key)),
+  })
+
+  return createBattleProfileStoreState({
+    head: Object.freeze({
+      generation: 0,
+      revision: 0,
+      playerData: checkpoint.playerData,
+    }),
+    manifest,
+    manifestBytes,
+    playerDataCreatedAt: replacedAt,
+    appVersion,
+    journalKeys: [],
+  })
+}
+
+export async function deleteUnrecoverableBattleProfileStoreData({
+  store,
+  entries,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly entries: ReadonlyMap<string, string>
+}) {
   await store.compareAndSwapVerified({
     expectedEntries: Array.from(entries),
     putEntries: [],
