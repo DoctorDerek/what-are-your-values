@@ -90,6 +90,10 @@ type RootMachineEvent =
       type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED"
       serialized: string
     }
+  | {
+      type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED"
+      issue: string
+    }
   | { type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" }
   | { type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" }
 
@@ -358,6 +362,13 @@ export const rootMachine = setup({
                 pendingImport: null,
                 preImportBackupBytes: null,
                 portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => event.issue,
                 portabilityNotice: null,
               }),
             },

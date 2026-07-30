@@ -7,12 +7,18 @@ import {
   type BattleSchedulerRestorePoint,
 } from "@game/machines/src/BattleScheduler"
 import { rootMachine } from "@game/machines/src/RootMachine"
+import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
+import {
+  downloadPlayerDataFile,
+  readPlayerDataFile,
+} from "@/lib/PlayerDataFiles"
 import packageMetadata from "@/package.json"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
+import DataManagement, { type DataManagementActivity } from "./DataManagement"
 import Hub from "./Hub"
 import Splash from "./Splash"
 
@@ -108,6 +114,31 @@ export default function GameClient() {
     },
     [send],
   )
+  const openDataManagement = useCallback(
+    (focusTargetId: string) => {
+      returnFocusTargetIdRef.current = focusTargetId
+      shouldRestoreHubFocusRef.current = true
+      send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    },
+    [send],
+  )
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      try {
+        const serialized = await readPlayerDataFile(file)
+        send({
+          type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+          serialized,
+        })
+      } catch (error: unknown) {
+        send({
+          type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+          issue: getErrorMessage(error),
+        })
+      }
+    },
+    [send],
+  )
 
   useEffect(() => {
     send({
@@ -115,6 +146,23 @@ export default function GameClient() {
       schedulerSeed: crypto.randomUUID(),
     })
   }, [send])
+
+  useEffect(() => {
+    const preparedDownload = state.context.preparedDownload
+    if (!preparedDownload) {
+      return
+    }
+
+    try {
+      downloadPlayerDataFile(preparedDownload)
+      send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+    } catch (error: unknown) {
+      send({
+        type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+        issue: getErrorMessage(error),
+      })
+    }
+  }, [send, state.context.preparedDownload])
 
   useEffect(() => {
     if (state.matches("Hub") && shouldRestoreHubFocusRef.current) {
@@ -167,10 +215,42 @@ export default function GameClient() {
         onAddCustomValue={(focusTargetId) =>
           openAllValues({ focusTargetId, openCustomValueBuilder: true })
         }
+        onManageData={openDataManagement}
         onOpenValue={(valueId, focusTargetId) =>
           openAllValues({ focusTargetId, valueId })
         }
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+      />
+    )
+  }
+
+  if (state.matches("DataManagement")) {
+    let activity: DataManagementActivity | null = null
+    if (state.matches({ DataManagement: "Exporting" })) {
+      activity = "Exporting backup…"
+    } else if (state.matches({ DataManagement: "PreparingImport" })) {
+      activity = "Checking backup…"
+    } else if (state.matches({ DataManagement: "CreatingPreImportBackup" })) {
+      activity = "Creating recovery backup…"
+    } else if (state.matches({ DataManagement: "ReplacingImport" })) {
+      activity = "Replacing local data…"
+    }
+
+    return (
+      <DataManagement
+        activity={activity}
+        issue={state.context.portabilityIssue}
+        notice={state.context.portabilityNotice}
+        preview={state.context.pendingImport?.preview ?? null}
+        onCancelImport={() =>
+          send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+        }
+        onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
+        onConfirmImport={() =>
+          send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+        }
+        onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+        onImportFile={handleImportFile}
       />
     )
   }

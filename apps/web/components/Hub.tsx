@@ -55,17 +55,19 @@ function ValueActionRail({
   browseAllValuesButtonRef,
   onBrowseAllValues,
   onAddCustomValue,
+  onManageData,
   onStartBattle,
 }: {
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
+  onManageData: (focusTargetId: string) => void
   onStartBattle: () => void
 }) {
   return (
     <nav
       aria-label="Value actions"
-      className="mt-6 flex w-full flex-col gap-4 sm:flex-row"
+      className="mt-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
       <button
         type="button"
@@ -91,6 +93,14 @@ function ValueActionRail({
       >
         Add Custom Value
       </button>
+      <button
+        id="hub-manage-data-button"
+        type="button"
+        onClick={(event) => onManageData(event.currentTarget.id)}
+        className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
+      >
+        Manage Data
+      </button>
     </nav>
   )
 }
@@ -100,6 +110,7 @@ export default function Hub({
   browseAllValuesButtonRef,
   onBrowseAllValues,
   onAddCustomValue,
+  onManageData,
   onOpenValue,
   onStartBattle,
 }: {
@@ -107,6 +118,7 @@ export default function Hub({
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
+  onManageData: (focusTargetId: string) => void
   onOpenValue: (valueId: ValueId, focusTargetId: string) => void
   onStartBattle: () => void
 }) {
@@ -168,6 +180,7 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
+              onManageData={onManageData}
               onStartBattle={onStartBattle}
             />
             <div className="bg-mapache-vivid-primary-cyan border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
@@ -195,6 +208,7 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
+              onManageData={onManageData}
               onStartBattle={onStartBattle}
             />
             <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2">
