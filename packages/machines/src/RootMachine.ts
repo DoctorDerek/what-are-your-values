@@ -252,6 +252,12 @@ function requireStoredRecoveryBackup(context: RootMachineContext) {
   return backup
 }
 
+function getRecoveryReplacementNotice(context: RootMachineContext) {
+  return context.pendingRecoveryImportSource === "last-known-good"
+    ? "Last known-good save restored."
+    : "Your backup replaced the unreadable local data."
+}
+
 export const rootMachine = setup({
   types: {
     context: {} as RootMachineContext,
@@ -1128,12 +1134,12 @@ export const rootMachine = setup({
                 playerData: ({ event }) => event.output.head.playerData,
                 battleProfileStoreState: ({ event }) => event.output,
                 pendingImport: null,
-                pendingRecoveryImportSource: null,
                 recoveryEntries: null,
                 persistenceIssue: null,
                 portabilityIssue: null,
-                portabilityNotice:
-                  "Your backup replaced the unreadable local data.",
+                portabilityNotice: ({ context }) =>
+                  getRecoveryReplacementNotice(context),
+                pendingRecoveryImportSource: null,
               }),
             },
             onError: {
