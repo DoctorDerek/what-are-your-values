@@ -178,11 +178,6 @@ export function createAchievementState({
     progress.countedBattleWindow,
   )
 
-  if (lifetimeBattleCount < countedBattleWindow.length) {
-    throw new Error(
-      "Achievement lifetime battle count is lower than its counted window",
-    )
-  }
   if (completedCycleCount > lifetimeBattleCount) {
     throw new Error(
       "Achievement completed-cycle count exceeds lifetime battles",
