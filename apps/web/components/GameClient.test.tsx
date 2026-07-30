@@ -1,4 +1,5 @@
 import type { DurableStoreTransaction } from "@game/machines/src/DurableStoreAdapter"
+import type { PreparedWayvmDownload } from "@game/machines/src/PlayerDataPortabilityActors"
 import {
   fireEvent,
   render,
@@ -13,6 +14,9 @@ import GameClient from "./GameClient"
 const durableStoreFailure = vi.hoisted(() => ({
   readEnabled: false,
   writeEnabled: false,
+}))
+const playerDataFileSpies = vi.hoisted(() => ({
+  download: vi.fn<(download: PreparedWayvmDownload) => void>(),
 }))
 
 vi.mock("@/lib/IndexedDbDurableStore", async () => {
@@ -45,10 +49,20 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
   }
 })
 
+vi.mock("@/lib/PlayerDataFiles", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/PlayerDataFiles")>()
+
+  return {
+    ...actual,
+    downloadPlayerDataFile: playerDataFileSpies.download,
+  }
+})
+
 describe("GameClient Integration", () => {
   afterEach(() => {
     durableStoreFailure.readEnabled = false
     durableStoreFailure.writeEnabled = false
+    playerDataFileSpies.download.mockReset()
     localStorage.clear()
     vi.restoreAllMocks()
   })
@@ -184,6 +198,102 @@ describe("GameClient Integration", () => {
 
     await waitFor(() => expect(redoButton).toBeDisabled())
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled()
+  })
+
+  it("exports previews cancels and atomically imports complete local Player Data before restoring Hub focus", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000053",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Manage Data" }))
+    fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
+
+    await waitFor(() =>
+      expect(playerDataFileSpies.download).toHaveBeenCalledOnce(),
+    )
+    expect(
+      await screen.findByText("Your private backup is ready."),
+    ).toBeVisible()
+    const preparedDownload = playerDataFileSpies.download.mock.calls[0]?.[0]
+    if (!preparedDownload) {
+      throw new Error("The complete backup download was not prepared")
+    }
+    const backupFile = new File(
+      [preparedDownload.serialized],
+      preparedDownload.filename,
+      { type: "application/json" },
+    )
+
+    fireEvent.change(screen.getByLabelText("Import Data"), {
+      target: { files: [backupFile] },
+    })
+    expect(
+      await screen.findByRole("heading", { name: "Review Import" }),
+    ).toBeVisible()
+    expect(screen.getByText("100 active · 0 custom")).toBeVisible()
+    expect(
+      screen.getByText(/Version 0\.1\.0 · Build development/),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel Import" }))
+    expect(
+      await screen.findByRole("heading", { name: "Private Backups" }),
+    ).toBeVisible()
+
+    fireEvent.change(screen.getByLabelText("Import Data"), {
+      target: { files: [backupFile] },
+    })
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Replace Current Data" }),
+    )
+
+    expect(
+      await screen.findByText(
+        "Your imported values and progress are now active.",
+      ),
+    ).toBeVisible()
+    expect(playerDataFileSpies.download).toHaveBeenCalledOnce()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+    const manageDataButton = await screen.findByRole("button", {
+      name: "Manage Data",
+    })
+    await waitFor(() => expect(manageDataButton).toHaveFocus())
+  })
+
+  it("reports invalid import bytes without leaving Data Management or replacing current values", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000054",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Manage Data" }))
+    fireEvent.change(screen.getByLabelText("Import Data"), {
+      target: {
+        files: [
+          new File(["{}"], "invalid-backup.json", {
+            type: "application/json",
+          }),
+        ],
+      },
+    })
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Persisted JSON must use tuple arrays rather than objects",
+    )
+    expect(
+      screen.getByRole("heading", { name: "Private Backups" }),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+    expect(
+      await screen.findByRole("heading", { name: "Included Values" }),
+    ).toBeVisible()
   })
 
   it("persists a first-run profile only after introduction completion", async () => {
