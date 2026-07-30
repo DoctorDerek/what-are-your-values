@@ -783,12 +783,18 @@ describe("Root Machine", () => {
     ).toBe(5)
   })
 
-  it("surfaces durable hydration failure without inventing a replacement profile", async () => {
+  it("retries durable hydration failure without exporting invented Player Data or offering an unsafe return", async () => {
+    let shouldFail = true
+    const memoryStore = createInMemoryDurableStore()
     const durableStore = Object.freeze({
       readAll: async () => {
-        throw new Error("IndexedDB unavailable")
+        if (shouldFail) {
+          throw new Error("IndexedDB unavailable")
+        }
+
+        return memoryStore.readAll()
       },
-      compareAndSwapVerified: async () => undefined,
+      compareAndSwapVerified: memoryStore.compareAndSwapVerified,
     }) satisfies DurableStoreAdapter
     const { actor } = createRootActor({ durableStore })
     actor.start()
@@ -801,14 +807,34 @@ describe("Root Machine", () => {
       candidate.matches("PersistenceFailure"),
     )
     expect(snapshot.context.persistenceIssue).toBe("IndexedDB unavailable")
+    expect(snapshot.context.persistenceFailureOrigin).toBe("loading")
     expect(snapshot.context.battleProfileStoreState).toBeNull()
+
+    actor.send({ type: "STORAGE_RECOVERY.EXPORT_REQUESTED" })
+    actor.send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+
+    shouldFail = false
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    await waitFor(actor, (candidate) => candidate.matches("Splash"))
+
+    expect(actor.getSnapshot().context.persistenceFailureOrigin).toBeNull()
   })
 
-  it("surfaces durable first-run initialization failure without persisting a profile", async () => {
+  it("exports current first-run data and returns safely after durable initialization failure", async () => {
+    let shouldFail = true
+    const memoryStore = createInMemoryDurableStore()
     const durableStore = Object.freeze({
-      readAll: async () => new Map<string, string>(),
-      compareAndSwapVerified: async () => {
-        throw new Error("Profile initialization failed")
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFail) {
+          throw new Error("Profile initialization failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
       },
     }) satisfies DurableStoreAdapter
     const { actor } = createRootActor({ durableStore })
@@ -827,7 +853,33 @@ describe("Root Machine", () => {
     expect(snapshot.context.persistenceIssue).toBe(
       "Profile initialization failed",
     )
+    expect(snapshot.context.persistenceFailureOrigin).toBe("initialization")
     expect(snapshot.context.battleProfileStoreState).toBeNull()
+
+    actor.send({ type: "STORAGE_RECOVERY.EXPORT_REQUESTED" })
+    const exportedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+    await expect(
+      decodeWayvmExport(
+        exportedSnapshot.context.preparedDownload?.serialized ?? "",
+      ),
+    ).resolves.toMatchObject({
+      playerData: {
+        profile: { scheduler: { seed: "failed-initialization-seed" } },
+      },
+    })
+    actor.send({ type: "RECOVERY.EXPORT_CONSUMED" })
+    actor.send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
+    expect(actor.getSnapshot().matches("Splash")).toBe(true)
+
+    shouldFail = false
+    actor.send({ type: "INTRODUCTION.COMPLETED" })
+    await waitFor(actor, (candidate) => candidate.matches("Hub"))
+    expect((await durableStore.readAll()).size).toBe(2)
   })
 
   it("surfaces a durable battle commit failure without mutating the prior profile", async () => {
@@ -869,8 +921,90 @@ describe("Root Machine", () => {
       candidate.matches("PersistenceFailure"),
     )
     expect(snapshot.context.persistenceIssue).toBe("Battle commit failed")
+    expect(snapshot.context.persistenceFailureOrigin).toBe("crucible")
     expect(snapshot.context.playerData?.profile).toBe(priorProfile)
     expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
+
+    actor.send({ type: "STORAGE_RECOVERY.EXPORT_REQUESTED" })
+    const exportedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+    await expect(
+      decodeWayvmExport(
+        exportedSnapshot.context.preparedDownload?.serialized ?? "",
+      ),
+    ).resolves.toMatchObject({
+      playerData: { profile: { scheduler: priorProfile.scheduler } },
+    })
+    actor.send({ type: "RECOVERY.EXPORT_CONSUMED" })
+    actor.send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+    expect(actor.getSnapshot().context.playerData?.profile).toBe(priorProfile)
+  })
+
+  it("returns a failed battle write to the unchanged pair so the player can retry the choice", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let shouldFail = false
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFail) {
+          throw new Error("Battle retry fixture failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "root-battle-retry-seed",
+    })
+
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    const priorProfile = actor.getSnapshot().context.playerData?.profile
+    if (!priorProfile) {
+      throw new Error("Battle retry profile did not initialize")
+    }
+    const [winnerId] = projectScheduledPair(
+      priorProfile.activeDeck,
+      priorProfile.scheduler,
+    ).pair
+
+    shouldFail = true
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId,
+      expectedScheduler: priorProfile.scheduler,
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "Reviewing" }),
+    )
+
+    shouldFail = false
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const retrySnapshot = await waitForReadyCrucible(actor)
+
+    expect(retrySnapshot.context.playerData?.profile).toBe(priorProfile)
+    expect(
+      projectScheduledPair(priorProfile.activeDeck, priorProfile.scheduler)
+        .pair,
+    ).toContain(winnerId)
+
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId,
+      expectedScheduler: priorProfile.scheduler,
+    })
+    const committedSnapshot = await waitForReadyCrucible(actor)
+
+    expect(
+      committedSnapshot.context.playerData?.profile.progressById.get(winnerId)
+        ?.totalXp,
+    ).toBe(1)
   })
 
   it("returns a failed Custom Value write to browsing without replacing the durable profile", async () => {
