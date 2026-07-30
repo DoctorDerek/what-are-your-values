@@ -83,6 +83,26 @@ async function bootCorruptRootActor({
   return root
 }
 
+async function createSerializedRecoveryBackup({
+  schedulerSeed,
+  sourceBuild,
+}: {
+  readonly schedulerSeed: string
+  readonly sourceBuild: string
+}) {
+  return serializeWayvmExport(
+    await createWayvmExport({
+      exportedAt: TEST_TIMESTAMP,
+      sourceAppVersion: "0.1.0",
+      sourceBuild,
+      playerData: createInitialPlayerData({
+        schedulerSeed,
+        createdAt: TEST_TIMESTAMP,
+      }),
+    }),
+  )
+}
+
 async function waitForReadyCrucible(
   actor: ReturnType<typeof createRootActor>["actor"],
 ) {
@@ -1497,18 +1517,10 @@ describe("Root Machine", () => {
   })
 
   it("restores a retained pre-import backup only after validated preview and explicit confirmation", async () => {
-    const restoredPlayerData = createInitialPlayerData({
+    const serializedBackup = await createSerializedRecoveryBackup({
       schedulerSeed: "retained-recovery-backup",
-      createdAt: TEST_TIMESTAMP,
+      sourceBuild: "retained-backup-build",
     })
-    const serializedBackup = serializeWayvmExport(
-      await createWayvmExport({
-        exportedAt: TEST_TIMESTAMP,
-        sourceAppVersion: "0.1.0",
-        sourceBuild: "retained-backup-build",
-        playerData: restoredPlayerData,
-      }),
-    )
     const { actor, durableStore } = await bootCorruptRootActor({
       initialEntries: [
         [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
@@ -1527,6 +1539,9 @@ describe("Root Machine", () => {
       activeValueCount: 100,
       replacesCurrentLocalData: true,
     })
+    expect(reviewSnapshot.context.pendingRecoveryImportSource).toBe(
+      "last-known-good",
+    )
 
     actor.send({ type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" })
     const restoredSnapshot = await waitFor(actor, (candidate) =>
@@ -1546,6 +1561,41 @@ describe("Root Machine", () => {
     expect(
       (await durableStore.readAll()).has(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY),
     ).toBe(false)
+  })
+
+  it("identifies a player-selected recovery backup until its validated preview is cancelled", async () => {
+    const serializedBackup = await createSerializedRecoveryBackup({
+      schedulerSeed: "selected-recovery-backup",
+      sourceBuild: "selected-backup-build",
+    })
+    const { actor } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+    })
+
+    actor.send({
+      type: "RECOVERY.IMPORT_PREPARE_REQUESTED",
+      serialized: serializedBackup,
+    })
+    const reviewSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "ReviewingImport" }),
+    )
+
+    expect(reviewSnapshot.context.pendingImport?.preview.sourceBuild).toBe(
+      "selected-backup-build",
+    )
+    expect(reviewSnapshot.context.pendingRecoveryImportSource).toBe(
+      "selected-backup",
+    )
+
+    actor.send({ type: "RECOVERY.IMPORT_CANCEL_REQUESTED" })
+
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    expect(actor.getSnapshot().context.pendingRecoveryImportSource).toBeNull()
   })
 
   it("rejects invalid selected recovery bytes without mutating the captured corrupt store", async () => {
@@ -1570,6 +1620,7 @@ describe("Root Machine", () => {
     )
 
     expect(rejectedSnapshot.context.pendingImport).toBeNull()
+    expect(rejectedSnapshot.context.pendingRecoveryImportSource).toBeNull()
     expect(rejectedSnapshot.context.portabilityIssue).toBe(
       "Persisted JSON must use tuple arrays rather than objects",
     )
