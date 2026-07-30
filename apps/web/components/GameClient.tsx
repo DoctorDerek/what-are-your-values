@@ -17,6 +17,7 @@ import {
   readPlayerDataFile,
 } from "@/lib/PlayerDataFiles"
 import packageMetadata from "@/package.json"
+import Achievements from "./Achievements"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import DataManagement, { type DataManagementActivity } from "./DataManagement"
@@ -122,6 +123,14 @@ export default function GameClient() {
       returnFocusTargetIdRef.current = focusTargetId
       shouldRestoreHubFocusRef.current = true
       send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    },
+    [send],
+  )
+  const openAchievements = useCallback(
+    (focusTargetId: string) => {
+      returnFocusTargetIdRef.current = focusTargetId
+      shouldRestoreHubFocusRef.current = true
+      send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
     },
     [send],
   )
@@ -303,11 +312,22 @@ export default function GameClient() {
         onAddCustomValue={(focusTargetId) =>
           openAllValues({ focusTargetId, openCustomValueBuilder: true })
         }
+        onOpenAchievements={openAchievements}
         onManageData={openDataManagement}
         onOpenValue={(valueId, focusTargetId) =>
           openAllValues({ focusTargetId, valueId })
         }
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+      />
+    )
+  }
+
+  if (state.matches("Achievements")) {
+    return (
+      <Achievements
+        achievementState={state.context.playerData.achievements}
+        battleProfile={battleProfile}
+        onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
       />
     )
   }
