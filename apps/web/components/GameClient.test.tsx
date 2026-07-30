@@ -96,9 +96,10 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
     expect(
       screen.getByText(
-        "Your saved data was left unchanged. Reload this page to try again.",
+        "Your saved data was left unchanged. Try again after checking that this browser can access local storage.",
       ),
     ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Try Again" })).toBeVisible()
   })
 
   it("exports captured corruption and restores the retained last-known-good save through validated review", async () => {

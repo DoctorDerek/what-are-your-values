@@ -27,6 +27,9 @@ function renderRecovery(
 ) {
   const props = {
     activity: null,
+    canExportCurrentData: false,
+    canReturnWithoutNewChanges: false,
+    canRetry: false,
     hasCapturedData: true,
     hasLastKnownGoodSave: false,
     importSource: null,
@@ -36,9 +39,12 @@ function renderRecovery(
     onCancelImport: vi.fn(),
     onConfirmImport: vi.fn(),
     onDeleteAllData: vi.fn(),
+    onExportCurrentData: vi.fn(),
     onExportUnreadableData: vi.fn(),
     onImportFile: vi.fn(),
     onRestoreLastKnownGoodSave: vi.fn(),
+    onRetry: vi.fn(),
+    onReturnWithoutNewChanges: vi.fn(),
     ...overrides,
   } satisfies Parameters<typeof Recovery>[0]
 
@@ -48,8 +54,11 @@ function renderRecovery(
 }
 
 describe("Recovery", () => {
-  it("preserves the generic failure surface when no unreadable records were captured", () => {
-    renderRecovery({ hasCapturedData: false })
+  it("offers only a safe retry when loading failed before any stored Player Data was verified", () => {
+    const props = renderRecovery({
+      canRetry: true,
+      hasCapturedData: false,
+    })
 
     expect(
       screen.getByRole("heading", {
@@ -58,12 +67,49 @@ describe("Recovery", () => {
     ).toBeVisible()
     expect(
       screen.getByText(
-        "Your saved data was left unchanged. Reload this page to try again.",
+        "Your saved data was left unchanged. Try again after checking that this browser can access local storage.",
       ),
     ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
+    expect(props.onRetry).toHaveBeenCalledOnce()
+    expect(
+      screen.queryByRole("button", { name: "Export Current Data" }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "Delete All Data" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("presents exact storage-unavailable copy with export retry and safe-return actions after a rejected write", () => {
+    const props = renderRecovery({
+      canExportCurrentData: true,
+      canReturnWithoutNewChanges: true,
+      canRetry: true,
+      hasCapturedData: false,
+    })
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "WAYVM cannot currently write to device storage. Keep this screen open while you export a backup or free storage. Continuing without a reliable save could lose new progress.",
+      ),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Current Data" }))
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Return Without New Changes",
+      }),
+    )
+
+    expect(props.onExportCurrentData).toHaveBeenCalledOnce()
+    expect(props.onRetry).toHaveBeenCalledOnce()
+    expect(props.onReturnWithoutNewChanges).toHaveBeenCalledOnce()
   })
 
   it("offers exact non-destructive recovery actions and a bounded local backup picker", () => {
