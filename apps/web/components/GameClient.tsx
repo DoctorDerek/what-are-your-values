@@ -234,23 +234,46 @@ export default function GameClient() {
       activity = "Creating recovery backup…"
     } else if (state.matches({ DataManagement: "ReplacingImport" })) {
       activity = "Replacing local data…"
+    } else if (state.matches({ DataManagement: "ApplyingScopedReset" })) {
+      activity = "Applying reset…"
+    } else if (state.matches({ DataManagement: "DeletingAllData" })) {
+      activity = "Deleting local data…"
+    } else if (state.matches({ DataManagement: "ExportingResetBackup" })) {
+      activity = "Exporting backup…"
     }
 
     return (
       <DataManagement
         activity={activity}
+        canDeleteCustomValues={battleProfile.activeDeck.customValues.length > 0}
         issue={state.context.portabilityIssue}
         notice={state.context.portabilityNotice}
         preview={state.context.pendingImport?.preview ?? null}
+        resetKind={state.context.pendingResetKind}
         onCancelImport={() =>
           send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+        }
+        onCancelReset={() =>
+          send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
         }
         onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
         onConfirmImport={() =>
           send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
         }
+        onConfirmReset={(deleteAllDataAcknowledged) =>
+          send({
+            type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+            deleteAllDataAcknowledged,
+          })
+        }
         onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
         onImportFile={handleImportFile}
+        onOpenReset={(resetKind) =>
+          send({
+            type: "DATA_MANAGEMENT.RESET_OPEN_REQUESTED",
+            resetKind,
+          })
+        }
       />
     )
   }
