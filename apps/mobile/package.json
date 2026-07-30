@@ -1,0 +1,42 @@
+{
+  "name": "@game/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "build": "expo export --platform android --output-dir dist",
+    "doctor": "expo-doctor"
+  },
+  "dependencies": {
+    "@game/data": "workspace:*",
+    "@game/machines": "workspace:*",
+    "@game/utils": "workspace:*",
+    "@expo/dom-webview": "57.0.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@xstate/react": "^5",
+    "expo": "57.0.9",
+    "expo-dev-client": "57.0.10",
+    "expo-document-picker": "57.0.1",
+    "expo-file-system": "57.0.1",
+    "expo-router": "57.0.9",
+    "expo-sharing": "57.0.8",
+    "expo-status-bar": "57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "5.7.0",
+    "react-native-screens": "4.26.0",
+    "react-native-web": "0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "typescript": "^6"
+  },
+  "engines": {
+    "node": "^24"
+  }
+}

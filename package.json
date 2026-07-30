@@ -8,6 +8,10 @@
   "packageManager": "pnpm@11.10.0",
   "scripts": {
     "dev": "turbo dev",
+    "mobile": "pnpm --filter @game/mobile start",
+    "mobile:android": "pnpm --filter @game/mobile android",
+    "mobile:ios": "pnpm --filter @game/mobile ios",
+    "mobile:doctor": "pnpm --filter @game/mobile doctor",
     "prebuild": "node --import jiti/register scripts/decrypt-assets.ts",
     "build": "turbo build",
     "start": "turbo start",
@@ -32,7 +36,6 @@
     "eslint-config-next": "^16",
     "eslint-config-prettier": "^10",
     "eslint-plugin-only-warn": "^1",
-    "expo": "^57",
     "fake-indexeddb": "^6",
     "happy-dom": "^20",
     "jiti": "^2",
