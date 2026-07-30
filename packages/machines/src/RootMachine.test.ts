@@ -1157,4 +1157,277 @@ describe("Root Machine", () => {
       "root-retry-source-seed",
     )
   })
+
+  it("deletes all Custom Values through one reviewed reset while preserving canonical progress", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-delete-custom-values",
+    })
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The practice of making original solutions.",
+    })
+    const withCustomValue = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ AllValues: "Browsing" }) &&
+        candidate.context.playerData?.profile.activeDeck.customValues.length ===
+          1,
+    )
+    actor.send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_OPEN_REQUESTED",
+      resetKind: "delete-all-custom-values",
+    })
+
+    expect(
+      actor.getSnapshot().matches({ DataManagement: "ReviewingReset" }),
+    ).toBe(true)
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+      deleteAllDataAcknowledged: false,
+    })
+    const resetSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityNotice?.startsWith(
+          "All Custom Values were deleted.",
+        ) === true,
+    )
+
+    expect(
+      resetSnapshot.context.playerData?.profile.activeDeck.customValues,
+    ).toEqual([])
+    expect(
+      resetSnapshot.context.playerData?.profile.scheduler.deckRevision,
+    ).toBe(
+      (withCustomValue.context.playerData?.profile.scheduler.deckRevision ??
+        0) + 1,
+    )
+  })
+
+  it("resets levels and experience through a new progress generation while retaining achievements and deck membership", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-reset-progress",
+    })
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    const playedProfile = actor.getSnapshot().context.playerData?.profile
+    if (!playedProfile) {
+      throw new Error("Progress reset fixture did not initialize")
+    }
+    const [winnerId] = projectScheduledPair(
+      playedProfile.activeDeck,
+      playedProfile.scheduler,
+    ).pair
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId,
+      expectedScheduler: playedProfile.scheduler,
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ Crucible: "Ready" }),
+    )
+    actor.send({ type: "BATTLE.EXIT_REQUESTED" })
+    const beforeReset = actor.getSnapshot().context.playerData
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_OPEN_REQUESTED",
+      resetKind: "reset-levels-and-experience",
+    })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+      deleteAllDataAcknowledged: false,
+    })
+    const resetSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityNotice?.startsWith(
+          "Levels and experience were reset.",
+        ) === true,
+    )
+    const resetPlayerData = resetSnapshot.context.playerData
+    if (!beforeReset || !resetPlayerData) {
+      throw new Error("Progress reset Player Data is unavailable")
+    }
+
+    expect(resetPlayerData.profile.activeDeck.valueIds).toEqual(
+      beforeReset.profile.activeDeck.valueIds,
+    )
+    expect(resetPlayerData.profile.scheduler.progressGeneration).toBe(
+      beforeReset.profile.scheduler.progressGeneration + 1,
+    )
+    expect(resetPlayerData.profile.history).toEqual([])
+    expect(
+      Array.from(resetPlayerData.profile.progressById.values()).every(
+        ({ totalXp }) => totalXp === 0,
+      ),
+    ).toBe(true)
+    expect(resetPlayerData.achievements.unlocks).toEqual(
+      beforeReset.achievements.unlocks,
+    )
+  })
+
+  it("resets only achievements while preserving the complete profile timeline", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-reset-achievements",
+    })
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    const profile = actor.getSnapshot().context.playerData?.profile
+    if (!profile) {
+      throw new Error("Achievement reset fixture did not initialize")
+    }
+    const [winnerId] = projectScheduledPair(
+      profile.activeDeck,
+      profile.scheduler,
+    ).pair
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId,
+      expectedScheduler: profile.scheduler,
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ Crucible: "Ready" }),
+    )
+    actor.send({ type: "BATTLE.EXIT_REQUESTED" })
+    const beforeReset = actor.getSnapshot().context.playerData
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_OPEN_REQUESTED",
+      resetKind: "reset-achievements",
+    })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+      deleteAllDataAcknowledged: false,
+    })
+    const resetSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityNotice?.startsWith(
+          "Achievements and achievement progress were reset.",
+        ) === true,
+    )
+    const resetPlayerData = resetSnapshot.context.playerData
+    if (!beforeReset || !resetPlayerData) {
+      throw new Error("Achievement reset Player Data is unavailable")
+    }
+
+    expect(resetPlayerData.profile).toEqual(beforeReset.profile)
+    expect(resetPlayerData.achievements.unlocks).toEqual([])
+    expect(resetPlayerData.achievements.progress).toMatchObject({
+      achievementProgressGeneration:
+        beforeReset.achievements.progress.achievementProgressGeneration + 1,
+      lifetimeBattleCount: 0,
+      completedCycleCount: 0,
+      countedBattleWindow: beforeReset.profile.history.map(
+        ({ battleId }) => battleId,
+      ),
+    })
+  })
+
+  it("keeps reset review active through export and refuses complete erasure until acknowledged", async () => {
+    const { actor, durableStore } = await bootRootActor({
+      schedulerSeed: "root-delete-all-data",
+    })
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_OPEN_REQUESTED",
+      resetKind: "delete-all-data",
+    })
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    const exportedReview = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "ReviewingReset" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+
+    expect(exportedReview.context.pendingResetKind).toBe("delete-all-data")
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+      deleteAllDataAcknowledged: false,
+    })
+
+    expect(
+      actor.getSnapshot().matches({ DataManagement: "ReviewingReset" }),
+    ).toBe(true)
+    expect((await durableStore.readAll()).size).toBeGreaterThan(0)
+
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+      deleteAllDataAcknowledged: true,
+    })
+    const deletedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches("Splash") &&
+        candidate.context.portabilityNotice ===
+          "All local WAYVM player data was deleted.",
+    )
+
+    await expect(durableStore.readAll()).resolves.toEqual(new Map())
+    expect(deletedSnapshot.context.battleProfileStoreState).toBeNull()
+
+    actor.send({ type: "INTRODUCTION.COMPLETED" })
+    await waitFor(actor, (candidate) => candidate.matches("Hub"))
+    expect((await durableStore.readAll()).size).toBe(2)
+  })
+
+  it("returns a failed scoped reset to review with its intent intact for retry", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let shouldFail = false
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFail) {
+          throw new Error("Scoped reset failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "root-reset-retry",
+    })
+    const currentPlayerData = actor.getSnapshot().context.playerData
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_OPEN_REQUESTED",
+      resetKind: "reset-achievements",
+    })
+    shouldFail = true
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+      deleteAllDataAcknowledged: false,
+    })
+    const failedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "ReviewingReset" }) &&
+        candidate.context.portabilityIssue === "Scoped reset failed",
+    )
+
+    expect(failedSnapshot.context.playerData).toBe(currentPlayerData)
+    expect(failedSnapshot.context.pendingResetKind).toBe("reset-achievements")
+
+    shouldFail = false
+    actor.send({
+      type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED",
+      deleteAllDataAcknowledged: false,
+    })
+    const retriedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.pendingResetKind === null,
+    )
+
+    expect(retriedSnapshot.context.portabilityIssue).toBeNull()
+  })
 })
