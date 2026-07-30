@@ -1,15 +1,24 @@
 import { createCustomValueId } from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { createActor, waitFor } from "xstate"
-import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "./BattleProfileStore"
+import {
+  BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  BATTLE_PROFILE_SNAPSHOT_A_KEY,
+} from "./BattleProfileStore"
 import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
 } from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
+import { createInitialPlayerData } from "./PlayerData"
 import { rootMachine } from "./RootMachine"
-import { decodeWayvmExport } from "./WayvmExport"
+import {
+  createWayvmExport,
+  decodeWayvmExport,
+  serializeWayvmExport,
+} from "./WayvmExport"
 
 const TEST_TIMESTAMP = "2026-07-21T00:00:00.000Z"
 
@@ -50,6 +59,26 @@ async function bootRootActor({
     root.actor.send({ type: "INTRODUCTION.COMPLETED" })
     await waitFor(root.actor, (snapshot) => snapshot.matches("Hub"))
   }
+
+  return root
+}
+
+async function bootCorruptRootActor({
+  initialEntries,
+}: {
+  readonly initialEntries: readonly (readonly [string, string])[]
+}) {
+  const root = createRootActor({
+    durableStore: createInMemoryDurableStore(initialEntries),
+  })
+  root.actor.start()
+  root.actor.send({
+    type: "APP.HYDRATED",
+    schedulerSeed: "unrecoverable-root-seed",
+  })
+  await waitFor(root.actor, (snapshot) =>
+    snapshot.matches({ PersistenceFailure: "Reviewing" }),
+  )
 
   return root
 }
@@ -1429,5 +1458,192 @@ describe("Root Machine", () => {
     )
 
     expect(retriedSnapshot.context.portabilityIssue).toBeNull()
+  })
+
+  it("exports the exact captured corrupt records as diagnostic evidence before recovery", async () => {
+    const corruptEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ] as const
+    const { actor } = await bootCorruptRootActor({
+      initialEntries: corruptEntries,
+    })
+
+    actor.send({ type: "RECOVERY.EXPORT_REQUESTED" })
+    const exportedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+    const preparedDownload = exportedSnapshot.context.preparedDownload
+    if (!preparedDownload) {
+      throw new Error("Recovery evidence was not prepared")
+    }
+
+    expect(preparedDownload.filename).toContain("mapache-recovery")
+    expect(JSON.parse(preparedDownload.serialized)).toEqual(
+      expect.arrayContaining([
+        "wayvm-recovery-bundle",
+        expect.arrayContaining([
+          [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+          [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+        ]),
+      ]),
+    )
+
+    actor.send({ type: "RECOVERY.EXPORT_CONSUMED" })
+    expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+  })
+
+  it("restores a retained pre-import backup only after validated preview and explicit confirmation", async () => {
+    const restoredPlayerData = createInitialPlayerData({
+      schedulerSeed: "retained-recovery-backup",
+      createdAt: TEST_TIMESTAMP,
+    })
+    const serializedBackup = serializeWayvmExport(
+      await createWayvmExport({
+        exportedAt: TEST_TIMESTAMP,
+        sourceAppVersion: "0.1.0",
+        sourceBuild: "retained-backup-build",
+        playerData: restoredPlayerData,
+      }),
+    )
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+        [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, serializedBackup],
+      ],
+    })
+
+    actor.send({ type: "RECOVERY.RESTORE_BACKUP_REQUESTED" })
+    const reviewSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "ReviewingImport" }),
+    )
+
+    expect(reviewSnapshot.context.pendingImport?.preview).toMatchObject({
+      sourceBuild: "retained-backup-build",
+      activeValueCount: 100,
+      replacesCurrentLocalData: true,
+    })
+
+    actor.send({ type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" })
+    const restoredSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("Hub"),
+    )
+
+    expect(restoredSnapshot.context.playerData?.profile.scheduler.seed).toBe(
+      "retained-recovery-backup",
+    )
+    expect(restoredSnapshot.context.recoveryEntries).toBeNull()
+    expect(restoredSnapshot.context.portabilityNotice).toBe(
+      "Your backup replaced the unreadable local data.",
+    )
+    expect(
+      (await durableStore.readAll()).has(BATTLE_PROFILE_MANIFEST_KEY),
+    ).toBe(true)
+    expect(
+      (await durableStore.readAll()).has(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY),
+    ).toBe(false)
+  })
+
+  it("rejects invalid selected recovery bytes without mutating the captured corrupt store", async () => {
+    const initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ] as const
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries,
+    })
+    const capturedEntries = await durableStore.readAll()
+
+    actor.send({
+      type: "RECOVERY.IMPORT_PREPARE_REQUESTED",
+      serialized: "{}",
+    })
+    const rejectedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.portabilityIssue !== null,
+    )
+
+    expect(rejectedSnapshot.context.pendingImport).toBeNull()
+    expect(rejectedSnapshot.context.portabilityIssue).toBe(
+      "Persisted JSON must use tuple arrays rather than objects",
+    )
+    await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
+  })
+
+  it("requires fresh acknowledgment before deleting every captured corrupt record", async () => {
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+    })
+
+    actor.send({
+      type: "RECOVERY.DELETE_ALL_REQUESTED",
+      acknowledged: false,
+    })
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    expect((await durableStore.readAll()).size).toBe(2)
+
+    actor.send({
+      type: "RECOVERY.DELETE_ALL_REQUESTED",
+      acknowledged: true,
+    })
+    const deletedSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("Splash"),
+    )
+
+    await expect(durableStore.readAll()).resolves.toEqual(new Map())
+    expect(deletedSnapshot.context.recoveryEntries).toBeNull()
+    expect(deletedSnapshot.context.portabilityNotice).toBe(
+      "All local WAYVM player data was deleted.",
+    )
+  })
+
+  it("keeps destructive recovery events inert when a runtime failure has no captured hydration evidence", async () => {
+    let compareAndSwapCallCount = 0
+    const durableStore = Object.freeze({
+      readAll: async () => {
+        throw new Error("IndexedDB unavailable")
+      },
+      compareAndSwapVerified: async () => {
+        compareAndSwapCallCount += 1
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = createRootActor({ durableStore })
+    actor.start()
+    actor.send({
+      type: "APP.HYDRATED",
+      schedulerSeed: "runtime-failure-recovery-guard",
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "Reviewing" }),
+    )
+
+    actor.send({ type: "RECOVERY.EXPORT_REQUESTED" })
+    actor.send({
+      type: "RECOVERY.IMPORT_PREPARE_REQUESTED",
+      serialized: "{}",
+    })
+    actor.send({
+      type: "RECOVERY.DELETE_ALL_REQUESTED",
+      acknowledged: true,
+    })
+
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    expect(actor.getSnapshot().context.recoveryEntries).toBeNull()
+    expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+    expect(actor.getSnapshot().context.pendingImport).toBeNull()
+    expect(compareAndSwapCallCount).toBe(0)
   })
 })
