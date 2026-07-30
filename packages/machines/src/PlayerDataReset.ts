@@ -10,6 +10,17 @@ import { createDeckRevisionCommit } from "./BattleProfileCommit"
 import { createPlayerData, type PlayerData } from "./PlayerData"
 import { createProgressResetCandidate } from "./ProgressReset"
 
+export type PlayerDataResetKind =
+  | "delete-all-custom-values"
+  | "reset-levels-and-experience"
+  | "reset-achievements"
+  | "delete-all-data"
+
+export type ScopedPlayerDataResetKind = Exclude<
+  PlayerDataResetKind,
+  "delete-all-data"
+>
+
 function getReachableBattleIds(profile: BattleProfile) {
   return Object.freeze(
     [...profile.history, ...profile.redo].map(({ battleId }) => battleId),
@@ -146,4 +157,31 @@ export function createAchievementsResetCandidate({
       },
     }),
   })
+}
+
+export function createScopedPlayerDataResetCandidate({
+  playerData,
+  resetAt,
+  resetKind,
+}: {
+  readonly playerData: PlayerData
+  readonly resetAt: string
+  readonly resetKind: ScopedPlayerDataResetKind
+}) {
+  if (resetKind === "delete-all-custom-values") {
+    return createDeleteAllCustomValuesCandidate({
+      playerData,
+      deletedAt: resetAt,
+    })
+  }
+
+  if (resetKind === "reset-levels-and-experience") {
+    return createLevelsAndExperienceResetCandidate({
+      playerData,
+      resetAt,
+      schedulerSeed: `reset:${resetAt}`,
+    })
+  }
+
+  return createAchievementsResetCandidate({ playerData })
 }
