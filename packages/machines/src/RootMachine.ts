@@ -62,6 +62,7 @@ type RootMachineContext = {
   pendingBattleProfileCommit: BattleProfileCommit | null
   pendingImportBytes: string | null
   pendingImport: PreparedWayvmImport | null
+  pendingRecoveryImportSource: "last-known-good" | "selected-backup" | null
   preImportBackupBytes: string | null
   preparedDownload: PreparedWayvmDownload | null
   pendingResetKind: PlayerDataResetKind | null
@@ -320,6 +321,7 @@ export const rootMachine = setup({
     pendingBattleProfileCommit: null,
     pendingImportBytes: null,
     pendingImport: null,
+    pendingRecoveryImportSource: null,
     preImportBackupBytes: null,
     preparedDownload: null,
     pendingResetKind: null,
@@ -982,6 +984,7 @@ export const rootMachine = setup({
               actions: assign({
                 pendingImportBytes: ({ event }) => event.serialized,
                 pendingImport: null,
+                pendingRecoveryImportSource: "selected-backup",
                 portabilityIssue: null,
                 portabilityNotice: null,
               }),
@@ -993,6 +996,7 @@ export const rootMachine = setup({
                 pendingImportBytes: ({ context }) =>
                   requireStoredRecoveryBackup(context),
                 pendingImport: null,
+                pendingRecoveryImportSource: "last-known-good",
                 portabilityIssue: null,
                 portabilityNotice: null,
               }),
@@ -1061,6 +1065,7 @@ export const rootMachine = setup({
               actions: assign({
                 pendingImportBytes: null,
                 pendingImport: null,
+                pendingRecoveryImportSource: null,
                 portabilityIssue: ({ event }) => getErrorMessage(event.error),
               }),
             },
@@ -1085,6 +1090,7 @@ export const rootMachine = setup({
               actions: assign({
                 pendingImportBytes: null,
                 pendingImport: null,
+                pendingRecoveryImportSource: null,
                 portabilityIssue: ({ event }) => getErrorMessage(event.error),
               }),
             },
@@ -1096,6 +1102,7 @@ export const rootMachine = setup({
               target: "Reviewing",
               actions: assign({
                 pendingImport: null,
+                pendingRecoveryImportSource: null,
                 portabilityIssue: null,
               }),
             },
@@ -1121,6 +1128,7 @@ export const rootMachine = setup({
                 playerData: ({ event }) => event.output.head.playerData,
                 battleProfileStoreState: ({ event }) => event.output,
                 pendingImport: null,
+                pendingRecoveryImportSource: null,
                 recoveryEntries: null,
                 persistenceIssue: null,
                 portabilityIssue: null,
@@ -1151,6 +1159,7 @@ export const rootMachine = setup({
                 battleProfileStoreState: null,
                 pendingImport: null,
                 pendingImportBytes: null,
+                pendingRecoveryImportSource: null,
                 preparedDownload: null,
                 recoveryEntries: null,
                 persistenceIssue: null,
