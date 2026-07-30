@@ -133,9 +133,7 @@ describe("Root Machine", () => {
   })
 
   it("adds a custom value through the All Values durable update flow", async () => {
-    const randomUuid = vi.fn(
-      () => "00000000-0000-4000-8000-000000000001",
-    )
+    const randomUuid = vi.fn(() => "00000000-0000-4000-8000-000000000001")
     const { actor } = await bootRootActor({
       schedulerSeed: "all-values-add-seed",
       randomUuid,
