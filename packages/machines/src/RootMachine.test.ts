@@ -1,6 +1,7 @@
 import { createCustomValueId } from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { createActor, waitFor } from "xstate"
+import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "./BattleProfileStore"
 import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
@@ -8,6 +9,7 @@ import {
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
 import { rootMachine } from "./RootMachine"
+import { decodeWayvmExport } from "./WayvmExport"
 
 const TEST_TIMESTAMP = "2026-07-21T00:00:00.000Z"
 
@@ -942,5 +944,217 @@ describe("Root Machine", () => {
 
     expect(actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(true)
     expect(actor.getSnapshot().context.playerData?.profile).toBe(profile)
+  })
+
+  it("prepares and consumes a canonical export carrying the deployed build identity", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-export-seed",
+    })
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    const snapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+    const preparedDownload = snapshot.context.preparedDownload
+    if (!preparedDownload) {
+      throw new Error("Export download was not prepared")
+    }
+
+    await expect(
+      decodeWayvmExport(preparedDownload.serialized),
+    ).resolves.toMatchObject({
+      exportedAt: TEST_TIMESTAMP,
+      sourceAppVersion: "0.1.0",
+      sourceBuild: "test-build",
+    })
+    expect(preparedDownload.filename).toContain("2026-07-21")
+    expect(snapshot.context.portabilityNotice).toBe(
+      "Your private backup is ready.",
+    )
+
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+
+    expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+  })
+
+  it("rejects invalid import bytes without replacing or abandoning the current Player Data", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-invalid-import-seed",
+    })
+    const currentPlayerData = actor.getSnapshot().context.playerData
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: "{}",
+    })
+    const snapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityIssue !== null,
+    )
+
+    expect(snapshot.context.playerData).toBe(currentPlayerData)
+    expect(snapshot.context.pendingImport).toBeNull()
+    expect(snapshot.context.portabilityIssue).toBe(
+      "Persisted JSON must use tuple arrays rather than objects",
+    )
+  })
+
+  it("previews and cancels a valid import before replacing complete Player Data with a retained backup", async () => {
+    const source = await bootRootActor({
+      schedulerSeed: "root-import-source-seed",
+    })
+    source.actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    source.actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    const sourceSnapshot = await waitFor(
+      source.actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+    const importBytes = sourceSnapshot.context.preparedDownload?.serialized
+    if (!importBytes) {
+      throw new Error("Import fixture was not exported")
+    }
+
+    const target = await bootRootActor({
+      schedulerSeed: "root-import-target-seed",
+    })
+    const targetPlayerData = target.actor.getSnapshot().context.playerData
+    target.actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    target.actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: importBytes,
+    })
+    let reviewSnapshot = await waitFor(target.actor, (candidate) =>
+      candidate.matches({ DataManagement: "ReviewingImport" }),
+    )
+
+    expect(reviewSnapshot.context.playerData).toBe(targetPlayerData)
+    expect(reviewSnapshot.context.pendingImport?.preview).toMatchObject({
+      sourceBuild: "test-build",
+      activeValueCount: 100,
+      replacesCurrentLocalData: true,
+    })
+
+    target.actor.send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+    expect(
+      target.actor.getSnapshot().matches({ DataManagement: "Browsing" }),
+    ).toBe(true)
+    expect(target.actor.getSnapshot().context.playerData).toBe(targetPlayerData)
+    expect(target.actor.getSnapshot().context.pendingImport).toBeNull()
+
+    target.actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: importBytes,
+    })
+    reviewSnapshot = await waitFor(target.actor, (candidate) =>
+      candidate.matches({ DataManagement: "ReviewingImport" }),
+    )
+    target.actor.send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+    const importedSnapshot = await waitFor(
+      target.actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityNotice ===
+          "Your imported values and progress are now active.",
+    )
+
+    expect(importedSnapshot.context.playerData?.profile.scheduler.seed).toBe(
+      "root-import-source-seed",
+    )
+    expect(importedSnapshot.context.pendingImport).toBeNull()
+    const preImportBackupBytes = (await target.durableStore.readAll()).get(
+      BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+    )
+    if (!preImportBackupBytes) {
+      throw new Error("Pre-import backup was not retained")
+    }
+    await expect(
+      decodeWayvmExport(preImportBackupBytes),
+    ).resolves.toMatchObject({
+      playerData: {
+        profile: {
+          scheduler: { seed: "root-import-target-seed" },
+        },
+      },
+    })
+    expect(reviewSnapshot.context.playerData).toBe(targetPlayerData)
+  })
+
+  it("preserves the reviewed import and current data after a failed replacement so the player can retry", async () => {
+    const source = await bootRootActor({
+      schedulerSeed: "root-retry-source-seed",
+    })
+    source.actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    source.actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    const sourceSnapshot = await waitFor(
+      source.actor,
+      (candidate) => candidate.context.preparedDownload !== null,
+    )
+    const importBytes = sourceSnapshot.context.preparedDownload?.serialized
+    if (!importBytes) {
+      throw new Error("Retry import fixture was not exported")
+    }
+
+    const memoryStore = createInMemoryDurableStore()
+    let shouldFail = false
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFail) {
+          throw new Error("Import replacement failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const target = await bootRootActor({
+      durableStore,
+      schedulerSeed: "root-retry-target-seed",
+    })
+    const targetPlayerData = target.actor.getSnapshot().context.playerData
+    target.actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    target.actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: importBytes,
+    })
+    await waitFor(target.actor, (candidate) =>
+      candidate.matches({ DataManagement: "ReviewingImport" }),
+    )
+
+    shouldFail = true
+    target.actor.send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+    const failedSnapshot = await waitFor(
+      target.actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "ReviewingImport" }) &&
+        candidate.context.portabilityIssue === "Import replacement failed",
+    )
+
+    expect(failedSnapshot.context.playerData).toBe(targetPlayerData)
+    expect(failedSnapshot.context.pendingImport).not.toBeNull()
+    expect(failedSnapshot.context.preImportBackupBytes).toBeNull()
+
+    shouldFail = false
+    target.actor.send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+    const retriedSnapshot = await waitFor(
+      target.actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityNotice ===
+          "Your imported values and progress are now active.",
+    )
+
+    expect(retriedSnapshot.context.portabilityIssue).toBeNull()
+    expect(retriedSnapshot.context.playerData?.profile.scheduler.seed).toBe(
+      "root-retry-source-seed",
+    )
   })
 })
