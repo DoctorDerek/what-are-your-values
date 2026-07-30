@@ -14,11 +14,13 @@ import {
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
   commitBattleProfileStoreEvent,
   deleteAllBattleProfileStoreData,
+  deleteUnrecoverableBattleProfileStoreData,
   getBattleProfileJournalKey,
   initializeBattleProfileStore,
   readBattleProfileJournalKeyGeneration,
   replaceBattleProfileStorePlayerData,
   replaceBattleProfileStorePlayerDataForReset,
+  replaceUnrecoverableBattleProfileStorePlayerData,
 } from "./BattleProfileStore"
 import { DurableStoreConflictError } from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
@@ -439,5 +441,83 @@ describe("Battle Profile Store", () => {
       deleteAllBattleProfileStoreData({ store, state: staleState }),
     ).rejects.toThrow("wayvm.snapshot.manifest")
     expect((await store.readAll()).size).toBeGreaterThan(0)
+  })
+
+  it("atomically replaces captured unrecoverable bytes with one validated generation-zero checkpoint", async () => {
+    const store = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ["wayvm.future-record", "future-corrupt-data"],
+    ])
+    const entries = await store.readAll()
+    const playerData = createInitialPlayerData({
+      schedulerSeed: "explicit-recovery-import",
+      createdAt: createCommitTimestamp(0),
+    })
+
+    const recoveredState =
+      await replaceUnrecoverableBattleProfileStorePlayerData({
+        store,
+        entries,
+        playerData,
+        replacedAt: createCommitTimestamp(1),
+        appVersion: "0.1.0",
+      })
+    const recoveredEntries = await store.readAll()
+
+    expect(recoveredState.head).toEqual({
+      generation: 0,
+      revision: 0,
+      playerData,
+    })
+    expect(Array.from(recoveredEntries.keys()).sort()).toEqual(
+      [BATTLE_PROFILE_MANIFEST_KEY, BATTLE_PROFILE_SNAPSHOT_A_KEY].sort(),
+    )
+    await expect(
+      decodeBattleProfileCheckpoint(
+        recoveredEntries.get(BATTLE_PROFILE_SNAPSHOT_A_KEY) ?? "",
+      ),
+    ).resolves.toMatchObject({ playerData })
+  })
+
+  it("rejects explicit recovery replacement when captured corrupt bytes become stale", async () => {
+    const store = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "first-corrupt-manifest"],
+    ])
+    const entries = await store.readAll()
+    await store.compareAndSwapVerified({
+      expectedEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "first-corrupt-manifest"],
+      ],
+      putEntries: [[BATTLE_PROFILE_MANIFEST_KEY, "second-corrupt-manifest"]],
+      deleteKeys: [],
+    })
+    const currentEntries = await store.readAll()
+
+    await expect(
+      replaceUnrecoverableBattleProfileStorePlayerData({
+        store,
+        entries,
+        playerData: createInitialPlayerData({
+          schedulerSeed: "stale-explicit-recovery",
+          createdAt: createCommitTimestamp(0),
+        }),
+        replacedAt: createCommitTimestamp(1),
+        appVersion: "0.1.0",
+      }),
+    ).rejects.toBeInstanceOf(DurableStoreConflictError)
+    await expect(store.readAll()).resolves.toEqual(currentEntries)
+  })
+
+  it("deletes exactly the captured unrecoverable records", async () => {
+    const store = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ])
+    const entries = await store.readAll()
+
+    await deleteUnrecoverableBattleProfileStoreData({ store, entries })
+
+    await expect(store.readAll()).resolves.toEqual(new Map())
   })
 })
