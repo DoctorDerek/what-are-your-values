@@ -179,6 +179,23 @@ describe("Root Machine", () => {
     expect(actor.getSnapshot().context.playerData?.profile).toBe(battleProfile)
   })
 
+  it("opens and closes Achievements without replacing Player Data", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "achievements-route-seed",
+    })
+    const playerData = actor.getSnapshot().context.playerData
+
+    actor.send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("Achievements")).toBe(true)
+    expect(actor.getSnapshot().context.playerData).toBe(playerData)
+
+    actor.send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+    expect(actor.getSnapshot().context.playerData).toBe(playerData)
+  })
+
   it("adds a custom value through the All Values durable update flow", async () => {
     const { actor } = await bootRootActor({
       schedulerSeed: "all-values-add-seed",
