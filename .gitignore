@@ -41,6 +41,9 @@ yarn-error.log*
 # Turborepo
 .turbo
 
+# Expo
+.expo/
+
 # Other Next.js
 node_modules
 target
