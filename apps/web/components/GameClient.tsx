@@ -232,6 +232,9 @@ export default function GameClient() {
 
   if (isPersistenceFailure) {
     let activity: RecoveryActivity | null = null
+    const canRecoverCurrentData =
+      state.context.persistenceFailureOrigin !== null &&
+      state.context.persistenceFailureOrigin !== "loading"
     if (
       state.matches({ PersistenceFailure: "PreparingStoredBackup" }) ||
       state.matches({ PersistenceFailure: "PreparingImport" })
@@ -250,14 +253,8 @@ export default function GameClient() {
     return (
       <Recovery
         activity={activity}
-        canExportCurrentData={
-          state.context.persistenceFailureOrigin === "initialization" ||
-          state.context.persistenceFailureOrigin === "crucible"
-        }
-        canReturnWithoutNewChanges={
-          state.context.persistenceFailureOrigin === "initialization" ||
-          state.context.persistenceFailureOrigin === "crucible"
-        }
+        canExportCurrentData={canRecoverCurrentData}
+        canReturnWithoutNewChanges={canRecoverCurrentData}
         canRetry={state.context.persistenceFailureOrigin !== null}
         hasCapturedData={state.context.recoveryEntries !== null}
         hasLastKnownGoodSave={
