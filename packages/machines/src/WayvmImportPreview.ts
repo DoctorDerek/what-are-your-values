@@ -21,6 +21,11 @@ export type WayvmImportPreview = {
   readonly replacesCurrentLocalData: true
 }
 
+export type PreparedWayvmImport = {
+  readonly wayvmExport: WayvmExport
+  readonly preview: WayvmImportPreview
+}
+
 function getTotalComparisons(wayvmExport: WayvmExport) {
   const valueComparisonCount = Array.from(
     wayvmExport.playerData.profile.progressById.values(),
@@ -68,5 +73,5 @@ export async function prepareWayvmImport(serialized: string) {
   return Object.freeze({
     wayvmExport,
     preview: createWayvmImportPreview(wayvmExport),
-  })
+  }) satisfies PreparedWayvmImport
 }
