@@ -82,11 +82,11 @@ describe("Root Machine", () => {
 
     let snapshot = actor.getSnapshot()
     expect(snapshot.matches("Splash")).toBe(true)
-    expect(snapshot.context.battleProfile?.activeDeck.valueIds).toHaveLength(
-      100,
-    )
-    expect(snapshot.context.battleProfile?.history).toEqual([])
-    expect(snapshot.context.battleProfile?.redo).toEqual([])
+    expect(
+      snapshot.context.playerData?.profile?.activeDeck.valueIds,
+    ).toHaveLength(100)
+    expect(snapshot.context.playerData?.profile?.history).toEqual([])
+    expect(snapshot.context.playerData?.profile?.redo).toEqual([])
     await expect(durableStore.readAll()).resolves.toEqual(new Map())
 
     actor.send({
@@ -94,9 +94,9 @@ describe("Root Machine", () => {
     })
     snapshot = await waitFor(actor, (candidate) => candidate.matches("Hub"))
 
-    expect(snapshot.context.battleProfileStoreState?.head.profile).toBe(
-      snapshot.context.battleProfile,
-    )
+    expect(
+      snapshot.context.battleProfileStoreState?.head.playerData.profile,
+    ).toBe(snapshot.context.playerData?.profile)
     expect((await durableStore.readAll()).size).toBe(2)
   })
 
@@ -115,16 +115,16 @@ describe("Root Machine", () => {
       schedulerSeed: "all-values-profile-seed",
     })
 
-    const battleProfile = actor.getSnapshot().context.battleProfile
+    const battleProfile = actor.getSnapshot().context.playerData?.profile
     actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
 
     expect(actor.getSnapshot().matches("AllValues")).toBe(true)
-    expect(actor.getSnapshot().context.battleProfile).toBe(battleProfile)
+    expect(actor.getSnapshot().context.playerData?.profile).toBe(battleProfile)
 
     actor.send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
 
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
-    expect(actor.getSnapshot().context.battleProfile).toBe(battleProfile)
+    expect(actor.getSnapshot().context.playerData?.profile).toBe(battleProfile)
   })
 
   it("adds a custom value through the All Values durable update flow", async () => {
@@ -144,7 +144,7 @@ describe("Root Machine", () => {
         return false
       }
 
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       if (!profile) {
         return false
       }
@@ -152,7 +152,7 @@ describe("Root Machine", () => {
       const customValue = profile.activeDeck.customValues[0]
       return customValue?.name === "Ingenuity"
     })
-    const afterAddProfile = afterAddSnapshot.context.battleProfile
+    const afterAddProfile = afterAddSnapshot.context.playerData?.profile
     if (!afterAddProfile) {
       throw new Error("Battle profile did not survive custom value add")
     }
@@ -185,7 +185,7 @@ describe("Root Machine", () => {
         return false
       }
 
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       if (!profile) {
         return false
       }
@@ -199,7 +199,8 @@ describe("Root Machine", () => {
     })
 
     const addedValue =
-      afterTrimmedAddSnapshot.context.battleProfile?.activeDeck.customValues[0]
+      afterTrimmedAddSnapshot.context.playerData?.profile?.activeDeck
+        .customValues[0]
     if (!addedValue) {
       throw new Error("Custom value add did not trim inputs")
     }
@@ -253,7 +254,7 @@ describe("Root Machine", () => {
       definition: "The disciplined practice of creating new solutions.",
     })
     const addedSnapshot = await waitFor(blankEditRoot.actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       return (
         candidate.matches({ AllValues: "Browsing" }) &&
         !!profile &&
@@ -261,7 +262,7 @@ describe("Root Machine", () => {
       )
     })
     const customValueId =
-      addedSnapshot.context.battleProfile?.activeDeck.customValues[0]?.id
+      addedSnapshot.context.playerData?.profile?.activeDeck.customValues[0]?.id
     if (!customValueId) {
       throw new Error("Custom value add did not create an id")
     }
@@ -291,7 +292,7 @@ describe("Root Machine", () => {
     const blankDefinitionAddedSnapshot = await waitFor(
       blankDefinitionUpdateRoot.actor,
       (candidate) => {
-        const profile = candidate.context.battleProfile
+        const profile = candidate.context.playerData?.profile
         return (
           candidate.matches({ AllValues: "Browsing" }) &&
           !!profile &&
@@ -300,7 +301,7 @@ describe("Root Machine", () => {
       },
     )
     const blankDefinitionValueId =
-      blankDefinitionAddedSnapshot.context.battleProfile?.activeDeck
+      blankDefinitionAddedSnapshot.context.playerData?.profile?.activeDeck
         .customValues[0]?.id
     if (!blankDefinitionValueId) {
       throw new Error("Custom value add did not create an id")
@@ -363,7 +364,7 @@ describe("Root Machine", () => {
     })
 
     const afterAddSnapshot = await waitFor(actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       return (
         candidate.matches({ AllValues: "Browsing" }) &&
         !!profile &&
@@ -374,7 +375,8 @@ describe("Root Machine", () => {
     })
 
     const customValueId =
-      afterAddSnapshot.context.battleProfile?.activeDeck.customValues[0]?.id
+      afterAddSnapshot.context.playerData?.profile?.activeDeck.customValues[0]
+        ?.id
     if (!customValueId) {
       throw new Error("Custom value add did not create an id")
     }
@@ -385,7 +387,7 @@ describe("Root Machine", () => {
       definition: "A sense of purpose in what matters.",
     })
     const afterSecondAddSnapshot = await waitFor(actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       return (
         candidate.matches({ AllValues: "Browsing" }) &&
         !!profile &&
@@ -393,7 +395,8 @@ describe("Root Machine", () => {
       )
     })
     const secondCustomValue =
-      afterSecondAddSnapshot.context.battleProfile?.activeDeck.customValues[1]
+      afterSecondAddSnapshot.context.playerData?.profile?.activeDeck
+        .customValues[1]
     if (!secondCustomValue) {
       throw new Error("Second custom value add did not create a value")
     }
@@ -406,7 +409,7 @@ describe("Root Machine", () => {
     })
 
     const afterUpdateSnapshot = await waitFor(actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       if (!candidate.matches({ AllValues: "Browsing" }) || !profile) {
         return false
       }
@@ -416,7 +419,7 @@ describe("Root Machine", () => {
       )
     })
 
-    const afterUpdateProfile = afterUpdateSnapshot.context.battleProfile
+    const afterUpdateProfile = afterUpdateSnapshot.context.playerData?.profile
     if (!afterUpdateProfile) {
       throw new Error("Battle profile did not survive custom value edit")
     }
@@ -450,7 +453,7 @@ describe("Root Machine", () => {
     })
 
     const afterAddSnapshot = await waitFor(actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       return (
         candidate.matches({ AllValues: "Browsing" }) &&
         !!profile &&
@@ -461,7 +464,8 @@ describe("Root Machine", () => {
     })
 
     const customValueId =
-      afterAddSnapshot.context.battleProfile?.activeDeck.customValues?.[0]?.id
+      afterAddSnapshot.context.playerData?.profile?.activeDeck.customValues?.[0]
+        ?.id
     if (!customValueId) {
       throw new Error("Custom value add did not create an id")
     }
@@ -474,7 +478,7 @@ describe("Root Machine", () => {
     })
 
     const afterUpdateSnapshot = await waitFor(actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       if (!candidate.matches({ AllValues: "Browsing" }) || !profile) {
         return false
       }
@@ -488,7 +492,7 @@ describe("Root Machine", () => {
     })
 
     const updatedValue =
-      afterUpdateSnapshot.context.battleProfile?.activeDeck.customValues.find(
+      afterUpdateSnapshot.context.playerData?.profile?.activeDeck.customValues.find(
         (value) => value.id === customValueId,
       )
     if (!updatedValue) {
@@ -514,7 +518,7 @@ describe("Root Machine", () => {
     })
 
     const afterAddSnapshot = await waitFor(actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       return (
         candidate.matches({ AllValues: "Browsing" }) &&
         !!profile &&
@@ -522,7 +526,8 @@ describe("Root Machine", () => {
       )
     })
     const customValueId =
-      afterAddSnapshot.context.battleProfile?.activeDeck.customValues[0]?.id
+      afterAddSnapshot.context.playerData?.profile?.activeDeck.customValues[0]
+        ?.id
     if (!customValueId) {
       throw new Error("Custom value add did not create an id")
     }
@@ -533,14 +538,14 @@ describe("Root Machine", () => {
     })
 
     const afterDeleteSnapshot = await waitFor(actor, (candidate) => {
-      const profile = candidate.context.battleProfile
+      const profile = candidate.context.playerData?.profile
       return (
         candidate.matches({ AllValues: "Browsing" }) &&
         !!profile &&
         profile.activeDeck.customValues.length === 0
       )
     })
-    const afterDeleteProfile = afterDeleteSnapshot.context.battleProfile
+    const afterDeleteProfile = afterDeleteSnapshot.context.playerData?.profile
     if (!afterDeleteProfile) {
       throw new Error("Battle profile did not survive Custom Value delete")
     }
@@ -557,7 +562,7 @@ describe("Root Machine", () => {
     actor.send({ type: "BATTLE.START_REQUESTED" })
 
     const awaitingSnapshot = actor.getSnapshot()
-    const awaitingBattleProfile = awaitingSnapshot.context.battleProfile
+    const awaitingBattleProfile = awaitingSnapshot.context.playerData?.profile
     if (!awaitingBattleProfile) {
       throw new Error("Battle profile did not initialize")
     }
@@ -574,7 +579,7 @@ describe("Root Machine", () => {
     actor.send(selectionEvent)
 
     const committedSnapshot = await waitForReadyCrucible(actor)
-    const committedBattleProfile = committedSnapshot.context.battleProfile
+    const committedBattleProfile = committedSnapshot.context.playerData?.profile
     if (!committedBattleProfile) {
       throw new Error("Battle profile disappeared after selection")
     }
@@ -595,7 +600,7 @@ describe("Root Machine", () => {
     expect((await durableStore.readAll()).size).toBe(3)
 
     actor.send(selectionEvent)
-    expect(actor.getSnapshot().context.battleProfile).toBe(
+    expect(actor.getSnapshot().context.playerData?.profile).toBe(
       committedBattleProfile,
     )
 
@@ -625,7 +630,7 @@ describe("Root Machine", () => {
       durableStore,
     })
     actor.send({ type: "BATTLE.START_REQUESTED" })
-    const initialProfile = actor.getSnapshot().context.battleProfile
+    const initialProfile = actor.getSnapshot().context.playerData?.profile
     if (!initialProfile) {
       throw new Error("Battle profile did not initialize")
     }
@@ -641,11 +646,13 @@ describe("Root Machine", () => {
     })
 
     expect(actor.getSnapshot().matches({ Crucible: "Persisting" })).toBe(true)
-    expect(actor.getSnapshot().context.battleProfile).toBe(initialProfile)
+    expect(actor.getSnapshot().context.playerData?.profile).toBe(initialProfile)
 
     releaseCommit()
     const committedSnapshot = await waitForReadyCrucible(actor)
-    expect(committedSnapshot.context.battleProfile?.scheduler.cursor).toBe(1)
+    expect(
+      committedSnapshot.context.playerData?.profile?.scheduler.cursor,
+    ).toBe(1)
   })
 
   it("applies guarded Undo, Redo, and replacement branches to the durable profile", async () => {
@@ -654,7 +661,7 @@ describe("Root Machine", () => {
     })
     actor.send({ type: "BATTLE.START_REQUESTED" })
 
-    const initialProfile = actor.getSnapshot().context.battleProfile
+    const initialProfile = actor.getSnapshot().context.playerData?.profile
     if (!initialProfile) {
       throw new Error("Battle profile did not initialize")
     }
@@ -670,14 +677,14 @@ describe("Root Machine", () => {
     })
 
     const committedProfile = (await waitForReadyCrucible(actor)).context
-      .battleProfile
+      .playerData?.profile
     if (!committedProfile) {
       throw new Error("Battle profile disappeared after selection")
     }
 
     actor.send({ type: "BATTLE.UNDO_REQUESTED" })
-    const undoneProfile = (await waitForReadyCrucible(actor)).context
-      .battleProfile
+    const undoneProfile = (await waitForReadyCrucible(actor)).context.playerData
+      ?.profile
     if (!undoneProfile) {
       throw new Error("Battle profile disappeared after Undo")
     }
@@ -688,11 +695,11 @@ describe("Root Machine", () => {
     expect(undoneProfile.redo).toEqual([committedProfile.history[0]])
 
     actor.send({ type: "BATTLE.UNDO_REQUESTED" })
-    expect(actor.getSnapshot().context.battleProfile).toBe(undoneProfile)
+    expect(actor.getSnapshot().context.playerData?.profile).toBe(undoneProfile)
 
     actor.send({ type: "BATTLE.REDO_REQUESTED" })
-    const redoneProfile = (await waitForReadyCrucible(actor)).context
-      .battleProfile
+    const redoneProfile = (await waitForReadyCrucible(actor)).context.playerData
+      ?.profile
     if (!redoneProfile) {
       throw new Error("Battle profile disappeared after Redo")
     }
@@ -703,8 +710,8 @@ describe("Root Machine", () => {
     expect(redoneProfile.redo).toEqual([])
 
     actor.send({ type: "BATTLE.UNDO_REQUESTED" })
-    const branchProfile = (await waitForReadyCrucible(actor)).context
-      .battleProfile
+    const branchProfile = (await waitForReadyCrucible(actor)).context.playerData
+      ?.profile
     if (!branchProfile) {
       throw new Error("Battle profile disappeared before branching")
     }
@@ -715,7 +722,7 @@ describe("Root Machine", () => {
     })
 
     const replacedProfile = (await waitForReadyCrucible(actor)).context
-      .battleProfile
+      .playerData?.profile
     expect(replacedProfile?.history).toHaveLength(1)
     expect(replacedProfile?.history[0]?.winnerId).toBe(secondValueId)
     expect(replacedProfile?.redo).toEqual([])
@@ -790,7 +797,7 @@ describe("Root Machine", () => {
     })
 
     actor.send({ type: "BATTLE.START_REQUESTED" })
-    const priorProfile = actor.getSnapshot().context.battleProfile
+    const priorProfile = actor.getSnapshot().context.playerData?.profile
     if (!priorProfile) {
       throw new Error("Battle profile did not initialize")
     }
@@ -810,7 +817,7 @@ describe("Root Machine", () => {
       candidate.matches("PersistenceFailure"),
     )
     expect(snapshot.context.persistenceIssue).toBe("Battle commit failed")
-    expect(snapshot.context.battleProfile).toBe(priorProfile)
+    expect(snapshot.context.playerData?.profile).toBe(priorProfile)
     expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
   })
 
@@ -847,7 +854,9 @@ describe("Root Machine", () => {
         candidate.context.persistenceIssue === "Custom Value commit failed",
     )
     expect(snapshot.context.persistenceIssue).toBe("Custom Value commit failed")
-    expect(snapshot.context.battleProfile?.activeDeck.customValues).toEqual([])
+    expect(
+      snapshot.context.playerData?.profile?.activeDeck.customValues,
+    ).toEqual([])
     expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
 
     shouldFail = false
@@ -861,7 +870,8 @@ describe("Root Machine", () => {
       actor,
       (candidate) =>
         candidate.matches({ AllValues: "Browsing" }) &&
-        candidate.context.battleProfile?.activeDeck.customValues.length === 1,
+        candidate.context.playerData?.profile?.activeDeck.customValues
+          .length === 1,
     )
     expect(retriedSnapshot.context.persistenceIssue).toBeNull()
   })
@@ -897,9 +907,9 @@ describe("Root Machine", () => {
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
     expect(readCount).toBe(2)
     expect(compareAndSwapCount).toBe(1)
-    expect(actor.getSnapshot().context.battleProfile?.scheduler.seed).toBe(
-      "persisted-profile-seed",
-    )
+    expect(
+      actor.getSnapshot().context.playerData?.profile?.scheduler.seed,
+    ).toBe("persisted-profile-seed")
   })
 
   it("ignores a winner that is not in the currently projected pair", async () => {
@@ -907,7 +917,7 @@ describe("Root Machine", () => {
       schedulerSeed: "root-invalid-selection-seed",
     })
     actor.send({ type: "BATTLE.START_REQUESTED" })
-    const profile = actor.getSnapshot().context.battleProfile
+    const profile = actor.getSnapshot().context.playerData?.profile
     if (!profile) {
       throw new Error("Battle profile did not initialize")
     }
@@ -930,6 +940,6 @@ describe("Root Machine", () => {
     })
 
     expect(actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(true)
-    expect(actor.getSnapshot().context.battleProfile).toBe(profile)
+    expect(actor.getSnapshot().context.playerData?.profile).toBe(profile)
   })
 })
