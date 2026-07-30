@@ -240,6 +240,17 @@ describe("GameClient Integration", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
     )
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Achievement unlocked: First Battle.",
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss achievement" }))
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", {
+          name: "Achievement unlocked",
+        }),
+      ).not.toBeInTheDocument(),
+    )
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
 
     expect(
