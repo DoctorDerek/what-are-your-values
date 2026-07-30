@@ -11,12 +11,14 @@ function formatUtcTimestamp(timestamp: string) {
 }
 
 export default function PlayerDataImportPreview({
+  confirmLabel,
   isBusy,
   preview,
   replacementWarning,
   onCancelImport,
   onConfirmImport,
 }: {
+  confirmLabel: string
   isBusy: boolean
   preview: WayvmImportPreview
   replacementWarning: string
@@ -85,7 +87,7 @@ export default function PlayerDataImportPreview({
           onClick={onConfirmImport}
           className="bg-mapache-vivid-primary-orange min-h-14 flex-1 cursor-pointer border-4 border-black px-5 py-4 text-xl font-black text-white uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[6px] active:translate-y-[6px] active:shadow-none disabled:cursor-wait disabled:opacity-60"
         >
-          Replace Current Data
+          {confirmLabel}
         </button>
         <button
           type="button"

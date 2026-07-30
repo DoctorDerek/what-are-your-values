@@ -223,6 +223,7 @@ export default function DataManagement({
 
         {preview ? (
           <PlayerDataImportPreview
+            confirmLabel="Replace Current Data"
             isBusy={activity !== null}
             preview={preview}
             replacementWarning="Replacing local data changes your values, rankings, battle history, achievements, and settings. A recovery backup is created first."
