@@ -229,3 +229,24 @@ export function getPendingAchievementUnlocks(state: AchievementState) {
   const presentedIds = new Set(state.presentedAchievementIds)
   return state.unlocks.filter(({ id }) => !presentedIds.has(id))
 }
+
+export function markAchievementPresented({
+  activeDeck,
+  state,
+  achievementId,
+}: {
+  readonly activeDeck: ActiveDeck
+  readonly state: AchievementState
+  readonly achievementId: AchievementId
+}) {
+  if (state.presentedAchievementIds.includes(achievementId)) {
+    return state
+  }
+
+  return createAchievementState({
+    activeDeck,
+    unlocks: state.unlocks,
+    presentedAchievementIds: [...state.presentedAchievementIds, achievementId],
+    progress: state.progress,
+  })
+}
