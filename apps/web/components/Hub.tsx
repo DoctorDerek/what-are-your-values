@@ -106,6 +106,7 @@ function ValueActionRail({
 }
 
 export default function Hub({
+  notice,
   rankedValues,
   browseAllValuesButtonRef,
   onBrowseAllValues,
@@ -114,6 +115,7 @@ export default function Hub({
   onOpenValue,
   onStartBattle,
 }: {
+  notice?: string | null
   rankedValues: readonly RankedValue[]
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   onBrowseAllValues: (focusTargetId: string) => void
@@ -136,6 +138,15 @@ export default function Hub({
       <h1 className="text-mapache-vivid-primary-cyan mt-8 mb-8 text-center text-5xl font-black uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-7xl">
         Your Values
       </h1>
+
+      {notice ? (
+        <p
+          role="status"
+          className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark mb-6 w-full max-w-7xl border-4 border-black p-4 text-xl font-black shadow-[6px_6px_0px_0px_#000000]"
+        >
+          {notice}
+        </p>
+      ) : null}
 
       <section
         aria-labelledby="your-values-heading"
