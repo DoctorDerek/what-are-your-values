@@ -224,11 +224,22 @@ export default function GameClient() {
       activity = "Replacing unreadable data…"
     } else if (state.matches({ PersistenceFailure: "DeletingAllData" })) {
       activity = "Deleting local data…"
+    } else if (state.matches({ PersistenceFailure: "ExportingCurrentData" })) {
+      activity = "Exporting current data…"
     }
 
     return (
       <Recovery
         activity={activity}
+        canExportCurrentData={
+          state.context.persistenceFailureOrigin === "initialization" ||
+          state.context.persistenceFailureOrigin === "crucible"
+        }
+        canReturnWithoutNewChanges={
+          state.context.persistenceFailureOrigin === "initialization" ||
+          state.context.persistenceFailureOrigin === "crucible"
+        }
+        canRetry={state.context.persistenceFailureOrigin !== null}
         hasCapturedData={state.context.recoveryEntries !== null}
         hasLastKnownGoodSave={
           state.context.recoveryEntries?.has(
@@ -251,12 +262,19 @@ export default function GameClient() {
             acknowledged,
           })
         }
+        onExportCurrentData={() =>
+          send({ type: "STORAGE_RECOVERY.EXPORT_REQUESTED" })
+        }
         onExportUnreadableData={() =>
           send({ type: "RECOVERY.EXPORT_REQUESTED" })
         }
         onImportFile={(file) => handleImportFile(file, "recovery")}
         onRestoreLastKnownGoodSave={() =>
           send({ type: "RECOVERY.RESTORE_BACKUP_REQUESTED" })
+        }
+        onRetry={() => send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })}
+        onReturnWithoutNewChanges={() =>
+          send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
         }
       />
     )

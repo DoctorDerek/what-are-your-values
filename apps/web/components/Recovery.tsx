@@ -8,6 +8,7 @@ import PlayerDataImportPreview from "./PlayerDataImportPreview"
 export type RecoveryActivity =
   | "Checking backup…"
   | "Deleting local data…"
+  | "Exporting current data…"
   | "Exporting unreadable data…"
   | "Replacing unreadable data…"
 
@@ -15,6 +16,9 @@ export type RecoveryImportSource = "last-known-good" | "selected-backup" | null
 
 export default function Recovery({
   activity,
+  canExportCurrentData,
+  canReturnWithoutNewChanges,
+  canRetry,
   hasCapturedData,
   hasLastKnownGoodSave,
   importSource,
@@ -24,11 +28,17 @@ export default function Recovery({
   onCancelImport,
   onConfirmImport,
   onDeleteAllData,
+  onExportCurrentData,
   onExportUnreadableData,
   onImportFile,
   onRestoreLastKnownGoodSave,
+  onRetry,
+  onReturnWithoutNewChanges,
 }: {
   activity: RecoveryActivity | null
+  canExportCurrentData: boolean
+  canReturnWithoutNewChanges: boolean
+  canRetry: boolean
   hasCapturedData: boolean
   hasLastKnownGoodSave: boolean
   importSource: RecoveryImportSource
@@ -38,22 +48,87 @@ export default function Recovery({
   onCancelImport: () => void
   onConfirmImport: () => void
   onDeleteAllData: (acknowledged: boolean) => void
+  onExportCurrentData: () => void
   onExportUnreadableData: () => void
   onImportFile: (file: File) => void
   onRestoreLastKnownGoodSave: () => void
+  onRetry: () => void
+  onReturnWithoutNewChanges: () => void
 }) {
   const [deleteAllDataAcknowledged, setDeleteAllDataAcknowledged] =
     useState(false)
 
   if (!hasCapturedData) {
+    const isStorageWriteFailure = canExportCurrentData
+
     return (
       <main className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex min-h-[100dvh] w-full flex-col items-center justify-center gap-6 p-8 text-center">
         <h1 className="max-w-4xl text-4xl font-black uppercase drop-shadow-[4px_4px_0px_#000000] sm:text-6xl">
-          We couldn’t safely load your values.
+          {isStorageWriteFailure
+            ? "Progress Cannot Be Saved Reliably"
+            : "We couldn’t safely load your values."}
         </h1>
         <p className="max-w-2xl text-xl font-bold text-white sm:text-2xl">
-          Your saved data was left unchanged. Reload this page to try again.
+          {isStorageWriteFailure
+            ? "WAYVM cannot currently write to device storage. Keep this screen open while you export a backup or free storage. Continuing without a reliable save could lose new progress."
+            : "Your saved data was left unchanged. Try again after checking that this browser can access local storage."}
         </p>
+        {activity ? (
+          <p
+            role="status"
+            className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark w-full max-w-3xl border-4 border-black p-4 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000]"
+          >
+            {activity}
+          </p>
+        ) : null}
+        {notice ? (
+          <p
+            role="status"
+            className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark w-full max-w-3xl border-4 border-black p-4 text-xl font-black shadow-[6px_6px_0px_0px_#000000]"
+          >
+            {notice}
+          </p>
+        ) : null}
+        {issue ? (
+          <p
+            role="alert"
+            className="bg-mapache-vivid-primary-orange w-full max-w-3xl border-4 border-black p-4 text-xl font-black text-white shadow-[6px_6px_0px_0px_#000000]"
+          >
+            {issue}
+          </p>
+        ) : null}
+        <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
+          {canExportCurrentData ? (
+            <button
+              type="button"
+              disabled={activity !== null}
+              onClick={onExportCurrentData}
+              className="bg-mapache-vivid-secondary-purple min-h-14 cursor-pointer border-4 border-black px-5 py-4 text-lg font-black text-white uppercase shadow-[6px_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60"
+            >
+              Export Current Data
+            </button>
+          ) : null}
+          {canRetry ? (
+            <button
+              type="button"
+              disabled={activity !== null}
+              onClick={onRetry}
+              className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark min-h-14 cursor-pointer border-4 border-black px-5 py-4 text-lg font-black uppercase shadow-[6px_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60"
+            >
+              Try Again
+            </button>
+          ) : null}
+          {canReturnWithoutNewChanges ? (
+            <button
+              type="button"
+              disabled={activity !== null}
+              onClick={onReturnWithoutNewChanges}
+              className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark min-h-14 cursor-pointer border-4 border-black px-5 py-4 text-lg font-black uppercase shadow-[6px_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black disabled:cursor-wait disabled:opacity-60"
+            >
+              Return Without New Changes
+            </button>
+          ) : null}
+        </div>
       </main>
     )
   }
