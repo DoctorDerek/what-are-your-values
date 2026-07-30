@@ -24,6 +24,7 @@ describe("Hub Component Integration", () => {
         )}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
+        onManageData={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -49,6 +50,7 @@ describe("Hub Component Integration", () => {
         )}
         onBrowseAllValues={vi.fn()}
         onAddCustomValue={vi.fn()}
+        onManageData={vi.fn()}
         onOpenValue={vi.fn()}
         onStartBattle={vi.fn()}
       />,
@@ -94,6 +96,7 @@ describe("Hub Component Integration", () => {
         )}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
+        onManageData={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -113,6 +116,7 @@ describe("Hub Component Integration", () => {
   it("routes action and row presses with stable focus target identifiers", () => {
     const onBrowseAllValues = vi.fn()
     const onAddCustomValue = vi.fn()
+    const onManageData = vi.fn()
     const onOpenValue = vi.fn()
     const battleCycle = createInitialBattleCycle("action-hub-seed")
 
@@ -124,6 +128,7 @@ describe("Hub Component Integration", () => {
         )}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
+        onManageData={onManageData}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -131,6 +136,7 @@ describe("Hub Component Integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Browse All Values" }))
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.click(screen.getByRole("button", { name: "Manage Data" }))
     fireEvent.click(
       screen.getByRole("button", { name: "Open Acceptance in All Values" }),
     )
@@ -139,6 +145,7 @@ describe("Hub Component Integration", () => {
       "hub-browse-all-values-button",
     )
     expect(onAddCustomValue).toHaveBeenCalledWith("hub-add-custom-value-button")
+    expect(onManageData).toHaveBeenCalledWith("hub-manage-data-button")
     expect(onOpenValue).toHaveBeenCalledWith(
       "pvcs-2011:acceptance",
       "hub-value-pvcs-2011:acceptance-button",
