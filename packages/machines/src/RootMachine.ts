@@ -12,7 +12,15 @@ import {
   hydrateBattleProfileActor,
   initializeBattleProfileActor,
 } from "./BattleProfilePersistenceActors"
-import type { BattleProfileStoreState } from "./BattleProfileStore"
+import {
+  createRecoveryBundleActor,
+  deleteUnrecoverablePlayerDataActor,
+  replaceUnrecoverablePlayerDataActor,
+} from "./BattleProfileRecoveryActors"
+import {
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  type BattleProfileStoreState,
+} from "./BattleProfileStore"
 import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
@@ -57,6 +65,7 @@ type RootMachineContext = {
   preImportBackupBytes: string | null
   preparedDownload: PreparedWayvmDownload | null
   pendingResetKind: PlayerDataResetKind | null
+  recoveryEntries: ReadonlyMap<string, string> | null
   persistenceIssue: string | null
   portabilityIssue: string | null
   portabilityNotice: string | null
@@ -114,6 +123,17 @@ type RootMachineEvent =
       type: "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED"
       deleteAllDataAcknowledged: boolean
     }
+  | { type: "RECOVERY.EXPORT_REQUESTED" }
+  | { type: "RECOVERY.EXPORT_CONSUMED" }
+  | {
+      type: "RECOVERY.IMPORT_PREPARE_REQUESTED"
+      serialized: string
+    }
+  | { type: "RECOVERY.RESTORE_BACKUP_REQUESTED" }
+  | { type: "RECOVERY.IMPORT_CANCEL_REQUESTED" }
+  | { type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" }
+  | { type: "RECOVERY.DELETE_ALL_REQUESTED"; acknowledged: boolean }
+  | { type: "RECOVERY.PLATFORM_FAILURE_REPORTED"; issue: string }
 
 type RootMachineInput = {
   readonly durableStore: DurableStoreAdapter
@@ -212,6 +232,25 @@ function createFreshPlayerDataAfterDeletion(context: RootMachineContext) {
   })
 }
 
+function requireRecoveryEntries(context: RootMachineContext) {
+  if (!context.recoveryEntries) {
+    throw new Error("Captured recovery entries are unavailable")
+  }
+
+  return context.recoveryEntries
+}
+
+function requireStoredRecoveryBackup(context: RootMachineContext) {
+  const backup = requireRecoveryEntries(context).get(
+    BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  )
+  if (!backup) {
+    throw new Error("A stored recovery backup is unavailable")
+  }
+
+  return backup
+}
+
 export const rootMachine = setup({
   types: {
     context: {} as RootMachineContext,
@@ -227,6 +266,9 @@ export const rootMachine = setup({
     replacePlayerData: replacePlayerDataActor,
     applyScopedPlayerDataReset: applyScopedPlayerDataResetActor,
     deleteAllPlayerData: deleteAllPlayerDataActor,
+    createRecoveryBundle: createRecoveryBundleActor,
+    replaceUnrecoverablePlayerData: replaceUnrecoverablePlayerDataActor,
+    deleteUnrecoverablePlayerData: deleteUnrecoverablePlayerDataActor,
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -260,6 +302,14 @@ export const rootMachine = setup({
       event.type === "DATA_MANAGEMENT.RESET_CONFIRM_REQUESTED" &&
       context.pendingResetKind === "delete-all-data" &&
       event.deleteAllDataAcknowledged,
+    hasRecoveryEntries: ({ context }) => context.recoveryEntries !== null,
+    hasStoredRecoveryBackup: ({ context }) =>
+      context.recoveryEntries?.has(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY) ??
+      false,
+    isAcknowledgedRecoveryDeletion: ({ context, event }) =>
+      context.recoveryEntries !== null &&
+      event.type === "RECOVERY.DELETE_ALL_REQUESTED" &&
+      event.acknowledged,
   },
 }).createMachine({
   id: "root",
@@ -273,6 +323,7 @@ export const rootMachine = setup({
     preImportBackupBytes: null,
     preparedDownload: null,
     pendingResetKind: null,
+    recoveryEntries: null,
     persistenceIssue: null,
     portabilityIssue: null,
     portabilityNotice: null,
@@ -323,6 +374,7 @@ export const rootMachine = setup({
 
                 return event.output.state
               },
+              recoveryEntries: null,
               persistenceIssue: null,
             }),
           },
@@ -334,6 +386,10 @@ export const rootMachine = setup({
                 event.output.status === "recovery-required"
                   ? event.output.issue
                   : "Battle Profile recovery is required",
+              recoveryEntries: ({ event }) =>
+                event.output.status === "recovery-required"
+                  ? event.output.entries
+                  : null,
             }),
           },
           {
@@ -903,6 +959,214 @@ export const rootMachine = setup({
         },
       },
     },
-    PersistenceFailure: {},
+    PersistenceFailure: {
+      initial: "Reviewing",
+      states: {
+        Reviewing: {
+          on: {
+            "RECOVERY.EXPORT_REQUESTED": {
+              guard: "hasRecoveryEntries",
+              target: "ExportingEvidence",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.EXPORT_CONSUMED": {
+              actions: assign({ preparedDownload: null }),
+            },
+            "RECOVERY.IMPORT_PREPARE_REQUESTED": {
+              guard: "hasRecoveryEntries",
+              target: "PreparingImport",
+              actions: assign({
+                pendingImportBytes: ({ event }) => event.serialized,
+                pendingImport: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.RESTORE_BACKUP_REQUESTED": {
+              guard: "hasStoredRecoveryBackup",
+              target: "PreparingStoredBackup",
+              actions: assign({
+                pendingImportBytes: ({ context }) =>
+                  requireStoredRecoveryBackup(context),
+                pendingImport: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.DELETE_ALL_REQUESTED": {
+              guard: "isAcknowledgedRecoveryDeletion",
+              target: "DeletingAllData",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.PLATFORM_FAILURE_REPORTED": {
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => event.issue,
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        ExportingEvidence: {
+          invoke: {
+            src: "createRecoveryBundle",
+            input: ({ context }) => ({
+              entries: requireRecoveryEntries(context),
+              exportedAt: context.now(),
+              issue: context.persistenceIssue ?? "Recovery is required",
+              sourceAppVersion: context.appVersion,
+              sourceBuild: context.sourceBuild,
+            }),
+            onDone: {
+              target: "Reviewing",
+              actions: assign({
+                preparedDownload: ({ event }) => event.output,
+                portabilityIssue: null,
+                portabilityNotice:
+                  "Your unreadable local data is ready as a diagnostic recovery file.",
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        PreparingStoredBackup: {
+          invoke: {
+            src: "prepareWayvmImport",
+            input: ({ context }) => ({
+              serialized: requirePendingImportBytes(context),
+            }),
+            onDone: {
+              target: "ReviewingImport",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: ({ event }) => event.output,
+                portabilityIssue: null,
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        PreparingImport: {
+          invoke: {
+            src: "prepareWayvmImport",
+            input: ({ context }) => ({
+              serialized: requirePendingImportBytes(context),
+            }),
+            onDone: {
+              target: "ReviewingImport",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: ({ event }) => event.output,
+                portabilityIssue: null,
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        ReviewingImport: {
+          on: {
+            "RECOVERY.IMPORT_CANCEL_REQUESTED": {
+              target: "Reviewing",
+              actions: assign({
+                pendingImport: null,
+                portabilityIssue: null,
+              }),
+            },
+            "RECOVERY.IMPORT_CONFIRM_REQUESTED": {
+              target: "ReplacingPlayerData",
+              actions: assign({ portabilityIssue: null }),
+            },
+          },
+        },
+        ReplacingPlayerData: {
+          invoke: {
+            src: "replaceUnrecoverablePlayerData",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              entries: requireRecoveryEntries(context),
+              playerData: requirePendingImport(context).wayvmExport.playerData,
+              replacedAt: context.now(),
+              appVersion: context.appVersion,
+            }),
+            onDone: {
+              target: "#root.Hub",
+              actions: assign({
+                playerData: ({ event }) => event.output.head.playerData,
+                battleProfileStoreState: ({ event }) => event.output,
+                pendingImport: null,
+                recoveryEntries: null,
+                persistenceIssue: null,
+                portabilityIssue: null,
+                portabilityNotice:
+                  "Your backup replaced the unreadable local data.",
+              }),
+            },
+            onError: {
+              target: "ReviewingImport",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        DeletingAllData: {
+          invoke: {
+            src: "deleteUnrecoverablePlayerData",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              entries: requireRecoveryEntries(context),
+            }),
+            onDone: {
+              target: "#root.Splash",
+              actions: assign({
+                playerData: ({ context }) =>
+                  createFreshPlayerDataAfterDeletion(context),
+                battleProfileStoreState: null,
+                pendingImport: null,
+                pendingImportBytes: null,
+                preparedDownload: null,
+                recoveryEntries: null,
+                persistenceIssue: null,
+                portabilityIssue: null,
+                portabilityNotice: "All local WAYVM player data was deleted.",
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+      },
+    },
   },
 })
