@@ -265,6 +265,46 @@ describe("GameClient Integration", () => {
     expect(setItem).not.toHaveBeenCalled()
   })
 
+  it("offers complete recovery after achievement presentation cannot be saved", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000048",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) {
+      throw new Error("Achievement recovery winner card is unavailable")
+    }
+    fireEvent.click(winnerCard)
+
+    const dismissButton = await screen.findByRole("button", {
+      name: "Dismiss achievement",
+    })
+    durableStoreFailure.writeEnabled = true
+    fireEvent.click(dismissButton)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Export Current Data" }),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Try Again" })).toBeVisible()
+    durableStoreFailure.writeEnabled = false
+    fireEvent.click(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    )
+
+    expect(
+      await screen.findByRole("button", { name: "Dismiss achievement" }),
+    ).toBeEnabled()
+  })
+
   it("opens the complete local Achievements catalog and restores Hub focus on return", async () => {
     render(<GameClient />)
 
