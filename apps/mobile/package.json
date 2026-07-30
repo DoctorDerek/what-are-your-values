@@ -6,9 +6,11 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios",
     "build": "expo export --platform android --output-dir dist",
-    "doctor": "pnpm dlx expo-doctor"
+    "dev-client": "expo start --dev-client",
+    "doctor": "pnpm dlx expo-doctor",
+    "go": "expo start --go",
+    "ios": "expo start --ios"
   },
   "dependencies": {
     "@game/data": "workspace:*",

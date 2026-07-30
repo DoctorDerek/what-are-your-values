@@ -10,6 +10,8 @@
     "dev": "turbo dev",
     "mobile": "pnpm --filter @game/mobile start",
     "mobile:android": "pnpm --filter @game/mobile android",
+    "mobile:dev-client": "pnpm --filter @game/mobile dev-client",
+    "mobile:go": "pnpm --filter @game/mobile go",
     "mobile:ios": "pnpm --filter @game/mobile ios",
     "mobile:doctor": "pnpm --filter @game/mobile doctor",
     "prebuild": "node --import jiti/register scripts/decrypt-assets.ts",
