@@ -175,18 +175,6 @@ describe("Achievement State", () => {
         presentedAchievementIds: [],
         progress: {
           ...initial.progress,
-          lifetimeBattleCount: 0,
-          countedBattleWindow: [createCountedBattleId(0)],
-        },
-      }),
-    ).toThrow("lower than its counted window")
-    expect(() =>
-      createAchievementState({
-        activeDeck,
-        unlocks: [],
-        presentedAchievementIds: [],
-        progress: {
-          ...initial.progress,
           lifetimeBattleCount: 1,
           completedCycleCount: 2,
         },
@@ -239,5 +227,40 @@ describe("Achievement State", () => {
         },
       }),
     ).toThrow("exceeds its bounded capacity")
+  })
+
+  it("allows retained timeline replay guards after achievement counters restart", () => {
+    const activeDeck = createActiveDeck([])
+    const battleId = createBattleId(
+      createSchedulerRestorePoint({
+        activeDeck,
+        progressGeneration: 0,
+        deckRevision: 0,
+        seed: "achievement-reset-window",
+        cycleIndex: 0,
+      }),
+    )
+
+    expect(
+      createAchievementState({
+        activeDeck,
+        unlocks: [],
+        presentedAchievementIds: [],
+        progress: {
+          achievementProgressGeneration: 1,
+          lifetimeBattleCount: 0,
+          completedCycleCount: 0,
+          baselineLevelsByValue: new Map(
+            activeDeck.valueIds.map((valueId) => [valueId, 1]),
+          ),
+          topFiveAlreadyRevealedAtReset: false,
+          countedBattleWindow: [battleId],
+        },
+      }).progress,
+    ).toMatchObject({
+      achievementProgressGeneration: 1,
+      lifetimeBattleCount: 0,
+      countedBattleWindow: [battleId],
+    })
   })
 })
