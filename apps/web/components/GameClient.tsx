@@ -198,7 +198,10 @@ export default function GameClient() {
 
   if (state.matches("Splash")) {
     return (
-      <Splash onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })} />
+      <Splash
+        announcement={state.context.portabilityNotice}
+        onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })}
+      />
     )
   }
 
