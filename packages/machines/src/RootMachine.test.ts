@@ -1553,7 +1553,7 @@ describe("Root Machine", () => {
     )
     expect(restoredSnapshot.context.recoveryEntries).toBeNull()
     expect(restoredSnapshot.context.portabilityNotice).toBe(
-      "Your backup replaced the unreadable local data.",
+      "Last known-good save restored.",
     )
     expect(
       (await durableStore.readAll()).has(BATTLE_PROFILE_MANIFEST_KEY),
