@@ -256,3 +256,78 @@ export async function commitBattleProfileStoreEvent({
     journalKeys: retainedJournalKeys,
   })
 }
+
+function incrementStoreIdentity(value: number, label: string) {
+  if (
+    !Number.isSafeInteger(value) ||
+    value < 0 ||
+    value === Number.MAX_SAFE_INTEGER
+  ) {
+    throw new Error(`${label} cannot be incremented safely`)
+  }
+
+  return value + 1
+}
+
+export async function replaceBattleProfileStorePlayerData({
+  store,
+  state,
+  playerData,
+  replacedAt,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly state: BattleProfileStoreState
+  readonly playerData: PlayerData
+  readonly replacedAt: string
+}) {
+  const generation = incrementStoreIdentity(
+    state.head.generation,
+    "Store generation",
+  )
+  const revision = incrementStoreIdentity(state.head.revision, "Store revision")
+  const activeSlot = getInactiveCheckpointSlot(state.manifest.activeSlot)
+  const checkpointKey = getSnapshotKey(activeSlot)
+  const entries = await store.readAll()
+  const replacedCheckpointBytes = entries.get(checkpointKey) ?? null
+  const checkpoint = await createBattleProfileCheckpoint({
+    generation,
+    revision,
+    createdAt: replacedAt,
+    updatedAt: replacedAt,
+    appVersion: state.appVersion,
+    playerData,
+  })
+  const manifest = createBattleProfileManifest({
+    activeSlot,
+    checkpointGeneration: generation,
+    checkpointRevision: revision,
+    headGeneration: generation,
+    headRevision: revision,
+  })
+  const manifestBytes = serializeBattleProfileManifest(manifest)
+
+  await store.compareAndSwapVerified({
+    expectedEntries: [
+      [BATTLE_PROFILE_MANIFEST_KEY, state.manifestBytes],
+      [checkpointKey, replacedCheckpointBytes],
+    ],
+    putEntries: [
+      [checkpointKey, serializeBattleProfileCheckpoint(checkpoint)],
+      [BATTLE_PROFILE_MANIFEST_KEY, manifestBytes],
+    ],
+    deleteKeys: state.journalKeys,
+  })
+
+  return createBattleProfileStoreState({
+    head: Object.freeze({
+      generation,
+      revision,
+      playerData: checkpoint.playerData,
+    }),
+    manifest,
+    manifestBytes,
+    playerDataCreatedAt: replacedAt,
+    appVersion: state.appVersion,
+    journalKeys: [],
+  })
+}
