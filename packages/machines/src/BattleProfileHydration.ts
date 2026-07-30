@@ -6,6 +6,7 @@ import { recoverBattleProfileStore } from "./BattleProfileRecovery"
 import {
   BATTLE_PROFILE_JOURNAL_KEY_PREFIX,
   BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   BATTLE_PROFILE_QUARANTINE_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
@@ -35,6 +36,7 @@ function hasBattleProfileRecords(entries: ReadonlyMap<string, string>) {
       key === BATTLE_PROFILE_SNAPSHOT_A_KEY ||
       key === BATTLE_PROFILE_SNAPSHOT_B_KEY ||
       key === BATTLE_PROFILE_QUARANTINE_KEY ||
+      key === BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY ||
       key.startsWith(BATTLE_PROFILE_JOURNAL_KEY_PREFIX),
   )
 }
