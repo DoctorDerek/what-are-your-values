@@ -89,6 +89,7 @@ describe("Achievement State", () => {
   it("rejects duplicate, missing, and inconsistent unlock evidence", () => {
     const activeDeck = createActiveDeck([])
     const firstBattleId = readAchievementId("battle.first", "Achievement ID")
+    const tenBattlesId = readAchievementId("battle.10", "Achievement ID")
     const initial = createInitialAchievementState(activeDeck)
     const unlock = {
       id: firstBattleId,
@@ -120,6 +121,24 @@ describe("Achievement State", () => {
         progress: initial.progress,
       }),
     ).toThrow("Presented Achievement is not unlocked")
+    expect(() =>
+      createAchievementState({
+        activeDeck,
+        unlocks: [
+          unlock,
+          {
+            id: tenBattlesId,
+            unlockedAt: "2026-07-29T00:10:00.000Z",
+            eventToken: "tenth-event",
+          },
+        ],
+        presentedAchievementIds: [tenBattlesId],
+        progress: {
+          ...initial.progress,
+          lifetimeBattleCount: 10,
+        },
+      }),
+    ).toThrow("does not follow unlock order")
   })
 
   it("rejects malformed achievement progress and baseline coverage", () => {
