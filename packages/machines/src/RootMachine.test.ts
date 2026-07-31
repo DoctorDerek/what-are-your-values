@@ -973,6 +973,49 @@ describe("Root Machine", () => {
     expect((await durableStore.readAll()).size).toBe(2)
   })
 
+  it("retries durable initialization into a persisted Hub profile without discarding first-run data", async () => {
+    let shouldFail = true
+    const memoryStore = createInMemoryDurableStore()
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFail) {
+          throw new Error("Initialization retry fixture failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = createRootActor({ durableStore })
+    actor.start()
+    actor.send({
+      type: "APP.HYDRATED",
+      schedulerSeed: "initialization-retry-seed",
+    })
+
+    await waitFor(actor, (candidate) => candidate.matches("Splash"))
+    actor.send({ type: "INTRODUCTION.COMPLETED" })
+    const failureSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("PersistenceFailure"),
+    )
+    const firstRunPlayerData = failureSnapshot.context.playerData
+    if (!firstRunPlayerData) {
+      throw new Error("Initialization retry fixture did not retain Player Data")
+    }
+
+    shouldFail = false
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const restoredSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("Hub"),
+    )
+
+    expect(restoredSnapshot.context.playerData).toStrictEqual(
+      firstRunPlayerData,
+    )
+    expect(restoredSnapshot.context.persistenceFailureOrigin).toBeNull()
+    expect((await durableStore.readAll()).size).toBe(2)
+  })
+
   it("surfaces a durable battle commit failure without mutating the prior profile", async () => {
     const memoryStore = createInMemoryDurableStore()
     let shouldFail = false
