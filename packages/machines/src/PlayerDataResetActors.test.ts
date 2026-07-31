@@ -93,9 +93,7 @@ describe("Player Data Reset Actors", () => {
     })
     actor.start()
 
-    await expect(toPromise(actor)).rejects.toThrow(
-      "wayvm.snapshot.manifest",
-    )
+    await expect(toPromise(actor)).rejects.toThrow("wayvm.snapshot.manifest")
     await expect(store.readAll()).resolves.toEqual(entriesBeforeAttempt)
   })
 

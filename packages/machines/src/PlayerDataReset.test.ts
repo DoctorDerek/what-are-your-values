@@ -146,9 +146,7 @@ describe("Player Data Reset", () => {
     expect(candidate.achievements.progress.lifetimeBattleCount).toBe(
       playerData.achievements.progress.lifetimeBattleCount,
     )
-    expect(candidate.achievements.progress.countedBattleWindow.ids).toEqual(
-      [],
-    )
+    expect(candidate.achievements.progress.countedBattleWindow.ids).toEqual([])
     expect(candidate.settings).toEqual(playerData.settings)
     expect(candidate.progressGenerationStartedAt).toBe(
       playerData.progressGenerationStartedAt,
@@ -209,10 +207,8 @@ describe("Player Data Reset", () => {
     expect(candidate.achievements.progress).toMatchObject({
       achievementProgressGeneration:
         playerData.achievements.progress.achievementProgressGeneration,
-      lifetimeBattleCount:
-        playerData.achievements.progress.lifetimeBattleCount,
-      completedCycleCount:
-        playerData.achievements.progress.completedCycleCount,
+      lifetimeBattleCount: playerData.achievements.progress.lifetimeBattleCount,
+      completedCycleCount: playerData.achievements.progress.completedCycleCount,
       topFiveAlreadyRevealedAtReset: false,
       countedBattleWindow: { ids: [] },
     })
@@ -311,7 +307,12 @@ describe("Player Data Reset", () => {
     ["reset-achievements", 0, 0, 1],
   ] as const)(
     "dispatches %s through only its owned generation",
-    (resetKind, progressGenerationDelta, deckRevisionDelta, achievementDelta) => {
+    (
+      resetKind,
+      progressGenerationDelta,
+      deckRevisionDelta,
+      achievementDelta,
+    ) => {
       const playerData = createPlayedCustomPlayerData()
       const candidate = createScopedPlayerDataResetCandidate({
         playerData,
