@@ -54,6 +54,15 @@ describe("WAYVM Export", () => {
     ).rejects.toThrow("Invalid Export content hash")
   })
 
+  it("rejects noncanonical JSON bytes even when their parsed meaning and checksum are unchanged", async () => {
+    const serialized = serializeWayvmExport(await createExportFixture())
+    const noncanonicalSerialized = serialized.replace("[", "[ ")
+
+    await expect(decodeWayvmExport(noncanonicalSerialized)).rejects.toThrow(
+      "WAYVM Export encoding is not canonical",
+    )
+  })
+
   it.each([
     {
       index: 0,
