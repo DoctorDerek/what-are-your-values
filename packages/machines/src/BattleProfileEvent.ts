@@ -25,9 +25,12 @@ export const BATTLE_PROFILE_EVENT_VERSION = 1 as const
 export type BattleProfileEventType =
   "battle-choice" | "battle-undo" | "battle-redo" | "deck-revision"
 
-type BattleProfileChoiceEvent = {
+type BattleProfileDeltaEventType =
+  "battle-choice" | "battle-undo" | "battle-redo"
+
+type BattleProfileDeltaEvent<TEventType extends BattleProfileDeltaEventType> = {
   readonly version: typeof BATTLE_PROFILE_EVENT_VERSION
-  readonly type: "battle-choice" | "battle-undo" | "battle-redo"
+  readonly type: TEventType
   readonly delta: BattleDelta
 }
 
@@ -38,7 +41,10 @@ type BattleProfileDeckRevisionEvent = {
 }
 
 export type BattleProfileEvent =
-  BattleProfileChoiceEvent | BattleProfileDeckRevisionEvent
+  | BattleProfileDeltaEvent<"battle-choice">
+  | BattleProfileDeltaEvent<"battle-undo">
+  | BattleProfileDeltaEvent<"battle-redo">
+  | BattleProfileDeckRevisionEvent
 
 export type EncodedBattleProfileEvent = readonly [
   version: number,
@@ -47,7 +53,7 @@ export type EncodedBattleProfileEvent = readonly [
 ]
 
 function createBattleProfileEvent(
-  type: BattleProfileChoiceEvent["type"],
+  type: BattleProfileDeltaEventType,
   transition: BattleProfileTransition,
 ) {
   return Object.freeze({
