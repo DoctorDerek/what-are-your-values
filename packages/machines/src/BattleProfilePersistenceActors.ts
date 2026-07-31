@@ -1,5 +1,4 @@
 import { fromPromise } from "xstate"
-import type { BattleProfile } from "./BattleProfile"
 import type { BattleProfileEvent } from "./BattleProfileEvent"
 import { hydrateBattleProfileStore } from "./BattleProfileHydration"
 import {
@@ -8,6 +7,7 @@ import {
   type BattleProfileStoreState,
 } from "./BattleProfileStore"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
+import type { PlayerData } from "./PlayerData"
 
 type HydrateBattleProfileInput = {
   readonly store: DurableStoreAdapter
@@ -15,7 +15,7 @@ type HydrateBattleProfileInput = {
 }
 
 type InitializeBattleProfileInput = HydrateBattleProfileInput & {
-  readonly profile: BattleProfile
+  readonly playerData: PlayerData
   readonly createdAt: string
 }
 
@@ -35,7 +35,7 @@ export const initializeBattleProfileActor = fromPromise(
   async ({ input }: { input: InitializeBattleProfileInput }) =>
     initializeBattleProfileStore({
       store: input.store,
-      profile: input.profile,
+      playerData: input.playerData,
       createdAt: input.createdAt,
       appVersion: input.appVersion,
     }),

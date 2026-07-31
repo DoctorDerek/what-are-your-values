@@ -1,10 +1,4 @@
 import { CANONICAL_CATALOG_VERSION } from "@game/data/src/Value"
-import type { BattleProfile } from "./BattleProfile"
-import {
-  decodeBattleProfile,
-  encodeBattleProfile,
-  type EncodedBattleProfile,
-} from "./BattleProfileCodec"
 import { parsePersistedJson, serializePersistedJson } from "./PersistedJson"
 import {
   readIsoTimestamp,
@@ -12,6 +6,12 @@ import {
   readString,
   readTuple,
 } from "./PersistenceValidation"
+import type { PlayerData } from "./PlayerData"
+import {
+  decodePlayerData,
+  encodePlayerData,
+  type EncodedPlayerData,
+} from "./PlayerDataCodec"
 import { createSha256Hex } from "./Sha256"
 
 export const BATTLE_PROFILE_CHECKPOINT_FORMAT = "wayvm-save" as const
@@ -26,7 +26,7 @@ export type BattleProfileCheckpoint = {
   readonly updatedAt: string
   readonly appVersion: string
   readonly canonicalCatalogVersion: typeof CANONICAL_CATALOG_VERSION
-  readonly profile: BattleProfile
+  readonly playerData: PlayerData
   readonly contentHash: string
 }
 
@@ -39,7 +39,7 @@ export type EncodedBattleProfileCheckpoint = readonly [
   updatedAt: string,
   appVersion: string,
   canonicalCatalogVersion: string,
-  profile: EncodedBattleProfile,
+  playerData: EncodedPlayerData,
   contentHash: string,
 ]
 
@@ -52,7 +52,7 @@ type HashableBattleProfileCheckpoint = readonly [
   updatedAt: string,
   appVersion: string,
   canonicalCatalogVersion: string,
-  profile: EncodedBattleProfile,
+  playerData: EncodedPlayerData,
 ]
 
 function createHashableCheckpoint({
@@ -61,7 +61,7 @@ function createHashableCheckpoint({
   createdAt,
   updatedAt,
   appVersion,
-  profile,
+  playerData,
 }: Omit<
   BattleProfileCheckpoint,
   "format" | "schemaVersion" | "canonicalCatalogVersion" | "contentHash"
@@ -74,14 +74,14 @@ function createHashableCheckpoint({
     createdAt,
     updatedAt,
     appVersion,
-    profile.activeDeck.catalogVersion,
-    encodeBattleProfile(profile),
+    playerData.profile.activeDeck.catalogVersion,
+    encodePlayerData(playerData),
   ]
 }
 
 function freezeCheckpoint(
   hashableCheckpoint: HashableBattleProfileCheckpoint,
-  profile: BattleProfile,
+  playerData: PlayerData,
   contentHash: string,
 ) {
   return Object.freeze({
@@ -93,7 +93,7 @@ function freezeCheckpoint(
     updatedAt: hashableCheckpoint[5],
     appVersion: hashableCheckpoint[6],
     canonicalCatalogVersion: CANONICAL_CATALOG_VERSION,
-    profile,
+    playerData,
     contentHash,
   }) satisfies BattleProfileCheckpoint
 }
@@ -145,14 +145,14 @@ export async function createBattleProfileCheckpoint({
   createdAt,
   updatedAt,
   appVersion,
-  profile,
+  playerData,
 }: {
   readonly generation: number
   readonly revision: number
   readonly createdAt: string
   readonly updatedAt: string
   readonly appVersion: string
-  readonly profile: BattleProfile
+  readonly playerData: PlayerData
 }) {
   const metadata = validateCheckpointMetadata({
     generation,
@@ -161,16 +161,16 @@ export async function createBattleProfileCheckpoint({
     updatedAt,
     appVersion,
   })
-  const validatedProfile = decodeBattleProfile(encodeBattleProfile(profile))
+  const validatedPlayerData = decodePlayerData(encodePlayerData(playerData))
   const hashableCheckpoint = createHashableCheckpoint({
     ...metadata,
-    profile: validatedProfile,
+    playerData: validatedPlayerData,
   })
   const contentHash = await createSha256Hex(
     serializePersistedJson(hashableCheckpoint),
   )
 
-  return freezeCheckpoint(hashableCheckpoint, validatedProfile, contentHash)
+  return freezeCheckpoint(hashableCheckpoint, validatedPlayerData, contentHash)
 }
 
 export function encodeBattleProfileCheckpoint(
@@ -222,10 +222,10 @@ export async function decodeBattleProfileCheckpoint(serialized: string) {
     throw new Error("Checkpoint content hash does not match")
   }
 
-  const profile = decodeBattleProfile(tuple[8])
+  const playerData = decodePlayerData(tuple[8])
   const checkpoint = freezeCheckpoint(
-    createHashableCheckpoint({ ...metadata, profile }),
-    profile,
+    createHashableCheckpoint({ ...metadata, playerData }),
+    playerData,
     contentHash,
   )
 

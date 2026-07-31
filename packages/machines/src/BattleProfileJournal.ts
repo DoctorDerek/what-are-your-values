@@ -1,5 +1,5 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
-import type { BattleProfile } from "./BattleProfile"
+import { applyAchievementTransition } from "./AchievementTransition"
 import {
   decodeBattleProfileEvent,
   encodeBattleProfileEvent,
@@ -14,6 +14,7 @@ import {
   readString,
   readTuple,
 } from "./PersistenceValidation"
+import { createPlayerData, type PlayerData } from "./PlayerData"
 import { createSha256Hex } from "./Sha256"
 
 export const BATTLE_PROFILE_JOURNAL_FORMAT = "wayvm-journal-event" as const
@@ -22,7 +23,7 @@ export const BATTLE_PROFILE_JOURNAL_SCHEMA_VERSION = 1 as const
 export type BattleProfilePersistenceHead = {
   readonly generation: number
   readonly revision: number
-  readonly profile: BattleProfile
+  readonly playerData: PlayerData
 }
 
 export type BattleProfileJournalRecord = {
@@ -172,10 +173,25 @@ export function applyBattleProfileJournalRecord(
     )
   }
 
+  const resultingProfile = replayBattleProfileEvent(
+    head.playerData.profile,
+    record.event,
+  )
+
   return Object.freeze({
     generation: record.generation,
     revision: record.revision,
-    profile: replayBattleProfileEvent(head.profile, record.event),
+    playerData: createPlayerData({
+      ...head.playerData,
+      profile: resultingProfile,
+      achievements: applyAchievementTransition({
+        state: head.playerData.achievements,
+        priorProfile: head.playerData.profile,
+        resultingProfile,
+        event: record.event,
+        occurredAt: record.committedAt,
+      }),
+    }),
   }) satisfies BattleProfilePersistenceHead
 }
 

@@ -33,7 +33,7 @@ export default function GameClient() {
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
     useState(false)
   const shouldRestoreHubFocusRef = useRef(false)
-  const battleProfile = state.context.battleProfile
+  const battleProfile = state.context.playerData?.profile ?? null
   const rankedValues = useMemo(
     () =>
       battleProfile

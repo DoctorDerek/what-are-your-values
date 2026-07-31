@@ -147,7 +147,7 @@ export async function recoverBattleProfileStore({
         head: selected.replay.head,
         manifest,
         manifestBytes,
-        profileCreatedAt: selected.candidate.checkpoint.createdAt,
+        playerDataCreatedAt: selected.candidate.checkpoint.createdAt,
         appVersion,
         journalKeys,
       }),
@@ -180,7 +180,7 @@ export async function recoverBattleProfileStore({
     createdAt: selected.candidate.checkpoint.createdAt,
     updatedAt: selected.replay.updatedAt,
     appVersion,
-    profile: selected.replay.head.profile,
+    playerData: selected.replay.head.playerData,
   })
   const manifest = createBattleProfileManifest({
     activeSlot: recoveredSlot,
@@ -216,7 +216,7 @@ export async function recoverBattleProfileStore({
       head: selected.replay.head,
       manifest,
       manifestBytes,
-      profileCreatedAt: selected.candidate.checkpoint.createdAt,
+      playerDataCreatedAt: selected.candidate.checkpoint.createdAt,
       appVersion,
       journalKeys,
     }),
