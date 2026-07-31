@@ -1,3 +1,4 @@
+import { getPairCount } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { describe, expect, it } from "vitest"
@@ -22,6 +23,7 @@ import {
 } from "./BattleProfileEvent"
 import { projectBattlePair } from "./BattleScheduler"
 import { createCustomValueAddCommit } from "./CustomValueCommands"
+import { createSchedulerRestorePoint } from "./PairScheduler"
 
 const OCCURRED_AT = "2026-07-29T00:00:00.000Z"
 
@@ -132,6 +134,65 @@ describe("Achievement Transition", () => {
     expect(afterRedo.progress.lifetimeBattleCount).toBe(1)
     expect(afterReplacement.progress.lifetimeBattleCount).toBe(1)
     expect(afterReplacement.unlocks).toHaveLength(1)
+  })
+
+  it("unlocks one completed cycle across boundary Undo and Redo", () => {
+    const initialProfile = createInitialBattleProfile(
+      "cycle-completion-achievement-seed",
+    )
+    const profile = Object.freeze({
+      ...initialProfile,
+      scheduler: createSchedulerRestorePoint({
+        activeDeck: initialProfile.activeDeck,
+        progressGeneration: initialProfile.scheduler.progressGeneration,
+        deckRevision: initialProfile.scheduler.deckRevision,
+        seed: initialProfile.scheduler.seed,
+        cycleIndex: initialProfile.scheduler.cycleIndex,
+        cursor: getPairCount(initialProfile.activeDeck.valueIds.length) - 1,
+      }),
+    })
+    const completedCycle = chooseWinner(profile)
+    const afterCompletion = applyAchievementTransition({
+      state: createInitialAchievementState(profile.activeDeck),
+      priorProfile: profile,
+      resultingProfile: completedCycle.transition.profile,
+      event: completedCycle.event,
+      occurredAt: OCCURRED_AT,
+    })
+    const undoTransition = applyBattleUndo(completedCycle.transition.profile)
+    if (!undoTransition) {
+      throw new Error("Cycle-boundary Undo fixture is unavailable")
+    }
+    const afterUndo = applyAchievementTransition({
+      state: afterCompletion,
+      priorProfile: completedCycle.transition.profile,
+      resultingProfile: undoTransition.profile,
+      event: createBattleUndoEvent(undoTransition),
+      occurredAt: OCCURRED_AT,
+    })
+    const redoTransition = applyBattleRedo(undoTransition.profile)
+    if (!redoTransition) {
+      throw new Error("Cycle-boundary Redo fixture is unavailable")
+    }
+    const afterRedo = applyAchievementTransition({
+      state: afterUndo,
+      priorProfile: undoTransition.profile,
+      resultingProfile: redoTransition.profile,
+      event: createBattleRedoEvent(redoTransition),
+      occurredAt: OCCURRED_AT,
+    })
+    const cycleAchievementId = readAchievementId(
+      "cycle.first",
+      "Achievement ID",
+    )
+
+    expect(completedCycle.event.delta.cycleBoundary).not.toBeNull()
+    expect(afterCompletion.progress.completedCycleCount).toBe(1)
+    expect(afterUndo.progress.completedCycleCount).toBe(1)
+    expect(afterRedo.progress.completedCycleCount).toBe(1)
+    expect(
+      afterRedo.unlocks.filter(({ id }) => id === cycleAchievementId),
+    ).toHaveLength(1)
   })
 
   it("unlocks literal battle-count milestones without filling gaps", () => {
