@@ -4,6 +4,7 @@ import {
   type CustomValueDefinition,
   type CustomValueId,
 } from "./Value"
+import { countGraphemes } from "unicode-segmenter/grapheme"
 
 export const CUSTOM_VALUE_NAME_MAX_GRAPHEMES = 60
 export const CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES = 280
@@ -23,9 +24,6 @@ export type CustomValueDraftValidation = Readonly<{
   definition: CustomValueFieldValidation
 }>
 
-const graphemeSegmenter = new Intl.Segmenter("und", {
-  granularity: "grapheme",
-})
 const canonicalValueNameComparisonKeys = Object.freeze(
   CANONICAL_VALUES.map(({ englishName }) =>
     normalizeValueNameForComparison(englishName),
@@ -33,10 +31,6 @@ const canonicalValueNameComparisonKeys = Object.freeze(
 )
 const prohibitedCustomValueCharacterPattern =
   /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200e\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u
-
-function countGraphemes(value: string) {
-  return Array.from(graphemeSegmenter.segment(value)).length
-}
 
 function validateField(value: string, maximumGraphemeCount: number) {
   const trimmedValue = value.trim()

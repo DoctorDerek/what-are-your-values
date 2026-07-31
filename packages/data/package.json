@@ -4,7 +4,8 @@
   "private": true,
   "dependencies": {
     "@game/utils": "workspace:*",
-    "unicode-case-folding": "^1"
+    "unicode-case-folding": "^1",
+    "unicode-segmenter": "^0.17.3"
   },
   "devDependencies": {
     "typescript": "^6"
