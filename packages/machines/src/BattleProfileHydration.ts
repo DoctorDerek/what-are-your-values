@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@game/utils/src/Errors"
 import { decodeBattleProfileCheckpoint } from "./BattleProfileCheckpoint"
 import { replayBattleProfileJournalToGeneration } from "./BattleProfileJournalReplay"
 import { decodeBattleProfileManifest } from "./BattleProfileManifest"
@@ -26,10 +27,6 @@ export type BattleProfileHydrationResult =
       readonly issue: string
       readonly entries: ReadonlyMap<string, string>
     }
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
-}
 
 function hasBattleProfileRecords(entries: ReadonlyMap<string, string>) {
   return Array.from(entries.keys()).some(

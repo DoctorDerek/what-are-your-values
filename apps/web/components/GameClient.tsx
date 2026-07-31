@@ -23,6 +23,7 @@ export default function GameClient() {
       durableStore,
       appVersion: packageMetadata.version,
       now: () => new Date().toISOString(),
+      randomUuid: () => crypto.randomUUID(),
     },
   })
   const browseAllValuesButtonRef = useRef<HTMLButtonElement>(null)

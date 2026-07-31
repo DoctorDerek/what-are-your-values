@@ -1,16 +1,11 @@
-import type {
-  CustomValueDefinition,
-  CustomValueId,
-  ValueId,
-} from "@game/data/src/Value"
-import { createCustomValueId } from "@game/data/src/Value"
+import type { CustomValueId, ValueId } from "@game/data/src/Value"
+import { getErrorMessage } from "@game/utils/src/Errors"
 import { assign, setup } from "xstate"
 import { createInitialBattleProfile, type BattleProfile } from "./BattleProfile"
 import {
   createBattleChoiceCommit,
   createBattleRedoCommit,
   createBattleUndoCommit,
-  createDeckRevisionCommit,
   type BattleProfileCommit,
 } from "./BattleProfileCommit"
 import {
@@ -24,6 +19,11 @@ import {
   type BattleSchedulerRestorePoint,
 } from "./BattleScheduler"
 import {
+  createCustomValueAddCommit,
+  createCustomValueDeleteCommit,
+  createCustomValueUpdateCommit,
+} from "./CustomValueCommands"
+import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
 } from "./DurableStoreAdapter"
@@ -33,6 +33,7 @@ type RootMachineContext = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
   readonly now: () => string
+  readonly randomUuid: () => string
   battleProfile: BattleProfile | null
   battleProfileStoreState: BattleProfileStoreState | null
   pendingBattleProfileCommit: BattleProfileCommit | null
@@ -73,6 +74,7 @@ type RootMachineInput = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
   readonly now: () => string
+  readonly randomUuid: () => string
 }
 
 function requireBattleProfile(context: RootMachineContext) {
@@ -97,199 +99,6 @@ function requirePendingBattleProfileCommit(context: RootMachineContext) {
   }
 
   return context.pendingBattleProfileCommit
-}
-
-function createNextCustomValue({
-  existingCustomValues,
-  name,
-  definition,
-  now,
-}: {
-  readonly existingCustomValues: readonly CustomValueDefinition[]
-  readonly name: string
-  readonly definition: string
-  readonly now: () => string
-}) {
-  const trimmedName = name.trim()
-  const trimmedDefinition = definition.trim()
-
-  if (trimmedName.length === 0) {
-    throw new Error("Custom Value name is required")
-  }
-
-  if (trimmedDefinition.length === 0) {
-    throw new Error("Custom Value definition is required")
-  }
-
-  const nextCreationOrdinal =
-    existingCustomValues.reduce(
-      (maxOrdinal, value) =>
-        value.creationOrdinal > maxOrdinal ? value.creationOrdinal : maxOrdinal,
-      0,
-    ) + 1
-
-  return Object.freeze({
-    kind: "custom",
-    id: createCustomValueId(`custom:${crypto.randomUUID()}`),
-    name: trimmedName,
-    definition: trimmedDefinition,
-    creationOrdinal: nextCreationOrdinal,
-    createdAt: now(),
-    updatedAt: now(),
-  }) satisfies CustomValueDefinition
-}
-
-function createRevisedCustomValuesForAdd({
-  profile,
-  name,
-  definition,
-  now,
-}: {
-  readonly profile: BattleProfile
-  readonly name: string
-  readonly definition: string
-  readonly now: () => string
-}) {
-  const customValues = Object.freeze([
-    ...profile.activeDeck.customValues,
-    createNextCustomValue({
-      existingCustomValues: profile.activeDeck.customValues,
-      name,
-      definition,
-      now,
-    }),
-  ])
-
-  return customValues
-}
-
-function createRevisedCustomValuesForUpdate({
-  profile,
-  valueId,
-  name,
-  definition,
-  now,
-}: {
-  readonly profile: BattleProfile
-  readonly valueId: CustomValueId
-  readonly name: string
-  readonly definition: string
-  readonly now: () => string
-}) {
-  const trimmedName = name.trim()
-  const trimmedDefinition = definition.trim()
-
-  if (trimmedName.length === 0) {
-    throw new Error("Custom Value name is required")
-  }
-
-  if (trimmedDefinition.length === 0) {
-    throw new Error("Custom Value definition is required")
-  }
-
-  return Object.freeze(
-    profile.activeDeck.customValues.map((value) => {
-      if (value.id !== valueId) {
-        return value
-      }
-
-      return Object.freeze({
-        ...value,
-        name: trimmedName,
-        definition: trimmedDefinition,
-        updatedAt: now(),
-      })
-    }),
-  )
-}
-
-function createRevisedCustomValuesForDelete({
-  profile,
-  valueId,
-}: {
-  readonly profile: BattleProfile
-  readonly valueId: CustomValueId
-}) {
-  const revisedCustomValues = profile.activeDeck.customValues.filter(
-    (value) => value.id !== valueId,
-  )
-
-  if (revisedCustomValues.length === profile.activeDeck.customValues.length) {
-    throw new Error(`Custom Value does not exist: ${valueId}`)
-  }
-
-  return Object.freeze(revisedCustomValues)
-}
-
-function createDeckRevisionCommitFromUpdate({
-  context,
-  valueId,
-  name,
-  definition,
-  now,
-}: {
-  readonly context: RootMachineContext
-  readonly valueId: CustomValueId
-  readonly name: string
-  readonly definition: string
-  readonly now: () => string
-}) {
-  const profile = requireBattleProfile(context)
-  const revisedCustomValues = createRevisedCustomValuesForUpdate({
-    profile,
-    valueId,
-    name,
-    definition,
-    now,
-  })
-  if (
-    !revisedCustomValues.some((value) => value.id === valueId) ||
-    profile.activeDeck.customValues.every((value) => value.id !== valueId)
-  ) {
-    throw new Error(`Custom Value does not exist: ${valueId}`)
-  }
-
-  return createDeckRevisionCommit({ profile, revisedCustomValues })
-}
-
-function createDeckRevisionCommitFromAdd({
-  context,
-  name,
-  definition,
-}: {
-  readonly context: RootMachineContext
-  readonly name: string
-  readonly definition: string
-}) {
-  const profile = requireBattleProfile(context)
-  const revisedCustomValues = createRevisedCustomValuesForAdd({
-    profile,
-    name,
-    definition,
-    now: context.now,
-  })
-
-  return createDeckRevisionCommit({ profile, revisedCustomValues })
-}
-
-function createDeckRevisionCommitFromDelete({
-  context,
-  valueId,
-}: {
-  readonly context: RootMachineContext
-  readonly valueId: CustomValueId
-}) {
-  const profile = requireBattleProfile(context)
-  const revisedCustomValues = createRevisedCustomValuesForDelete({
-    profile,
-    valueId,
-  })
-
-  return createDeckRevisionCommit({ profile, revisedCustomValues })
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
 }
 
 export const rootMachine = setup({
@@ -339,6 +148,7 @@ export const rootMachine = setup({
     durableStore: input.durableStore,
     appVersion: input.appVersion,
     now: input.now,
+    randomUuid: input.randomUuid,
   }),
   states: {
     Hydrating: {
@@ -465,10 +275,12 @@ export const rootMachine = setup({
                     throw new Error("Invalid add request event type")
                   }
 
-                  return createDeckRevisionCommitFromAdd({
-                    context,
+                  return createCustomValueAddCommit({
+                    profile: requireBattleProfile(context),
                     name: event.name,
                     definition: event.definition,
+                    now: context.now,
+                    randomUuid: context.randomUuid,
                   })
                 },
               }),
@@ -481,8 +293,8 @@ export const rootMachine = setup({
                     throw new Error("Invalid update request event type")
                   }
 
-                  return createDeckRevisionCommitFromUpdate({
-                    context,
+                  return createCustomValueUpdateCommit({
+                    profile: requireBattleProfile(context),
                     valueId: event.valueId,
                     name: event.name,
                     definition: event.definition,
@@ -499,8 +311,8 @@ export const rootMachine = setup({
                     throw new Error("Invalid delete request event type")
                   }
 
-                  return createDeckRevisionCommitFromDelete({
-                    context,
+                  return createCustomValueDeleteCommit({
+                    profile: requireBattleProfile(context),
                     valueId: event.valueId,
                   })
                 },

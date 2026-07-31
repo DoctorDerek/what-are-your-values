@@ -3,7 +3,6 @@
 import {
   getValueDisplayDefinition,
   getValueDisplayName,
-  normalizeValueNameForComparison,
   type CustomValueId,
   type ValueId,
 } from "@game/data/src/Value"
@@ -11,6 +10,11 @@ import {
   sortRankedValuesAlphabetically,
   type RankedValue,
 } from "@game/data/src/ValueRanking"
+import {
+  filterRankedValuesByQuery,
+  findRankedValueNameMatches,
+  hasExactRankedValueNameCollision,
+} from "@game/data/src/ValueSearch"
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
@@ -81,47 +85,20 @@ export default function AllValues({
   const orderedValues = hasComparisons
     ? rankedValues
     : sortRankedValuesAlphabetically(rankedValues)
-  const normalizedQuery = normalizeValueNameForComparison(searchQuery)
   const visibleValues = useMemo(
-    () =>
-      normalizedQuery.length === 0
-        ? orderedValues
-        : orderedValues.filter(
-            ({ definition }) =>
-              normalizeValueNameForComparison(
-                getValueDisplayName(definition),
-              ).includes(normalizedQuery) ||
-              getValueDisplayDefinition(definition)
-                .toLocaleLowerCase("en-US")
-                .includes(normalizedQuery),
-          ),
-    [normalizedQuery, orderedValues],
-  )
-  const normalizedValueNames = useMemo(
-    () =>
-      new Set(
-        rankedValues.map(({ definition }) =>
-          normalizeValueNameForComparison(getValueDisplayName(definition)),
-        ),
-      ),
-    [rankedValues],
+    () => filterRankedValuesByQuery(orderedValues, searchQuery),
+    [orderedValues, searchQuery],
   )
   const trimmedAddName = addName.trim()
   const trimmedAddDefinition = addDefinition.trim()
-  const normalizedAddName = normalizeValueNameForComparison(trimmedAddName)
   const matchingAddValues = useMemo(
-    () =>
-      normalizedAddName.length === 0
-        ? []
-        : rankedValues.filter(({ definition }) =>
-            normalizeValueNameForComparison(
-              getValueDisplayName(definition),
-            ).includes(normalizedAddName),
-          ),
-    [normalizedAddName, rankedValues],
+    () => findRankedValueNameMatches(rankedValues, trimmedAddName),
+    [rankedValues, trimmedAddName],
   )
-  const hasDuplicateAddName =
-    normalizedAddName.length > 0 && normalizedValueNames.has(normalizedAddName)
+  const hasDuplicateAddName = hasExactRankedValueNameCollision({
+    rankedValues,
+    name: trimmedAddName,
+  })
   const canSubmitAdd =
     trimmedAddName.length > 0 &&
     trimmedAddDefinition.length > 0 &&
@@ -129,15 +106,11 @@ export default function AllValues({
   const editableCustomValue = rankedValues.find(
     ({ definition }) => definition.id === editingValueId,
   )?.definition
-  const normalizedEditName = normalizeValueNameForComparison(editName)
-  const isDuplicateEditName =
-    normalizedEditName.length > 0 &&
-    rankedValues.some(
-      ({ definition }) =>
-        definition.id !== editingValueId &&
-        normalizeValueNameForComparison(getValueDisplayName(definition)) ===
-          normalizedEditName,
-    )
+  const isDuplicateEditName = hasExactRankedValueNameCollision({
+    rankedValues,
+    name: editName,
+    excludedValueId: editingValueId,
+  })
   const canSubmitEdit =
     editableCustomValue?.kind === "custom" &&
     editName.trim().length > 0 &&
@@ -287,7 +260,7 @@ export default function AllValues({
                     setDeletingValueId(definition.id)
                     setEditingValueId(null)
                   }}
-                  className="bg-mapache-vivid-secondary-red border-4 border-black px-3 py-2 text-lg font-black text-white uppercase focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className="bg-mapache-vivid-secondary-red border-4 border-black px-3 py-2 text-lg font-black text-black uppercase focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
                 >
                   Delete
                 </button>
@@ -322,7 +295,7 @@ export default function AllValues({
                     onDeleteCustomValue(customValueId)
                     setDeletingValueId(null)
                   }}
-                  className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-white uppercase"
+                  className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-black uppercase"
                 >
                   Delete Value
                 </button>
@@ -362,7 +335,7 @@ export default function AllValues({
               {isDuplicateEditName ? (
                 <p
                   role="status"
-                  className="border-mapache-vivid-secondary-red bg-mapache-vivid-secondary-red/15 text-mapache-vivid-secondary-red rounded-sm border-4 p-3 text-base font-black uppercase"
+                  className="border-mapache-vivid-secondary-red bg-mapache-vivid-secondary-red/15 rounded-sm border-4 p-3 text-base font-black text-black uppercase"
                 >
                   This value already exists. Open it instead.
                 </p>
@@ -389,7 +362,7 @@ export default function AllValues({
                     <button
                       type="button"
                       onClick={confirmUpdateCustomValue}
-                      className="bg-mapache-vivid-primary-orange border-4 border-black px-4 py-2 font-black text-white uppercase"
+                      className="bg-mapache-vivid-primary-orange border-4 border-black px-4 py-2 font-black text-black uppercase"
                     >
                       Update Value
                     </button>
@@ -408,7 +381,7 @@ export default function AllValues({
                   <button
                     type="button"
                     onClick={cancelEdit}
-                    className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-white uppercase"
+                    className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-black uppercase"
                   >
                     Cancel
                   </button>

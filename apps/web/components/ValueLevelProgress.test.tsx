@@ -18,8 +18,16 @@ describe("ValueLevelProgress Component Integration", () => {
   it("shows a new profile at the beginning of Level 1", () => {
     render(<ValueLevelProgress totalXp={0} />)
 
-    expect(
-      screen.getByLabelText("Level 1: 0 of 1 XP toward Level 2"),
-    ).toBeVisible()
+    const progress = screen.getByLabelText("Level 1: 0 of 1 XP toward Level 2")
+
+    expect(progress).toBeVisible()
+    expect(progress).toHaveClass(
+      "w-full",
+      "min-w-0",
+      "basis-full",
+      "sm:w-auto",
+      "sm:min-w-44",
+      "sm:basis-auto",
+    )
   })
 })

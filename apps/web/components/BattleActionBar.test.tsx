@@ -23,12 +23,17 @@ describe("Battle Action Bar", () => {
     const redo = screen.getByRole("button", { name: "Redo" })
     expect(undo).toBeDisabled()
     expect(redo).toBeDisabled()
+    for (const shortcut of ["[Z]", "[Y]", "[ESC]"]) {
+      expect(screen.getByText(shortcut)).toHaveClass("hidden", "sm:inline")
+    }
     fireEvent.click(undo)
     fireEvent.click(redo)
     expect(onUndo).not.toHaveBeenCalled()
     expect(onRedo).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole("button", { name: "Stop" }))
+    const stop = screen.getByRole("button", { name: "Stop" })
+    expect(stop).toHaveClass("text-black")
+    fireEvent.click(stop)
     expect(onStop).toHaveBeenCalledTimes(1)
 
     rerender(
