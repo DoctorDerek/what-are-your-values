@@ -27,17 +27,31 @@ import {
   type DurableStoreAdapter,
 } from "./DurableStoreAdapter"
 import { createInitialPlayerData, type PlayerData } from "./PlayerData"
+import {
+  createWayvmExportActor,
+  prepareWayvmImportActor,
+  replacePlayerDataActor,
+  type PreparedWayvmDownload,
+} from "./PlayerDataPortabilityActors"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
+import type { PreparedWayvmImport } from "./WayvmImportPreview"
 
 type RootMachineContext = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
+  readonly sourceBuild: string
   readonly now: () => string
   readonly randomUuid: () => string
   playerData: PlayerData | null
   battleProfileStoreState: BattleProfileStoreState | null
   pendingBattleProfileCommit: BattleProfileCommit | null
+  pendingImportBytes: string | null
+  pendingImport: PreparedWayvmImport | null
+  preImportBackupBytes: string | null
+  preparedDownload: PreparedWayvmDownload | null
   persistenceIssue: string | null
+  portabilityIssue: string | null
+  portabilityNotice: string | null
 }
 
 type RootMachineEvent =
@@ -69,10 +83,21 @@ type RootMachineEvent =
   | { type: "BATTLE.UNDO_REQUESTED" }
   | { type: "BATTLE.REDO_REQUESTED" }
   | { type: "BATTLE.EXIT_REQUESTED" }
+  | { type: "DATA_MANAGEMENT.OPEN_REQUESTED" }
+  | { type: "DATA_MANAGEMENT.CLOSE_REQUESTED" }
+  | { type: "DATA_MANAGEMENT.EXPORT_REQUESTED" }
+  | { type: "DATA_MANAGEMENT.EXPORT_CONSUMED" }
+  | {
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED"
+      serialized: string
+    }
+  | { type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" }
+  | { type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" }
 
 type RootMachineInput = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
+  readonly sourceBuild: string
   readonly now: () => string
   readonly randomUuid: () => string
 }
@@ -105,6 +130,30 @@ function requirePendingBattleProfileCommit(context: RootMachineContext) {
   return context.pendingBattleProfileCommit
 }
 
+function requirePendingImportBytes(context: RootMachineContext) {
+  if (context.pendingImportBytes === null) {
+    throw new Error("Import bytes are not prepared")
+  }
+
+  return context.pendingImportBytes
+}
+
+function requirePendingImport(context: RootMachineContext) {
+  if (!context.pendingImport) {
+    throw new Error("Validated import data is not prepared")
+  }
+
+  return context.pendingImport
+}
+
+function requirePreImportBackupBytes(context: RootMachineContext) {
+  if (!context.preImportBackupBytes) {
+    throw new Error("Pre-import backup bytes are not prepared")
+  }
+
+  return context.preImportBackupBytes
+}
+
 export const rootMachine = setup({
   types: {
     context: {} as RootMachineContext,
@@ -115,6 +164,9 @@ export const rootMachine = setup({
     hydrateBattleProfile: hydrateBattleProfileActor,
     initializeBattleProfile: initializeBattleProfileActor,
     commitBattleProfileEvent: commitBattleProfileEventActor,
+    createWayvmExport: createWayvmExportActor,
+    prepareWayvmImport: prepareWayvmImportActor,
+    replacePlayerData: replacePlayerDataActor,
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -148,9 +200,16 @@ export const rootMachine = setup({
     playerData: null,
     battleProfileStoreState: null,
     pendingBattleProfileCommit: null,
+    pendingImportBytes: null,
+    pendingImport: null,
+    preImportBackupBytes: null,
+    preparedDownload: null,
     persistenceIssue: null,
+    portabilityIssue: null,
+    portabilityNotice: null,
     durableStore: input.durableStore,
     appVersion: input.appVersion,
+    sourceBuild: input.sourceBuild,
     now: input.now,
     randomUuid: input.randomUuid,
   }),
@@ -266,6 +325,181 @@ export const rootMachine = setup({
       on: {
         "BATTLE.START_REQUESTED": { target: "Crucible" },
         "ALL_VALUES.OPEN_REQUESTED": { target: "AllValues" },
+        "DATA_MANAGEMENT.OPEN_REQUESTED": { target: "DataManagement" },
+      },
+    },
+    DataManagement: {
+      initial: "Browsing",
+      states: {
+        Browsing: {
+          on: {
+            "DATA_MANAGEMENT.CLOSE_REQUESTED": {
+              target: "#root.Hub",
+              actions: assign({
+                pendingImport: null,
+                pendingImportBytes: null,
+                preImportBackupBytes: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.EXPORT_REQUESTED": {
+              target: "Exporting",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.EXPORT_CONSUMED": {
+              actions: assign({ preparedDownload: null }),
+            },
+            "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED": {
+              target: "PreparingImport",
+              actions: assign({
+                pendingImportBytes: ({ event }) => event.serialized,
+                pendingImport: null,
+                preImportBackupBytes: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        Exporting: {
+          invoke: {
+            src: "createWayvmExport",
+            input: ({ context }) => ({
+              exportedAt: context.now(),
+              sourceAppVersion: context.appVersion,
+              sourceBuild: context.sourceBuild,
+              playerData: requirePlayerData(context),
+            }),
+            onDone: {
+              target: "Browsing",
+              actions: assign({
+                preparedDownload: ({ event }) => event.output,
+                portabilityIssue: null,
+                portabilityNotice: "Your private backup is ready.",
+              }),
+            },
+            onError: {
+              target: "Browsing",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        PreparingImport: {
+          invoke: {
+            src: "prepareWayvmImport",
+            input: ({ context }) => ({
+              serialized: requirePendingImportBytes(context),
+            }),
+            onDone: {
+              target: "ReviewingImport",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: ({ event }) => event.output,
+                portabilityIssue: null,
+              }),
+            },
+            onError: {
+              target: "Browsing",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        ReviewingImport: {
+          on: {
+            "DATA_MANAGEMENT.CLOSE_REQUESTED": {
+              target: "#root.Hub",
+              actions: assign({
+                pendingImport: null,
+                preImportBackupBytes: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED": {
+              target: "Browsing",
+              actions: assign({
+                pendingImport: null,
+                preImportBackupBytes: null,
+                portabilityIssue: null,
+              }),
+            },
+            "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED": {
+              target: "CreatingPreImportBackup",
+              actions: assign({
+                preImportBackupBytes: null,
+                portabilityIssue: null,
+              }),
+            },
+          },
+        },
+        CreatingPreImportBackup: {
+          invoke: {
+            src: "createWayvmExport",
+            input: ({ context }) => ({
+              exportedAt: context.now(),
+              sourceAppVersion: context.appVersion,
+              sourceBuild: context.sourceBuild,
+              playerData: requirePlayerData(context),
+            }),
+            onDone: {
+              target: "ReplacingImport",
+              actions: assign({
+                preImportBackupBytes: ({ event }) => event.output.serialized,
+              }),
+            },
+            onError: {
+              target: "ReviewingImport",
+              actions: assign({
+                preImportBackupBytes: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        ReplacingImport: {
+          invoke: {
+            src: "replacePlayerData",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+              playerData: requirePendingImport(context).wayvmExport.playerData,
+              preImportBackupBytes: requirePreImportBackupBytes(context),
+              replacedAt: context.now(),
+            }),
+            onDone: {
+              target: "Browsing",
+              actions: assign({
+                playerData: ({ event }) => event.output.head.playerData,
+                battleProfileStoreState: ({ event }) => event.output,
+                pendingImport: null,
+                preImportBackupBytes: null,
+                portabilityIssue: null,
+                portabilityNotice:
+                  "Your imported values and progress are now active.",
+              }),
+            },
+            onError: {
+              target: "ReviewingImport",
+              actions: assign({
+                preImportBackupBytes: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
       },
     },
     AllValues: {

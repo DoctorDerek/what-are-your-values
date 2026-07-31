@@ -16,7 +16,10 @@ import {
   type BattleProfileManifest,
 } from "./BattleProfileManifest"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
+import { serializePersistedJson } from "./PersistedJson"
 import type { PlayerData } from "./PlayerData"
+import { encodePlayerData } from "./PlayerDataCodec"
+import { decodeWayvmExport } from "./WayvmExport"
 
 export const BATTLE_PROFILE_SNAPSHOT_A_KEY = "wayvm.snapshot.a" as const
 export const BATTLE_PROFILE_SNAPSHOT_B_KEY = "wayvm.snapshot.b" as const
@@ -24,6 +27,8 @@ export const BATTLE_PROFILE_MANIFEST_KEY = "wayvm.snapshot.manifest" as const
 export const BATTLE_PROFILE_JOURNAL_KEY_PREFIX = "wayvm.journal." as const
 export const BATTLE_PROFILE_QUARANTINE_KEY =
   "wayvm.recovery.quarantine" as const
+export const BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY =
+  "wayvm.import.pre-replacement-backup" as const
 
 export type BattleProfileStoreState = {
   readonly head: BattleProfilePersistenceHead
@@ -254,5 +259,104 @@ export async function commitBattleProfileStoreEvent({
     manifest,
     manifestBytes,
     journalKeys: retainedJournalKeys,
+  })
+}
+
+function incrementStoreIdentity(value: number, label: string) {
+  if (
+    !Number.isSafeInteger(value) ||
+    value < 0 ||
+    value === Number.MAX_SAFE_INTEGER
+  ) {
+    throw new Error(`${label} cannot be incremented safely`)
+  }
+
+  return value + 1
+}
+
+async function requireMatchingPreImportBackup(
+  preImportBackupBytes: string,
+  currentPlayerData: PlayerData,
+) {
+  const preImportBackup = await decodeWayvmExport(preImportBackupBytes)
+  if (
+    serializePersistedJson(encodePlayerData(preImportBackup.playerData)) !==
+    serializePersistedJson(encodePlayerData(currentPlayerData))
+  ) {
+    throw new Error("Pre-import backup does not match current Player Data")
+  }
+}
+
+export async function replaceBattleProfileStorePlayerData({
+  store,
+  state,
+  playerData,
+  preImportBackupBytes,
+  replacedAt,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly state: BattleProfileStoreState
+  readonly playerData: PlayerData
+  readonly preImportBackupBytes: string
+  readonly replacedAt: string
+}) {
+  await requireMatchingPreImportBackup(
+    preImportBackupBytes,
+    state.head.playerData,
+  )
+
+  const generation = incrementStoreIdentity(
+    state.head.generation,
+    "Store generation",
+  )
+  const revision = incrementStoreIdentity(state.head.revision, "Store revision")
+  const activeSlot = getInactiveCheckpointSlot(state.manifest.activeSlot)
+  const checkpointKey = getSnapshotKey(activeSlot)
+  const entries = await store.readAll()
+  const replacedCheckpointBytes = entries.get(checkpointKey) ?? null
+  const priorPreImportBackupBytes =
+    entries.get(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY) ?? null
+  const checkpoint = await createBattleProfileCheckpoint({
+    generation,
+    revision,
+    createdAt: replacedAt,
+    updatedAt: replacedAt,
+    appVersion: state.appVersion,
+    playerData,
+  })
+  const manifest = createBattleProfileManifest({
+    activeSlot,
+    checkpointGeneration: generation,
+    checkpointRevision: revision,
+    headGeneration: generation,
+    headRevision: revision,
+  })
+  const manifestBytes = serializeBattleProfileManifest(manifest)
+
+  await store.compareAndSwapVerified({
+    expectedEntries: [
+      [BATTLE_PROFILE_MANIFEST_KEY, state.manifestBytes],
+      [checkpointKey, replacedCheckpointBytes],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, priorPreImportBackupBytes],
+    ],
+    putEntries: [
+      [checkpointKey, serializeBattleProfileCheckpoint(checkpoint)],
+      [BATTLE_PROFILE_MANIFEST_KEY, manifestBytes],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, preImportBackupBytes],
+    ],
+    deleteKeys: state.journalKeys,
+  })
+
+  return createBattleProfileStoreState({
+    head: Object.freeze({
+      generation,
+      revision,
+      playerData: checkpoint.playerData,
+    }),
+    manifest,
+    manifestBytes,
+    playerDataCreatedAt: replacedAt,
+    appVersion: state.appVersion,
+    journalKeys: [],
   })
 }
