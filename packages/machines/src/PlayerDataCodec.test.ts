@@ -40,4 +40,22 @@ describe("Player Data Codec", () => {
       "Invalid Player Data",
     )
   })
+
+  it("rejects executable array representations that alter canonical JSON", () => {
+    const encoded = [
+      ...encodePlayerData(
+        createInitialPlayerData({
+          schedulerSeed: "executable-player-data-codec-seed",
+          createdAt: "2026-07-29T00:00:00.000Z",
+        }),
+      ),
+    ]
+    Object.defineProperty(encoded, "toJSON", {
+      value: () => ["altered-player-data"],
+    })
+
+    expect(() => decodePlayerData(encoded)).toThrow(
+      "Player Data encoding is not canonical",
+    )
+  })
 })
