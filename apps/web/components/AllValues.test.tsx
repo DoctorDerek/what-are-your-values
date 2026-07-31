@@ -352,6 +352,55 @@ describe("All Values Component Integration", () => {
     expect(onUpdateCustomValue).not.toHaveBeenCalled()
   })
 
+  it("cancels an invalid edit and restores the persisted Custom Value fields", () => {
+    const activeDeck = createActiveDeckWithIngenuity()
+    const onUpdateCustomValue = vi.fn()
+
+    renderAllValues(createRankedValues(activeDeck), { onUpdateCustomValue })
+
+    const targetListItem = screen.getByText("Ingenuity").closest("li")
+    if (!targetListItem) {
+      throw new Error("Expected Ingenuity list item in DOM")
+    }
+
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
+    )
+    fireEvent.change(screen.getByLabelText("Value Name"), {
+      target: { value: "Curiosity Engine" },
+    })
+    const definitionInput = screen.getByLabelText("What This Value Means to Me")
+    fireEvent.change(definitionInput, {
+      target: { value: "Purpose\u202e" },
+    })
+    fireEvent.blur(definitionInput)
+
+    expect(
+      screen.getByText(
+        "Remove invisible or control characters from the personal definition.",
+      ),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(
+      screen.queryByLabelText("What This Value Means to Me"),
+    ).not.toBeInTheDocument()
+    expect(onUpdateCustomValue).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
+    )
+    expect(screen.getByLabelText("Value Name")).toHaveValue("Ingenuity")
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
+      "Ability to solve problems creatively.",
+    )
+    expect(
+      screen.queryByText(
+        "Remove invisible or control characters from the personal definition.",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps an invalid Custom Value update local and unconfirmed", () => {
     const activeDeck = createActiveDeckWithIngenuity()
     const onUpdateCustomValue = vi.fn()
