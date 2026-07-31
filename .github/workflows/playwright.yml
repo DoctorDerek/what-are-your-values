@@ -13,7 +13,7 @@ jobs:
     name: Playwright E2E Tests
     if: github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout Repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -39,11 +39,14 @@ jobs:
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ steps.playwright-version.outputs.PLAYWRIGHT_VERSION }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.PLAYWRIGHT_VERSION }}
+
+      - name: Install Playwright Browser Dependencies
+        run: pnpm exec playwright install-deps
 
       - name: Install Playwright Browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps
+        run: pnpm exec playwright install
 
       - name: Get GitHub OIDC Token
         id: github-oidc-token
@@ -57,7 +60,6 @@ jobs:
 
       - name: Run Playwright Tests and Capture Summary
         id: playwright
-        if: always()
         run: |
           set +e
           pnpm exec playwright test --pass-with-no-tests 2>&1 | tee "$RUNNER_TEMP/playwright-output.txt"
