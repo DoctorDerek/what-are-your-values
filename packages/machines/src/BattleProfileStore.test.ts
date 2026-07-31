@@ -10,13 +10,16 @@ import {
   BATTLE_PROFILE_JOURNAL_KEY_PREFIX,
   BATTLE_PROFILE_MANIFEST_KEY,
   BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  BATTLE_PROFILE_QUARANTINE_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
   commitBattleProfileStoreEvent,
+  deleteAllBattleProfileStoreData,
   getBattleProfileJournalKey,
   initializeBattleProfileStore,
   readBattleProfileJournalKeyGeneration,
   replaceBattleProfileStorePlayerData,
+  replaceBattleProfileStorePlayerDataForReset,
 } from "./BattleProfileStore"
 import { DurableStoreConflictError } from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
@@ -369,6 +372,198 @@ describe("Battle Profile Store", () => {
     expect((await store.readAll()).has(getBattleProfileJournalKey(2))).toBe(
       true,
     )
+  })
+
+  it("atomically checkpoints a scoped reset while retaining existing recovery records", async () => {
+    const store = createInMemoryDurableStore()
+    const initialState = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "reset-store-initial",
+        createdAt: createCommitTimestamp(0),
+      }),
+      createdAt: createCommitTimestamp(0),
+      appVersion: "0.1.0",
+    })
+    const preImportBackupBytes = await createPreImportBackupBytes(
+      initialState.head.playerData,
+    )
+    const importedState = await replaceBattleProfileStorePlayerData({
+      store,
+      state: initialState,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "reset-store-imported",
+        createdAt: createCommitTimestamp(1),
+      }),
+      preImportBackupBytes,
+      replacedAt: createCommitTimestamp(1),
+    })
+    const committedState = await commitBattleProfileStoreEvent({
+      store,
+      state: importedState,
+      event: createChoiceEvent(importedState.head.playerData.profile),
+      committedAt: createCommitTimestamp(2),
+    })
+    await store.compareAndSwapVerified({
+      expectedEntries: [
+        [BATTLE_PROFILE_QUARANTINE_KEY, null],
+        ["wayvm.future-record", null],
+      ],
+      putEntries: [
+        [BATTLE_PROFILE_QUARANTINE_KEY, "retained-quarantine"],
+        ["wayvm.future-record", "retained-future-player-data"],
+      ],
+      deleteKeys: [],
+    })
+    const resetPlayerData = createInitialPlayerData({
+      schedulerSeed: "reset-store-candidate",
+      createdAt: createCommitTimestamp(3),
+    })
+
+    const resetState = await replaceBattleProfileStorePlayerDataForReset({
+      store,
+      state: committedState,
+      playerData: resetPlayerData,
+      replacedAt: createCommitTimestamp(3),
+    })
+    const entries = await store.readAll()
+
+    expect(resetState.head).toMatchObject({
+      generation: 3,
+      revision: 3,
+      playerData: resetPlayerData,
+    })
+    expect(resetState.journalKeys).toEqual([])
+    expect(entries.has(getBattleProfileJournalKey(2))).toBe(false)
+    expect(entries.get(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY)).toBe(
+      preImportBackupBytes,
+    )
+    expect(entries.get(BATTLE_PROFILE_QUARANTINE_KEY)).toBe(
+      "retained-quarantine",
+    )
+    expect(entries.get("wayvm.future-record")).toBe(
+      "retained-future-player-data",
+    )
+  })
+
+  it("does not invent a pre-import backup during a scoped reset", async () => {
+    const store = createInMemoryDurableStore()
+    const state = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "reset-without-backup-initial",
+        createdAt: createCommitTimestamp(0),
+      }),
+      createdAt: createCommitTimestamp(0),
+      appVersion: "0.1.0",
+    })
+
+    await replaceBattleProfileStorePlayerDataForReset({
+      store,
+      state,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "reset-without-backup-candidate",
+        createdAt: createCommitTimestamp(1),
+      }),
+      replacedAt: createCommitTimestamp(1),
+    })
+
+    expect(
+      (await store.readAll()).has(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY),
+    ).toBe(false)
+  })
+
+  it("deletes every existing durable player-data record from the current manifest identity", async () => {
+    const store = createInMemoryDurableStore()
+    const initialState = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "delete-all-store-initial",
+        createdAt: createCommitTimestamp(0),
+      }),
+      createdAt: createCommitTimestamp(0),
+      appVersion: "0.1.0",
+    })
+    const committedState = await commitBattleProfileStoreEvent({
+      store,
+      state: initialState,
+      event: createChoiceEvent(initialState.head.playerData.profile),
+      committedAt: createCommitTimestamp(1),
+    })
+    const preImportBackupBytes = await createPreImportBackupBytes(
+      committedState.head.playerData,
+    )
+    const importedState = await replaceBattleProfileStorePlayerData({
+      store,
+      state: committedState,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "delete-all-store-imported",
+        createdAt: createCommitTimestamp(2),
+      }),
+      preImportBackupBytes,
+      replacedAt: createCommitTimestamp(2),
+    })
+    const currentState = await commitBattleProfileStoreEvent({
+      store,
+      state: importedState,
+      event: createChoiceEvent(importedState.head.playerData.profile),
+      committedAt: createCommitTimestamp(3),
+    })
+    await store.compareAndSwapVerified({
+      expectedEntries: [
+        [BATTLE_PROFILE_QUARANTINE_KEY, null],
+        ["wayvm.future-record", null],
+      ],
+      putEntries: [
+        [BATTLE_PROFILE_QUARANTINE_KEY, "corrupt-player-data"],
+        ["wayvm.future-record", "future-player-data"],
+      ],
+      deleteKeys: [],
+    })
+
+    await deleteAllBattleProfileStoreData({ store, state: currentState })
+
+    await expect(store.readAll()).resolves.toEqual(new Map())
+  })
+
+  it("rejects scoped replacement and complete erasure from stale manifest identities without changing bytes", async () => {
+    const store = createInMemoryDurableStore()
+    const staleState = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "stale-reset-store",
+        createdAt: createCommitTimestamp(0),
+      }),
+      createdAt: createCommitTimestamp(0),
+      appVersion: "0.1.0",
+    })
+    const currentState = await replaceBattleProfileStorePlayerDataForReset({
+      store,
+      state: staleState,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "current-reset-store",
+        createdAt: createCommitTimestamp(1),
+      }),
+      replacedAt: createCommitTimestamp(1),
+    })
+    const entriesBeforeAttempts = await store.readAll()
+
+    await expect(
+      replaceBattleProfileStorePlayerDataForReset({
+        store,
+        state: staleState,
+        playerData: createInitialPlayerData({
+          schedulerSeed: "rejected-reset-store",
+          createdAt: createCommitTimestamp(2),
+        }),
+        replacedAt: createCommitTimestamp(2),
+      }),
+    ).rejects.toBeInstanceOf(DurableStoreConflictError)
+    await expect(
+      deleteAllBattleProfileStoreData({ store, state: staleState }),
+    ).rejects.toBeInstanceOf(DurableStoreConflictError)
+    await expect(store.readAll()).resolves.toEqual(entriesBeforeAttempts)
+    expect(currentState.head.generation).toBe(1)
   })
 
   it("rejects malformed pre-import backup bytes without changing durable state", async () => {
