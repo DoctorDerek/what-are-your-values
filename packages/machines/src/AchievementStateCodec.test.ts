@@ -63,6 +63,8 @@ describe("Achievement State Codec", () => {
   it("rejects unsupported versions and malformed collection fields", () => {
     const { activeDeck, state } = createPopulatedAchievementState()
     const encoded = encodeAchievementState(state)
+    const malformedCountedBattleProgress: unknown[] = [...encoded[3]]
+    malformedCountedBattleProgress[5] = "counted-battles"
 
     expect(() =>
       decodeAchievementState(activeDeck, [2, ...encoded.slice(1)]),
@@ -86,6 +88,14 @@ describe("Achievement State Codec", () => {
     expect(() =>
       decodeAchievementState(activeDeck, [1, encoded[1], encoded[2], []]),
     ).toThrow("Invalid Achievement Progress")
+    expect(() =>
+      decodeAchievementState(activeDeck, [
+        1,
+        encoded[1],
+        encoded[2],
+        malformedCountedBattleProgress,
+      ]),
+    ).toThrow("Invalid Counted Battle window")
   })
 
   it("rejects unknown achievements and malformed Battle IDs", () => {

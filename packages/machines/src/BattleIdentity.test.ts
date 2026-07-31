@@ -92,6 +92,7 @@ describe("Battle Identity", () => {
     const battleId = createBattleId(battleCycle.scheduler)
 
     expect(readBattleId(battleId, "Battle ID")).toBe(battleId)
+    expect(() => readBattleId(null, "Battle ID")).toThrow("Invalid Battle ID")
     expect(() => readBattleId("not-json", "Battle ID")).toThrow(
       "Invalid Battle ID",
     )
