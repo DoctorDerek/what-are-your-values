@@ -808,4 +808,23 @@ describe("Battle Profile Store", () => {
 
     await expect(store.readAll()).resolves.toEqual(new Map())
   })
+
+  it("rejects recovery deletion when captured corrupt bytes have changed", async () => {
+    const store = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "first-corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "first-corrupt-checkpoint"],
+    ])
+    const entries = await store.readAll()
+    await store.compareAndSwapVerified({
+      expectedEntries: Array.from(entries),
+      putEntries: [[BATTLE_PROFILE_SNAPSHOT_A_KEY, "later-corrupt-checkpoint"]],
+      deleteKeys: [],
+    })
+    const currentEntries = await store.readAll()
+
+    await expect(
+      deleteUnrecoverableBattleProfileStoreData({ store, entries }),
+    ).rejects.toBeInstanceOf(DurableStoreConflictError)
+    await expect(store.readAll()).resolves.toEqual(currentEntries)
+  })
 })
