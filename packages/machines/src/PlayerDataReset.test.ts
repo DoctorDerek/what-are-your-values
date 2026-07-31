@@ -301,6 +301,32 @@ describe("Player Data Reset", () => {
     })
   })
 
+  it("rejects achievement reset when an active value has no level baseline", () => {
+    const playerData = createInitialPlayerData({
+      schedulerSeed: "missing-achievement-baseline",
+      createdAt: CREATED_AT,
+    })
+    const missingValueId = playerData.profile.activeDeck.valueIds[0]
+    if (!missingValueId) {
+      throw new Error("Achievement baseline fixture has no active values")
+    }
+    const incompleteProgressById = new Map(playerData.profile.progressById)
+    incompleteProgressById.delete(missingValueId)
+    const incompletePlayerData = Object.freeze({
+      ...playerData,
+      profile: Object.freeze({
+        ...playerData.profile,
+        progressById: incompleteProgressById,
+      }),
+    }) satisfies PlayerData
+
+    expect(() =>
+      createAchievementsResetCandidate({ playerData: incompletePlayerData }),
+    ).toThrow(
+      `Value progress is unavailable during achievement reset: ${missingValueId}`,
+    )
+  })
+
   it.each([
     ["delete-all-custom-values", 0, 1, 0],
     ["reset-levels-and-experience", 1, 0, 0],
