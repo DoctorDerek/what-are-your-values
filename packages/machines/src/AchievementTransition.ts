@@ -141,17 +141,17 @@ function isAchievementSatisfied({
   readonly winnerBaselineLevel: number
 }) {
   const { condition } = achievement
-  if (condition.kind === "battle-count") {
+  if (condition.kind === "battleCount") {
     return isNewBattle && lifetimeBattleCount === condition.threshold
   }
-  if (condition.kind === "cycle-complete") {
+  if (condition.kind === "cycleComplete") {
     return (
       isNewBattle &&
       completedCycleCount === 1 &&
       event.delta.cycleBoundary !== null
     )
   }
-  if (condition.kind === "top-five") {
+  if (condition.kind === "topFive") {
     return (
       !priorState.progress.topFiveAlreadyRevealedAtReset &&
       !hasEarnedTopFive(priorProfile) &&
