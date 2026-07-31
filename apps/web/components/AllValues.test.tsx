@@ -125,9 +125,7 @@ describe("All Values Component Integration", () => {
       "Inventions and original ideas matter.",
     )
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
-    expect(screen.getByLabelText("Value Name")).toHaveValue(
-      "   Ingenuity   ",
-    )
+    expect(screen.getByLabelText("Value Name")).toHaveValue("   Ingenuity   ")
     expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
       "  Inventions and original ideas matter. ",
     )
