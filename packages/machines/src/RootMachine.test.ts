@@ -2087,16 +2087,20 @@ describe("Root Machine", () => {
     if (!priorProfile) {
       throw new Error("Battle retry profile did not initialize")
     }
+    const priorScheduler = priorProfile.scheduler
+    if (priorScheduler.scheduleKind !== "full-cycle") {
+      throw new Error("Battle retry fixture expected a full-cycle scheduler")
+    }
     const [winnerId] = projectScheduledPair(
       priorProfile.activeDeck,
-      priorProfile.scheduler,
+      priorScheduler,
     ).pair
 
     shouldFail = true
     actor.send({
       type: "BATTLE.WINNER_SELECTED",
       winnerId,
-      expectedScheduler: priorProfile.scheduler,
+      expectedScheduler: priorScheduler,
     })
     await waitFor(actor, (candidate) =>
       candidate.matches({ PersistenceFailure: "Reviewing" }),
@@ -2108,14 +2112,13 @@ describe("Root Machine", () => {
 
     expect(retrySnapshot.context.playerData?.profile).toBe(priorProfile)
     expect(
-      projectScheduledPair(priorProfile.activeDeck, priorProfile.scheduler)
-        .pair,
+      projectScheduledPair(priorProfile.activeDeck, priorScheduler).pair,
     ).toContain(winnerId)
 
     actor.send({
       type: "BATTLE.WINNER_SELECTED",
       winnerId,
-      expectedScheduler: priorProfile.scheduler,
+      expectedScheduler: priorScheduler,
     })
     const committedSnapshot = await waitForReadyCrucible(actor)
 
@@ -2391,16 +2394,22 @@ describe("Root Machine", () => {
     if (!committedProfile) {
       throw new Error("Current-data export fixture did not initialize")
     }
+    const committedScheduler = committedProfile.scheduler
+    if (committedScheduler.scheduleKind !== "full-cycle") {
+      throw new Error(
+        "Current-data export fixture expected a full-cycle scheduler",
+      )
+    }
     const [winnerId] = projectScheduledPair(
       committedProfile.activeDeck,
-      committedProfile.scheduler,
+      committedScheduler,
     ).pair
 
     shouldFailCommit = true
     actor.send({
       type: "BATTLE.WINNER_SELECTED",
       winnerId,
-      expectedScheduler: committedProfile.scheduler,
+      expectedScheduler: committedScheduler,
     })
     await waitFor(actor, (candidate) =>
       candidate.matches({ PersistenceFailure: "Reviewing" }),
