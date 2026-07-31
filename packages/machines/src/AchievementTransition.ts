@@ -27,7 +27,7 @@ function incrementSafeInteger(value: number, label: string) {
   return value + 1
 }
 
-function getReachableBattleIds(profile: BattleProfile) {
+export function getReachableAchievementBattleIds(profile: BattleProfile) {
   return Object.freeze(
     [...profile.history, ...profile.redo].map(({ battleId }) => battleId),
   )
@@ -48,7 +48,7 @@ function getRebasedBaselineLevelsByValue({
   )
 }
 
-function hasEarnedTopFive(profile: BattleProfile) {
+export function hasEarnedTopFive(profile: BattleProfile) {
   return (
     Array.from(profile.progressById.values()).filter(
       ({ totalXp }) => totalXp > 0,
@@ -246,7 +246,7 @@ function applyBattleChoiceAchievementTransition({
       lifetimeBattleCount,
       completedCycleCount,
       countedBattleWindow: createBoundedBattleIdSet(
-        getReachableBattleIds(resultingProfile),
+        getReachableAchievementBattleIds(resultingProfile),
       ),
     },
   })
@@ -289,7 +289,7 @@ export function applyAchievementTransition({
             })
           : state.progress.baselineLevelsByValue,
       countedBattleWindow: createBoundedBattleIdSet(
-        getReachableBattleIds(resultingProfile),
+        getReachableAchievementBattleIds(resultingProfile),
       ),
     },
   })
