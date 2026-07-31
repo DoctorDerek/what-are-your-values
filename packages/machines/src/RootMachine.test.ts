@@ -2211,6 +2211,29 @@ describe("Root Machine", () => {
     ).toBe(false)
   })
 
+  it("keeps captured corruption recoverable when retained backup bytes are empty", async () => {
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+        [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, ""],
+      ],
+    })
+    const capturedEntries = await durableStore.readAll()
+
+    actor.send({ type: "RECOVERY.RESTORE_BACKUP_REQUESTED" })
+    const failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.portabilityIssue !== null,
+    )
+
+    expect(failureSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+    expect(failureSnapshot.context.pendingRecoveryImportSource).toBeNull()
+    await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
+  })
+
   it("tracks a selected recovery backup through preview, clears it on cancellation, and preserves its exact replacement outcome", async () => {
     const serializedBackup = await createSerializedRecoveryBackup({
       schedulerSeed: "selected-recovery-backup",

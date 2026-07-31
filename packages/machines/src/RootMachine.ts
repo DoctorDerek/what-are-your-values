@@ -290,7 +290,7 @@ function requireStoredRecoveryBackup(context: RootMachineContext) {
   const backup = requireRecoveryEntries(context).get(
     BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   )
-  if (!backup) {
+  if (backup === undefined) {
     throw new Error("A stored recovery backup is unavailable")
   }
 
