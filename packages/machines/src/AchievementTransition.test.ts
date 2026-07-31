@@ -307,6 +307,31 @@ describe("Achievement Transition", () => {
     ])
   })
 
+  it("rejects lifetime battle-count overflow before integer precision is lost", () => {
+    const profile = createInitialBattleProfile("achievement-overflow-seed")
+    const { transition, event } = chooseWinner(profile)
+    const initialState = createInitialAchievementState(profile.activeDeck)
+    const saturatedState = createAchievementState({
+      activeDeck: profile.activeDeck,
+      unlocks: [],
+      presentedAchievementIds: [],
+      progress: {
+        ...initialState.progress,
+        lifetimeBattleCount: Number.MAX_SAFE_INTEGER,
+      },
+    })
+
+    expect(() =>
+      applyAchievementTransition({
+        state: saturatedState,
+        priorProfile: profile,
+        resultingProfile: transition.profile,
+        event,
+        occurredAt: OCCURRED_AT,
+      }),
+    ).toThrow("Achievement lifetime battle count cannot be incremented safely")
+  })
+
   it("rebases achievement levels and replay evidence after a deck revision", () => {
     const profile = createInitialBattleProfile("achievement-deck-seed")
     const first = chooseWinner(profile)
