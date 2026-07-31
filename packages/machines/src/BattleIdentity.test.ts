@@ -11,12 +11,29 @@ import {
 } from "./PairScheduler"
 
 describe("Battle Identity", () => {
-  it("is stable for the same complete scheduler identity", () => {
+  it("serializes the exact seed-independent v5.0 identity tuple", () => {
     const battleCycle = createInitialBattleCycle("battle-identity-seed")
+    const schedulerWithDifferentSeed = createSchedulerRestorePoint({
+      activeDeck: battleCycle.activeDeck,
+      progressGeneration: battleCycle.scheduler.progressGeneration,
+      deckRevision: battleCycle.scheduler.deckRevision,
+      seed: "different-restore-only-seed",
+      cycleIndex: battleCycle.scheduler.cycleIndex,
+      cursor: battleCycle.scheduler.cursor,
+    })
+    const battleId = createBattleId(battleCycle.scheduler)
 
-    expect(createBattleId(battleCycle.scheduler)).toBe(
-      createBattleId({ ...battleCycle.scheduler }),
-    )
+    expect(JSON.parse(battleId)).toEqual([
+      "battle-v1",
+      battleCycle.scheduler.progressGeneration,
+      battleCycle.scheduler.deckRevision,
+      battleCycle.scheduler.activeDeckFingerprint,
+      battleCycle.scheduler.algorithmVersion,
+      battleCycle.scheduler.scheduleKind,
+      battleCycle.scheduler.cycleIndex,
+      battleCycle.scheduler.cursor,
+    ])
+    expect(createBattleId(schedulerWithDifferentSeed)).toBe(battleId)
   })
 
   it("changes for a different cursor cycle deck revision or generation", () => {
@@ -90,5 +107,21 @@ describe("Battle Identity", () => {
     expect(() => readBattleId(` ${battleId}`, "Battle ID")).toThrow(
       "Invalid Battle ID",
     )
+    expect(() =>
+      readBattleId(
+        JSON.stringify([
+          "battle-v1",
+          battleCycle.scheduler.progressGeneration,
+          battleCycle.scheduler.deckRevision,
+          battleCycle.scheduler.activeDeckFingerprint,
+          battleCycle.scheduler.algorithmVersion,
+          battleCycle.scheduler.scheduleKind,
+          battleCycle.scheduler.seed,
+          battleCycle.scheduler.cycleIndex,
+          battleCycle.scheduler.cursor,
+        ]),
+        "Battle ID",
+      ),
+    ).toThrow("Invalid Battle ID")
   })
 })
