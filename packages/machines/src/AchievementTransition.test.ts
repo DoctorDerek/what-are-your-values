@@ -261,6 +261,7 @@ describe("Achievement Transition", () => {
       name: "Ingenuity",
       definition: "Finding useful new paths through difficult problems.",
       now: () => "2026-07-29T00:01:00.000Z",
+      randomUuid: () => "00000000-0000-4000-8000-000000000001",
     })
     const deckTransition = applyDeckRevision({
       profile: first.transition.profile,
