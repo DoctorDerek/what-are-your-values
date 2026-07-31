@@ -2,6 +2,11 @@ import { createCustomValueId } from "@game/data/src/Value"
 import { describe, expect, it, vi } from "vitest"
 import { createActor, fromPromise, waitFor } from "xstate"
 import {
+  createRecoveryBundleActor,
+  deleteUnrecoverablePlayerDataActor,
+  replaceUnrecoverablePlayerDataActor,
+} from "./BattleProfileRecoveryActors"
+import {
   BATTLE_PROFILE_MANIFEST_KEY,
   BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
@@ -98,11 +103,14 @@ async function bootRootActor({
 
 async function bootCorruptRootActor({
   initialEntries,
+  rootLogic,
 }: {
   readonly initialEntries: readonly (readonly [string, string])[]
+  readonly rootLogic?: typeof rootMachine
 }) {
   const root = createRootActor({
     durableStore: createInMemoryDurableStore(initialEntries),
+    rootLogic,
   })
   root.actor.start()
   root.actor.send({
@@ -2352,5 +2360,227 @@ describe("Root Machine", () => {
     expect(actor.getSnapshot().context.preparedDownload).toBeNull()
     expect(actor.getSnapshot().context.pendingImport).toBeNull()
     expect(compareAndSwapCallCount).toBe(0)
+  })
+
+  it("retains the valid committed battle snapshot when current-data export fails", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let shouldFailCommit = false
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldFailCommit) {
+          throw new Error("Battle export fixture failed")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const failingWayvmExportActor = fromPromise(async () => {
+      throw new Error("Current backup export failed")
+    }) as typeof createWayvmExportActor
+    const rootLogic = rootMachine.provide({
+      actors: { createWayvmExport: failingWayvmExportActor },
+    })
+    const { actor } = await bootRootActor({
+      durableStore,
+      rootLogic,
+      schedulerSeed: "root-current-data-export-failure-seed",
+    })
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    const committedProfile = actor.getSnapshot().context.playerData?.profile
+    if (!committedProfile) {
+      throw new Error("Current-data export fixture did not initialize")
+    }
+    const [winnerId] = projectScheduledPair(
+      committedProfile.activeDeck,
+      committedProfile.scheduler,
+    ).pair
+
+    shouldFailCommit = true
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId,
+      expectedScheduler: committedProfile.scheduler,
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "Reviewing" }),
+    )
+
+    actor.send({ type: "STORAGE_RECOVERY.EXPORT_REQUESTED" })
+    const failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.portabilityIssue === "Current backup export failed",
+    )
+
+    expect(failureSnapshot.context.playerData?.profile).toBe(committedProfile)
+    expect(failureSnapshot.context.preparedDownload).toBeNull()
+  })
+
+  it("retains captured corruption after diagnostic export failure and reports a platform delivery failure", async () => {
+    const failingRecoveryBundleActor = fromPromise(async () => {
+      throw new Error("Diagnostic export failed")
+    }) as typeof createRecoveryBundleActor
+    const rootLogic = rootMachine.provide({
+      actors: { createRecoveryBundle: failingRecoveryBundleActor },
+    })
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+      rootLogic,
+    })
+    const capturedEntries = await durableStore.readAll()
+
+    actor.send({ type: "RECOVERY.EXPORT_REQUESTED" })
+    const exportFailureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.portabilityIssue === "Diagnostic export failed",
+    )
+
+    expect(exportFailureSnapshot.context.recoveryEntries).toEqual(
+      capturedEntries,
+    )
+    expect(exportFailureSnapshot.context.preparedDownload).toBeNull()
+
+    actor.send({
+      type: "RECOVERY.PLATFORM_FAILURE_REPORTED",
+      issue: "Native file sharing was canceled",
+    })
+
+    expect(actor.getSnapshot().context.portabilityIssue).toBe(
+      "Native file sharing was canceled",
+    )
+    await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
+  })
+
+  it("retains the validated recovery review and captured corruption when replacement fails", async () => {
+    const failingRecoveryReplacementActor = fromPromise(async () => {
+      throw new Error("Recovery replacement failed")
+    }) as typeof replaceUnrecoverablePlayerDataActor
+    const rootLogic = rootMachine.provide({
+      actors: {
+        replaceUnrecoverablePlayerData: failingRecoveryReplacementActor,
+      },
+    })
+    const serializedBackup = await createSerializedRecoveryBackup({
+      schedulerSeed: "replacement-retry-backup",
+      sourceBuild: "replacement-retry-build",
+    })
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+      rootLogic,
+    })
+    const capturedEntries = await durableStore.readAll()
+
+    actor.send({
+      type: "RECOVERY.IMPORT_PREPARE_REQUESTED",
+      serialized: serializedBackup,
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "ReviewingImport" }),
+    )
+    actor.send({ type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" })
+    const failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "ReviewingImport" }) &&
+        candidate.context.portabilityIssue === "Recovery replacement failed",
+    )
+
+    expect(failureSnapshot.context.pendingImport?.preview.sourceBuild).toBe(
+      "replacement-retry-build",
+    )
+    expect(failureSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+    await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
+  })
+
+  it("retains captured corruption when acknowledged recovery erasure fails", async () => {
+    const failingRecoveryDeleteActor = fromPromise(async () => {
+      throw new Error("Recovery deletion failed")
+    }) as typeof deleteUnrecoverablePlayerDataActor
+    const rootLogic = rootMachine.provide({
+      actors: { deleteUnrecoverablePlayerData: failingRecoveryDeleteActor },
+    })
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+      rootLogic,
+    })
+    const capturedEntries = await durableStore.readAll()
+
+    actor.send({
+      type: "RECOVERY.DELETE_ALL_REQUESTED",
+      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    })
+    const failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.portabilityIssue === "Recovery deletion failed",
+    )
+
+    expect(failureSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+    await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
+  })
+
+  it("fails loudly if diagnostic export loses captured recovery entries after its guard", async () => {
+    const rootLogic = rootMachine.provide({
+      guards: {
+        hasRecoveryEntries: ({ context }) => {
+          context.recoveryEntries = null
+          return true
+        },
+      },
+    })
+    const { actor } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+      rootLogic,
+    })
+    const actorError = createActorErrorPromise(actor)
+
+    actor.send({ type: "RECOVERY.EXPORT_REQUESTED" })
+
+    await expect(actorError).resolves.toMatchObject({
+      message: "Captured recovery entries are unavailable",
+    })
+  })
+
+  it("fails loudly if retained-backup recovery loses its backup after the guard", async () => {
+    const rootLogic = rootMachine.provide({
+      guards: {
+        hasStoredRecoveryBackup: ({ context }) => {
+          context.recoveryEntries = new Map()
+          return true
+        },
+      },
+    })
+    const { actor } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+        [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, "retained-backup"],
+      ],
+      rootLogic,
+    })
+    const actorError = createActorErrorPromise(actor)
+
+    actor.send({ type: "RECOVERY.RESTORE_BACKUP_REQUESTED" })
+
+    await expect(actorError).resolves.toMatchObject({
+      message: "A stored recovery backup is unavailable",
+    })
   })
 })
