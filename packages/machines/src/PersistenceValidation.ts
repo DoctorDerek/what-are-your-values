@@ -16,6 +16,14 @@ export function readString(value: unknown, label: string) {
   return value
 }
 
+export function readBoolean(value: unknown, label: string) {
+  if (typeof value !== "boolean") {
+    throw new Error(`Invalid ${label}`)
+  }
+
+  return value
+}
+
 export function readIsoTimestamp(value: unknown, label: string) {
   const timestamp = readString(value, label)
   const parsedTimestamp = new Date(timestamp)
