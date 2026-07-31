@@ -432,4 +432,82 @@ describe("Battle Profile Store", () => {
     ).rejects.toThrow("Pre-import backup does not match current Player Data")
     await expect(store.readAll()).resolves.toEqual(entriesBeforeAttempt)
   })
+
+  it.each([
+    {
+      caseName: "non-integer generation",
+      generation: Number.NaN,
+      revision: 0,
+      label: "Store generation",
+    },
+    {
+      caseName: "negative generation",
+      generation: -1,
+      revision: 0,
+      label: "Store generation",
+    },
+    {
+      caseName: "maximum generation",
+      generation: Number.MAX_SAFE_INTEGER,
+      revision: 0,
+      label: "Store generation",
+    },
+    {
+      caseName: "non-integer revision",
+      generation: 0,
+      revision: Number.NaN,
+      label: "Store revision",
+    },
+    {
+      caseName: "negative revision",
+      generation: 0,
+      revision: -1,
+      label: "Store revision",
+    },
+    {
+      caseName: "maximum revision",
+      generation: 0,
+      revision: Number.MAX_SAFE_INTEGER,
+      label: "Store revision",
+    },
+  ])(
+    "rejects an unsafe $caseName before changing durable state",
+    async ({ generation, revision, label }) => {
+      const store = createInMemoryDurableStore()
+      const state = await initializeBattleProfileStore({
+        store,
+        playerData: createInitialPlayerData({
+          schedulerSeed: "unsafe-replacement-identity-seed",
+          createdAt: "2026-07-21T00:00:00.000Z",
+        }),
+        createdAt: "2026-07-21T00:00:00.000Z",
+        appVersion: "0.1.0",
+      })
+      const preImportBackupBytes = await createPreImportBackupBytes(
+        state.head.playerData,
+      )
+      const entriesBeforeAttempt = await store.readAll()
+
+      await expect(
+        replaceBattleProfileStorePlayerData({
+          store,
+          state: {
+            ...state,
+            head: {
+              ...state.head,
+              generation,
+              revision,
+            },
+          },
+          playerData: createInitialPlayerData({
+            schedulerSeed: "unsafe-replacement-import-seed",
+            createdAt: "2026-07-20T00:00:00.000Z",
+          }),
+          preImportBackupBytes,
+          replacedAt: "2026-07-21T00:01:00.000Z",
+        }),
+      ).rejects.toThrow(`${label} cannot be incremented safely`)
+      await expect(store.readAll()).resolves.toEqual(entriesBeforeAttempt)
+    },
+  )
 })
