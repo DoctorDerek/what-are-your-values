@@ -11,6 +11,7 @@ export type WayvmImportPreview = {
   readonly totalComparisons: number
   readonly currentCycle: number
   readonly customValueCount: number
+  readonly customValueNames: readonly string[]
   readonly activeValueCount: number
   readonly activePairCycleSize: number
   readonly deckRevision: number
@@ -40,6 +41,15 @@ function getTotalComparisons(wayvmExport: WayvmExport) {
   return valueComparisonCount / 2
 }
 
+function getCurrentCycle(wayvmExport: WayvmExport) {
+  const cycleIndex = wayvmExport.playerData.profile.scheduler.cycleIndex
+  if (cycleIndex === Number.MAX_SAFE_INTEGER) {
+    throw new Error("Export cycle number cannot be represented safely")
+  }
+
+  return cycleIndex + 1
+}
+
 export function createWayvmImportPreview(
   wayvmExport: WayvmExport,
 ): WayvmImportPreview {
@@ -53,8 +63,11 @@ export function createWayvmImportPreview(
     saveSchemaVersion: wayvmExport.saveSchemaVersion,
     canonicalCatalogVersion: wayvmExport.canonicalCatalogVersion,
     totalComparisons: getTotalComparisons(wayvmExport),
-    currentCycle: playerData.profile.scheduler.cycleIndex + 1,
+    currentCycle: getCurrentCycle(wayvmExport),
     customValueCount: playerData.profile.activeDeck.customValues.length,
+    customValueNames: Object.freeze(
+      playerData.profile.activeDeck.customValues.map(({ name }) => name),
+    ),
     activeValueCount,
     activePairCycleSize: getPairCount(activeValueCount),
     deckRevision: wayvmExport.deckRevision,
