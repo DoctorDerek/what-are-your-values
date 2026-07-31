@@ -1,7 +1,75 @@
+import {
+  CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES,
+  CUSTOM_VALUE_NAME_MAX_GRAPHEMES,
+  validateCustomValueDraft,
+  type CustomValueValidationCode,
+} from "@game/data/src/CustomValueValidation"
 import type { CustomValueDefinition, CustomValueId } from "@game/data/src/Value"
 import { createCustomValueId } from "@game/data/src/Value"
 import type { BattleProfile } from "./BattleProfile"
 import { createDeckRevisionCommit } from "./BattleProfileCommit"
+
+function getValidationErrorMessage(
+  field: "name" | "definition",
+  validationCode: CustomValueValidationCode,
+) {
+  if (validationCode === "required") {
+    return `Custom Value ${field} is required`
+  }
+
+  if (validationCode === "duplicate_name") {
+    return "Custom Value name already exists"
+  }
+
+  if (validationCode === "prohibited_characters") {
+    return `Custom Value ${field} contains prohibited control characters`
+  }
+
+  const maximumGraphemeCount =
+    field === "name"
+      ? CUSTOM_VALUE_NAME_MAX_GRAPHEMES
+      : CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES
+  return `Custom Value ${field} cannot exceed ${maximumGraphemeCount} grapheme clusters`
+}
+
+function requireValidCustomValueDraft({
+  existingCustomValues,
+  name,
+  definition,
+  excludedCustomValueId,
+}: {
+  readonly existingCustomValues: readonly CustomValueDefinition[]
+  readonly name: string
+  readonly definition: string
+  readonly excludedCustomValueId?: CustomValueId | null
+}) {
+  const validation = validateCustomValueDraft({
+    name,
+    definition,
+    existingCustomValues,
+    excludedCustomValueId,
+  })
+
+  if (validation.name.validationCode) {
+    throw new Error(
+      getValidationErrorMessage("name", validation.name.validationCode),
+    )
+  }
+
+  if (validation.definition.validationCode) {
+    throw new Error(
+      getValidationErrorMessage(
+        "definition",
+        validation.definition.validationCode,
+      ),
+    )
+  }
+
+  return Object.freeze({
+    name: validation.name.value,
+    definition: validation.definition.value,
+  })
+}
 
 function createNextCustomValue({
   existingCustomValues,
@@ -16,17 +84,6 @@ function createNextCustomValue({
   readonly now: () => string
   readonly randomUuid: () => string
 }) {
-  const trimmedName = name.trim()
-  const trimmedDefinition = definition.trim()
-
-  if (trimmedName.length === 0) {
-    throw new Error("Custom Value name is required")
-  }
-
-  if (trimmedDefinition.length === 0) {
-    throw new Error("Custom Value definition is required")
-  }
-
   const nextCreationOrdinal =
     existingCustomValues.reduce(
       (maxOrdinal, value) => Math.max(maxOrdinal, value.creationOrdinal),
@@ -37,8 +94,8 @@ function createNextCustomValue({
   return Object.freeze({
     kind: "custom",
     id: createCustomValueId(`custom:${randomUuid()}`),
-    name: trimmedName,
-    definition: trimmedDefinition,
+    name,
+    definition,
     creationOrdinal: nextCreationOrdinal,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -58,12 +115,17 @@ export function createCustomValueAddCommit({
   readonly now: () => string
   readonly randomUuid: () => string
 }) {
+  const validatedDraft = requireValidCustomValueDraft({
+    existingCustomValues: profile.activeDeck.customValues,
+    name,
+    definition,
+  })
   const revisedCustomValues = Object.freeze([
     ...profile.activeDeck.customValues,
     createNextCustomValue({
       existingCustomValues: profile.activeDeck.customValues,
-      name,
-      definition,
+      name: validatedDraft.name,
+      definition: validatedDraft.definition,
       now,
       randomUuid,
     }),
@@ -85,16 +147,12 @@ export function createCustomValueUpdateCommit({
   readonly definition: string
   readonly now: () => string
 }) {
-  const trimmedName = name.trim()
-  const trimmedDefinition = definition.trim()
-
-  if (trimmedName.length === 0) {
-    throw new Error("Custom Value name is required")
-  }
-
-  if (trimmedDefinition.length === 0) {
-    throw new Error("Custom Value definition is required")
-  }
+  const validatedDraft = requireValidCustomValueDraft({
+    existingCustomValues: profile.activeDeck.customValues,
+    name,
+    definition,
+    excludedCustomValueId: valueId,
+  })
 
   const revisedCustomValues = Object.freeze(
     profile.activeDeck.customValues.map((value) => {
@@ -104,8 +162,8 @@ export function createCustomValueUpdateCommit({
 
       return Object.freeze({
         ...value,
-        name: trimmedName,
-        definition: trimmedDefinition,
+        name: validatedDraft.name,
+        definition: validatedDraft.definition,
         updatedAt: now(),
       })
     }),

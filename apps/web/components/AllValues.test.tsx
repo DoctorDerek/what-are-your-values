@@ -84,8 +84,8 @@ describe("All Values Component Integration", () => {
     )
 
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
-    expect(screen.getByLabelText("Custom Value Name")).toHaveValue("Ingenuity")
-    expect(screen.getByLabelText("Personal Definition")).toHaveValue(
+    expect(screen.getByLabelText("Value Name")).toHaveValue("Ingenuity")
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
       "To solve problems in original, resourceful, and practical ways.",
     )
     expect(screen.getByRole("button", { name: "Save Value" })).toBeEnabled()
@@ -112,10 +112,10 @@ describe("All Values Component Integration", () => {
     renderAllValues(undefined, { onAddCustomValue })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "   Ingenuity   " },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "  Inventions and original ideas matter. " },
     })
     fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
@@ -124,6 +124,29 @@ describe("All Values Component Integration", () => {
       "Ingenuity",
       "Inventions and original ideas matter.",
     )
+    expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
+    expect(screen.getByLabelText("Value Name")).toHaveValue("   Ingenuity   ")
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
+      "  Inventions and original ideas matter. ",
+    )
+  })
+
+  it("locks navigation and mutation controls while persistence is pending", () => {
+    renderAllValues(undefined, {
+      openCustomValueBuilder: true,
+      isPersistencePending: true,
+    })
+
+    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Close Custom Value Form" }),
+    ).toBeDisabled()
+    expect(screen.getByLabelText("Value Name")).toBeDisabled()
+    expect(screen.getByLabelText("What This Value Means to Me")).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: /Start with Ingenuity/ }),
+    ).toBeDisabled()
   })
 
   it("keeps an incomplete add draft open without submitting it", () => {
@@ -138,11 +161,73 @@ describe("All Values Component Integration", () => {
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
   })
 
+  it("explains required fields after interaction and counts grapheme clusters", () => {
+    renderAllValues()
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    const nameInput = screen.getByLabelText("Value Name")
+    const definitionInput = screen.getByLabelText("What This Value Means to Me")
+
+    expect(screen.getByText("0 / 60 characters")).toBeVisible()
+    expect(screen.getByText("0 / 280 characters")).toBeVisible()
+    expect(
+      screen.queryByText("Enter a name for this value."),
+    ).not.toBeInTheDocument()
+
+    fireEvent.blur(nameInput)
+    fireEvent.blur(definitionInput)
+
+    expect(screen.getByText("Enter a name for this value.")).toBeVisible()
+    expect(
+      screen.getByText("Enter a short personal definition for this value."),
+    ).toBeVisible()
+    expect(nameInput).toHaveAttribute("aria-invalid", "true")
+    expect(definitionInput).toHaveAttribute("aria-invalid", "true")
+
+    fireEvent.change(nameInput, { target: { value: "👨‍👩‍👧‍👦" } })
+    fireEvent.change(definitionInput, {
+      target: { value: "Caring for family with intention." },
+    })
+
+    expect(screen.getByText("1 / 60 characters")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Save Value" })).toBeEnabled()
+  })
+
+  it("keeps overlong or controlled Custom Value drafts visible and unsaved", () => {
+    const onAddCustomValue = vi.fn()
+
+    renderAllValues(undefined, { onAddCustomValue })
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    const nameInput = screen.getByLabelText("Value Name")
+    const definitionInput = screen.getByLabelText("What This Value Means to Me")
+    fireEvent.change(nameInput, { target: { value: "🦝".repeat(61) } })
+    fireEvent.change(definitionInput, {
+      target: { value: "Purpose\u202e" },
+    })
+    fireEvent.blur(nameInput)
+    fireEvent.blur(definitionInput)
+
+    expect(
+      screen.getByText("Use 60 or fewer characters for the value name."),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Remove invisible or control characters from the personal definition.",
+      ),
+    ).toBeVisible()
+    expect(screen.getByText("61 / 60 characters")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Save Value" })).toBeDisabled()
+    expect(onAddCustomValue).not.toHaveBeenCalled()
+    expect(nameInput).toHaveValue("🦝".repeat(61))
+    expect(definitionInput).toHaveValue("Purpose\u202e")
+  })
+
   it("cancels an unsaved custom value draft", () => {
     renderAllValues()
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Ingenuity" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
@@ -160,10 +245,10 @@ describe("All Values Component Integration", () => {
     renderAllValues(rankedValues, { onAddCustomValue })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "  INGENUITY  " },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "Another form of creativity." },
     })
 
@@ -191,7 +276,7 @@ describe("All Values Component Integration", () => {
     renderAllValues(rankedValues)
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "ingen" },
     })
 
@@ -215,10 +300,10 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: " Curiosity Engine " },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "  A drive to explore how things connect. " },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
@@ -252,10 +337,10 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "A drive to explore how things connect." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
@@ -265,6 +350,55 @@ describe("All Values Component Integration", () => {
       screen.queryByRole("alertdialog", { name: "Update Ingenuity?" }),
     ).not.toBeInTheDocument()
     expect(onUpdateCustomValue).not.toHaveBeenCalled()
+  })
+
+  it("cancels an invalid edit and restores the persisted Custom Value fields", () => {
+    const activeDeck = createActiveDeckWithIngenuity()
+    const onUpdateCustomValue = vi.fn()
+
+    renderAllValues(createRankedValues(activeDeck), { onUpdateCustomValue })
+
+    const targetListItem = screen.getByText("Ingenuity").closest("li")
+    if (!targetListItem) {
+      throw new Error("Expected Ingenuity list item in DOM")
+    }
+
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
+    )
+    fireEvent.change(screen.getByLabelText("Value Name"), {
+      target: { value: "Curiosity Engine" },
+    })
+    const definitionInput = screen.getByLabelText("What This Value Means to Me")
+    fireEvent.change(definitionInput, {
+      target: { value: "Purpose\u202e" },
+    })
+    fireEvent.blur(definitionInput)
+
+    expect(
+      screen.getByText(
+        "Remove invisible or control characters from the personal definition.",
+      ),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(
+      screen.queryByLabelText("What This Value Means to Me"),
+    ).not.toBeInTheDocument()
+    expect(onUpdateCustomValue).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      within(targetListItem).getByRole("button", { name: "Edit" }),
+    )
+    expect(screen.getByLabelText("Value Name")).toHaveValue("Ingenuity")
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
+      "Ability to solve problems creatively.",
+    )
+    expect(
+      screen.queryByText(
+        "Remove invisible or control characters from the personal definition.",
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps an invalid Custom Value update local and unconfirmed", () => {
@@ -280,10 +414,10 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "" },
     })
     const editForm = targetListItem.querySelector("form")
@@ -292,17 +426,17 @@ describe("All Values Component Integration", () => {
     }
     fireEvent.submit(editForm)
 
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "A drive to explore how things connect." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
@@ -371,12 +505,17 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
+    fireEvent.blur(screen.getByLabelText("Value Name"))
     expect(
       screen.getByText("This value already exists. Open it instead."),
     ).toHaveClass("text-black")
+    expect(screen.getByLabelText("Value Name")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
     expect(screen.getByRole("button", { name: "Review Update" })).toBeDisabled()
   })
 

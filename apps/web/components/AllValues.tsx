@@ -1,6 +1,11 @@
 "use client"
 
 import {
+  CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES,
+  CUSTOM_VALUE_NAME_MAX_GRAPHEMES,
+  validateCustomValueDraft,
+} from "@game/data/src/CustomValueValidation"
+import {
   getValueDisplayDefinition,
   getValueDisplayName,
   type CustomValueId,
@@ -13,10 +18,10 @@ import {
 import {
   filterRankedValuesByQuery,
   findRankedValueNameMatches,
-  hasExactRankedValueNameCollision,
 } from "@game/data/src/ValueSearch"
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import CustomValueFieldFeedback from "@/components/CustomValueFieldFeedback"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 const STARTER_EXAMPLES = Object.freeze([
@@ -42,6 +47,8 @@ export default function AllValues({
   rankedValues,
   initialValueId,
   openCustomValueBuilder,
+  isPersistencePending = false,
+  persistenceIssue = null,
   onClose,
   onAddCustomValue,
   onUpdateCustomValue,
@@ -50,6 +57,8 @@ export default function AllValues({
   rankedValues: readonly RankedValue[]
   initialValueId?: ValueId | null
   openCustomValueBuilder?: boolean
+  isPersistencePending?: boolean
+  persistenceIssue?: string | null
   onClose: () => void
   onAddCustomValue: (name: string, definition: string) => void
   onUpdateCustomValue: (
@@ -62,11 +71,15 @@ export default function AllValues({
   const [searchQuery, setSearchQuery] = useState("")
   const [addName, setAddName] = useState("")
   const [addDefinition, setAddDefinition] = useState("")
+  const [isAddNameTouched, setIsAddNameTouched] = useState(false)
+  const [isAddDefinitionTouched, setIsAddDefinitionTouched] = useState(false)
   const [editingValueId, setEditingValueId] = useState<CustomValueId | null>(
     null,
   )
   const [editName, setEditName] = useState("")
   const [editDefinition, setEditDefinition] = useState("")
+  const [isEditNameTouched, setIsEditNameTouched] = useState(false)
+  const [isEditDefinitionTouched, setIsEditDefinitionTouched] = useState(false)
   const [isConfirmingEdit, setIsConfirmingEdit] = useState(false)
   const [deletingValueId, setDeletingValueId] = useState<CustomValueId | null>(
     null,
@@ -89,35 +102,47 @@ export default function AllValues({
     () => filterRankedValuesByQuery(orderedValues, searchQuery),
     [orderedValues, searchQuery],
   )
-  const trimmedAddName = addName.trim()
-  const trimmedAddDefinition = addDefinition.trim()
-  const matchingAddValues = useMemo(
-    () => findRankedValueNameMatches(rankedValues, trimmedAddName),
-    [rankedValues, trimmedAddName],
+  const existingCustomValues = useMemo(
+    () =>
+      rankedValues.flatMap(({ definition }) =>
+        definition.kind === "custom" ? [definition] : [],
+      ),
+    [rankedValues],
   )
-  const hasDuplicateAddName = hasExactRankedValueNameCollision({
-    rankedValues,
-    name: trimmedAddName,
-  })
-  const canSubmitAdd =
-    trimmedAddName.length > 0 &&
-    trimmedAddDefinition.length > 0 &&
-    !hasDuplicateAddName
+  const addValidation = useMemo(
+    () =>
+      validateCustomValueDraft({
+        name: addName,
+        definition: addDefinition,
+        existingCustomValues,
+      }),
+    [addDefinition, addName, existingCustomValues],
+  )
+  const matchingAddValues = useMemo(
+    () => findRankedValueNameMatches(rankedValues, addValidation.name.value),
+    [addValidation.name.value, rankedValues],
+  )
+  const hasDuplicateAddName =
+    addValidation.name.validationCode === "duplicate_name"
+  const canSubmitAdd = addValidation.isValid
   const editableCustomValue = rankedValues.find(
     ({ definition }) => definition.id === editingValueId,
   )?.definition
-  const isDuplicateEditName = hasExactRankedValueNameCollision({
-    rankedValues,
-    name: editName,
-    excludedValueId: editingValueId,
-  })
+  const editValidation = useMemo(
+    () =>
+      validateCustomValueDraft({
+        name: editName,
+        definition: editDefinition,
+        existingCustomValues,
+        excludedCustomValueId: editingValueId,
+      }),
+    [editDefinition, editName, editingValueId, existingCustomValues],
+  )
   const canSubmitEdit =
     editableCustomValue?.kind === "custom" &&
-    editName.trim().length > 0 &&
-    editDefinition.trim().length > 0 &&
-    (editName.trim() !== editableCustomValue.name ||
-      editDefinition.trim() !== editableCustomValue.definition) &&
-    !isDuplicateEditName
+    editValidation.isValid &&
+    (editValidation.name.value !== editableCustomValue.name ||
+      editValidation.definition.value !== editableCustomValue.definition)
 
   useEffect(() => {
     if (!isAddingCustomValue) {
@@ -154,14 +179,15 @@ export default function AllValues({
 
   const handleAddCustomValue = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!canSubmitAdd) {
+    if (!canSubmitAdd || isPersistencePending) {
       return
     }
 
-    onAddCustomValue(trimmedAddName, trimmedAddDefinition)
-    setAddName("")
-    setAddDefinition("")
-    setIsAddingCustomValue(false)
+    const draft = Object.freeze({
+      name: addValidation.name.value,
+      definition: addValidation.definition.value,
+    })
+    onAddCustomValue(draft.name, draft.definition)
   }
 
   const startEdit = (
@@ -172,6 +198,8 @@ export default function AllValues({
     setEditingValueId(valueId)
     setEditName(name)
     setEditDefinition(definition)
+    setIsEditNameTouched(false)
+    setIsEditDefinitionTouched(false)
     setIsConfirmingEdit(false)
   }
 
@@ -179,12 +207,14 @@ export default function AllValues({
     setEditingValueId(null)
     setEditName("")
     setEditDefinition("")
+    setIsEditNameTouched(false)
+    setIsEditDefinitionTouched(false)
     setIsConfirmingEdit(false)
   }
 
   const handleUpdateCustomValue = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!canSubmitEdit || !editingValueId) {
+    if (!canSubmitEdit || !editingValueId || isPersistencePending) {
       return
     }
 
@@ -192,12 +222,16 @@ export default function AllValues({
   }
 
   const confirmUpdateCustomValue = () => {
-    if (!canSubmitEdit || !editingValueId) {
+    if (!canSubmitEdit || !editingValueId || isPersistencePending) {
       return
     }
 
-    onUpdateCustomValue(editingValueId, editName.trim(), editDefinition.trim())
-    cancelEdit()
+    const draft = Object.freeze({
+      valueId: editingValueId,
+      name: editValidation.name.value,
+      definition: editValidation.definition.value,
+    })
+    onUpdateCustomValue(draft.valueId, draft.name, draft.definition)
   }
 
   const openMatchingValue = (valueId: ValueId) => {
@@ -243,6 +277,7 @@ export default function AllValues({
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
+                  disabled={isPersistencePending}
                   onClick={() =>
                     startEdit(
                       definition.id,
@@ -256,6 +291,7 @@ export default function AllValues({
                 </button>
                 <button
                   type="button"
+                  disabled={isPersistencePending}
                   onClick={() => {
                     setDeletingValueId(definition.id)
                     setEditingValueId(null)
@@ -284,6 +320,7 @@ export default function AllValues({
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
+                  disabled={isPersistencePending}
                   onClick={() => setDeletingValueId(null)}
                   className="bg-mapache-vivid-secondary-purple border-4 border-black px-4 py-2 font-black text-white uppercase"
                 >
@@ -291,13 +328,13 @@ export default function AllValues({
                 </button>
                 <button
                   type="button"
+                  disabled={isPersistencePending}
                   onClick={() => {
                     onDeleteCustomValue(customValueId)
-                    setDeletingValueId(null)
                   }}
                   className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-black uppercase"
                 >
-                  Delete Value
+                  {isPersistencePending ? "Deleting…" : "Delete Value"}
                 </button>
               </div>
             </div>
@@ -311,35 +348,58 @@ export default function AllValues({
                 htmlFor={`custom-value-name-${definition.id}`}
                 className="mb-3 block text-xl font-black uppercase"
               >
-                Custom Value Name
+                Value Name
               </label>
               <input
                 id={`custom-value-name-${definition.id}`}
                 value={editName}
+                disabled={isPersistencePending}
                 onChange={(event) => setEditName(event.target.value)}
+                onBlur={() => setIsEditNameTouched(true)}
+                aria-invalid={
+                  isEditNameTouched &&
+                  editValidation.name.validationCode !== null
+                }
+                aria-describedby={`custom-value-name-feedback-${definition.id}`}
                 className="focus-visible:ring-mapache-vivid-primary-cyan mb-3 w-full border-4 border-black px-4 py-3 text-2xl font-bold outline-none focus-visible:ring-8"
+              />
+              <CustomValueFieldFeedback
+                id={`custom-value-name-feedback-${definition.id}`}
+                field="name"
+                validation={editValidation.name}
+                maximumGraphemeCount={CUSTOM_VALUE_NAME_MAX_GRAPHEMES}
+                showValidationMessage={
+                  isEditNameTouched ||
+                  editValidation.name.validationCode === "duplicate_name"
+                }
               />
               <label
                 htmlFor={`custom-value-definition-${definition.id}`}
-                className="mb-3 block text-xl font-black uppercase"
+                className="mt-4 mb-3 block text-xl font-black uppercase"
               >
-                Personal Definition
+                What This Value Means to Me
               </label>
               <textarea
                 id={`custom-value-definition-${definition.id}`}
                 value={editDefinition}
+                disabled={isPersistencePending}
                 onChange={(event) => setEditDefinition(event.target.value)}
+                onBlur={() => setIsEditDefinitionTouched(true)}
+                aria-invalid={
+                  isEditDefinitionTouched &&
+                  editValidation.definition.validationCode !== null
+                }
+                aria-describedby={`custom-value-definition-feedback-${definition.id}`}
                 rows={4}
-                className="focus-visible:ring-mapache-vivid-primary-cyan mb-4 w-full border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
+                className="focus-visible:ring-mapache-vivid-primary-cyan w-full border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
               />
-              {isDuplicateEditName ? (
-                <p
-                  role="status"
-                  className="border-mapache-vivid-secondary-red bg-mapache-vivid-secondary-red/15 rounded-sm border-4 p-3 text-base font-black text-black uppercase"
-                >
-                  This value already exists. Open it instead.
-                </p>
-              ) : null}
+              <CustomValueFieldFeedback
+                id={`custom-value-definition-feedback-${definition.id}`}
+                field="definition"
+                validation={editValidation.definition}
+                maximumGraphemeCount={CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES}
+                showValidationMessage={isEditDefinitionTouched}
+              />
               {isConfirmingEdit ? (
                 <div
                   role="alertdialog"
@@ -354,6 +414,7 @@ export default function AllValues({
                   <div className="mt-4 flex flex-wrap gap-3">
                     <button
                       type="button"
+                      disabled={isPersistencePending}
                       onClick={() => setIsConfirmingEdit(false)}
                       className="bg-mapache-vivid-secondary-purple border-4 border-black px-4 py-2 font-black text-white uppercase"
                     >
@@ -361,10 +422,11 @@ export default function AllValues({
                     </button>
                     <button
                       type="button"
+                      disabled={isPersistencePending}
                       onClick={confirmUpdateCustomValue}
                       className="bg-mapache-vivid-primary-orange border-4 border-black px-4 py-2 font-black text-black uppercase"
                     >
-                      Update Value
+                      {isPersistencePending ? "Saving…" : "Update Value"}
                     </button>
                   </div>
                 </div>
@@ -373,13 +435,14 @@ export default function AllValues({
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    disabled={!canSubmitEdit}
+                    disabled={!canSubmitEdit || isPersistencePending}
                     className="bg-mapache-vivid-secondary-green border-4 border-black px-4 py-2 font-black uppercase disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Review Update
                   </button>
                   <button
                     type="button"
+                    disabled={isPersistencePending}
                     onClick={cancelEdit}
                     className="bg-mapache-vivid-secondary-red border-4 border-black px-4 py-2 font-black text-black uppercase"
                   >
@@ -411,6 +474,7 @@ export default function AllValues({
           </div>
           <button
             type="button"
+            disabled={isPersistencePending}
             onClick={onClose}
             className="bg-mapache-vivid-secondary-red cursor-pointer border-4 border-black px-5 py-3 text-2xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[6px] active:translate-y-[6px] active:shadow-none"
           >
@@ -448,6 +512,21 @@ export default function AllValues({
           {visibleValues.length}{" "}
           {visibleValues.length === 1 ? "Value" : "Values"} Shown
         </p>
+        {persistenceIssue ? (
+          <div
+            role="alert"
+            aria-label="Custom Value save failed"
+            className="bg-mapache-vivid-primary-orange mt-6 border-4 border-black p-5 text-black shadow-[8px_8px_0px_0px_#000000]"
+          >
+            <h2 className="text-2xl font-black uppercase">
+              That change wasn’t saved.
+            </h2>
+            <p className="mt-2 text-lg font-bold">
+              Your current data and draft are unchanged. Review them and try
+              again.
+            </p>
+          </div>
+        ) : null}
 
         <section className="mt-8">
           <h2 className="text-2xl font-black uppercase">
@@ -466,9 +545,12 @@ export default function AllValues({
                 <button
                   key={name}
                   type="button"
+                  disabled={isPersistencePending}
                   onClick={() => {
                     setAddName(name)
                     setAddDefinition(definition)
+                    setIsAddNameTouched(false)
+                    setIsAddDefinitionTouched(false)
                     setIsAddingCustomValue(true)
                   }}
                   className="bg-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
@@ -481,6 +563,7 @@ export default function AllValues({
           </div>
           <button
             type="button"
+            disabled={isPersistencePending}
             onClick={() => setIsAddingCustomValue((value) => !value)}
             className="bg-mapache-vivid-primary-orange mt-5 border-4 border-black px-5 py-3 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[6px] active:translate-y-[6px] active:shadow-none"
           >
@@ -495,42 +578,72 @@ export default function AllValues({
               onSubmit={handleAddCustomValue}
               className="mt-5 flex flex-col gap-4 border-4 border-black bg-white p-6 text-black shadow-[8px_8px_0px_0px_#000000]"
             >
-              <label
-                htmlFor="custom-value-name"
-                className="flex flex-col gap-2"
-              >
-                <span className="text-xl font-black uppercase">
-                  Custom Value Name
-                </span>
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="custom-value-name"
+                  className="text-xl font-black uppercase"
+                >
+                  Value Name
+                </label>
                 <input
                   id="custom-value-name"
                   type="text"
                   value={addName}
+                  disabled={isPersistencePending}
                   onChange={(event) => setAddName(event.target.value)}
+                  onBlur={() => setIsAddNameTouched(true)}
+                  aria-invalid={
+                    isAddNameTouched &&
+                    addValidation.name.validationCode !== null
+                  }
+                  aria-describedby="custom-value-name-feedback"
                   className="focus-visible:ring-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-2xl font-bold outline-none focus-visible:ring-8"
                 />
-              </label>
-              <label
-                htmlFor="custom-value-definition"
-                className="flex flex-col gap-2"
-              >
-                <span className="text-xl font-black uppercase">
-                  Personal Definition
-                </span>
+                <CustomValueFieldFeedback
+                  id="custom-value-name-feedback"
+                  field="name"
+                  validation={addValidation.name}
+                  maximumGraphemeCount={CUSTOM_VALUE_NAME_MAX_GRAPHEMES}
+                  showValidationMessage={
+                    isAddNameTouched || hasDuplicateAddName
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="custom-value-definition"
+                  className="text-xl font-black uppercase"
+                >
+                  What This Value Means to Me
+                </label>
                 <textarea
                   ref={addDefinitionRef}
                   id="custom-value-definition"
                   value={addDefinition}
+                  disabled={isPersistencePending}
                   onChange={(event) => setAddDefinition(event.target.value)}
+                  onBlur={() => setIsAddDefinitionTouched(true)}
+                  aria-invalid={
+                    isAddDefinitionTouched &&
+                    addValidation.definition.validationCode !== null
+                  }
+                  aria-describedby="custom-value-definition-feedback"
                   rows={4}
                   className="focus-visible:ring-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
                 />
-              </label>
+                <CustomValueFieldFeedback
+                  id="custom-value-definition-feedback"
+                  field="definition"
+                  validation={addValidation.definition}
+                  maximumGraphemeCount={CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES}
+                  showValidationMessage={isAddDefinitionTouched}
+                />
+              </div>
               {matchingAddValues.length > 0 ? (
                 <div className="bg-mapache-vivid-primary-cyan/20 border-4 border-black p-4">
                   {hasDuplicateAddName ? (
                     <p className="text-lg font-black uppercase">
-                      This value already exists. Open it instead.
+                      Matching value
                     </p>
                   ) : (
                     <p className="text-lg font-black uppercase">
@@ -542,6 +655,7 @@ export default function AllValues({
                       <li key={definition.id}>
                         <button
                           type="button"
+                          disabled={isPersistencePending}
                           onClick={() => openMatchingValue(definition.id)}
                           className="hover:text-mapache-vivid-secondary-purple border-b-4 border-black text-left text-lg font-black uppercase focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
                         >
@@ -555,16 +669,19 @@ export default function AllValues({
               <div className="flex flex-wrap gap-3">
                 <button
                   type="submit"
-                  disabled={!canSubmitAdd}
+                  disabled={!canSubmitAdd || isPersistencePending}
                   className="bg-mapache-vivid-secondary-green border-4 border-black px-5 py-3 text-xl font-black uppercase disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Save Value
+                  {isPersistencePending ? "Saving…" : "Save Value"}
                 </button>
                 <button
                   type="button"
+                  disabled={isPersistencePending}
                   onClick={() => {
                     setAddName("")
                     setAddDefinition("")
+                    setIsAddNameTouched(false)
+                    setIsAddDefinitionTouched(false)
                     setIsAddingCustomValue(false)
                   }}
                   className="bg-mapache-vivid-secondary-red border-4 border-black px-5 py-3 text-xl font-black text-white uppercase"

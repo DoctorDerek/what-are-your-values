@@ -825,7 +825,7 @@ describe("Root Machine", () => {
     expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
   })
 
-  it("surfaces a durable Custom Value commit failure without saving the draft", async () => {
+  it("returns a failed Custom Value write to browsing without replacing the durable profile", async () => {
     const memoryStore = createInMemoryDurableStore()
     let shouldFail = false
     const durableStore = Object.freeze({
@@ -851,12 +851,30 @@ describe("Root Machine", () => {
       definition: "The disciplined practice of creating new solutions.",
     })
 
-    const snapshot = await waitFor(actor, (candidate) =>
-      candidate.matches("PersistenceFailure"),
+    const snapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ AllValues: "Browsing" }) &&
+        candidate.context.persistenceIssue === "Custom Value commit failed",
     )
     expect(snapshot.context.persistenceIssue).toBe("Custom Value commit failed")
     expect(snapshot.context.battleProfile?.activeDeck.customValues).toEqual([])
     expect(snapshot.context.pendingBattleProfileCommit).toBeNull()
+
+    shouldFail = false
+    actor.send({
+      type: "ALL_VALUES.ADD_REQUESTED",
+      name: "Ingenuity",
+      definition: "The disciplined practice of creating new solutions.",
+    })
+
+    const retriedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ AllValues: "Browsing" }) &&
+        candidate.context.battleProfile?.activeDeck.customValues.length === 1,
+    )
+    expect(retriedSnapshot.context.persistenceIssue).toBeNull()
   })
 
   it("retries initialization after a durable conflict and hydrates the persisted profile", async () => {

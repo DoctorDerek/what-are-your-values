@@ -1,3 +1,4 @@
+import type { DurableStoreTransaction } from "@game/machines/src/DurableStoreAdapter"
 import {
   fireEvent,
   render,
@@ -9,7 +10,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
 
-const durableStoreFailure = vi.hoisted(() => ({ enabled: false }))
+const durableStoreFailure = vi.hoisted(() => ({
+  readEnabled: false,
+  writeEnabled: false,
+}))
 
 vi.mock("@/lib/IndexedDbDurableStore", async () => {
   const { createInMemoryDurableStore } =
@@ -17,29 +21,40 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
 
   return {
     createIndexedDbDurableStore: () => {
-      if (durableStoreFailure.enabled) {
-        return {
-          readAll: async () => {
-            throw new Error("IndexedDB unavailable")
-          },
-          compareAndSwapVerified: async () => undefined,
-        }
-      }
+      const durableStore = createInMemoryDurableStore()
 
-      return createInMemoryDurableStore()
+      return {
+        readAll: async () => {
+          if (durableStoreFailure.readEnabled) {
+            throw new Error("IndexedDB unavailable")
+          }
+
+          return durableStore.readAll()
+        },
+        compareAndSwapVerified: async (
+          transaction: DurableStoreTransaction,
+        ) => {
+          if (durableStoreFailure.writeEnabled) {
+            throw new Error("IndexedDB write failed")
+          }
+
+          return durableStore.compareAndSwapVerified(transaction)
+        },
+      }
     },
   }
 })
 
 describe("GameClient Integration", () => {
   afterEach(() => {
-    durableStoreFailure.enabled = false
+    durableStoreFailure.readEnabled = false
+    durableStoreFailure.writeEnabled = false
     localStorage.clear()
     vi.restoreAllMocks()
   })
 
   it("renders the safe persistence failure screen without exposing saved data", async () => {
-    durableStoreFailure.enabled = true
+    durableStoreFailure.readEnabled = true
 
     render(<GameClient />)
 
@@ -53,6 +68,51 @@ describe("GameClient Integration", () => {
         "Your saved data was left unchanged. Reload this page to try again.",
       ),
     ).toBeVisible()
+  })
+
+  it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000047",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Add Custom Value" }),
+    )
+    fireEvent.change(await screen.findByLabelText("Value Name"), {
+      target: { value: "Ingenuity" },
+    })
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
+      target: { value: "To make original solutions." },
+    })
+
+    durableStoreFailure.writeEnabled = true
+    fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
+
+    expect(
+      await screen.findByRole("alert", {
+        name: "Custom Value save failed",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText("100 Active Values")).toBeVisible()
+    expect(screen.getByLabelText("Value Name")).toHaveValue("Ingenuity")
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
+      "To make original solutions.",
+    )
+    expect(screen.getByRole("button", { name: "Save Value" })).toBeEnabled()
+
+    durableStoreFailure.writeEnabled = false
+    fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
+
+    expect(await screen.findByText("101 Active Values")).toBeVisible()
+    expect(
+      screen.queryByRole("alert", { name: "Custom Value save failed" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("form", { name: "Add Custom Value" }),
+    ).not.toBeInTheDocument()
   })
 
   it("carries one canonical battle result back to the earned Hub ranking", async () => {
@@ -226,10 +286,10 @@ describe("GameClient Integration", () => {
       await screen.findByRole("button", { name: "Add Custom Value" }),
     )
 
-    fireEvent.change(await screen.findByLabelText("Custom Value Name"), {
+    fireEvent.change(await screen.findByLabelText("Value Name"), {
       target: { value: "Ingenuity" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "To make original solutions." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
@@ -244,13 +304,16 @@ describe("GameClient Integration", () => {
       }
       return valueRow
     })
+    expect(
+      screen.queryByRole("form", { name: "Add Custom Value" }),
+    ).not.toBeInTheDocument()
     fireEvent.click(
       within(customValueRow).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "To explore how things connect." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
@@ -266,6 +329,9 @@ describe("GameClient Integration", () => {
       }
       return valueRow
     })
+    expect(
+      screen.queryByRole("alertdialog", { name: "Update Ingenuity?" }),
+    ).not.toBeInTheDocument()
     fireEvent.click(
       within(updatedValueRow).getByRole("button", { name: "Delete" }),
     )
