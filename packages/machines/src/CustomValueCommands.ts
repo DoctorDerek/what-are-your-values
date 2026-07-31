@@ -29,8 +29,7 @@ function createNextCustomValue({
 
   const nextCreationOrdinal =
     existingCustomValues.reduce(
-      (maxOrdinal, value) =>
-        value.creationOrdinal > maxOrdinal ? value.creationOrdinal : maxOrdinal,
+      (maxOrdinal, value) => Math.max(maxOrdinal, value.creationOrdinal),
       0,
     ) + 1
   const timestamp = now()
