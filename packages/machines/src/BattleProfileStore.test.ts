@@ -19,6 +19,7 @@ import {
 import { DurableStoreConflictError } from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
+import { createInitialPlayerData } from "./PlayerData"
 
 function createChoiceEvent(
   profile: ReturnType<typeof createInitialBattleProfile>,
@@ -68,10 +69,13 @@ describe("Battle Profile Store", () => {
 
   it("atomically initializes slot A and its generation-zero manifest", async () => {
     const store = createInMemoryDurableStore()
-    const profile = createInitialBattleProfile("store-initialization-seed")
+    const playerData = createInitialPlayerData({
+      schedulerSeed: "store-initialization-seed",
+      createdAt: "2026-07-21T00:00:00.000Z",
+    })
     const state = await initializeBattleProfileStore({
       store,
-      profile,
+      playerData,
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
@@ -84,10 +88,10 @@ describe("Battle Profile Store", () => {
 
     await expect(
       decodeBattleProfileCheckpoint(checkpointBytes),
-    ).resolves.toMatchObject({ generation: 0, revision: 0, profile })
+    ).resolves.toMatchObject({ generation: 0, revision: 0, playerData })
     expect(decodeBattleProfileManifest(manifestBytes)).toEqual(state.manifest)
     expect(entries.has(BATTLE_PROFILE_SNAPSHOT_B_KEY)).toBe(false)
-    expect(state.head).toEqual({ generation: 0, revision: 0, profile })
+    expect(state.head).toEqual({ generation: 0, revision: 0, playerData })
   })
 
   it("refuses to initialize over an orphaned checkpoint", async () => {
@@ -98,7 +102,10 @@ describe("Battle Profile Store", () => {
     await expect(
       initializeBattleProfileStore({
         store,
-        profile: createInitialBattleProfile("orphaned-store-seed"),
+        playerData: createInitialPlayerData({
+          schedulerSeed: "orphaned-store-seed",
+          createdAt: "2026-07-21T00:00:00.000Z",
+        }),
         createdAt: "2026-07-21T00:00:00.000Z",
         appVersion: "0.1.0",
       }),
@@ -112,11 +119,14 @@ describe("Battle Profile Store", () => {
     const store = createInMemoryDurableStore()
     const initialState = await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("store-commit-seed"),
+      playerData: createInitialPlayerData({
+        schedulerSeed: "store-commit-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
-    const event = createChoiceEvent(initialState.head.profile)
+    const event = createChoiceEvent(initialState.head.playerData.profile)
     const committedState = await commitBattleProfileStoreEvent({
       store,
       state: initialState,
@@ -146,7 +156,10 @@ describe("Battle Profile Store", () => {
     const store = createInMemoryDurableStore()
     let state = await initializeBattleProfileStore({
       store,
-      profile: createInitialBattleProfile("store-rotation-seed"),
+      playerData: createInitialPlayerData({
+        schedulerSeed: "store-rotation-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
       createdAt: "2026-07-21T00:00:00.000Z",
       appVersion: "0.1.0",
     })
@@ -159,7 +172,7 @@ describe("Battle Profile Store", () => {
       state = await commitBattleProfileStoreEvent({
         store,
         state,
-        event: createChoiceEvent(state.head.profile),
+        event: createChoiceEvent(state.head.playerData.profile),
         committedAt: createCommitTimestamp(generation),
       })
 
@@ -189,7 +202,7 @@ describe("Battle Profile Store", () => {
     expect(activeCheckpoint).toMatchObject({
       generation: 64,
       revision: 64,
-      profile: state.head.profile,
+      playerData: state.head.playerData,
     })
     expect(entries.has(BATTLE_PROFILE_SNAPSHOT_B_KEY)).toBe(true)
     expect(entries.has(`${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}32`)).toBe(false)

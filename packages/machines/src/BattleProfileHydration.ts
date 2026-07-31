@@ -96,7 +96,7 @@ export async function hydrateBattleProfileStore({
         head,
         manifest,
         manifestBytes,
-        profileCreatedAt: checkpoint.createdAt,
+        playerDataCreatedAt: checkpoint.createdAt,
         appVersion,
         journalKeys,
       }),

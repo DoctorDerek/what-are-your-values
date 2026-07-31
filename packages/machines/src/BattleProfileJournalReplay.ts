@@ -12,7 +12,7 @@ export function createBattleProfileCheckpointHead(
   return Object.freeze({
     generation: checkpoint.generation,
     revision: checkpoint.revision,
-    profile: checkpoint.profile,
+    playerData: checkpoint.playerData,
   })
 }
 
@@ -40,7 +40,7 @@ export async function replayBattleProfileJournalToGeneration({
     }
 
     const record = await decodeBattleProfileJournalRecord(
-      head.profile.activeDeck,
+      head.playerData.profile.activeDeck,
       serialized,
     )
     if (record.generation !== generation) {
@@ -80,7 +80,7 @@ export async function replayAvailableBattleProfileJournal({
 
     try {
       const record = await decodeBattleProfileJournalRecord(
-        head.profile.activeDeck,
+        head.playerData.profile.activeDeck,
         serialized,
       )
       if (record.generation !== generation) {

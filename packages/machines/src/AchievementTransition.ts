@@ -14,9 +14,9 @@ import type { BattleId } from "./BattleIdentity"
 import type { BattleProfile } from "./BattleProfile"
 import type { BattleProfileEvent } from "./BattleProfileEvent"
 
-type BattleProfileDeltaEvent = Exclude<
+type BattleChoiceAchievementEvent = Extract<
   BattleProfileEvent,
-  { readonly type: "deck-revision" }
+  { readonly type: "battle-choice" }
 >
 
 function incrementSafeInteger(value: number, label: string) {
@@ -75,7 +75,7 @@ function getNewlySatisfiedAchievements({
   readonly priorState: AchievementState
   readonly priorProfile: BattleProfile
   readonly resultingProfile: BattleProfile
-  readonly event: BattleProfileDeltaEvent
+  readonly event: BattleChoiceAchievementEvent
   readonly lifetimeBattleCount: number
   readonly completedCycleCount: number
   readonly isNewBattle: boolean
@@ -138,7 +138,7 @@ function isAchievementSatisfied({
   readonly priorState: AchievementState
   readonly priorProfile: BattleProfile
   readonly resultingProfile: BattleProfile
-  readonly event: BattleProfileDeltaEvent
+  readonly event: BattleChoiceAchievementEvent
   readonly lifetimeBattleCount: number
   readonly completedCycleCount: number
   readonly isNewBattle: boolean
@@ -201,7 +201,7 @@ function applyBattleChoiceAchievementTransition({
   readonly state: AchievementState
   readonly priorProfile: BattleProfile
   readonly resultingProfile: BattleProfile
-  readonly event: BattleProfileDeltaEvent
+  readonly event: BattleChoiceAchievementEvent
   readonly occurredAt: string
 }) {
   const isNewBattle = !state.progress.countedBattleWindow.ids.includes(
