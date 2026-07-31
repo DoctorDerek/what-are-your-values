@@ -12,7 +12,15 @@ import {
   hydrateBattleProfileActor,
   initializeBattleProfileActor,
 } from "./BattleProfilePersistenceActors"
-import type { BattleProfileStoreState } from "./BattleProfileStore"
+import {
+  createRecoveryBundleActor,
+  deleteUnrecoverablePlayerDataActor,
+  replaceUnrecoverablePlayerDataActor,
+} from "./BattleProfileRecoveryActors"
+import {
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  type BattleProfileStoreState,
+} from "./BattleProfileStore"
 import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
@@ -50,6 +58,10 @@ type PendingResetReview = {
   readonly confirmationId: string
 }
 
+type PendingRecoveryImportSource = "last-known-good" | "selected-backup"
+
+type PersistenceFailureOrigin = "loading" | "initialization" | "crucible"
+
 type RootMachineContext = {
   readonly durableStore: DurableStoreAdapter
   readonly appVersion: string
@@ -64,6 +76,9 @@ type RootMachineContext = {
   preImportBackupBytes: string | null
   preparedDownload: PreparedWayvmDownload | null
   pendingResetReview: PendingResetReview | null
+  recoveryEntries: ReadonlyMap<string, string> | null
+  pendingRecoveryImportSource: PendingRecoveryImportSource | null
+  persistenceFailureOrigin: PersistenceFailureOrigin | null
   persistenceIssue: string | null
   portabilityIssue: string | null
   portabilityNotice: string | null
@@ -123,6 +138,20 @@ type RootMachineEvent =
   | { type: "DELETE_ALL_DATA.REQUESTED" }
   | { type: "DELETE_ALL_DATA.CONFIRMED"; phrase: string }
   | { type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" }
+  | { type: "RECOVERY.EXPORT_REQUESTED" }
+  | { type: "RECOVERY.EXPORT_CONSUMED" }
+  | {
+      type: "RECOVERY.IMPORT_PREPARE_REQUESTED"
+      serialized: string
+    }
+  | { type: "RECOVERY.RESTORE_BACKUP_REQUESTED" }
+  | { type: "RECOVERY.IMPORT_CANCEL_REQUESTED" }
+  | { type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" }
+  | { type: "RECOVERY.DELETE_ALL_REQUESTED"; phrase: string }
+  | { type: "RECOVERY.PLATFORM_FAILURE_REPORTED"; issue: string }
+  | { type: "STORAGE_RECOVERY.EXPORT_REQUESTED" }
+  | { type: "STORAGE_RECOVERY.RETRY_REQUESTED" }
+  | { type: "STORAGE_RECOVERY.RETURN_REQUESTED" }
 
 type RootMachineInput = {
   readonly durableStore: DurableStoreAdapter
@@ -249,6 +278,31 @@ function createFreshPlayerDataAfterDeletion(context: RootMachineContext) {
   })
 }
 
+function requireRecoveryEntries(context: RootMachineContext) {
+  if (!context.recoveryEntries) {
+    throw new Error("Captured recovery entries are unavailable")
+  }
+
+  return context.recoveryEntries
+}
+
+function requireStoredRecoveryBackup(context: RootMachineContext) {
+  const backup = requireRecoveryEntries(context).get(
+    BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  )
+  if (!backup) {
+    throw new Error("A stored recovery backup is unavailable")
+  }
+
+  return backup
+}
+
+function getRecoveryReplacementNotice(context: RootMachineContext) {
+  return context.pendingRecoveryImportSource === "last-known-good"
+    ? "Last known-good save restored."
+    : "Your backup replaced the unreadable local data."
+}
+
 export const rootMachine = setup({
   types: {
     context: {} as RootMachineContext,
@@ -264,6 +318,9 @@ export const rootMachine = setup({
     replacePlayerData: replacePlayerDataActor,
     applyScopedPlayerDataReset: applyScopedPlayerDataResetActor,
     deleteAllPlayerData: deleteAllPlayerDataActor,
+    createRecoveryBundle: createRecoveryBundleActor,
+    replaceUnrecoverablePlayerData: replaceUnrecoverablePlayerDataActor,
+    deleteUnrecoverablePlayerData: deleteUnrecoverablePlayerDataActor,
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -314,6 +371,24 @@ export const rootMachine = setup({
       event.type === "DELETE_ALL_DATA.CONFIRMED" &&
       context.pendingResetReview?.resetKind === "delete-all-data" &&
       event.phrase === DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    hasRecoveryEntries: ({ context }) => context.recoveryEntries !== null,
+    hasStoredRecoveryBackup: ({ context }) =>
+      context.recoveryEntries?.has(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY) ??
+      false,
+    canConfirmRecoveryDeletion: ({ context, event }) =>
+      context.recoveryEntries !== null &&
+      event.type === "RECOVERY.DELETE_ALL_REQUESTED" &&
+      event.phrase === DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    canExportCurrentDataAfterStorageFailure: ({ context }) =>
+      context.playerData !== null &&
+      context.persistenceFailureOrigin !== null &&
+      context.persistenceFailureOrigin !== "loading",
+    isLoadingStorageFailure: ({ context }) =>
+      context.persistenceFailureOrigin === "loading",
+    isInitializationStorageFailure: ({ context }) =>
+      context.persistenceFailureOrigin === "initialization",
+    isCrucibleStorageFailure: ({ context }) =>
+      context.persistenceFailureOrigin === "crucible",
   },
 }).createMachine({
   id: "root",
@@ -327,6 +402,9 @@ export const rootMachine = setup({
     preImportBackupBytes: null,
     preparedDownload: null,
     pendingResetReview: null,
+    recoveryEntries: null,
+    pendingRecoveryImportSource: null,
+    persistenceFailureOrigin: null,
     persistenceIssue: null,
     portabilityIssue: null,
     portabilityNotice: null,
@@ -378,6 +456,9 @@ export const rootMachine = setup({
 
                 return event.output.state
               },
+              recoveryEntries: null,
+              pendingRecoveryImportSource: null,
+              persistenceFailureOrigin: null,
               persistenceIssue: null,
             }),
           },
@@ -389,6 +470,12 @@ export const rootMachine = setup({
                 event.output.status === "recovery-required"
                   ? event.output.issue
                   : "Battle Profile recovery is required",
+              recoveryEntries: ({ event }) =>
+                event.output.status === "recovery-required"
+                  ? event.output.entries
+                  : null,
+              pendingRecoveryImportSource: null,
+              persistenceFailureOrigin: null,
             }),
           },
           {
@@ -400,6 +487,9 @@ export const rootMachine = setup({
         onError: {
           target: "PersistenceFailure",
           actions: assign({
+            recoveryEntries: null,
+            pendingRecoveryImportSource: null,
+            persistenceFailureOrigin: "loading",
             persistenceIssue: ({ event }) => getErrorMessage(event.error),
           }),
         },
@@ -425,6 +515,9 @@ export const rootMachine = setup({
             assign({
               playerData: ({ event }) => event.output.head.playerData,
               battleProfileStoreState: ({ event }) => event.output,
+              recoveryEntries: null,
+              pendingRecoveryImportSource: null,
+              persistenceFailureOrigin: null,
               persistenceIssue: null,
             }),
           ],
@@ -438,6 +531,9 @@ export const rootMachine = setup({
           {
             target: "PersistenceFailure",
             actions: assign({
+              recoveryEntries: null,
+              pendingRecoveryImportSource: null,
+              persistenceFailureOrigin: "initialization",
               persistenceIssue: ({ event }) => getErrorMessage(event.error),
             }),
           },
@@ -987,6 +1083,9 @@ export const rootMachine = setup({
               target: "#root.PersistenceFailure",
               actions: assign({
                 pendingBattleProfileCommit: null,
+                recoveryEntries: null,
+                pendingRecoveryImportSource: null,
+                persistenceFailureOrigin: "crucible",
                 persistenceIssue: ({ event }) => getErrorMessage(event.error),
               }),
             },
@@ -994,6 +1093,294 @@ export const rootMachine = setup({
         },
       },
     },
-    PersistenceFailure: {},
+    PersistenceFailure: {
+      initial: "Reviewing",
+      states: {
+        Reviewing: {
+          on: {
+            "RECOVERY.EXPORT_REQUESTED": {
+              guard: "hasRecoveryEntries",
+              target: "ExportingEvidence",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.EXPORT_CONSUMED": {
+              actions: assign({ preparedDownload: null }),
+            },
+            "RECOVERY.IMPORT_PREPARE_REQUESTED": {
+              guard: "hasRecoveryEntries",
+              target: "PreparingImport",
+              actions: assign({
+                pendingImportBytes: ({ event }) => event.serialized,
+                pendingImport: null,
+                pendingRecoveryImportSource: "selected-backup",
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.RESTORE_BACKUP_REQUESTED": {
+              guard: "hasStoredRecoveryBackup",
+              target: "PreparingImport",
+              actions: assign({
+                pendingImportBytes: ({ context }) =>
+                  requireStoredRecoveryBackup(context),
+                pendingImport: null,
+                pendingRecoveryImportSource: "last-known-good",
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.DELETE_ALL_REQUESTED": {
+              guard: "canConfirmRecoveryDeletion",
+              target: "DeletingAllData",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.PLATFORM_FAILURE_REPORTED": {
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => event.issue,
+                portabilityNotice: null,
+              }),
+            },
+            "STORAGE_RECOVERY.EXPORT_REQUESTED": {
+              guard: "canExportCurrentDataAfterStorageFailure",
+              target: "ExportingCurrentData",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "STORAGE_RECOVERY.RETRY_REQUESTED": [
+              {
+                guard: "isLoadingStorageFailure",
+                target: "#root.LoadingProfile",
+                actions: assign({
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+              {
+                guard: "isInitializationStorageFailure",
+                target: "#root.InitializingProfile",
+                actions: assign({
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+              {
+                guard: "isCrucibleStorageFailure",
+                target: "#root.Crucible.Ready",
+                actions: assign({
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+            ],
+            "STORAGE_RECOVERY.RETURN_REQUESTED": [
+              {
+                guard: "isInitializationStorageFailure",
+                target: "#root.Splash",
+                actions: assign({
+                  battleProfileStoreState: null,
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+              {
+                guard: "isCrucibleStorageFailure",
+                target: "#root.Hub",
+                actions: assign({
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+            ],
+          },
+        },
+        ExportingCurrentData: {
+          invoke: {
+            src: "createWayvmExport",
+            input: ({ context }) => ({
+              exportedAt: context.now(),
+              sourceAppVersion: context.appVersion,
+              sourceBuild: context.sourceBuild,
+              playerData: requirePlayerData(context),
+            }),
+            onDone: {
+              target: "Reviewing",
+              actions: assign({
+                preparedDownload: ({ event }) => event.output,
+                portabilityIssue: null,
+                portabilityNotice: "Your current data backup is ready.",
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        ExportingEvidence: {
+          invoke: {
+            src: "createRecoveryBundle",
+            input: ({ context }) => ({
+              entries: requireRecoveryEntries(context),
+              exportedAt: context.now(),
+              issue: context.persistenceIssue ?? "Recovery is required",
+              sourceAppVersion: context.appVersion,
+              sourceBuild: context.sourceBuild,
+            }),
+            onDone: {
+              target: "Reviewing",
+              actions: assign({
+                preparedDownload: ({ event }) => event.output,
+                portabilityIssue: null,
+                portabilityNotice:
+                  "Your unreadable local data is ready as a diagnostic recovery file.",
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        PreparingImport: {
+          invoke: {
+            src: "prepareWayvmImport",
+            input: ({ context }) => ({
+              serialized: requirePendingImportBytes(context),
+            }),
+            onDone: {
+              target: "ReviewingImport",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: ({ event }) => event.output,
+                portabilityIssue: null,
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                pendingImportBytes: null,
+                pendingImport: null,
+                pendingRecoveryImportSource: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        ReviewingImport: {
+          on: {
+            "RECOVERY.IMPORT_CANCEL_REQUESTED": {
+              target: "Reviewing",
+              actions: assign({
+                pendingImport: null,
+                pendingRecoveryImportSource: null,
+                portabilityIssue: null,
+              }),
+            },
+            "RECOVERY.IMPORT_CONFIRM_REQUESTED": {
+              target: "ReplacingPlayerData",
+              actions: assign({ portabilityIssue: null }),
+            },
+          },
+        },
+        ReplacingPlayerData: {
+          invoke: {
+            src: "replaceUnrecoverablePlayerData",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              entries: requireRecoveryEntries(context),
+              playerData: requirePendingImport(context).wayvmExport.playerData,
+              replacedAt: context.now(),
+              appVersion: context.appVersion,
+            }),
+            onDone: {
+              target: "#root.Hub",
+              actions: assign({
+                playerData: ({ event }) => event.output.head.playerData,
+                battleProfileStoreState: ({ event }) => event.output,
+                pendingImport: null,
+                pendingImportBytes: null,
+                preImportBackupBytes: null,
+                preparedDownload: null,
+                recoveryEntries: null,
+                pendingRecoveryImportSource: null,
+                persistenceFailureOrigin: null,
+                persistenceIssue: null,
+                portabilityIssue: null,
+                portabilityNotice: ({ context }) =>
+                  getRecoveryReplacementNotice(context),
+              }),
+            },
+            onError: {
+              target: "ReviewingImport",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        DeletingAllData: {
+          invoke: {
+            src: "deleteUnrecoverablePlayerData",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              entries: requireRecoveryEntries(context),
+            }),
+            onDone: {
+              target: "#root.Splash",
+              actions: assign({
+                playerData: ({ context }) =>
+                  createFreshPlayerDataAfterDeletion(context),
+                battleProfileStoreState: null,
+                pendingBattleProfileCommit: null,
+                pendingImport: null,
+                pendingImportBytes: null,
+                preImportBackupBytes: null,
+                preparedDownload: null,
+                pendingResetReview: null,
+                recoveryEntries: null,
+                pendingRecoveryImportSource: null,
+                persistenceFailureOrigin: null,
+                persistenceIssue: null,
+                portabilityIssue: null,
+                portabilityNotice: "All local WAYVM player data was deleted.",
+              }),
+            },
+            onError: {
+              target: "Reviewing",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+      },
+    },
   },
 })
