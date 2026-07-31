@@ -241,9 +241,9 @@ describe("Achievement State", () => {
     const initial = createInitialAchievementState(activeDeck)
     const battleId = createCountedBattleId(0)
 
-    expect(() =>
-      createBoundedBattleIdSet(["" as typeof battleId]),
-    ).toThrow("contains an empty Battle ID")
+    expect(() => createBoundedBattleIdSet(["" as typeof battleId])).toThrow(
+      "contains an empty Battle ID",
+    )
     expect(() =>
       createAchievementState({
         activeDeck,
