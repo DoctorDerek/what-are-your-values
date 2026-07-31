@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest"
 import { readAchievementId } from "./AchievementCatalog"
 import {
   COUNTED_BATTLE_WINDOW_CAPACITY,
-  createBoundedBattleIdSet,
   createAchievementState,
+  createBoundedBattleIdSet,
   createInitialAchievementState,
   getPendingAchievementUnlocks,
 } from "./AchievementState"

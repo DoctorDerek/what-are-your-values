@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
-  ACHIEVEMENT_COPY_KEYS,
   ACHIEVEMENT_CATALOG,
+  ACHIEVEMENT_COPY_KEYS,
   getAchievementDefinition,
   HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS,
   isAchievementId,

@@ -165,9 +165,7 @@ export function createBoundedBattleIdSet(
   })
 }
 
-function validateCountedBattleWindow(
-  countedBattleWindow: BoundedBattleIdSet,
-) {
+function validateCountedBattleWindow(countedBattleWindow: BoundedBattleIdSet) {
   if (countedBattleWindow.capacity !== COUNTED_BATTLE_WINDOW_CAPACITY) {
     throw new Error("Counted Battle window has a noncanonical capacity")
   }

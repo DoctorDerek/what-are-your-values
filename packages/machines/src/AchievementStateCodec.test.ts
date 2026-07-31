@@ -2,8 +2,8 @@ import { createActiveDeck } from "@game/data/src/ActiveDeck"
 import { describe, expect, it } from "vitest"
 import { readAchievementId } from "./AchievementCatalog"
 import {
-  createBoundedBattleIdSet,
   createAchievementState,
+  createBoundedBattleIdSet,
   createInitialAchievementState,
 } from "./AchievementState"
 import {
