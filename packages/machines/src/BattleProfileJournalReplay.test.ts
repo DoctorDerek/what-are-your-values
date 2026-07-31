@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applyBattleChoice, createInitialBattleProfile } from "./BattleProfile"
+import { applyBattleChoice } from "./BattleProfile"
 import { createBattleProfileCheckpoint } from "./BattleProfileCheckpoint"
 import { createBattleChoiceEvent } from "./BattleProfileEvent"
 import {
@@ -12,9 +12,14 @@ import {
 } from "./BattleProfileJournalReplay"
 import { getBattleProfileJournalKey } from "./BattleProfileStore"
 import { projectScheduledPair } from "./PairScheduler"
+import { createInitialPlayerData } from "./PlayerData"
 
 async function createReplayFixture() {
-  const initialProfile = createInitialBattleProfile("journal-replay-seed")
+  const initialPlayerData = createInitialPlayerData({
+    schedulerSeed: "journal-replay-seed",
+    createdAt: "2026-07-21T00:00:00.000Z",
+  })
+  const initialProfile = initialPlayerData.profile
   const [winnerId] = projectScheduledPair(
     initialProfile.activeDeck,
     initialProfile.scheduler,
@@ -28,7 +33,7 @@ async function createReplayFixture() {
     head: {
       generation: 0,
       revision: 0,
-      profile: initialProfile,
+      playerData: initialPlayerData,
     },
     event: createBattleChoiceEvent(transition),
     committedAt: "2026-07-21T00:01:00.000Z",
@@ -39,7 +44,7 @@ async function createReplayFixture() {
     createdAt: "2026-07-21T00:00:00.000Z",
     updatedAt: "2026-07-21T00:00:00.000Z",
     appVersion: "0.1.0",
-    profile: initialProfile,
+    playerData: initialPlayerData,
   })
 
   return {
@@ -80,7 +85,7 @@ describe("Battle Profile Journal Replay", () => {
       head: {
         generation: 0,
         revision: 0,
-        profile: checkpoint.profile,
+        playerData: checkpoint.playerData,
       },
       updatedAt: checkpoint.updatedAt,
       stoppedIssue: "Battle Profile journal generation 1 is missing",
@@ -116,13 +121,13 @@ describe("Battle Profile Journal Replay", () => {
   it("rejects an exact replay when the journal key disagrees with its record", async () => {
     const { checkpoint, commit } = await createReplayFixture()
     const secondPair = projectScheduledPair(
-      commit.head.profile.activeDeck,
-      commit.head.profile.scheduler,
+      commit.head.playerData.profile.activeDeck,
+      commit.head.playerData.profile.scheduler,
     ).pair
     const secondTransition = applyBattleChoice({
-      profile: commit.head.profile,
+      profile: commit.head.playerData.profile,
       winnerId: secondPair[0],
-      expectedScheduler: commit.head.profile.scheduler,
+      expectedScheduler: commit.head.playerData.profile.scheduler,
     })
     const secondCommit = await createBattleProfileJournalCommit({
       head: commit.head,

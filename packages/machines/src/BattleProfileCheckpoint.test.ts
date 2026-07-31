@@ -1,24 +1,42 @@
 import { describe, expect, it } from "vitest"
-import { applyBattleChoice, createInitialBattleProfile } from "./BattleProfile"
+import { applyAchievementTransition } from "./AchievementTransition"
+import { applyBattleChoice } from "./BattleProfile"
 import {
   createBattleProfileCheckpoint,
   decodeBattleProfileCheckpoint,
   serializeBattleProfileCheckpoint,
 } from "./BattleProfileCheckpoint"
+import { createBattleChoiceEvent } from "./BattleProfileEvent"
 import { projectScheduledPair } from "./PairScheduler"
 import { parsePersistedJson, serializePersistedJson } from "./PersistedJson"
+import { createInitialPlayerData, createPlayerData } from "./PlayerData"
 
 async function createCheckpoint() {
-  const initial = createInitialBattleProfile("checkpoint-seed")
+  const initial = createInitialPlayerData({
+    schedulerSeed: "checkpoint-seed",
+    createdAt: "2026-07-21T00:00:00.000Z",
+  })
   const [winnerId] = projectScheduledPair(
-    initial.activeDeck,
-    initial.scheduler,
+    initial.profile.activeDeck,
+    initial.profile.scheduler,
   ).pair
-  const profile = applyBattleChoice({
-    profile: initial,
+  const transition = applyBattleChoice({
+    profile: initial.profile,
     winnerId,
-    expectedScheduler: initial.scheduler,
-  }).profile
+    expectedScheduler: initial.profile.scheduler,
+  })
+  const event = createBattleChoiceEvent(transition)
+  const playerData = createPlayerData({
+    ...initial,
+    profile: transition.profile,
+    achievements: applyAchievementTransition({
+      state: initial.achievements,
+      priorProfile: initial.profile,
+      resultingProfile: transition.profile,
+      event,
+      occurredAt: "2026-07-21T00:01:00.000Z",
+    }),
+  })
 
   return createBattleProfileCheckpoint({
     generation: 1,
@@ -26,7 +44,7 @@ async function createCheckpoint() {
     createdAt: "2026-07-21T00:00:00.000Z",
     updatedAt: "2026-07-21T00:01:00.000Z",
     appVersion: "0.1.0",
-    profile,
+    playerData,
   })
 }
 
@@ -122,7 +140,10 @@ describe("Battle Profile Checkpoint", () => {
         createdAt: "2026-07-21T00:00:00.000Z",
         updatedAt: "2026-07-20T00:00:00.000Z",
         appVersion: "0.1.0",
-        profile: createInitialBattleProfile("invalid-checkpoint-seed"),
+        playerData: createInitialPlayerData({
+          schedulerSeed: "invalid-checkpoint-seed",
+          createdAt: "2026-07-21T00:00:00.000Z",
+        }),
       }),
     ).rejects.toThrow(
       "Checkpoint update timestamp precedes its creation timestamp",
