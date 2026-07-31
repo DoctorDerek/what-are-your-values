@@ -137,9 +137,9 @@ export const rootMachine = setup({
       ).includes(event.winnerId)
     },
     canUndoBattle: ({ context }) =>
-      (context.playerData?.profile.history.length ?? 0) > 0,
+      requireBattleProfile(context).history.length > 0,
     canRedoBattle: ({ context }) =>
-      (context.playerData?.profile.redo.length ?? 0) > 0,
+      requireBattleProfile(context).redo.length > 0,
   },
 }).createMachine({
   id: "root",
