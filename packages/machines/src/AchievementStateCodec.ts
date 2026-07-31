@@ -1,6 +1,7 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import { readAchievementId, type AchievementId } from "./AchievementCatalog"
 import {
+  COUNTED_BATTLE_WINDOW_CAPACITY,
   createAchievementState,
   type AchievementState,
   type AchievementUnlock,
@@ -63,7 +64,7 @@ export function encodeAchievementState(
       state.progress.completedCycleCount,
       encodeValueNumberEntries(state.progress.baselineLevelsByValue),
       state.progress.topFiveAlreadyRevealedAtReset,
-      state.progress.countedBattleWindow,
+      state.progress.countedBattleWindow.ids,
     ],
   ]
 }
@@ -143,7 +144,10 @@ export function decodeAchievementState(activeDeck: ActiveDeck, value: unknown) {
         progressTuple[4],
         "Top Five achievement reset baseline",
       ),
-      countedBattleWindow: decodeCountedBattleWindow(progressTuple[5]),
+      countedBattleWindow: {
+        ids: decodeCountedBattleWindow(progressTuple[5]),
+        capacity: COUNTED_BATTLE_WINDOW_CAPACITY,
+      },
     },
   })
 

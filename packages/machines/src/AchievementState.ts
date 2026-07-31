@@ -20,13 +20,18 @@ export type AchievementUnlock = {
   readonly eventToken: string
 }
 
+export type BoundedBattleIdSet = {
+  readonly ids: readonly BattleId[]
+  readonly capacity: number
+}
+
 export type AchievementProgress = {
   readonly achievementProgressGeneration: number
   readonly lifetimeBattleCount: number
   readonly completedCycleCount: number
   readonly baselineLevelsByValue: ReadonlyMap<ValueId, number>
   readonly topFiveAlreadyRevealedAtReset: boolean
-  readonly countedBattleWindow: readonly BattleId[]
+  readonly countedBattleWindow: BoundedBattleIdSet
 }
 
 export type AchievementState = {
@@ -138,16 +143,31 @@ function validateBaselineLevelsByValue({
   )
 }
 
-function validateCountedBattleWindow(countedBattleWindow: readonly BattleId[]) {
-  if (countedBattleWindow.length > COUNTED_BATTLE_WINDOW_CAPACITY) {
+export function createBoundedBattleIdSet(
+  ids: readonly BattleId[],
+): BoundedBattleIdSet {
+  if (ids.length > COUNTED_BATTLE_WINDOW_CAPACITY) {
     throw new Error("Counted Battle window exceeds its bounded capacity")
   }
-  if (countedBattleWindow.some((battleId) => battleId.length === 0)) {
+  if (ids.some((battleId) => battleId.length === 0)) {
     throw new Error("Counted Battle window contains an empty Battle ID")
   }
 
-  validateUniqueStrings(countedBattleWindow, "Counted Battle window")
-  return Object.freeze([...countedBattleWindow])
+  validateUniqueStrings(ids, "Counted Battle window")
+  return Object.freeze({
+    ids: Object.freeze([...ids]),
+    capacity: COUNTED_BATTLE_WINDOW_CAPACITY,
+  })
+}
+
+function validateCountedBattleWindow(
+  countedBattleWindow: BoundedBattleIdSet,
+) {
+  if (countedBattleWindow.capacity !== COUNTED_BATTLE_WINDOW_CAPACITY) {
+    throw new Error("Counted Battle window has a noncanonical capacity")
+  }
+
+  return createBoundedBattleIdSet(countedBattleWindow.ids)
 }
 
 export function createAchievementState({
@@ -178,7 +198,7 @@ export function createAchievementState({
     progress.countedBattleWindow,
   )
 
-  if (lifetimeBattleCount < countedBattleWindow.length) {
+  if (lifetimeBattleCount < countedBattleWindow.ids.length) {
     throw new Error(
       "Achievement lifetime battle count is lower than its counted window",
     )
@@ -225,7 +245,7 @@ export function createInitialAchievementState(activeDeck: ActiveDeck) {
         activeDeck.valueIds.map((valueId) => [valueId, 1]),
       ),
       topFiveAlreadyRevealedAtReset: false,
-      countedBattleWindow: [],
+      countedBattleWindow: createBoundedBattleIdSet([]),
     },
   })
 }

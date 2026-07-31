@@ -5,6 +5,7 @@ import {
   type AchievementId,
 } from "./AchievementCatalog"
 import {
+  createBoundedBattleIdSet,
   createAchievementState,
   type AchievementState,
   type AchievementUnlock,
@@ -203,7 +204,7 @@ function applyBattleChoiceAchievementTransition({
   readonly event: BattleProfileDeltaEvent
   readonly occurredAt: string
 }) {
-  const isNewBattle = !state.progress.countedBattleWindow.includes(
+  const isNewBattle = !state.progress.countedBattleWindow.ids.includes(
     event.delta.battleId,
   )
   const lifetimeBattleCount = isNewBattle
@@ -244,7 +245,9 @@ function applyBattleChoiceAchievementTransition({
       ...state.progress,
       lifetimeBattleCount,
       completedCycleCount,
-      countedBattleWindow: getReachableBattleIds(resultingProfile),
+      countedBattleWindow: createBoundedBattleIdSet(
+        getReachableBattleIds(resultingProfile),
+      ),
     },
   })
 }
@@ -285,7 +288,9 @@ export function applyAchievementTransition({
               resultingProfile,
             })
           : state.progress.baselineLevelsByValue,
-      countedBattleWindow: getReachableBattleIds(resultingProfile),
+      countedBattleWindow: createBoundedBattleIdSet(
+        getReachableBattleIds(resultingProfile),
+      ),
     },
   })
 }
