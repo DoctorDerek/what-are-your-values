@@ -1,6 +1,6 @@
 import { createCustomValueId } from "@game/data/src/Value"
 import { describe, expect, it, vi } from "vitest"
-import { createActor, waitFor } from "xstate"
+import { createActor, fromPromise, waitFor } from "xstate"
 import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "./BattleProfileStore"
 import {
   DurableStoreConflictError,
@@ -8,19 +8,30 @@ import {
 } from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
+import { createInitialPlayerData } from "./PlayerData"
+import {
+  createWayvmExportActor,
+  prepareWayvmImportActor,
+} from "./PlayerDataPortabilityActors"
 import { rootMachine } from "./RootMachine"
-import { decodeWayvmExport } from "./WayvmExport"
+import {
+  createWayvmExport,
+  decodeWayvmExport,
+  serializeWayvmExport,
+} from "./WayvmExport"
 
 const TEST_TIMESTAMP = "2026-07-21T00:00:00.000Z"
 
 function createRootActor({
   durableStore = createInMemoryDurableStore(),
   randomUuid = () => crypto.randomUUID(),
+  rootLogic = rootMachine,
 }: {
   readonly durableStore?: DurableStoreAdapter
   readonly randomUuid?: () => string
+  readonly rootLogic?: typeof rootMachine
 } = {}) {
-  const actor = createActor(rootMachine, {
+  const actor = createActor(rootLogic, {
     input: {
       durableStore,
       appVersion: "0.1.0",
@@ -33,18 +44,34 @@ function createRootActor({
   return { actor, durableStore }
 }
 
+async function createSerializedImportFixture(schedulerSeed: string) {
+  return serializeWayvmExport(
+    await createWayvmExport({
+      exportedAt: TEST_TIMESTAMP,
+      sourceAppVersion: "0.1.0",
+      sourceBuild: "import-fixture-build",
+      playerData: createInitialPlayerData({
+        schedulerSeed,
+        createdAt: TEST_TIMESTAMP,
+      }),
+    }),
+  )
+}
+
 async function bootRootActor({
   schedulerSeed = "root-machine-seed",
   durableStore,
   randomUuid,
+  rootLogic,
   skipIntroduction = false,
 }: {
   readonly schedulerSeed?: string
   readonly durableStore?: DurableStoreAdapter
   readonly randomUuid?: () => string
+  readonly rootLogic?: typeof rootMachine
   readonly skipIntroduction?: boolean
 } = {}) {
-  const root = createRootActor({ durableStore, randomUuid })
+  const root = createRootActor({ durableStore, randomUuid, rootLogic })
   root.actor.start()
   root.actor.send({ type: "APP.HYDRATED", schedulerSeed })
   await waitFor(
@@ -79,6 +106,14 @@ function expectActorEventError(
   actor.send(event)
   expect(observedError).toMatchObject({
     message: expect.stringContaining(message),
+  })
+}
+
+function createActorErrorPromise(
+  actor: ReturnType<typeof createRootActor>["actor"],
+) {
+  return new Promise<unknown>((resolve) => {
+    actor.subscribe({ error: resolve })
   })
 }
 
@@ -990,6 +1025,155 @@ describe("Root Machine", () => {
     actor.send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
 
     expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+  })
+
+  it("surfaces export and pre-import backup creation failures without abandoning current data", async () => {
+    const failingWayvmExportActor = fromPromise(async () => {
+      throw new Error("Private backup creation failed")
+    }) as typeof createWayvmExportActor
+    const rootLogic = rootMachine.provide({
+      actors: { createWayvmExport: failingWayvmExportActor },
+    })
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-export-failure-seed",
+      rootLogic,
+    })
+    const currentPlayerData = actor.getSnapshot().context.playerData
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    let failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityIssue === "Private backup creation failed",
+    )
+
+    expect(failureSnapshot.context.playerData).toBe(currentPlayerData)
+    expect(failureSnapshot.context.preparedDownload).toBeNull()
+
+    const importBytes = await createSerializedImportFixture(
+      "root-backup-failure-import-seed",
+    )
+    actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: importBytes,
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ DataManagement: "ReviewingImport" }),
+    )
+    actor.send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+    failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "ReviewingImport" }) &&
+        candidate.context.portabilityIssue === "Private backup creation failed",
+    )
+
+    expect(failureSnapshot.context.playerData).toBe(currentPlayerData)
+    expect(failureSnapshot.context.pendingImport).not.toBeNull()
+    expect(failureSnapshot.context.preImportBackupBytes).toBeNull()
+  })
+
+  it("rejects empty import bytes through the recoverable malformed-file state", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-empty-import-seed",
+    })
+    const currentPlayerData = actor.getSnapshot().context.playerData
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: "",
+    })
+    const failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.portabilityIssue === "Persisted JSON is malformed",
+    )
+
+    expect(failureSnapshot.context.playerData).toBe(currentPlayerData)
+    expect(failureSnapshot.context.pendingImport).toBeNull()
+  })
+
+  it("fails loudly when an invalid event removes required pending import bytes", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-missing-import-bytes-seed",
+    })
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    const invalidEvent = {
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: null,
+    } as unknown as Parameters<typeof actor.send>[0]
+
+    expectActorEventError(actor, invalidEvent, "Import bytes are not prepared")
+  })
+
+  it("rejects a missing validated import before atomic replacement", async () => {
+    const missingPreparedImportActor = fromPromise(
+      async () => null as never,
+    ) as typeof prepareWayvmImportActor
+    const rootLogic = rootMachine.provide({
+      actors: { prepareWayvmImport: missingPreparedImportActor },
+    })
+    const { actor, durableStore } = await bootRootActor({
+      schedulerSeed: "root-missing-prepared-import-seed",
+      rootLogic,
+    })
+    const currentPlayerData = actor.getSnapshot().context.playerData
+    const entriesBeforeAttempt = await durableStore.readAll()
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: "ignored-by-test-actor",
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ DataManagement: "ReviewingImport" }),
+    )
+    const actorError = createActorErrorPromise(actor)
+    actor.send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+
+    await expect(actorError).resolves.toMatchObject({
+      message: "Validated import data is not prepared",
+    })
+    expect(actor.getSnapshot().context.playerData).toBe(currentPlayerData)
+    await expect(durableStore.readAll()).resolves.toEqual(entriesBeforeAttempt)
+  })
+
+  it("rejects missing pre-import backup bytes before atomic replacement", async () => {
+    const emptyWayvmExportActor = fromPromise(async () =>
+      Object.freeze({ filename: "empty-backup.json", serialized: "" }),
+    ) as typeof createWayvmExportActor
+    const rootLogic = rootMachine.provide({
+      actors: { createWayvmExport: emptyWayvmExportActor },
+    })
+    const { actor, durableStore } = await bootRootActor({
+      schedulerSeed: "root-missing-backup-bytes-seed",
+      rootLogic,
+    })
+    const currentPlayerData = actor.getSnapshot().context.playerData
+    const entriesBeforeAttempt = await durableStore.readAll()
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({
+      type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+      serialized: await createSerializedImportFixture(
+        "root-missing-backup-import-seed",
+      ),
+    })
+    await waitFor(actor, (candidate) =>
+      candidate.matches({ DataManagement: "ReviewingImport" }),
+    )
+    const actorError = createActorErrorPromise(actor)
+    actor.send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+
+    await expect(actorError).resolves.toMatchObject({
+      message: "Pre-import backup bytes are not prepared",
+    })
+    expect(actor.getSnapshot().context.playerData).toBe(currentPlayerData)
+    await expect(durableStore.readAll()).resolves.toEqual(entriesBeforeAttempt)
   })
 
   it("rejects invalid import bytes without replacing or abandoning the current Player Data", async () => {

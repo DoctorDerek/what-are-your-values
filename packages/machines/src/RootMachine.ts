@@ -131,7 +131,7 @@ function requirePendingBattleProfileCommit(context: RootMachineContext) {
 }
 
 function requirePendingImportBytes(context: RootMachineContext) {
-  if (!context.pendingImportBytes) {
+  if (context.pendingImportBytes === null) {
     throw new Error("Import bytes are not prepared")
   }
 
