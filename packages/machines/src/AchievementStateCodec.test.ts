@@ -2,6 +2,7 @@ import { createActiveDeck } from "@game/data/src/ActiveDeck"
 import { describe, expect, it } from "vitest"
 import { readAchievementId } from "./AchievementCatalog"
 import {
+  createBoundedBattleIdSet,
   createAchievementState,
   createInitialAchievementState,
 } from "./AchievementState"
@@ -40,7 +41,7 @@ function createPopulatedAchievementState() {
       progress: {
         ...createInitialAchievementState(activeDeck).progress,
         lifetimeBattleCount: 1,
-        countedBattleWindow: [battleId],
+        countedBattleWindow: createBoundedBattleIdSet([battleId]),
       },
     }),
   }

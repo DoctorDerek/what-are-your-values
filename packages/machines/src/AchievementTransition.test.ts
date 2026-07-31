@@ -56,7 +56,7 @@ describe("Achievement Transition", () => {
     })
 
     expect(resultingState.progress.lifetimeBattleCount).toBe(1)
-    expect(resultingState.progress.countedBattleWindow).toEqual([
+    expect(resultingState.progress.countedBattleWindow.ids).toEqual([
       event.delta.battleId,
     ])
     expect(resultingState.unlocks).toEqual([
@@ -281,7 +281,7 @@ describe("Achievement Transition", () => {
     expect(
       new Set(resultingState.progress.baselineLevelsByValue.values()),
     ).toEqual(new Set([1]))
-    expect(resultingState.progress.countedBattleWindow).toEqual([])
+    expect(resultingState.progress.countedBattleWindow.ids).toEqual([])
     expect(resultingState.progress.lifetimeBattleCount).toBe(1)
     expect(resultingState.unlocks).toEqual(state.unlocks)
   })

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { readAchievementId } from "./AchievementCatalog"
 import {
   COUNTED_BATTLE_WINDOW_CAPACITY,
+  createBoundedBattleIdSet,
   createAchievementState,
   createInitialAchievementState,
   getPendingAchievementUnlocks,
@@ -37,7 +38,10 @@ describe("Achievement State", () => {
       lifetimeBattleCount: 0,
       completedCycleCount: 0,
       topFiveAlreadyRevealedAtReset: false,
-      countedBattleWindow: [],
+      countedBattleWindow: {
+        ids: [],
+        capacity: COUNTED_BATTLE_WINDOW_CAPACITY,
+      },
     })
     expect(state.progress.baselineLevelsByValue).toHaveLength(
       CANONICAL_VALUES.length,
@@ -176,7 +180,9 @@ describe("Achievement State", () => {
         progress: {
           ...initial.progress,
           lifetimeBattleCount: 0,
-          countedBattleWindow: [createCountedBattleId(0)],
+          countedBattleWindow: createBoundedBattleIdSet([
+            createCountedBattleId(0),
+          ]),
         },
       }),
     ).toThrow("lower than its counted window")
@@ -218,7 +224,10 @@ describe("Achievement State", () => {
         progress: {
           ...initial.progress,
           lifetimeBattleCount: 2,
-          countedBattleWindow: [battleId, battleId],
+          countedBattleWindow: {
+            ids: [battleId, battleId],
+            capacity: COUNTED_BATTLE_WINDOW_CAPACITY,
+          },
         },
       }),
     ).toThrow("Counted Battle window contains duplicate values")
@@ -235,9 +244,27 @@ describe("Achievement State", () => {
         progress: {
           ...initial.progress,
           lifetimeBattleCount: oversizedWindow.length,
-          countedBattleWindow: oversizedWindow,
+          countedBattleWindow: {
+            ids: oversizedWindow,
+            capacity: COUNTED_BATTLE_WINDOW_CAPACITY,
+          },
         },
       }),
     ).toThrow("exceeds its bounded capacity")
+
+    expect(() =>
+      createAchievementState({
+        activeDeck,
+        unlocks: [],
+        presentedAchievementIds: [],
+        progress: {
+          ...initial.progress,
+          countedBattleWindow: {
+            ids: [],
+            capacity: COUNTED_BATTLE_WINDOW_CAPACITY - 1,
+          },
+        },
+      }),
+    ).toThrow("has a noncanonical capacity")
   })
 })
