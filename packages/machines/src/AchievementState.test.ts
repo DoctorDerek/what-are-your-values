@@ -1,5 +1,6 @@
 import { createActiveDeck } from "@game/data/src/ActiveDeck"
 import { CANONICAL_VALUES } from "@game/data/src/CanonicalValues"
+import { createCanonicalValueId } from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { readAchievementId } from "./AchievementCatalog"
 import {
@@ -151,7 +152,7 @@ describe("Achievement State", () => {
           ...initial.progress,
           baselineLevelsByValue: new Map([
             ...initial.progress.baselineLevelsByValue,
-            ["inactive:value", 1],
+            [createCanonicalValueId("pvcs-2011:inactive-test-value"), 1],
           ]),
         },
       }),
