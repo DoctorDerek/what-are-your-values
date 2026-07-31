@@ -348,7 +348,7 @@ export default function AllValues({
                 htmlFor={`custom-value-name-${definition.id}`}
                 className="mb-3 block text-xl font-black uppercase"
               >
-                Custom Value Name
+                Value Name
               </label>
               <input
                 id={`custom-value-name-${definition.id}`}
@@ -377,7 +377,7 @@ export default function AllValues({
                 htmlFor={`custom-value-definition-${definition.id}`}
                 className="mt-4 mb-3 block text-xl font-black uppercase"
               >
-                Personal Definition
+                What This Value Means to Me
               </label>
               <textarea
                 id={`custom-value-definition-${definition.id}`}
@@ -583,7 +583,7 @@ export default function AllValues({
                   htmlFor="custom-value-name"
                   className="text-xl font-black uppercase"
                 >
-                  Custom Value Name
+                  Value Name
                 </label>
                 <input
                   id="custom-value-name"
@@ -614,7 +614,7 @@ export default function AllValues({
                   htmlFor="custom-value-definition"
                   className="text-xl font-black uppercase"
                 >
-                  Personal Definition
+                  What This Value Means to Me
                 </label>
                 <textarea
                   ref={addDefinitionRef}

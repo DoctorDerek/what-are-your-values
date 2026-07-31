@@ -81,10 +81,10 @@ describe("GameClient Integration", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Add Custom Value" }),
     )
-    fireEvent.change(await screen.findByLabelText("Custom Value Name"), {
+    fireEvent.change(await screen.findByLabelText("Value Name"), {
       target: { value: "Ingenuity" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "To make original solutions." },
     })
 
@@ -97,8 +97,8 @@ describe("GameClient Integration", () => {
       }),
     ).toBeVisible()
     expect(screen.getByText("100 Active Values")).toBeVisible()
-    expect(screen.getByLabelText("Custom Value Name")).toHaveValue("Ingenuity")
-    expect(screen.getByLabelText("Personal Definition")).toHaveValue(
+    expect(screen.getByLabelText("Value Name")).toHaveValue("Ingenuity")
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
       "To make original solutions.",
     )
     expect(screen.getByRole("button", { name: "Save Value" })).toBeEnabled()
@@ -286,10 +286,10 @@ describe("GameClient Integration", () => {
       await screen.findByRole("button", { name: "Add Custom Value" }),
     )
 
-    fireEvent.change(await screen.findByLabelText("Custom Value Name"), {
+    fireEvent.change(await screen.findByLabelText("Value Name"), {
       target: { value: "Ingenuity" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "To make original solutions." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
@@ -310,10 +310,10 @@ describe("GameClient Integration", () => {
     fireEvent.click(
       within(customValueRow).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "To explore how things connect." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))

@@ -84,8 +84,8 @@ describe("All Values Component Integration", () => {
     )
 
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
-    expect(screen.getByLabelText("Custom Value Name")).toHaveValue("Ingenuity")
-    expect(screen.getByLabelText("Personal Definition")).toHaveValue(
+    expect(screen.getByLabelText("Value Name")).toHaveValue("Ingenuity")
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
       "To solve problems in original, resourceful, and practical ways.",
     )
     expect(screen.getByRole("button", { name: "Save Value" })).toBeEnabled()
@@ -112,10 +112,10 @@ describe("All Values Component Integration", () => {
     renderAllValues(undefined, { onAddCustomValue })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "   Ingenuity   " },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "  Inventions and original ideas matter. " },
     })
     fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
@@ -125,10 +125,10 @@ describe("All Values Component Integration", () => {
       "Inventions and original ideas matter.",
     )
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
-    expect(screen.getByLabelText("Custom Value Name")).toHaveValue(
+    expect(screen.getByLabelText("Value Name")).toHaveValue(
       "   Ingenuity   ",
     )
-    expect(screen.getByLabelText("Personal Definition")).toHaveValue(
+    expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
       "  Inventions and original ideas matter. ",
     )
   })
@@ -143,8 +143,8 @@ describe("All Values Component Integration", () => {
     expect(
       screen.getByRole("button", { name: "Close Custom Value Form" }),
     ).toBeDisabled()
-    expect(screen.getByLabelText("Custom Value Name")).toBeDisabled()
-    expect(screen.getByLabelText("Personal Definition")).toBeDisabled()
+    expect(screen.getByLabelText("Value Name")).toBeDisabled()
+    expect(screen.getByLabelText("What This Value Means to Me")).toBeDisabled()
     expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled()
     expect(
       screen.getByRole("button", { name: /Start with Ingenuity/ }),
@@ -167,8 +167,8 @@ describe("All Values Component Integration", () => {
     renderAllValues()
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    const nameInput = screen.getByLabelText("Custom Value Name")
-    const definitionInput = screen.getByLabelText("Personal Definition")
+    const nameInput = screen.getByLabelText("Value Name")
+    const definitionInput = screen.getByLabelText("What This Value Means to Me")
 
     expect(screen.getByText("0 / 60 characters")).toBeVisible()
     expect(screen.getByText("0 / 280 characters")).toBeVisible()
@@ -201,8 +201,8 @@ describe("All Values Component Integration", () => {
     renderAllValues(undefined, { onAddCustomValue })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    const nameInput = screen.getByLabelText("Custom Value Name")
-    const definitionInput = screen.getByLabelText("Personal Definition")
+    const nameInput = screen.getByLabelText("Value Name")
+    const definitionInput = screen.getByLabelText("What This Value Means to Me")
     fireEvent.change(nameInput, { target: { value: "🦝".repeat(61) } })
     fireEvent.change(definitionInput, {
       target: { value: "Purpose\u202e" },
@@ -229,7 +229,7 @@ describe("All Values Component Integration", () => {
     renderAllValues()
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Ingenuity" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
@@ -247,10 +247,10 @@ describe("All Values Component Integration", () => {
     renderAllValues(rankedValues, { onAddCustomValue })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "  INGENUITY  " },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "Another form of creativity." },
     })
 
@@ -278,7 +278,7 @@ describe("All Values Component Integration", () => {
     renderAllValues(rankedValues)
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "ingen" },
     })
 
@@ -302,10 +302,10 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: " Curiosity Engine " },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "  A drive to explore how things connect. " },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
@@ -339,10 +339,10 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "A drive to explore how things connect." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
@@ -367,10 +367,10 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "" },
     })
     const editForm = targetListItem.querySelector("form")
@@ -379,17 +379,17 @@ describe("All Values Component Integration", () => {
     }
     fireEvent.submit(editForm)
 
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "A drive to explore how things connect." },
     })
     fireEvent.click(screen.getByRole("button", { name: "Review Update" }))
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "" },
     })
-    fireEvent.change(screen.getByLabelText("Personal Definition"), {
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
       target: { value: "" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Update Value" }))
@@ -458,14 +458,14 @@ describe("All Values Component Integration", () => {
     fireEvent.click(
       within(targetListItem).getByRole("button", { name: "Edit" }),
     )
-    fireEvent.change(screen.getByLabelText("Custom Value Name"), {
+    fireEvent.change(screen.getByLabelText("Value Name"), {
       target: { value: "Curiosity Engine" },
     })
-    fireEvent.blur(screen.getByLabelText("Custom Value Name"))
+    fireEvent.blur(screen.getByLabelText("Value Name"))
     expect(
       screen.getByText("This value already exists. Open it instead."),
     ).toHaveClass("text-black")
-    expect(screen.getByLabelText("Custom Value Name")).toHaveAttribute(
+    expect(screen.getByLabelText("Value Name")).toHaveAttribute(
       "aria-invalid",
       "true",
     )
