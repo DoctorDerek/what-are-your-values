@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  ACHIEVEMENT_COPY_KEYS,
   ACHIEVEMENT_CATALOG,
   getAchievementDefinition,
   HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS,
@@ -22,29 +23,32 @@ describe("Achievement Catalog", () => {
     expect(
       getAchievementDefinition(readAchievementId("battle.first", "ID")),
     ).toMatchObject({
-      condition: { kind: "battle-count", threshold: 1 },
-      title: "First Battle",
+      condition: { kind: "battleCount", threshold: 1 },
+      ...ACHIEVEMENT_COPY_KEYS.firstBattle,
     })
     expect(
       getAchievementDefinition(readAchievementId("battle.10000", "ID")),
     ).toMatchObject({
-      condition: { kind: "battle-count", threshold: 10_000 },
-      title: "10,000 Battles",
+      condition: { kind: "battleCount", threshold: 10_000 },
+      ...ACHIEVEMENT_COPY_KEYS.battleCount,
     })
     expect(
       getAchievementDefinition(readAchievementId("cycle.first", "ID")),
     ).toMatchObject({
-      condition: { kind: "cycle-complete" },
+      condition: { kind: "cycleComplete" },
+      ...ACHIEVEMENT_COPY_KEYS.cycleComplete,
     })
     expect(
       getAchievementDefinition(readAchievementId("topFive.first", "ID")),
     ).toMatchObject({
-      condition: { kind: "top-five" },
+      condition: { kind: "topFive" },
+      ...ACHIEVEMENT_COPY_KEYS.topFive,
     })
     expect(
       getAchievementDefinition(readAchievementId("valueLevel.100", "ID")),
     ).toMatchObject({
-      condition: { kind: "value-level", threshold: 100 },
+      condition: { kind: "valueLevel", threshold: 100 },
+      ...ACHIEVEMENT_COPY_KEYS.valueLevel,
     })
   })
 
