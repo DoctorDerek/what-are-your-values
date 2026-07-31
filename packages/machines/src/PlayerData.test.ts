@@ -60,9 +60,9 @@ describe("Player Data", () => {
     const playerData = createPlayerDataAfterOneBattle()
 
     expect(playerData.profile.history).toHaveLength(1)
-    expect(playerData.achievements.progress.countedBattleWindow.ids).toEqual(
-      [playerData.profile.history[0]!.battleId],
-    )
+    expect(playerData.achievements.progress.countedBattleWindow.ids).toEqual([
+      playerData.profile.history[0]!.battleId,
+    ])
     expect(
       new Set(playerData.achievements.unlocks.map(({ id }) => id)),
     ).toEqual(new Set([readAchievementId("battle.first", "Achievement ID")]))
