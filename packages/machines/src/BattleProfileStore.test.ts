@@ -566,6 +566,30 @@ describe("Battle Profile Store", () => {
     expect(currentState.head.generation).toBe(1)
   })
 
+  it("rejects complete erasure when the expected manifest has disappeared", async () => {
+    const store = createInMemoryDurableStore()
+    const state = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "missing-erasure-manifest",
+        createdAt: createCommitTimestamp(0),
+      }),
+      createdAt: createCommitTimestamp(0),
+      appVersion: "0.1.0",
+    })
+    await store.compareAndSwapVerified({
+      expectedEntries: [[BATTLE_PROFILE_MANIFEST_KEY, state.manifestBytes]],
+      putEntries: [],
+      deleteKeys: [BATTLE_PROFILE_MANIFEST_KEY],
+    })
+    const orphanedEntries = await store.readAll()
+
+    await expect(
+      deleteAllBattleProfileStoreData({ store, state }),
+    ).rejects.toBeInstanceOf(DurableStoreConflictError)
+    await expect(store.readAll()).resolves.toEqual(orphanedEntries)
+  })
+
   it("rejects malformed pre-import backup bytes without changing durable state", async () => {
     const store = createInMemoryDurableStore()
     const state = await initializeBattleProfileStore({
