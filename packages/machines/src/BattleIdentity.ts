@@ -25,7 +25,6 @@ export function createBattleId(scheduler: SchedulerIdentity<ScheduleKind>) {
     scheduler.activeDeckFingerprint,
     scheduler.algorithmVersion,
     scheduler.scheduleKind,
-    scheduler.seed,
     scheduler.cycleIndex,
     scheduler.cursor,
   ]) as BattleId
@@ -43,7 +42,7 @@ export function readBattleId(value: unknown, label: string) {
     throw new Error(`Invalid ${label}`)
   }
 
-  if (!Array.isArray(parsed) || parsed.length !== 9) {
+  if (!Array.isArray(parsed) || parsed.length !== 8) {
     throw new Error(`Invalid ${label}`)
   }
 
@@ -54,7 +53,6 @@ export function readBattleId(value: unknown, label: string) {
     activeDeckFingerprint,
     algorithmVersion,
     scheduleKind,
-    seed,
     cycleIndex,
     cursor,
   ] = parsed
@@ -69,8 +67,6 @@ export function readBattleId(value: unknown, label: string) {
     algorithmVersion !== PAIR_SCHEDULER_ALGORITHM_VERSION ||
     (scheduleKind !== FULL_CYCLE_SCHEDULE_KIND &&
       scheduleKind !== JOIN_PASS_SCHEDULE_KIND) ||
-    typeof seed !== "string" ||
-    seed.length === 0 ||
     !Number.isSafeInteger(cycleIndex) ||
     (cycleIndex as number) < 0 ||
     !Number.isSafeInteger(cursor) ||
