@@ -148,6 +148,14 @@ describe("Achievement State", () => {
     if (!firstValueId) {
       throw new Error("Canonical test deck is empty")
     }
+    const inactiveBaselineLevelsByValue = new Map(
+      initial.progress.baselineLevelsByValue,
+    )
+    inactiveBaselineLevelsByValue.delete(firstValueId)
+    inactiveBaselineLevelsByValue.set(
+      createCanonicalValueId("pvcs-2011:inactive-test-value"),
+      1,
+    )
 
     expect(() =>
       createAchievementState({
@@ -169,13 +177,10 @@ describe("Achievement State", () => {
         presentedAchievementIds: [],
         progress: {
           ...initial.progress,
-          baselineLevelsByValue: new Map([
-            ...initial.progress.baselineLevelsByValue,
-            [createCanonicalValueId("pvcs-2011:inactive-test-value"), 1],
-          ]),
+          baselineLevelsByValue: inactiveBaselineLevelsByValue,
         },
       }),
-    ).toThrow("do not cover the complete Active Deck")
+    ).toThrow("contain an inactive ID")
     expect(() =>
       createAchievementState({
         activeDeck,
@@ -236,6 +241,9 @@ describe("Achievement State", () => {
     const initial = createInitialAchievementState(activeDeck)
     const battleId = createCountedBattleId(0)
 
+    expect(() =>
+      createBoundedBattleIdSet(["" as typeof battleId]),
+    ).toThrow("contains an empty Battle ID")
     expect(() =>
       createAchievementState({
         activeDeck,
