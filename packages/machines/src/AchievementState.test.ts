@@ -204,20 +204,6 @@ describe("Achievement State", () => {
         presentedAchievementIds: [],
         progress: {
           ...initial.progress,
-          lifetimeBattleCount: 0,
-          countedBattleWindow: createBoundedBattleIdSet([
-            createCountedBattleId(0),
-          ]),
-        },
-      }),
-    ).toThrow("lower than its counted window")
-    expect(() =>
-      createAchievementState({
-        activeDeck,
-        unlocks: [],
-        presentedAchievementIds: [],
-        progress: {
-          ...initial.progress,
           lifetimeBattleCount: 1,
           completedCycleCount: 2,
         },
@@ -294,5 +280,35 @@ describe("Achievement State", () => {
         },
       }),
     ).toThrow("has a noncanonical capacity")
+  })
+
+  it("retains bounded replay identities after achievement counters restart", () => {
+    const activeDeck = createActiveDeck([])
+    const battleId = createCountedBattleId(0)
+
+    expect(
+      createAchievementState({
+        activeDeck,
+        unlocks: [],
+        presentedAchievementIds: [],
+        progress: {
+          achievementProgressGeneration: 1,
+          lifetimeBattleCount: 0,
+          completedCycleCount: 0,
+          baselineLevelsByValue: new Map(
+            activeDeck.valueIds.map((valueId) => [valueId, 1]),
+          ),
+          topFiveAlreadyRevealedAtReset: false,
+          countedBattleWindow: createBoundedBattleIdSet([battleId]),
+        },
+      }).progress,
+    ).toMatchObject({
+      achievementProgressGeneration: 1,
+      lifetimeBattleCount: 0,
+      countedBattleWindow: {
+        ids: [battleId],
+        capacity: COUNTED_BATTLE_WINDOW_CAPACITY,
+      },
+    })
   })
 })

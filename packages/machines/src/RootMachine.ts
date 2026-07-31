@@ -33,8 +33,22 @@ import {
   replacePlayerDataActor,
   type PreparedWayvmDownload,
 } from "./PlayerDataPortabilityActors"
+import {
+  DELETE_ALL_DATA_ACKNOWLEDGMENT,
+  type PlayerDataResetKind,
+  type ScopedPlayerDataResetKind,
+} from "./PlayerDataReset"
+import {
+  applyScopedPlayerDataResetActor,
+  deleteAllPlayerDataActor,
+} from "./PlayerDataResetActors"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
+
+type PendingResetReview = {
+  readonly resetKind: PlayerDataResetKind
+  readonly confirmationId: string
+}
 
 type RootMachineContext = {
   readonly durableStore: DurableStoreAdapter
@@ -49,6 +63,7 @@ type RootMachineContext = {
   pendingImport: PreparedWayvmImport | null
   preImportBackupBytes: string | null
   preparedDownload: PreparedWayvmDownload | null
+  pendingResetReview: PendingResetReview | null
   persistenceIssue: string | null
   portabilityIssue: string | null
   portabilityNotice: string | null
@@ -93,6 +108,21 @@ type RootMachineEvent =
     }
   | { type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" }
   | { type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" }
+  | { type: "CUSTOM_VALUE.DELETE_ALL_REQUESTED" }
+  | {
+      type: "CUSTOM_VALUE.DELETE_ALL_CONFIRMED"
+      confirmationId: string
+    }
+  | { type: "RESET.LEVELS_AND_EXPERIENCE_REQUESTED" }
+  | {
+      type: "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED"
+      confirmationId: string
+    }
+  | { type: "RESET.ACHIEVEMENTS_REQUESTED" }
+  | { type: "RESET.ACHIEVEMENTS_CONFIRMED"; confirmationId: string }
+  | { type: "DELETE_ALL_DATA.REQUESTED" }
+  | { type: "DELETE_ALL_DATA.CONFIRMED"; phrase: string }
+  | { type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" }
 
 type RootMachineInput = {
   readonly durableStore: DurableStoreAdapter
@@ -154,6 +184,71 @@ function requirePreImportBackupBytes(context: RootMachineContext) {
   return context.preImportBackupBytes
 }
 
+function createPendingResetReview(
+  context: RootMachineContext,
+  resetKind: PlayerDataResetKind,
+) {
+  const confirmationId = context.randomUuid()
+  if (confirmationId.length === 0) {
+    throw new Error("Reset confirmation ID is required")
+  }
+
+  return Object.freeze({ resetKind, confirmationId })
+}
+
+function requirePendingResetReview(context: RootMachineContext) {
+  if (!context.pendingResetReview) {
+    throw new Error("Reset review is not prepared")
+  }
+
+  return context.pendingResetReview
+}
+
+function requirePendingScopedResetKind(
+  context: RootMachineContext,
+): ScopedPlayerDataResetKind {
+  const { resetKind } = requirePendingResetReview(context)
+  if (resetKind === "delete-all-data") {
+    throw new Error("Complete data erasure is not a scoped reset")
+  }
+
+  return resetKind
+}
+
+function isMatchingScopedResetConfirmation({
+  context,
+  confirmationId,
+  resetKind,
+}: {
+  readonly context: RootMachineContext
+  readonly confirmationId: string
+  readonly resetKind: ScopedPlayerDataResetKind
+}) {
+  return (
+    context.pendingResetReview?.resetKind === resetKind &&
+    context.pendingResetReview.confirmationId === confirmationId
+  )
+}
+
+function getResetSuccessNotice(resetKind: ScopedPlayerDataResetKind) {
+  if (resetKind === "delete-all-custom-values") {
+    return "All Custom Values were deleted. Canonical value progress, achievements, and settings were kept."
+  }
+  if (resetKind === "reset-levels-and-experience") {
+    return "Levels and experience were reset. Custom Values, achievements, and settings were kept."
+  }
+
+  return "Achievements and achievement progress were reset. Your values, ranking, and settings were kept."
+}
+
+function createFreshPlayerDataAfterDeletion(context: RootMachineContext) {
+  const createdAt = context.now()
+  return createInitialPlayerData({
+    schedulerSeed: `delete-all:${createdAt}`,
+    createdAt,
+  })
+}
+
 export const rootMachine = setup({
   types: {
     context: {} as RootMachineContext,
@@ -167,6 +262,8 @@ export const rootMachine = setup({
     createWayvmExport: createWayvmExportActor,
     prepareWayvmImport: prepareWayvmImportActor,
     replacePlayerData: replacePlayerDataActor,
+    applyScopedPlayerDataReset: applyScopedPlayerDataResetActor,
+    deleteAllPlayerData: deleteAllPlayerDataActor,
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -192,6 +289,31 @@ export const rootMachine = setup({
       requireBattleProfile(context).history.length > 0,
     canRedoBattle: ({ context }) =>
       requireBattleProfile(context).redo.length > 0,
+    canConfirmDeleteAllCustomValues: ({ context, event }) =>
+      event.type === "CUSTOM_VALUE.DELETE_ALL_CONFIRMED" &&
+      isMatchingScopedResetConfirmation({
+        context,
+        confirmationId: event.confirmationId,
+        resetKind: "delete-all-custom-values",
+      }),
+    canConfirmLevelsAndExperienceReset: ({ context, event }) =>
+      event.type === "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED" &&
+      isMatchingScopedResetConfirmation({
+        context,
+        confirmationId: event.confirmationId,
+        resetKind: "reset-levels-and-experience",
+      }),
+    canConfirmAchievementsReset: ({ context, event }) =>
+      event.type === "RESET.ACHIEVEMENTS_CONFIRMED" &&
+      isMatchingScopedResetConfirmation({
+        context,
+        confirmationId: event.confirmationId,
+        resetKind: "reset-achievements",
+      }),
+    canConfirmDeleteAllData: ({ context, event }) =>
+      event.type === "DELETE_ALL_DATA.CONFIRMED" &&
+      context.pendingResetReview?.resetKind === "delete-all-data" &&
+      event.phrase === DELETE_ALL_DATA_ACKNOWLEDGMENT,
   },
 }).createMachine({
   id: "root",
@@ -204,6 +326,7 @@ export const rootMachine = setup({
     pendingImport: null,
     preImportBackupBytes: null,
     preparedDownload: null,
+    pendingResetReview: null,
     persistenceIssue: null,
     portabilityIssue: null,
     portabilityNotice: null,
@@ -339,6 +462,7 @@ export const rootMachine = setup({
                 pendingImport: null,
                 pendingImportBytes: null,
                 preImportBackupBytes: null,
+                pendingResetReview: null,
                 portabilityIssue: null,
                 portabilityNotice: null,
               }),
@@ -360,6 +484,49 @@ export const rootMachine = setup({
                 pendingImportBytes: ({ event }) => event.serialized,
                 pendingImport: null,
                 preImportBackupBytes: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "CUSTOM_VALUE.DELETE_ALL_REQUESTED": {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(context, "delete-all-custom-values"),
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RESET.LEVELS_AND_EXPERIENCE_REQUESTED": {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(
+                    context,
+                    "reset-levels-and-experience",
+                  ),
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RESET.ACHIEVEMENTS_REQUESTED": {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(context, "reset-achievements"),
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DELETE_ALL_DATA.REQUESTED": {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(context, "delete-all-data"),
                 portabilityIssue: null,
                 portabilityNotice: null,
               }),
@@ -441,6 +608,160 @@ export const rootMachine = setup({
               actions: assign({
                 preImportBackupBytes: null,
                 portabilityIssue: null,
+              }),
+            },
+          },
+        },
+        ReviewingReset: {
+          on: {
+            "DATA_MANAGEMENT.CLOSE_REQUESTED": {
+              target: "#root.Hub",
+              actions: assign({
+                pendingResetReview: null,
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED": {
+              target: "Browsing",
+              actions: assign({
+                pendingResetReview: null,
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.EXPORT_REQUESTED": {
+              target: "ExportingResetBackup",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.EXPORT_CONSUMED": {
+              actions: assign({ preparedDownload: null }),
+            },
+            "CUSTOM_VALUE.DELETE_ALL_CONFIRMED": {
+              guard: "canConfirmDeleteAllCustomValues",
+              target: "ApplyingScopedReset",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED": {
+              guard: "canConfirmLevelsAndExperienceReset",
+              target: "ApplyingScopedReset",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RESET.ACHIEVEMENTS_CONFIRMED": {
+              guard: "canConfirmAchievementsReset",
+              target: "ApplyingScopedReset",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DELETE_ALL_DATA.CONFIRMED": {
+              guard: "canConfirmDeleteAllData",
+              target: "DeletingAllData",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        ExportingResetBackup: {
+          invoke: {
+            src: "createWayvmExport",
+            input: ({ context }) => ({
+              exportedAt: context.now(),
+              sourceAppVersion: context.appVersion,
+              sourceBuild: context.sourceBuild,
+              playerData: requirePlayerData(context),
+            }),
+            onDone: {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: ({ event }) => event.output,
+                portabilityIssue: null,
+                portabilityNotice:
+                  "Your private backup is ready. Review the reset when you are ready.",
+              }),
+            },
+            onError: {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        ApplyingScopedReset: {
+          invoke: {
+            src: "applyScopedPlayerDataReset",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+              resetKind: requirePendingScopedResetKind(context),
+              resetAt: context.now(),
+            }),
+            onDone: {
+              target: "Browsing",
+              actions: assign({
+                playerData: ({ event }) => event.output.head.playerData,
+                battleProfileStoreState: ({ event }) => event.output,
+                portabilityNotice: ({ context }) =>
+                  getResetSuccessNotice(requirePendingScopedResetKind(context)),
+                pendingResetReview: null,
+                preparedDownload: null,
+                portabilityIssue: null,
+              }),
+            },
+            onError: {
+              target: "ReviewingReset",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        DeletingAllData: {
+          invoke: {
+            src: "deleteAllPlayerData",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+            }),
+            onDone: {
+              target: "#root.Splash",
+              actions: assign({
+                playerData: ({ context }) =>
+                  createFreshPlayerDataAfterDeletion(context),
+                battleProfileStoreState: null,
+                pendingBattleProfileCommit: null,
+                pendingResetReview: null,
+                pendingImport: null,
+                pendingImportBytes: null,
+                preImportBackupBytes: null,
+                preparedDownload: null,
+                persistenceIssue: null,
+                portabilityIssue: null,
+                portabilityNotice: "All local WAYVM player data was deleted.",
+              }),
+            },
+            onError: {
+              target: "ReviewingReset",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
               }),
             },
           },
