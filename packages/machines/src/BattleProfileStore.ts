@@ -16,8 +16,10 @@ import {
   type BattleProfileManifest,
 } from "./BattleProfileManifest"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
-import { MAX_PERSISTED_JSON_BYTES } from "./PersistedJson"
+import { serializePersistedJson } from "./PersistedJson"
 import type { PlayerData } from "./PlayerData"
+import { encodePlayerData } from "./PlayerDataCodec"
+import { decodeWayvmExport } from "./WayvmExport"
 
 export const BATTLE_PROFILE_SNAPSHOT_A_KEY = "wayvm.snapshot.a" as const
 export const BATTLE_PROFILE_SNAPSHOT_B_KEY = "wayvm.snapshot.b" as const
@@ -272,6 +274,19 @@ function incrementStoreIdentity(value: number, label: string) {
   return value + 1
 }
 
+async function requireMatchingPreImportBackup(
+  preImportBackupBytes: string,
+  currentPlayerData: PlayerData,
+) {
+  const preImportBackup = await decodeWayvmExport(preImportBackupBytes)
+  if (
+    serializePersistedJson(encodePlayerData(preImportBackup.playerData)) !==
+    serializePersistedJson(encodePlayerData(currentPlayerData))
+  ) {
+    throw new Error("Pre-import backup does not match current Player Data")
+  }
+}
+
 export async function replaceBattleProfileStorePlayerData({
   store,
   state,
@@ -285,12 +300,10 @@ export async function replaceBattleProfileStorePlayerData({
   readonly preImportBackupBytes: string
   readonly replacedAt: string
 }) {
-  if (
-    new TextEncoder().encode(preImportBackupBytes).byteLength >
-    MAX_PERSISTED_JSON_BYTES
-  ) {
-    throw new Error("Pre-import backup exceeds the persisted byte limit")
-  }
+  await requireMatchingPreImportBackup(
+    preImportBackupBytes,
+    state.head.playerData,
+  )
 
   const generation = incrementStoreIdentity(
     state.head.generation,

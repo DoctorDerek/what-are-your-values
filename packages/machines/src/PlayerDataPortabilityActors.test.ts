@@ -69,6 +69,8 @@ describe("Player Data Portability Actors", () => {
     const store = createInMemoryDurableStore()
     const initialPlayerData = createPlayerData("initial-seed")
     const importedPlayerData = createPlayerData("imported-seed")
+    const preImportBackupBytes = (await createPreparedDownload("initial-seed"))
+      .serialized
     const state = await initializeBattleProfileStore({
       store,
       playerData: initialPlayerData,
@@ -80,7 +82,7 @@ describe("Player Data Portability Actors", () => {
         store,
         state,
         playerData: importedPlayerData,
-        preImportBackupBytes: "verified-pre-import-backup",
+        preImportBackupBytes,
         replacedAt: EXPORTED_AT,
       },
     })
@@ -92,6 +94,6 @@ describe("Player Data Portability Actors", () => {
     expect(replacedState.head.generation).toBe(1)
     expect(
       (await store.readAll()).get(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY),
-    ).toBe("verified-pre-import-backup")
+    ).toBe(preImportBackupBytes)
   })
 })

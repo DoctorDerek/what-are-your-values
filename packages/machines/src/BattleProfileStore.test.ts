@@ -21,7 +21,8 @@ import {
 import { DurableStoreConflictError } from "./DurableStoreAdapter"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { projectScheduledPair } from "./PairScheduler"
-import { createInitialPlayerData } from "./PlayerData"
+import { createInitialPlayerData, type PlayerData } from "./PlayerData"
+import { createWayvmExport, serializeWayvmExport } from "./WayvmExport"
 
 function createChoiceEvent(
   profile: ReturnType<typeof createInitialBattleProfile>,
@@ -42,6 +43,20 @@ function createChoiceEvent(
 
 function createCommitTimestamp(generation: number) {
   return new Date(Date.UTC(2026, 6, 21, 0, generation)).toISOString()
+}
+
+async function createPreImportBackupBytes(
+  playerData: PlayerData,
+  exportedAt = "2026-07-21T00:01:30.000Z",
+) {
+  return serializeWayvmExport(
+    await createWayvmExport({
+      exportedAt,
+      sourceAppVersion: "0.1.0",
+      sourceBuild: "battle-profile-store-test",
+      playerData,
+    }),
+  )
 }
 
 describe("Battle Profile Store", () => {
@@ -235,11 +250,14 @@ describe("Battle Profile Store", () => {
       schedulerSeed: "imported-seed",
       createdAt: "2026-07-20T00:00:00.000Z",
     })
+    const preImportBackupBytes = await createPreImportBackupBytes(
+      committedState.head.playerData,
+    )
     const replacedState = await replaceBattleProfileStorePlayerData({
       store,
       state: committedState,
       playerData: importedPlayerData,
-      preImportBackupBytes: "verified-pre-import-backup",
+      preImportBackupBytes,
       replacedAt: "2026-07-21T00:02:00.000Z",
     })
     const entriesAfterImport = await store.readAll()
@@ -260,7 +278,7 @@ describe("Battle Profile Store", () => {
     )
     expect(entriesAfterImport.has(getBattleProfileJournalKey(1))).toBe(false)
     expect(entriesAfterImport.get(BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY)).toBe(
-      "verified-pre-import-backup",
+      preImportBackupBytes,
     )
     await expect(
       decodeBattleProfileCheckpoint(
@@ -287,6 +305,9 @@ describe("Battle Profile Store", () => {
       committedAt: "2026-07-21T00:01:00.000Z",
     })
     const entriesBeforeAttempt = await store.readAll()
+    const preImportBackupBytes = await createPreImportBackupBytes(
+      initialState.head.playerData,
+    )
 
     await expect(
       replaceBattleProfileStorePlayerData({
@@ -296,7 +317,7 @@ describe("Battle Profile Store", () => {
           schedulerSeed: "rejected-import-seed",
           createdAt: "2026-07-20T00:00:00.000Z",
         }),
-        preImportBackupBytes: "rejected-pre-import-backup",
+        preImportBackupBytes,
         replacedAt: "2026-07-21T00:02:00.000Z",
       }),
     ).rejects.toBeInstanceOf(DurableStoreConflictError)
@@ -319,11 +340,14 @@ describe("Battle Profile Store", () => {
       schedulerSeed: "continued-import-seed",
       createdAt: "2026-07-20T00:00:00.000Z",
     })
+    const preImportBackupBytes = await createPreImportBackupBytes(
+      initialState.head.playerData,
+    )
     const replacedState = await replaceBattleProfileStorePlayerData({
       store,
       state: initialState,
       playerData: importedPlayerData,
-      preImportBackupBytes: "continued-pre-import-backup",
+      preImportBackupBytes,
       replacedAt: "2026-07-21T00:01:00.000Z",
     })
     const committedState = await commitBattleProfileStoreEvent({
@@ -345,5 +369,67 @@ describe("Battle Profile Store", () => {
     expect((await store.readAll()).has(getBattleProfileJournalKey(2))).toBe(
       true,
     )
+  })
+
+  it("rejects malformed pre-import backup bytes without changing durable state", async () => {
+    const store = createInMemoryDurableStore()
+    const state = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "malformed-backup-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const entriesBeforeAttempt = await store.readAll()
+
+    await expect(
+      replaceBattleProfileStorePlayerData({
+        store,
+        state,
+        playerData: createInitialPlayerData({
+          schedulerSeed: "malformed-backup-import-seed",
+          createdAt: "2026-07-20T00:00:00.000Z",
+        }),
+        preImportBackupBytes: "not-json",
+        replacedAt: "2026-07-21T00:01:00.000Z",
+      }),
+    ).rejects.toThrow("Persisted JSON is malformed")
+    await expect(store.readAll()).resolves.toEqual(entriesBeforeAttempt)
+  })
+
+  it("rejects a valid backup of different Player Data without changing durable state", async () => {
+    const store = createInMemoryDurableStore()
+    const state = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "mismatched-backup-current-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const mismatchedBackupBytes = await createPreImportBackupBytes(
+      createInitialPlayerData({
+        schedulerSeed: "mismatched-backup-other-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
+    )
+    const entriesBeforeAttempt = await store.readAll()
+
+    await expect(
+      replaceBattleProfileStorePlayerData({
+        store,
+        state,
+        playerData: createInitialPlayerData({
+          schedulerSeed: "mismatched-backup-import-seed",
+          createdAt: "2026-07-20T00:00:00.000Z",
+        }),
+        preImportBackupBytes: mismatchedBackupBytes,
+        replacedAt: "2026-07-21T00:01:00.000Z",
+      }),
+    ).rejects.toThrow("Pre-import backup does not match current Player Data")
+    await expect(store.readAll()).resolves.toEqual(entriesBeforeAttempt)
   })
 })
