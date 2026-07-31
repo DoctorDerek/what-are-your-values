@@ -2,6 +2,7 @@ import { createCustomValueId } from "@game/data/src/Value"
 import { describe, expect, it, vi } from "vitest"
 import { createActor, fromPromise, waitFor } from "xstate"
 import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "./BattleProfileStore"
+import { projectBattlePair } from "./BattleScheduler"
 import {
   DurableStoreConflictError,
   type DurableStoreAdapter,
@@ -113,10 +114,7 @@ async function commitOneBattle(
     throw new Error("Battle profile did not initialize")
   }
 
-  const [winnerId] = projectScheduledPair(
-    profile.activeDeck,
-    profile.scheduler,
-  ).pair
+  const [winnerId] = projectBattlePair(profile.activeDeck, profile.scheduler)
   actor.send({
     type: "BATTLE.WINNER_SELECTED",
     winnerId,
