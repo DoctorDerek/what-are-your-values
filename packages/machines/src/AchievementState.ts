@@ -90,10 +90,15 @@ function validatePresentedAchievementIds({
   const unlockedIds = new Set(unlocks.map(({ id }) => id))
 
   return Object.freeze(
-    presentedAchievementIds.map((id) => {
+    presentedAchievementIds.map((id, index) => {
       getAchievementDefinition(id)
       if (!unlockedIds.has(id)) {
         throw new Error(`Presented Achievement is not unlocked: ${id}`)
+      }
+      if (unlocks[index]?.id !== id) {
+        throw new Error(
+          `Presented Achievement does not follow unlock order: ${id}`,
+        )
       }
 
       return id
