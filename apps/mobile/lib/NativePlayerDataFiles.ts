@@ -51,7 +51,9 @@ export function createNativePlayerDataFileAdapter(
       try {
         temporaryFile.write(serialized)
 
-        const expectedByteLength = new TextEncoder().encode(serialized).byteLength
+        const expectedByteLength = new TextEncoder().encode(
+          serialized,
+        ).byteLength
         if (
           temporaryFile.size !== expectedByteLength ||
           (await temporaryFile.text()) !== serialized

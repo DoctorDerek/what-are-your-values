@@ -8,11 +8,7 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "plugins": [
-      "expo-router",
-      "expo-status-bar",
-      "expo-sharing"
-    ],
+    "plugins": ["expo-router", "expo-status-bar", "expo-sharing"],
     "experiments": {
       "typedRoutes": true
     },
