@@ -5,11 +5,14 @@ import { recordAchievementPresentationActor } from "./AchievementPresentationAct
 import {
   createAchievementState,
   createInitialAchievementState,
+  getPendingAchievementUnlocks,
 } from "./AchievementState"
 import {
   BATTLE_PROFILE_MANIFEST_KEY,
   initializeBattleProfileStore,
+  replaceBattleProfileStorePlayerDataForLocalMutation,
 } from "./BattleProfileStore"
+import { hydrateBattleProfileStore } from "./BattleProfileHydration"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { createInitialPlayerData, createPlayerData } from "./PlayerData"
 
@@ -133,5 +136,48 @@ describe("Achievement Presentation Actors", () => {
       "Presented Achievement is not unlocked",
     )
     await expect(store.readAll()).resolves.toEqual(beforeEntries)
+  })
+
+  it("preserves a pending unlock through a stale acknowledgement and later hydration", async () => {
+    const { achievementId, state, store } =
+      await createUnlockedPresentationFixture()
+    const currentState =
+      await replaceBattleProfileStorePlayerDataForLocalMutation({
+        store,
+        state,
+        playerData: state.head.playerData,
+        replacedAt: PRESENTED_AT,
+      })
+    const entriesBeforeAcknowledgement = await store.readAll()
+    const actor = createActor(recordAchievementPresentationActor, {
+      input: {
+        store,
+        state,
+        achievementId,
+        presentedAt: PRESENTED_AT,
+      },
+    })
+    actor.start()
+
+    await expect(toPromise(actor)).rejects.toThrow("wayvm.snapshot.manifest")
+    await expect(store.readAll()).resolves.toEqual(
+      entriesBeforeAcknowledgement,
+    )
+
+    const hydrated = await hydrateBattleProfileStore({
+      store,
+      appVersion: "0.1.0",
+    })
+
+    expect(hydrated.status).toBe("ready")
+    if (hydrated.status !== "ready") {
+      throw new Error("Achievement presentation fixture did not rehydrate")
+    }
+    expect(hydrated.state).toEqual(currentState)
+    expect(
+      getPendingAchievementUnlocks(
+        hydrated.state.head.playerData.achievements,
+      ).map(({ id }) => id),
+    ).toEqual([achievementId])
   })
 })
