@@ -20,7 +20,7 @@ import {
   initializeBattleProfileStore,
   readBattleProfileJournalKeyGeneration,
   replaceBattleProfileStorePlayerData,
-  replaceBattleProfileStorePlayerDataForReset,
+  replaceBattleProfileStorePlayerDataForLocalMutation,
   replaceUnrecoverableBattleProfileStorePlayerData,
 } from "./BattleProfileStore"
 import { DurableStoreConflictError } from "./DurableStoreAdapter"
@@ -422,12 +422,13 @@ describe("Battle Profile Store", () => {
       createdAt: createCommitTimestamp(3),
     })
 
-    const resetState = await replaceBattleProfileStorePlayerDataForReset({
-      store,
-      state: committedState,
-      playerData: resetPlayerData,
-      replacedAt: createCommitTimestamp(3),
-    })
+    const resetState =
+      await replaceBattleProfileStorePlayerDataForLocalMutation({
+        store,
+        state: committedState,
+        playerData: resetPlayerData,
+        replacedAt: createCommitTimestamp(3),
+      })
     const entries = await store.readAll()
 
     expect(resetState.head).toMatchObject({
@@ -460,7 +461,7 @@ describe("Battle Profile Store", () => {
       appVersion: "0.1.0",
     })
 
-    await replaceBattleProfileStorePlayerDataForReset({
+    await replaceBattleProfileStorePlayerDataForLocalMutation({
       store,
       state,
       playerData: createInitialPlayerData({
@@ -539,19 +540,20 @@ describe("Battle Profile Store", () => {
       createdAt: createCommitTimestamp(0),
       appVersion: "0.1.0",
     })
-    const currentState = await replaceBattleProfileStorePlayerDataForReset({
-      store,
-      state: staleState,
-      playerData: createInitialPlayerData({
-        schedulerSeed: "current-reset-store",
-        createdAt: createCommitTimestamp(1),
-      }),
-      replacedAt: createCommitTimestamp(1),
-    })
+    const currentState =
+      await replaceBattleProfileStorePlayerDataForLocalMutation({
+        store,
+        state: staleState,
+        playerData: createInitialPlayerData({
+          schedulerSeed: "current-reset-store",
+          createdAt: createCommitTimestamp(1),
+        }),
+        replacedAt: createCommitTimestamp(1),
+      })
     const entriesBeforeAttempts = await store.readAll()
 
     await expect(
-      replaceBattleProfileStorePlayerDataForReset({
+      replaceBattleProfileStorePlayerDataForLocalMutation({
         store,
         state: staleState,
         playerData: createInitialPlayerData({
