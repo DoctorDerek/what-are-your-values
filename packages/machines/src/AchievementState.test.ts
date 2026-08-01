@@ -100,13 +100,25 @@ describe("Achievement State", () => {
           unlockedAt: "2026-07-29T00:00:00.000Z",
           eventToken: "first-event",
         },
+        {
+          id: tenBattlesId,
+          unlockedAt: "2026-07-29T00:10:00.000Z",
+          eventToken: "tenth-event",
+        },
       ],
       presentedAchievementIds: [],
       progress: {
         ...initial.progress,
-        lifetimeBattleCount: 1,
+        lifetimeBattleCount: 10,
       },
     })
+    expect(() =>
+      markAchievementPresented({
+        activeDeck,
+        state: unlocked,
+        achievementId: tenBattlesId,
+      }),
+    ).toThrow("does not follow unlock order")
     const presented = markAchievementPresented({
       activeDeck,
       state: unlocked,
@@ -123,13 +135,7 @@ describe("Achievement State", () => {
         achievementId: firstBattleId,
       }),
     ).toBe(presented)
-    expect(() =>
-      markAchievementPresented({
-        activeDeck,
-        state: presented,
-        achievementId: tenBattlesId,
-      }),
-    ).toThrow("Presented Achievement is not unlocked")
+    expect(unlocked.presentedAchievementIds).toEqual([])
   })
 
   it("rejects duplicate, missing, and inconsistent unlock evidence", () => {
