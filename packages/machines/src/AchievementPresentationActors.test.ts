@@ -7,12 +7,12 @@ import {
   createInitialAchievementState,
   getPendingAchievementUnlocks,
 } from "./AchievementState"
+import { hydrateBattleProfileStore } from "./BattleProfileHydration"
 import {
   BATTLE_PROFILE_MANIFEST_KEY,
   initializeBattleProfileStore,
   replaceBattleProfileStorePlayerDataForLocalMutation,
 } from "./BattleProfileStore"
-import { hydrateBattleProfileStore } from "./BattleProfileHydration"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { createInitialPlayerData, createPlayerData } from "./PlayerData"
 
@@ -160,9 +160,7 @@ describe("Achievement Presentation Actors", () => {
     actor.start()
 
     await expect(toPromise(actor)).rejects.toThrow("wayvm.snapshot.manifest")
-    await expect(store.readAll()).resolves.toEqual(
-      entriesBeforeAcknowledgement,
-    )
+    await expect(store.readAll()).resolves.toEqual(entriesBeforeAcknowledgement)
 
     const hydrated = await hydrateBattleProfileStore({
       store,
