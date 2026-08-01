@@ -16,6 +16,7 @@ export default defineConfig({
       reporter: ["lcov", "text"],
       include: [
         "apps/web/{app,components,lib}/**/*.{ts,tsx}",
+        "apps/mobile/lib/**/*.ts",
         "packages/*/src/**/*.ts",
       ],
       exclude: ["**/*.test.{ts,tsx}"],
