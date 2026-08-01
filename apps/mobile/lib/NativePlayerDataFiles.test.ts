@@ -29,11 +29,13 @@ function createTemporaryFile({
   writtenText,
   reportedSize,
   readText,
+  writeError,
   activity,
 }: {
   readonly writtenText: { value: string }
   readonly reportedSize?: number
   readonly readText?: string
+  readonly writeError?: Error
   readonly activity: string[]
 }) {
   return Object.freeze({
@@ -51,6 +53,9 @@ function createTemporaryFile({
     }),
     write: vi.fn((content) => {
       activity.push("write")
+      if (writeError) {
+        throw writeError
+      }
       writtenText.value = content
     }),
     text: vi.fn(async () => {
@@ -149,7 +154,13 @@ describe("createNativePlayerDataFileAdapter", () => {
 
     expect(services.createTemporaryFile).toHaveBeenCalledWith(BACKUP_FILENAME)
     expect(services.shareFile).toHaveBeenCalledWith(BACKUP_URI)
-    expect(activity).toEqual(["create:true", "write", "read", "share", "delete"])
+    expect(activity).toEqual([
+      "create:true",
+      "write",
+      "read",
+      "share",
+      "delete",
+    ])
   })
 
   it("rejects export before writing when native sharing is unavailable", async () => {
@@ -182,6 +193,46 @@ describe("createNativePlayerDataFileAdapter", () => {
         serialized: '["wayvm-export"]',
       }),
     ).rejects.toThrow("Native backup file verification failed")
+    expect(activity).toEqual(["create:true", "write", "delete"])
+    expect(services.shareFile).not.toHaveBeenCalled()
+  })
+
+  it("rejects a same-size temporary-file readback that does not preserve backup bytes", async () => {
+    const activity: string[] = []
+    const temporaryFile = createTemporaryFile({
+      writtenText: { value: "" },
+      readText: "wayvm-xport!",
+      activity,
+    })
+    const services = createServices({ temporaryFile, activity })
+    const adapter = createNativePlayerDataFileAdapter(services)
+
+    await expect(
+      adapter.exportJson({
+        filename: BACKUP_FILENAME,
+        serialized: "wayvm-export",
+      }),
+    ).rejects.toThrow("Native backup file verification failed")
+    expect(activity).toEqual(["create:true", "write", "read", "delete"])
+    expect(services.shareFile).not.toHaveBeenCalled()
+  })
+
+  it("deletes a temporary file after its native cache write rejects", async () => {
+    const activity: string[] = []
+    const temporaryFile = createTemporaryFile({
+      writtenText: { value: "" },
+      writeError: new Error("Native cache write failed"),
+      activity,
+    })
+    const services = createServices({ temporaryFile, activity })
+    const adapter = createNativePlayerDataFileAdapter(services)
+
+    await expect(
+      adapter.exportJson({
+        filename: BACKUP_FILENAME,
+        serialized: '["wayvm-export"]',
+      }),
+    ).rejects.toThrow("Native cache write failed")
     expect(activity).toEqual(["create:true", "write", "delete"])
     expect(services.shareFile).not.toHaveBeenCalled()
   })
