@@ -22,6 +22,16 @@ The public web application currently includes:
 
 The current public release is web-only. iOS and Android releases, JSON import/export, and local achievements are planned next. The README will be updated when those features are shipped.
 
+## Expo Go iteration
+
+The native workspace is under active development. Start its Expo Go development server with:
+
+```powershell
+pnpm mobile:go
+```
+
+This is an iteration entry point, not a store-release or physical-device-validation claim.
+
 ## Technology
 
 - TypeScript 6, pnpm, and Turborepo.
