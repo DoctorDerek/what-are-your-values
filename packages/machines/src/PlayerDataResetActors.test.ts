@@ -4,7 +4,7 @@ import {
   BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   initializeBattleProfileStore,
   replaceBattleProfileStorePlayerData,
-  replaceBattleProfileStorePlayerDataForReset,
+  replaceBattleProfileStorePlayerDataForLocalMutation,
 } from "./BattleProfileStore"
 import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { createInitialPlayerData } from "./PlayerData"
@@ -76,7 +76,7 @@ describe("Player Data Reset Actors", () => {
 
   it("propagates a stale reset conflict without changing durable bytes", async () => {
     const { store, state } = await createStoreFixture()
-    await replaceBattleProfileStorePlayerDataForReset({
+    await replaceBattleProfileStorePlayerDataForLocalMutation({
       store,
       state,
       playerData: state.head.playerData,
