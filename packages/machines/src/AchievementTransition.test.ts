@@ -261,17 +261,17 @@ describe("Achievement Transition", () => {
     const resultingProgressById = new Map(transition.profile.progressById)
     priorProgressById.set(event.delta.winnerId, {
       ...winnerProgress,
-      totalXp: 9,
-      profileWins: 9,
-      profileComparisons: 9,
-      currentCycleWins: 9,
+      totalXp: 4,
+      profileWins: 1,
+      profileComparisons: 1,
+      currentCycleWins: 1,
     })
     resultingProgressById.set(event.delta.winnerId, {
       ...winnerProgress,
-      totalXp: 55,
-      profileWins: 10,
-      profileComparisons: 10,
-      currentCycleWins: 10,
+      totalXp: 20,
+      profileWins: 2,
+      profileComparisons: 2,
+      currentCycleWins: 2,
     })
     const priorProfile = { ...profile, progressById: priorProgressById }
     const resultingProfile = {
@@ -290,8 +290,8 @@ describe("Achievement Transition", () => {
       },
     })
 
-    expect(getLevelFromXP(9)).toBe(4)
-    expect(getLevelFromXP(55)).toBe(11)
+    expect(getLevelFromXP(4)).toBe(3)
+    expect(getLevelFromXP(20)).toBe(12)
     expect(
       applyAchievementTransition({
         state,

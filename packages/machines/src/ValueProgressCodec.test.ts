@@ -56,5 +56,11 @@ describe("Value Progress Codec", () => {
         ...encoded.slice(1),
       ]),
     ).toThrow(`Profile wins exceed comparisons for ${encoded[0][0]}`)
+    expect(() =>
+      decodeValueProgressById(profile.activeDeck, [
+        [encoded[0][0], 666, 0, 0, 0],
+        ...encoded.slice(1),
+      ]),
+    ).toThrow(`Total XP is not divisible by 4 for ${encoded[0][0]}`)
   })
 })

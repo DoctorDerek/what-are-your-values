@@ -66,7 +66,7 @@ describe("Deck Revision", () => {
     })
     const priorActiveDeck = createActiveDeck([])
     const curiosityId = priorActiveDeck.valueIds[22]
-    const curiosityProgress = createProgress(10, 4, 7, 3)
+    const curiosityProgress = createProgress(16, 4, 7, 3)
     const priorProgressById = setProgress(
       createInitialValueProgress(priorActiveDeck),
       curiosityId,
@@ -143,7 +143,7 @@ describe("Deck Revision", () => {
       updatedAt: "2026-07-18T00:00:00.000Z",
     })
     const priorActiveDeck = createActiveDeck([ingenuity])
-    const ingenuityProgress = createProgress(28, 8, 14, 4)
+    const ingenuityProgress = createProgress(32, 8, 14, 4)
     const candidate = createDeckRevisionCandidate({
       priorActiveDeck,
       revisedCustomValues: [editedIngenuity],
@@ -199,7 +199,7 @@ describe("Deck Revision", () => {
     const ingenuity = createCustomValue(1, { name: "Ingenuity" })
     const destiny = createCustomValue(2, { name: "Destiny" })
     const priorActiveDeck = createActiveDeck([ingenuity, destiny])
-    const destinyProgress = createProgress(15, 5, 9, 2)
+    const destinyProgress = createProgress(20, 5, 9, 2)
     const candidate = createDeckRevisionCandidate({
       priorActiveDeck,
       revisedCustomValues: [destiny],

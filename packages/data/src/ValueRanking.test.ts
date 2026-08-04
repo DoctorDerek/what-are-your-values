@@ -58,16 +58,16 @@ describe("Value Ranking", () => {
           setProgress(
             createInitialValueProgress(activeDeck),
             first,
-            createProgress(20, 8, 12, 2),
+            createProgress(40, 8, 12, 2),
           ),
           second,
-          createProgress(20, 7, 12, 3),
+          createProgress(40, 7, 12, 3),
         ),
         third,
-        createProgress(20, 9, 13, 3),
+        createProgress(40, 9, 13, 3),
       ),
       fourth,
-      createProgress(21, 6, 10, 1),
+      createProgress(44, 6, 10, 1),
     )
     const ranking = rankValues(activeDeck, progressById)
 

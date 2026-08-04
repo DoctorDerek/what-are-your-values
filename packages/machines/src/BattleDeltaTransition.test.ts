@@ -4,6 +4,7 @@ import {
   createValueProgressById,
   type ValueProgress,
 } from "@game/data/src/ValueProgress"
+import { MAX_BATTLE_XP, XP_QUANTUM } from "@game/utils/src/LevelMath"
 import { describe, expect, it } from "vitest"
 import {
   createBattleCycleCandidate,
@@ -520,6 +521,25 @@ describe("Battle Delta transitions", () => {
       ...candidate.delta,
       xpGained: candidate.delta.xpGained + 1,
     }) satisfies BattleDelta
+    const missingQuantumDelta = Object.freeze({
+      ...candidate.delta,
+      xpGained: 0,
+      resultingWinnerProgress: Object.freeze({
+        ...candidate.delta.resultingWinnerProgress,
+        totalXp: candidate.delta.priorWinnerProgress.totalXp,
+      }),
+    }) satisfies BattleDelta
+    const excessivePayoutDelta = Object.freeze({
+      ...candidate.delta,
+      xpGained: MAX_BATTLE_XP + XP_QUANTUM,
+      resultingWinnerProgress: Object.freeze({
+        ...candidate.delta.resultingWinnerProgress,
+        totalXp:
+          candidate.delta.priorWinnerProgress.totalXp +
+          MAX_BATTLE_XP +
+          XP_QUANTUM,
+      }),
+    }) satisfies BattleDelta
     const tamperedIdentityDelta = Object.freeze({
       ...candidate.delta,
       battleId:
@@ -527,7 +547,7 @@ describe("Battle Delta transitions", () => {
     }) satisfies BattleDelta
     const mismatchedWinnerProgress = {
       ...candidate.delta.resultingWinnerProgress,
-      totalXp: candidate.delta.resultingWinnerProgress.totalXp + 1,
+      totalXp: candidate.delta.resultingWinnerProgress.totalXp + 4,
     }
     const mismatchedProgressById = replaceProgress(
       candidate,
@@ -559,6 +579,12 @@ describe("Battle Delta transitions", () => {
         battleCycle: candidate,
         delta: tamperedPayoutDelta,
       }),
+    ).toThrow("Battle Delta progress transition is inconsistent")
+    expect(() =>
+      validateBattleDelta(candidate.activeDeck, missingQuantumDelta),
+    ).toThrow("Battle Delta progress transition is inconsistent")
+    expect(() =>
+      validateBattleDelta(candidate.activeDeck, excessivePayoutDelta),
     ).toThrow("Battle Delta progress transition is inconsistent")
     expect(() =>
       undoBattleDelta({

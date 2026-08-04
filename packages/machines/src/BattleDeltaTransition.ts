@@ -5,6 +5,7 @@ import {
   type ValueProgress,
   type ValueProgressById,
 } from "@game/data/src/ValueProgress"
+import { MAX_BATTLE_XP, XP_QUANTUM } from "@game/utils/src/LevelMath"
 import type { BattleCycleState } from "./BattleCycle"
 import {
   BATTLE_DELTA_VERSION,
@@ -139,7 +140,9 @@ function assertBattleProgressDelta(delta: BattleDelta) {
     !pairContainsWinnerAndLoser ||
     delta.winnerId === delta.loserId ||
     !Number.isSafeInteger(delta.xpGained) ||
-    delta.xpGained < 1 ||
+    delta.xpGained < XP_QUANTUM ||
+    delta.xpGained > MAX_BATTLE_XP ||
+    delta.xpGained % XP_QUANTUM !== 0 ||
     delta.resultingWinnerProgress.totalXp -
       delta.priorWinnerProgress.totalXp !==
       delta.xpGained ||
