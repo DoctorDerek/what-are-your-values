@@ -41,6 +41,9 @@ yarn-error.log*
 # Turborepo
 .turbo
 
+# Expo mobile workspace state
+apps/mobile/.expo/
+
 # Other Next.js
 node_modules
 target

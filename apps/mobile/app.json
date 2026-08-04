@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "What Are Your Values, Mapache?",
+    "slug": "what-are-your-values-mapache",
+    "version": "0.1.0",
+    "scheme": "wayvm",
+    "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "plugins": ["expo-router", "expo-status-bar", "expo-sharing"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.doctorderek.whatareyourvaluesmapache",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.doctorderek.whatareyourvaluesmapache"
+    }
+  }
+}
