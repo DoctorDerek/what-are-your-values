@@ -9,7 +9,7 @@ import {
   type ValueProgress,
   type ValueProgressById,
 } from "@game/data/src/ValueProgress"
-import { getLevelFromXP } from "@game/utils/src/LevelMath"
+import { getPayoutTierFromXP } from "@game/utils/src/LevelMath"
 import { describe, expect, it } from "vitest"
 import { createDeckRevisionCandidate } from "./DeckRevision"
 import {
@@ -101,10 +101,10 @@ describe("Deck Revision", () => {
       profileComparisons: 0,
       currentCycleWins: 0,
     })
-    expect(candidate.cycleLevelSnapshot.get(curiosityId)).toBe(
-      getLevelFromXP(curiosityProgress.totalXp),
+    expect(candidate.cyclePayoutTierSnapshot.get(curiosityId)).toBe(
+      getPayoutTierFromXP(curiosityProgress.totalXp),
     )
-    expect(candidate.cycleLevelSnapshot.get(ingenuity.id)).toBe(1)
+    expect(candidate.cyclePayoutTierSnapshot.get(ingenuity.id)).toBe(1)
     expect(priorProgressById.get(curiosityId)).toEqual(curiosityProgress)
   })
 

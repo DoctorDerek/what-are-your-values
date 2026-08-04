@@ -195,7 +195,7 @@ describe("Player Data Reset", () => {
           currentCycleWins === 0,
       ),
     ).toBe(true)
-    expect(new Set(candidate.profile.cycleLevelSnapshot.values())).toEqual(
+    expect(new Set(candidate.profile.cyclePayoutTierSnapshot.values())).toEqual(
       new Set([1]),
     )
     expect(candidate.achievements.unlocks).toEqual(

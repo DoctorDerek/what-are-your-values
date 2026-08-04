@@ -14,9 +14,9 @@ import {
   type CurrentCycleWinsById,
 } from "./BattleDelta"
 import {
-  validateCycleLevelSnapshot,
-  type CycleLevelSnapshot,
-} from "./CycleLevelSnapshot"
+  validateCyclePayoutTierSnapshot,
+  type CyclePayoutTierSnapshot,
+} from "./CyclePayoutTierSnapshot"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 function assertProgressEquals(
@@ -106,14 +106,17 @@ function assertCurrentCycleWinsEqual(
   })
 }
 
-function assertCycleLevelSnapshotsEqual(
+function assertCyclePayoutTierSnapshotsEqual(
   activeDeck: ActiveDeck,
-  actual: CycleLevelSnapshot,
-  expected: CycleLevelSnapshot,
+  actual: CyclePayoutTierSnapshot,
+  expected: CyclePayoutTierSnapshot,
   transitionLabel: string,
 ) {
-  const validatedActual = validateCycleLevelSnapshot(activeDeck, actual)
-  const validatedExpected = validateCycleLevelSnapshot(activeDeck, expected)
+  const validatedActual = validateCyclePayoutTierSnapshot(activeDeck, actual)
+  const validatedExpected = validateCyclePayoutTierSnapshot(
+    activeDeck,
+    expected,
+  )
 
   if (
     activeDeck.valueIds.some(
@@ -122,7 +125,7 @@ function assertCycleLevelSnapshotsEqual(
     )
   ) {
     throw new Error(
-      `${transitionLabel} cycle-level snapshot does not match Battle Delta`,
+      `${transitionLabel} cycle-payout-tier snapshot does not match Battle Delta`,
     )
   }
 }
@@ -263,10 +266,10 @@ export function undoBattleDelta({
   }
 
   if (delta.cycleBoundary) {
-    assertCycleLevelSnapshotsEqual(
+    assertCyclePayoutTierSnapshotsEqual(
       battleCycle.activeDeck,
-      battleCycle.cycleLevelSnapshot,
-      delta.cycleBoundary.resultingCycleLevelSnapshot,
+      battleCycle.cyclePayoutTierSnapshot,
+      delta.cycleBoundary.resultingCyclePayoutTierSnapshot,
       "Undo",
     )
     assertCurrentCycleWinsEqual(
@@ -325,12 +328,12 @@ export function undoBattleDelta({
       currentCycleWinsById:
         delta.cycleBoundary?.priorCurrentCycleWinsById ?? null,
     }),
-    cycleLevelSnapshot: delta.cycleBoundary
-      ? validateCycleLevelSnapshot(
+    cyclePayoutTierSnapshot: delta.cycleBoundary
+      ? validateCyclePayoutTierSnapshot(
           battleCycle.activeDeck,
-          delta.cycleBoundary.priorCycleLevelSnapshot,
+          delta.cycleBoundary.priorCyclePayoutTierSnapshot,
         )
-      : battleCycle.cycleLevelSnapshot,
+      : battleCycle.cyclePayoutTierSnapshot,
     scheduler: delta.priorScheduler,
   }) satisfies BattleCycleState
 }
@@ -364,10 +367,10 @@ export function redoBattleDelta({
   )
 
   if (delta.cycleBoundary) {
-    assertCycleLevelSnapshotsEqual(
+    assertCyclePayoutTierSnapshotsEqual(
       battleCycle.activeDeck,
-      battleCycle.cycleLevelSnapshot,
-      delta.cycleBoundary.priorCycleLevelSnapshot,
+      battleCycle.cyclePayoutTierSnapshot,
+      delta.cycleBoundary.priorCyclePayoutTierSnapshot,
       "Redo",
     )
     assertCurrentCycleWinsEqual(
@@ -389,12 +392,12 @@ export function redoBattleDelta({
       currentCycleWinsById:
         delta.cycleBoundary?.resultingCurrentCycleWinsById ?? null,
     }),
-    cycleLevelSnapshot: delta.cycleBoundary
-      ? validateCycleLevelSnapshot(
+    cyclePayoutTierSnapshot: delta.cycleBoundary
+      ? validateCyclePayoutTierSnapshot(
           battleCycle.activeDeck,
-          delta.cycleBoundary.resultingCycleLevelSnapshot,
+          delta.cycleBoundary.resultingCyclePayoutTierSnapshot,
         )
-      : battleCycle.cycleLevelSnapshot,
+      : battleCycle.cyclePayoutTierSnapshot,
     scheduler: delta.resultingScheduler,
   }) satisfies BattleCycleState
 }

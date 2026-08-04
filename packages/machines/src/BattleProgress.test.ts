@@ -11,12 +11,13 @@ import {
   type ValueProgressById,
 } from "@game/data/src/ValueProgress"
 import {
-  getLevelFromXP,
+  calculateCycleSnapshotXpPayout,
+  getPayoutTierFromXP,
   MAX_SUPPORTED_TOTAL_XP,
 } from "@game/utils/src/LevelMath"
 import { describe, expect, it } from "vitest"
 import { createBattleProgressCandidate } from "./BattleProgress"
-import { createCycleLevelSnapshot } from "./CycleLevelSnapshot"
+import { createCyclePayoutTierSnapshot } from "./CyclePayoutTierSnapshot"
 import { createDeckRevisionCandidate } from "./DeckRevision"
 
 function createCustomValue(creationOrdinal: number): CustomValueDefinition {
@@ -56,11 +57,11 @@ function setProgress(
 }
 
 describe("Battle Progress", () => {
-  it("awards the losing value's frozen snapshot level and updates exact counters", () => {
+  it("awards the losing value's frozen payout tier and updates exact counters", () => {
     const activeDeck = createActiveDeck([])
     const [winnerId, loserId] = activeDeck.valueIds
-    const winnerProgress = createProgress(6, 3, 5, 2)
-    const loserProgress = createProgress(210, 7, 12, 1)
+    const winnerProgress = createProgress(12, 3, 5, 2)
+    const loserProgress = createProgress(840, 7, 12, 1)
     const progressById = setProgress(
       setProgress(
         createInitialValueProgress(activeDeck),
@@ -70,22 +71,22 @@ describe("Battle Progress", () => {
       loserId,
       loserProgress,
     )
-    const cycleLevelSnapshot = new Map(
-      createCycleLevelSnapshot(activeDeck, progressById),
+    const cyclePayoutTierSnapshot = new Map(
+      createCyclePayoutTierSnapshot(activeDeck, progressById),
     )
-    cycleLevelSnapshot.set(loserId, 15)
+    cyclePayoutTierSnapshot.set(loserId, 15)
     const candidate = createBattleProgressCandidate({
       activeDeck,
       progressById,
-      cycleLevelSnapshot,
+      cyclePayoutTierSnapshot,
       pair: [winnerId, loserId],
       winnerId,
     })
 
-    expect(getLevelFromXP(loserProgress.totalXp)).toBeGreaterThan(15)
-    expect(candidate.delta.xpGained).toBe(15)
+    expect(getPayoutTierFromXP(loserProgress.totalXp)).toBeGreaterThan(15)
+    expect(candidate.delta.xpGained).toBe(60)
     expect(candidate.progressById.get(winnerId)).toEqual({
-      totalXp: 21,
+      totalXp: 72,
       profileWins: 4,
       profileComparisons: 6,
       currentCycleWins: 3,
@@ -98,42 +99,42 @@ describe("Battle Progress", () => {
     expect(progressById.get(winnerId)).toEqual(winnerProgress)
   })
 
-  it("caps a high snapshotted opponent at 100 XP", () => {
+  it("caps a high snapshotted opponent at 400 XP", () => {
     const activeDeck = createActiveDeck([])
     const [winnerId, loserId] = activeDeck.valueIds
     const progressById = createInitialValueProgress(activeDeck)
-    const cycleLevelSnapshot = new Map(
-      createCycleLevelSnapshot(activeDeck, progressById),
+    const cyclePayoutTierSnapshot = new Map(
+      createCyclePayoutTierSnapshot(activeDeck, progressById),
     )
-    cycleLevelSnapshot.set(loserId, 130)
+    cyclePayoutTierSnapshot.set(loserId, 130)
 
     expect(
       createBattleProgressCandidate({
         activeDeck,
         progressById,
-        cycleLevelSnapshot,
+        cyclePayoutTierSnapshot,
         pair: [winnerId, loserId],
         winnerId,
       }).delta.xpGained,
-    ).toBe(100)
+    ).toBe(400)
   })
 
   it("produces the same progress for the same choices in either pair order", () => {
     const activeDeck = createActiveDeck([])
     const [winnerId, firstLoserId, secondLoserId] = activeDeck.valueIds
     const initialProgressById = createInitialValueProgress(activeDeck)
-    const cycleLevelSnapshot = new Map(
-      createCycleLevelSnapshot(activeDeck, initialProgressById),
+    const cyclePayoutTierSnapshot = new Map(
+      createCyclePayoutTierSnapshot(activeDeck, initialProgressById),
     )
-    cycleLevelSnapshot.set(firstLoserId, 15)
-    cycleLevelSnapshot.set(secondLoserId, 27)
+    cyclePayoutTierSnapshot.set(firstLoserId, 15)
+    cyclePayoutTierSnapshot.set(secondLoserId, 27)
     const applyPairs = (pairs: readonly ValuePair[]) =>
       pairs.reduce(
         (progressById, pair) =>
           createBattleProgressCandidate({
             activeDeck,
             progressById,
-            cycleLevelSnapshot,
+            cyclePayoutTierSnapshot,
             pair,
             winnerId,
           }).progressById,
@@ -149,14 +150,14 @@ describe("Battle Progress", () => {
     ])
 
     expect(Array.from(firstOrder)).toEqual(Array.from(secondOrder))
-    expect(firstOrder.get(winnerId)?.totalXp).toBe(42)
+    expect(firstOrder.get(winnerId)?.totalXp).toBe(168)
   })
 
-  it("gives a joined value evidence-earned catch-up and retained winners one XP", () => {
+  it("gives a joined value evidence-earned catch-up and retained winners four XP", () => {
     const ingenuity = createCustomValue(1)
     const priorActiveDeck = createActiveDeck([])
     const retainedId = priorActiveDeck.valueIds[0]
-    const retainedProgress = createProgress(190, 10, 20, 4)
+    const retainedProgress = createProgress(420, 10, 20, 4)
     const revision = createDeckRevisionCandidate({
       priorActiveDeck,
       revisedCustomValues: [ingenuity],
@@ -172,29 +173,31 @@ describe("Battle Progress", () => {
     const joinedWinner = createBattleProgressCandidate({
       activeDeck: revision.activeDeck,
       progressById: revision.progressById,
-      cycleLevelSnapshot: revision.cycleLevelSnapshot,
+      cyclePayoutTierSnapshot: revision.cyclePayoutTierSnapshot,
       pair: [ingenuity.id, retainedId],
       winnerId: ingenuity.id,
     })
     const retainedWinner = createBattleProgressCandidate({
       activeDeck: revision.activeDeck,
       progressById: revision.progressById,
-      cycleLevelSnapshot: revision.cycleLevelSnapshot,
+      cyclePayoutTierSnapshot: revision.cyclePayoutTierSnapshot,
       pair: [ingenuity.id, retainedId],
       winnerId: retainedId,
     })
 
     expect(joinedWinner.delta.xpGained).toBe(
-      getLevelFromXP(retainedProgress.totalXp),
+      calculateCycleSnapshotXpPayout(
+        getPayoutTierFromXP(retainedProgress.totalXp),
+      ),
     )
-    expect(retainedWinner.delta.xpGained).toBe(1)
+    expect(retainedWinner.delta.xpGained).toBe(4)
   })
 
   it("rejects invalid pairs, winners, snapshots, and unsafe increments", () => {
     const activeDeck = createActiveDeck([])
     const [firstValueId, secondValueId, thirdValueId] = activeDeck.valueIds
     const initialProgressById = createInitialValueProgress(activeDeck)
-    const cycleLevelSnapshot = createCycleLevelSnapshot(
+    const cyclePayoutTierSnapshot = createCyclePayoutTierSnapshot(
       activeDeck,
       initialProgressById,
     )
@@ -206,7 +209,7 @@ describe("Battle Progress", () => {
       createBattleProgressCandidate({
         activeDeck,
         progressById,
-        cycleLevelSnapshot,
+        cyclePayoutTierSnapshot,
         pair,
         winnerId,
       })
@@ -221,13 +224,13 @@ describe("Battle Progress", () => {
       createCandidate([firstValueId, createCustomValue(1).id], firstValueId),
     ).toThrow("inactive Value ID")
 
-    const incompleteSnapshot = new Map(cycleLevelSnapshot)
+    const incompleteSnapshot = new Map(cyclePayoutTierSnapshot)
     incompleteSnapshot.delete(secondValueId)
     expect(() =>
       createBattleProgressCandidate({
         activeDeck,
         progressById: initialProgressById,
-        cycleLevelSnapshot: incompleteSnapshot,
+        cyclePayoutTierSnapshot: incompleteSnapshot,
         pair: [firstValueId, secondValueId],
         winnerId: firstValueId,
       }),

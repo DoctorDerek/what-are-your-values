@@ -19,16 +19,16 @@ import {
   type BattleSchedulerRestorePoint,
 } from "./BattleScheduler"
 import {
-  createCycleLevelSnapshot,
-  type CycleLevelSnapshot,
-} from "./CycleLevelSnapshot"
+  createCyclePayoutTierSnapshot,
+  type CyclePayoutTierSnapshot,
+} from "./CyclePayoutTierSnapshot"
 import { createSchedulerRestorePoint } from "./PairScheduler"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 export type BattleCycleState = {
   readonly activeDeck: ActiveDeck
   readonly progressById: ValueProgressById
-  readonly cycleLevelSnapshot: CycleLevelSnapshot
+  readonly cyclePayoutTierSnapshot: CyclePayoutTierSnapshot
   readonly scheduler: BattleSchedulerRestorePoint
 }
 
@@ -43,7 +43,10 @@ export function createInitialBattleCycle(seed: string) {
   return Object.freeze({
     activeDeck,
     progressById,
-    cycleLevelSnapshot: createCycleLevelSnapshot(activeDeck, progressById),
+    cyclePayoutTierSnapshot: createCyclePayoutTierSnapshot(
+      activeDeck,
+      progressById,
+    ),
     scheduler: createSchedulerRestorePoint({
       activeDeck,
       progressGeneration: 0,
@@ -71,7 +74,7 @@ export function createBattleCycleCandidate({
   const progressCandidate = createBattleProgressCandidate({
     activeDeck: battleCycle.activeDeck,
     progressById: battleCycle.progressById,
-    cycleLevelSnapshot: battleCycle.cycleLevelSnapshot,
+    cyclePayoutTierSnapshot: battleCycle.cyclePayoutTierSnapshot,
     pair,
     winnerId,
   })
@@ -84,7 +87,7 @@ export function createBattleCycleCandidate({
     return Object.freeze({
       activeDeck: battleCycle.activeDeck,
       progressById: progressCandidate.progressById,
-      cycleLevelSnapshot: battleCycle.cycleLevelSnapshot,
+      cyclePayoutTierSnapshot: battleCycle.cyclePayoutTierSnapshot,
       scheduler: advancedScheduler,
       delta: createBattleDelta({
         activeDeck: battleCycle.activeDeck,
@@ -101,7 +104,7 @@ export function createBattleCycleCandidate({
     progressCandidate.progressById,
   )
 
-  const resultingCycleLevelSnapshot = createCycleLevelSnapshot(
+  const resultingCyclePayoutTierSnapshot = createCyclePayoutTierSnapshot(
     battleCycle.activeDeck,
     nextCycleProgressById,
   )
@@ -114,7 +117,7 @@ export function createBattleCycleCandidate({
   return Object.freeze({
     activeDeck: battleCycle.activeDeck,
     progressById: nextCycleProgressById,
-    cycleLevelSnapshot: resultingCycleLevelSnapshot,
+    cyclePayoutTierSnapshot: resultingCyclePayoutTierSnapshot,
     scheduler: resultingScheduler,
     delta: createBattleDelta({
       activeDeck: battleCycle.activeDeck,
@@ -124,8 +127,8 @@ export function createBattleCycleCandidate({
       cycleBoundary: createCycleBoundaryTransition({
         activeDeck: battleCycle.activeDeck,
         battleId,
-        priorCycleLevelSnapshot: battleCycle.cycleLevelSnapshot,
-        resultingCycleLevelSnapshot,
+        priorCyclePayoutTierSnapshot: battleCycle.cyclePayoutTierSnapshot,
+        resultingCyclePayoutTierSnapshot,
         priorProgressById: battleCycle.progressById,
         resultingProgressById: nextCycleProgressById,
       }),

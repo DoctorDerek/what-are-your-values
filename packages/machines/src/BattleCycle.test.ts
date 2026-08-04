@@ -8,7 +8,7 @@ import {
   createValueProgressById,
   type ValueProgress,
 } from "@game/data/src/ValueProgress"
-import { getLevelFromXP } from "@game/utils/src/LevelMath"
+import { getPayoutTierFromXP } from "@game/utils/src/LevelMath"
 import { describe, expect, it } from "vitest"
 import {
   createBattleCycleCandidate,
@@ -73,7 +73,7 @@ describe("Battle Cycle", () => {
       ),
     ).toBe(true)
     expect(battleCycle.progressById.size).toBe(100)
-    expect(battleCycle.cycleLevelSnapshot.size).toBe(100)
+    expect(battleCycle.cyclePayoutTierSnapshot.size).toBe(100)
     expect(battleCycle.scheduler.cursor).toBe(0)
     expect(battleCycle.scheduler).not.toHaveProperty("pairs")
     expect(projection.pair).toHaveLength(2)
@@ -97,7 +97,7 @@ describe("Battle Cycle", () => {
       pair,
       winnerId,
       loserId,
-      xpGained: 1,
+      xpGained: 4,
       progressGeneration: 0,
       deckRevision: 0,
       activeDeckFingerprint: battleCycle.activeDeck.fingerprint,
@@ -108,7 +108,7 @@ describe("Battle Cycle", () => {
     })
     expect(candidate.delta.battleId).toBe(createBattleId(battleCycle.scheduler))
     expect(candidate.progressById.get(winnerId)).toEqual({
-      totalXp: 1,
+      totalXp: 4,
       profileWins: 1,
       profileComparisons: 1,
       currentCycleWins: 1,
@@ -120,7 +120,9 @@ describe("Battle Cycle", () => {
       currentCycleWins: 0,
     })
     expect(candidate.scheduler.cursor).toBe(1)
-    expect(candidate.cycleLevelSnapshot).toBe(battleCycle.cycleLevelSnapshot)
+    expect(candidate.cyclePayoutTierSnapshot).toBe(
+      battleCycle.cyclePayoutTierSnapshot,
+    )
     expect(battleCycle.progressById.get(winnerId)?.totalXp).toBe(0)
     expect(() =>
       createBattleCycleCandidate({
@@ -148,8 +150,8 @@ describe("Battle Cycle", () => {
     const progressById = replaceProgress(
       initialBattleCycle,
       new Map([
-        [winnerId, createProgress(3, 2, 3, 1)],
-        [loserId, createProgress(210, 7, 12, 1)],
+        [winnerId, createProgress(12, 2, 3, 1)],
+        [loserId, createProgress(420, 7, 12, 1)],
       ]),
     )
     const battleCycle = Object.freeze({
@@ -163,7 +165,7 @@ describe("Battle Cycle", () => {
       expectedScheduler: finalScheduler,
     })
 
-    expect(candidate.delta.xpGained).toBe(1)
+    expect(candidate.delta.xpGained).toBe(4)
     expect(candidate.delta.resultingWinnerProgress.currentCycleWins).toBe(2)
     expect(candidate.delta.priorScheduler).toBe(finalScheduler)
     expect(candidate.delta.resultingScheduler).toBe(candidate.scheduler)
@@ -183,20 +185,20 @@ describe("Battle Cycle", () => {
           [],
       ).every((currentCycleWins) => currentCycleWins === 0),
     ).toBe(true)
-    expect(candidate.delta.cycleBoundary?.priorCycleLevelSnapshot).toEqual(
-      battleCycle.cycleLevelSnapshot,
+    expect(candidate.delta.cycleBoundary?.priorCyclePayoutTierSnapshot).toEqual(
+      battleCycle.cyclePayoutTierSnapshot,
     )
-    expect(candidate.delta.cycleBoundary?.resultingCycleLevelSnapshot).toEqual(
-      candidate.cycleLevelSnapshot,
-    )
+    expect(
+      candidate.delta.cycleBoundary?.resultingCyclePayoutTierSnapshot,
+    ).toEqual(candidate.cyclePayoutTierSnapshot)
     expect(candidate.progressById.get(winnerId)).toEqual({
-      totalXp: 4,
+      totalXp: 16,
       profileWins: 3,
       profileComparisons: 4,
       currentCycleWins: 0,
     })
     expect(candidate.progressById.get(loserId)).toEqual({
-      totalXp: 210,
+      totalXp: 420,
       profileWins: 7,
       profileComparisons: 13,
       currentCycleWins: 0,
@@ -208,8 +210,12 @@ describe("Battle Cycle", () => {
     ).toBe(true)
     expect(candidate.scheduler.cycleIndex).toBe(1)
     expect(candidate.scheduler.cursor).toBe(0)
-    expect(candidate.cycleLevelSnapshot.get(winnerId)).toBe(getLevelFromXP(4))
-    expect(candidate.cycleLevelSnapshot.get(loserId)).toBe(getLevelFromXP(210))
+    expect(candidate.cyclePayoutTierSnapshot.get(winnerId)).toBe(
+      getPayoutTierFromXP(16),
+    )
+    expect(candidate.cyclePayoutTierSnapshot.get(loserId)).toBe(
+      getPayoutTierFromXP(420),
+    )
     expect(() =>
       createBattleDelta({
         activeDeck: battleCycle.activeDeck,
@@ -247,7 +253,7 @@ describe("Battle Cycle", () => {
     const battleCycle = Object.freeze({
       activeDeck: revisedProfile.activeDeck,
       progressById: revisedProfile.progressById,
-      cycleLevelSnapshot: revisedProfile.cycleLevelSnapshot,
+      cyclePayoutTierSnapshot: revisedProfile.cyclePayoutTierSnapshot,
       scheduler: finalScheduler,
     }) satisfies BattleCycleState
     const [winnerId] = projectBattlePair(

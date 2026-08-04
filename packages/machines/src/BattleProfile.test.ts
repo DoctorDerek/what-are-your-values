@@ -47,8 +47,8 @@ describe("Battle Profile", () => {
 
     expect(undone.profile.scheduler).toEqual(initial.scheduler)
     expect(undone.profile.progressById).toEqual(initial.progressById)
-    expect(undone.profile.cycleLevelSnapshot).toEqual(
-      initial.cycleLevelSnapshot,
+    expect(undone.profile.cyclePayoutTierSnapshot).toEqual(
+      initial.cyclePayoutTierSnapshot,
     )
     expect(undone.profile.history).toEqual([])
     expect(undone.profile.redo).toEqual([committed.delta])
@@ -61,8 +61,8 @@ describe("Battle Profile", () => {
     expect(redone.delta).toBe(committed.delta)
     expect(redone.profile.scheduler).toEqual(committed.profile.scheduler)
     expect(redone.profile.progressById).toEqual(committed.profile.progressById)
-    expect(redone.profile.cycleLevelSnapshot).toEqual(
-      committed.profile.cycleLevelSnapshot,
+    expect(redone.profile.cyclePayoutTierSnapshot).toEqual(
+      committed.profile.cyclePayoutTierSnapshot,
     )
     expect(redone.profile.history).toEqual([committed.delta])
     expect(redone.profile.redo).toEqual([])

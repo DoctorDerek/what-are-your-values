@@ -65,8 +65,8 @@ describe("Progress Reset", () => {
       ),
     ).toBe(true)
     expect(
-      Array.from(candidate.cycleLevelSnapshot.values()).every(
-        (level) => level === 1,
+      Array.from(candidate.cyclePayoutTierSnapshot.values()).every(
+        (payoutTier) => payoutTier === 1,
       ),
     ).toBe(true)
     expect(progressById.get(firstValueId)?.totalXp).toBe(55)

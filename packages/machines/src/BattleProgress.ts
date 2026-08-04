@@ -10,9 +10,9 @@ import {
   MAX_SUPPORTED_TOTAL_XP,
 } from "@game/utils/src/LevelMath"
 import {
-  validateCycleLevelSnapshot,
-  type CycleLevelSnapshot,
-} from "./CycleLevelSnapshot"
+  validateCyclePayoutTierSnapshot,
+  type CyclePayoutTierSnapshot,
+} from "./CyclePayoutTierSnapshot"
 
 export type BattleProgressDelta = {
   readonly pair: ValuePair
@@ -72,13 +72,13 @@ function validateBattlePair(
 export function createBattleProgressCandidate({
   activeDeck,
   progressById,
-  cycleLevelSnapshot,
+  cyclePayoutTierSnapshot,
   pair,
   winnerId,
 }: {
   readonly activeDeck: ActiveDeck
   readonly progressById: ValueProgressById
-  readonly cycleLevelSnapshot: CycleLevelSnapshot
+  readonly cyclePayoutTierSnapshot: CyclePayoutTierSnapshot
   readonly pair: ValuePair
   readonly winnerId: ValueId
 }) {
@@ -88,24 +88,27 @@ export function createBattleProgressCandidate({
     activeDeck,
     Array.from(progressById),
   )
-  const validatedCycleLevelSnapshot = validateCycleLevelSnapshot(
+  const validatedCyclePayoutTierSnapshot = validateCyclePayoutTierSnapshot(
     activeDeck,
-    cycleLevelSnapshot,
+    cyclePayoutTierSnapshot,
   )
   const loserId = pair[0] === winnerId ? pair[1] : pair[0]
   const priorWinnerProgress = validatedProgressById.get(winnerId)
   const priorLoserProgress = validatedProgressById.get(loserId)
-  const opponentLevelAtCycleStart = validatedCycleLevelSnapshot.get(loserId)
+  const opponentPayoutTierAtCycleStart =
+    validatedCyclePayoutTierSnapshot.get(loserId)
 
   if (!priorWinnerProgress || !priorLoserProgress) {
     throw new Error("Battle progress is missing an active value")
   }
 
-  if (opponentLevelAtCycleStart === undefined) {
+  if (opponentPayoutTierAtCycleStart === undefined) {
     throw new Error("Battle snapshot is missing the losing value")
   }
 
-  const xpGained = calculateCycleSnapshotXpPayout(opponentLevelAtCycleStart)
+  const xpGained = calculateCycleSnapshotXpPayout(
+    opponentPayoutTierAtCycleStart,
+  )
   const resultingWinnerProgress = Object.freeze({
     totalXp: addXp(priorWinnerProgress.totalXp, xpGained),
     profileWins: incrementCounter(

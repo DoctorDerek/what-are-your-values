@@ -18,9 +18,9 @@ import {
   type BattleSchedulerRestorePoint,
 } from "./BattleScheduler"
 import {
-  validateCycleLevelSnapshot,
-  type CycleLevelSnapshot,
-} from "./CycleLevelSnapshot"
+  validateCyclePayoutTierSnapshot,
+  type CyclePayoutTierSnapshot,
+} from "./CyclePayoutTierSnapshot"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 
 export const BATTLE_DELTA_VERSION = 1 as const
@@ -31,8 +31,8 @@ export type CurrentCycleWinsById = ReadonlyMap<ValueId, number>
 export type CycleBoundaryTransition = {
   readonly version: typeof CYCLE_BOUNDARY_TRANSITION_VERSION
   readonly cycleCompleteEventId: CycleCompleteEventId
-  readonly priorCycleLevelSnapshot: CycleLevelSnapshot
-  readonly resultingCycleLevelSnapshot: CycleLevelSnapshot
+  readonly priorCyclePayoutTierSnapshot: CyclePayoutTierSnapshot
+  readonly resultingCyclePayoutTierSnapshot: CyclePayoutTierSnapshot
   readonly priorCurrentCycleWinsById: CurrentCycleWinsById
   readonly resultingCurrentCycleWinsById: CurrentCycleWinsById
 }
@@ -69,28 +69,28 @@ function createCurrentCycleWinsById(
 export function createCycleBoundaryTransition({
   activeDeck,
   battleId,
-  priorCycleLevelSnapshot,
-  resultingCycleLevelSnapshot,
+  priorCyclePayoutTierSnapshot,
+  resultingCyclePayoutTierSnapshot,
   priorProgressById,
   resultingProgressById,
 }: {
   readonly activeDeck: ActiveDeck
   readonly battleId: BattleId
-  readonly priorCycleLevelSnapshot: CycleLevelSnapshot
-  readonly resultingCycleLevelSnapshot: CycleLevelSnapshot
+  readonly priorCyclePayoutTierSnapshot: CyclePayoutTierSnapshot
+  readonly resultingCyclePayoutTierSnapshot: CyclePayoutTierSnapshot
   readonly priorProgressById: ValueProgressById
   readonly resultingProgressById: ValueProgressById
 }) {
   return Object.freeze({
     version: CYCLE_BOUNDARY_TRANSITION_VERSION,
     cycleCompleteEventId: createCycleCompleteEventId(battleId),
-    priorCycleLevelSnapshot: validateCycleLevelSnapshot(
+    priorCyclePayoutTierSnapshot: validateCyclePayoutTierSnapshot(
       activeDeck,
-      priorCycleLevelSnapshot,
+      priorCyclePayoutTierSnapshot,
     ),
-    resultingCycleLevelSnapshot: validateCycleLevelSnapshot(
+    resultingCyclePayoutTierSnapshot: validateCyclePayoutTierSnapshot(
       activeDeck,
-      resultingCycleLevelSnapshot,
+      resultingCyclePayoutTierSnapshot,
     ),
     priorCurrentCycleWinsById: createCurrentCycleWinsById(
       activeDeck,

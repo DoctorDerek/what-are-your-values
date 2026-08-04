@@ -63,8 +63,8 @@ function expectBattleCycleToEqual(
   expect(Array.from(actual.progressById)).toEqual(
     Array.from(expected.progressById),
   )
-  expect(Array.from(actual.cycleLevelSnapshot)).toEqual(
-    Array.from(expected.cycleLevelSnapshot),
+  expect(Array.from(actual.cyclePayoutTierSnapshot)).toEqual(
+    Array.from(expected.cyclePayoutTierSnapshot),
   )
   expect(actual.scheduler).toEqual(expected.scheduler)
 }
@@ -114,19 +114,21 @@ describe("Battle Delta transitions", () => {
     const progressById = replaceProgress(
       initialBattleCycle,
       new Map([
-        [winnerId, createProgress(6, 3, 5, 2)],
-        [loserId, createProgress(210, 7, 12, 1)],
+        [winnerId, createProgress(12, 3, 5, 2)],
+        [loserId, createProgress(840, 7, 12, 1)],
       ]),
     )
-    const cycleLevelSnapshot = new Map(initialBattleCycle.cycleLevelSnapshot)
-    cycleLevelSnapshot.set(loserId, 15)
+    const cyclePayoutTierSnapshot = new Map(
+      initialBattleCycle.cyclePayoutTierSnapshot,
+    )
+    cyclePayoutTierSnapshot.set(loserId, 15)
     const battleCycle = Object.freeze({
       ...initialBattleCycle,
       progressById,
-      cycleLevelSnapshot,
+      cyclePayoutTierSnapshot,
     }) satisfies BattleCycleState
     const priorProgressEntries = Array.from(battleCycle.progressById)
-    const priorSnapshotEntries = Array.from(battleCycle.cycleLevelSnapshot)
+    const priorSnapshotEntries = Array.from(battleCycle.cyclePayoutTierSnapshot)
     const candidate = createBattleCycleCandidate({
       battleCycle,
       winnerId,
@@ -138,7 +140,7 @@ describe("Battle Delta transitions", () => {
       candidate.delta,
     )
 
-    expect(candidate.delta.xpGained).toBe(15)
+    expect(candidate.delta.xpGained).toBe(60)
 
     const undone = undoBattleDelta({
       battleCycle: candidate,
@@ -156,7 +158,7 @@ describe("Battle Delta transitions", () => {
     expect(Object.isFrozen(undone)).toBe(true)
     expect(Object.isFrozen(redone)).toBe(true)
     expect(Array.from(battleCycle.progressById)).toEqual(priorProgressEntries)
-    expect(Array.from(battleCycle.cycleLevelSnapshot)).toEqual(
+    expect(Array.from(battleCycle.cyclePayoutTierSnapshot)).toEqual(
       priorSnapshotEntries,
     )
     expect(Array.from(candidate.progressById)).toEqual(resultingProgressEntries)
@@ -189,17 +191,19 @@ describe("Battle Delta transitions", () => {
     const progressById = replaceProgress(
       initialBattleCycle,
       new Map([
-        [winnerId, createProgress(6, 3, 5, 2)],
-        [loserId, createProgress(210, 7, 12, 1)],
-        [otherValueId, createProgress(5, 2, 4, 2)],
+        [winnerId, createProgress(12, 3, 5, 2)],
+        [loserId, createProgress(840, 7, 12, 1)],
+        [otherValueId, createProgress(20, 2, 4, 2)],
       ]),
     )
-    const cycleLevelSnapshot = new Map(initialBattleCycle.cycleLevelSnapshot)
-    cycleLevelSnapshot.set(loserId, 15)
+    const cyclePayoutTierSnapshot = new Map(
+      initialBattleCycle.cyclePayoutTierSnapshot,
+    )
+    cyclePayoutTierSnapshot.set(loserId, 15)
     const battleCycle = Object.freeze({
       ...initialBattleCycle,
       progressById,
-      cycleLevelSnapshot,
+      cyclePayoutTierSnapshot,
       scheduler: finalScheduler,
     }) satisfies BattleCycleState
     const candidate = createBattleCycleCandidate({
@@ -222,7 +226,7 @@ describe("Battle Delta transitions", () => {
       delta: candidate.delta,
     })
 
-    expect(candidate.delta.xpGained).toBe(15)
+    expect(candidate.delta.xpGained).toBe(60)
     expect(candidate.delta.resultingWinnerProgress.currentCycleWins).toBe(3)
     expect(candidate.progressById.get(winnerId)?.currentCycleWins).toBe(0)
     expect(
@@ -235,43 +239,45 @@ describe("Battle Delta transitions", () => {
     expect(undone.progressById.get(winnerId)?.currentCycleWins).toBe(2)
     expect(undone.progressById.get(loserId)?.currentCycleWins).toBe(1)
     expect(undone.progressById.get(otherValueId)?.currentCycleWins).toBe(2)
-    expect(Array.from(undone.cycleLevelSnapshot)).toEqual(
-      Array.from(boundary.priorCycleLevelSnapshot),
+    expect(Array.from(undone.cyclePayoutTierSnapshot)).toEqual(
+      Array.from(boundary.priorCyclePayoutTierSnapshot),
     )
-    expect(Array.from(redone.cycleLevelSnapshot)).toEqual(
-      Array.from(boundary.resultingCycleLevelSnapshot),
+    expect(Array.from(redone.cyclePayoutTierSnapshot)).toEqual(
+      Array.from(boundary.resultingCyclePayoutTierSnapshot),
     )
-    expect(undone.cycleLevelSnapshot).not.toBe(boundary.priorCycleLevelSnapshot)
-    expect(redone.cycleLevelSnapshot).not.toBe(
-      boundary.resultingCycleLevelSnapshot,
+    expect(undone.cyclePayoutTierSnapshot).not.toBe(
+      boundary.priorCyclePayoutTierSnapshot,
     )
-    const retainedPriorWinnerLevel =
-      boundary.priorCycleLevelSnapshot.get(winnerId)
-    const retainedResultingWinnerLevel =
-      boundary.resultingCycleLevelSnapshot.get(winnerId)
+    expect(redone.cyclePayoutTierSnapshot).not.toBe(
+      boundary.resultingCyclePayoutTierSnapshot,
+    )
+    const retainedPriorWinnerPayoutTier =
+      boundary.priorCyclePayoutTierSnapshot.get(winnerId)
+    const retainedResultingWinnerPayoutTier =
+      boundary.resultingCyclePayoutTierSnapshot.get(winnerId)
 
     if (
-      retainedPriorWinnerLevel === undefined ||
-      retainedResultingWinnerLevel === undefined
+      retainedPriorWinnerPayoutTier === undefined ||
+      retainedResultingWinnerPayoutTier === undefined
     ) {
       throw new Error("Boundary transition snapshots lost the winning value")
     }
 
-    const mutableUndoneSnapshot = undone.cycleLevelSnapshot as Map<
+    const mutableUndoneSnapshot = undone.cyclePayoutTierSnapshot as Map<
       ValueId,
       number
     >
-    const mutableRedoneSnapshot = redone.cycleLevelSnapshot as Map<
+    const mutableRedoneSnapshot = redone.cyclePayoutTierSnapshot as Map<
       ValueId,
       number
     >
-    mutableUndoneSnapshot.set(winnerId, retainedPriorWinnerLevel + 1)
-    mutableRedoneSnapshot.set(winnerId, retainedResultingWinnerLevel + 1)
-    expect(boundary.priorCycleLevelSnapshot.get(winnerId)).toBe(
-      retainedPriorWinnerLevel,
+    mutableUndoneSnapshot.set(winnerId, retainedPriorWinnerPayoutTier + 1)
+    mutableRedoneSnapshot.set(winnerId, retainedResultingWinnerPayoutTier + 1)
+    expect(boundary.priorCyclePayoutTierSnapshot.get(winnerId)).toBe(
+      retainedPriorWinnerPayoutTier,
     )
-    expect(boundary.resultingCycleLevelSnapshot.get(winnerId)).toBe(
-      retainedResultingWinnerLevel,
+    expect(boundary.resultingCyclePayoutTierSnapshot.get(winnerId)).toBe(
+      retainedResultingWinnerPayoutTier,
     )
     expect(
       projectScheduledPair(undone.activeDeck, undone.scheduler).pair,
@@ -352,7 +358,7 @@ describe("Battle Delta transitions", () => {
       }),
     }) as unknown as BattleDelta
 
-    const mismatchedSnapshot = new Map(boundary.priorCycleLevelSnapshot)
+    const mismatchedSnapshot = new Map(boundary.priorCyclePayoutTierSnapshot)
     mismatchedSnapshot.set(
       firstValueId,
       (mismatchedSnapshot.get(firstValueId) ?? 0) + 1,
@@ -361,7 +367,7 @@ describe("Battle Delta transitions", () => {
       ...candidate.delta,
       cycleBoundary: Object.freeze({
         ...boundary,
-        priorCycleLevelSnapshot: mismatchedSnapshot,
+        priorCyclePayoutTierSnapshot: mismatchedSnapshot,
       }),
     }) as unknown as BattleDelta
 
@@ -384,7 +390,7 @@ describe("Battle Delta transitions", () => {
         battleCycle,
         delta: mismatchedSnapshotDelta,
       }),
-    ).toThrow("Redo cycle-level snapshot does not match Battle Delta")
+    ).toThrow("Redo cycle-payout-tier snapshot does not match Battle Delta")
   })
 
   it("rejects Battle Delta pair, profile, scheduler, and cycle identities", () => {

@@ -120,7 +120,9 @@ describe("Battle Delta Codec", () => {
 
     expect(decoded.cycleBoundary).not.toBeNull()
     expect(encodeBattleDelta(decoded)).toEqual(encoded)
-    expect(decoded.cycleBoundary?.priorCycleLevelSnapshot).toBeInstanceOf(Map)
+    expect(decoded.cycleBoundary?.priorCyclePayoutTierSnapshot).toBeInstanceOf(
+      Map,
+    )
     expect(decoded.cycleBoundary?.priorCurrentCycleWinsById).toBeInstanceOf(Map)
   })
 
