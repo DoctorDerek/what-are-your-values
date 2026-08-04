@@ -28,7 +28,6 @@ export type BoundedBattleIdSet = {
 export type AchievementProgress = {
   readonly achievementProgressGeneration: number
   readonly lifetimeBattleCount: number
-  readonly completedCycleCount: number
   readonly baselineLevelsByValue: ReadonlyMap<ValueId, number>
   readonly topFiveAlreadyRevealedAtReset: boolean
   readonly countedBattleWindow: BoundedBattleIdSet
@@ -193,19 +192,10 @@ export function createAchievementState({
     progress.lifetimeBattleCount,
     "Achievement lifetime battle count",
   )
-  const completedCycleCount = readNonNegativeSafeInteger(
-    progress.completedCycleCount,
-    "Achievement completed-cycle count",
-  )
   const countedBattleWindow = validateCountedBattleWindow(
     progress.countedBattleWindow,
   )
 
-  if (completedCycleCount > lifetimeBattleCount) {
-    throw new Error(
-      "Achievement completed-cycle count exceeds lifetime battles",
-    )
-  }
   if (typeof progress.topFiveAlreadyRevealedAtReset !== "boolean") {
     throw new Error("Invalid Top Five achievement reset baseline")
   }
@@ -219,7 +209,6 @@ export function createAchievementState({
         "Achievement progress generation",
       ),
       lifetimeBattleCount,
-      completedCycleCount,
       baselineLevelsByValue: validateBaselineLevelsByValue({
         activeDeck,
         baselineLevelsByValue: progress.baselineLevelsByValue,
@@ -238,7 +227,6 @@ export function createInitialAchievementState(activeDeck: ActiveDeck) {
     progress: {
       achievementProgressGeneration: 0,
       lifetimeBattleCount: 0,
-      completedCycleCount: 0,
       baselineLevelsByValue: new Map(
         activeDeck.valueIds.map((valueId) => [valueId, 1]),
       ),

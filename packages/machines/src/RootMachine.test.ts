@@ -1734,7 +1734,6 @@ describe("Root Machine", () => {
         playerDataBeforeReset.achievements.progress
           .achievementProgressGeneration + 1,
       lifetimeBattleCount: 0,
-      completedCycleCount: 0,
       countedBattleWindow: { ids: reachableBattleIds },
     })
   })

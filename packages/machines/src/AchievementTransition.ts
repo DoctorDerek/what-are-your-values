@@ -201,13 +201,6 @@ function applyBattleChoiceAchievementTransition({
         "Achievement lifetime battle count",
       )
     : state.progress.lifetimeBattleCount
-  const completedCycleCount =
-    isNewBattle && event.delta.cycleBoundary
-      ? incrementSafeInteger(
-          state.progress.completedCycleCount,
-          "Achievement completed-cycle count",
-        )
-      : state.progress.completedCycleCount
   const newlySatisfiedAchievements = getNewlySatisfiedAchievements({
     priorState: state,
     priorProfile,
@@ -231,7 +224,6 @@ function applyBattleChoiceAchievementTransition({
     progress: {
       ...state.progress,
       lifetimeBattleCount,
-      completedCycleCount,
       countedBattleWindow: createBoundedBattleIdSet(
         getReachableAchievementBattleIds(resultingProfile),
       ),

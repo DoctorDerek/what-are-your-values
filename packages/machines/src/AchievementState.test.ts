@@ -38,7 +38,6 @@ describe("Achievement State", () => {
     expect(state.progress).toMatchObject({
       achievementProgressGeneration: 0,
       lifetimeBattleCount: 0,
-      completedCycleCount: 0,
       topFiveAlreadyRevealedAtReset: false,
       countedBattleWindow: {
         ids: [],
@@ -256,18 +255,6 @@ describe("Achievement State", () => {
         presentedAchievementIds: [],
         progress: {
           ...initial.progress,
-          lifetimeBattleCount: 1,
-          completedCycleCount: 2,
-        },
-      }),
-    ).toThrow("exceeds lifetime battles")
-    expect(() =>
-      createAchievementState({
-        activeDeck,
-        unlocks: [],
-        presentedAchievementIds: [],
-        progress: {
-          ...initial.progress,
           topFiveAlreadyRevealedAtReset: "yes" as unknown as boolean,
         },
       }),
@@ -346,7 +333,6 @@ describe("Achievement State", () => {
         progress: {
           achievementProgressGeneration: 1,
           lifetimeBattleCount: 0,
-          completedCycleCount: 0,
           baselineLevelsByValue: new Map(
             activeDeck.valueIds.map((valueId) => [valueId, 1]),
           ),

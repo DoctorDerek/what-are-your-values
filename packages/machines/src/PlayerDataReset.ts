@@ -144,7 +144,6 @@ export function createAchievementsResetCandidate({
           playerData.achievements,
         ),
         lifetimeBattleCount: 0,
-        completedCycleCount: 0,
         baselineLevelsByValue: new Map(
           profile.activeDeck.valueIds.map((valueId) => [
             valueId,
