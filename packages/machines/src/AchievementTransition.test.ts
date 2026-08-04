@@ -136,7 +136,7 @@ describe("Achievement Transition", () => {
     expect(afterReplacement.unlocks).toHaveLength(1)
   })
 
-  it("unlocks one completed cycle across boundary Undo and Redo", () => {
+  it("keeps cycle completion as scheduler evidence without an achievement", () => {
     const initialProfile = createInitialBattleProfile(
       "cycle-completion-achievement-seed",
     )
@@ -181,18 +181,12 @@ describe("Achievement Transition", () => {
       event: createBattleRedoEvent(redoTransition),
       occurredAt: OCCURRED_AT,
     })
-    const cycleAchievementId = readAchievementId(
-      "cycle.first",
-      "Achievement ID",
-    )
-
     expect(completedCycle.event.delta.cycleBoundary).not.toBeNull()
-    expect(afterCompletion.progress.completedCycleCount).toBe(1)
-    expect(afterUndo.progress.completedCycleCount).toBe(1)
-    expect(afterRedo.progress.completedCycleCount).toBe(1)
-    expect(
-      afterRedo.unlocks.filter(({ id }) => id === cycleAchievementId),
-    ).toHaveLength(1)
+    expect(afterCompletion.unlocks.map(({ id }) => id)).toEqual([
+      readAchievementId("battle.first", "Achievement ID"),
+    ])
+    expect(afterUndo.unlocks).toEqual(afterCompletion.unlocks)
+    expect(afterRedo.unlocks).toEqual(afterCompletion.unlocks)
   })
 
   it("unlocks literal battle-count milestones without filling gaps", () => {
@@ -220,6 +214,7 @@ describe("Achievement Transition", () => {
         .filter((id) => id.startsWith("battle.")),
     ).toEqual([
       readAchievementId("battle.first", "Achievement ID"),
+      readAchievementId("battle.5", "Achievement ID"),
       readAchievementId("battle.10", "Achievement ID"),
     ])
   })

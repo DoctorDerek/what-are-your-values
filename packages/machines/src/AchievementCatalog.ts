@@ -6,7 +6,6 @@ export type AchievementId = string & {
 
 export type AchievementCondition =
   | Readonly<{ kind: "battleCount"; threshold: number }>
-  | Readonly<{ kind: "cycleComplete" }>
   | Readonly<{ kind: "topFive" }>
   | Readonly<{ kind: "valueLevel"; threshold: number }>
 
@@ -18,10 +17,6 @@ export const ACHIEVEMENT_COPY_KEYS = Object.freeze({
   battleCount: Object.freeze({
     titleKey: "achievements.battleCount.title",
     descriptionKey: "achievements.battleCount.description",
-  }),
-  cycleComplete: Object.freeze({
-    titleKey: "achievements.cycleComplete.title",
-    descriptionKey: "achievements.cycleComplete.description",
   }),
   topFive: Object.freeze({
     titleKey: "achievements.topFive.title",
@@ -46,63 +41,43 @@ export type AchievementDefinition = {
   readonly descriptionKey: AchievementDescriptionKey
 }
 
-export const VALUE_LEVEL_ACHIEVEMENT_THRESHOLDS = [5, 10, 25, 50, 100] as const
+export const BATTLE_ACHIEVEMENT_THRESHOLDS = [
+  1, 5, 10, 25, 37, 50, 77, 100, 200, 300, 400, 500, 600, 700, 777, 800, 900,
+  1_000, 1_100, 1_200, 1_300, 1_400, 1_500, 1_600, 1_700, 1_800, 1_900, 2_000,
+  2_100, 2_200, 2_300, 2_400,
+] as const
 
-export const HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS = Object.freeze(
-  Array.from({ length: 100 }, (_unused, index) => (index + 1) * 100),
-)
+export const VALUE_LEVEL_ACHIEVEMENT_THRESHOLDS = [
+  5, 10, 25, 37, 50, 77, 100,
+] as const
 
 function createAchievementId(value: string) {
   return value as AchievementId
 }
 
 function createBattleCountAchievement(
-  id: string,
-  threshold: number,
-  copyKeys: Readonly<{
-    titleKey: AchievementTitleKey
-    descriptionKey: AchievementDescriptionKey
-  }>,
+  threshold: (typeof BATTLE_ACHIEVEMENT_THRESHOLDS)[number],
 ): AchievementDefinition {
   return Object.freeze({
-    id: createAchievementId(id),
+    id: createAchievementId(
+      threshold === 1 ? "battle.first" : `battle.${threshold}`,
+    ),
     condition: Object.freeze({ kind: "battleCount", threshold }),
-    ...copyKeys,
+    ...(threshold === 1
+      ? ACHIEVEMENT_COPY_KEYS.firstBattle
+      : ACHIEVEMENT_COPY_KEYS.battleCount),
   })
 }
 
-const battleCountAchievements = Object.freeze([
-  createBattleCountAchievement(
-    "battle.first",
-    1,
-    ACHIEVEMENT_COPY_KEYS.firstBattle,
-  ),
-  createBattleCountAchievement(
-    "battle.10",
-    10,
-    ACHIEVEMENT_COPY_KEYS.battleCount,
-  ),
-  ...HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS.map((threshold) =>
-    createBattleCountAchievement(
-      `battle.${threshold}`,
-      threshold,
-      ACHIEVEMENT_COPY_KEYS.battleCount,
-    ),
-  ),
-])
+const battleCountAchievements = Object.freeze(
+  BATTLE_ACHIEVEMENT_THRESHOLDS.map(createBattleCountAchievement),
+)
 
-const completionAchievements = Object.freeze([
-  Object.freeze({
-    id: createAchievementId("cycle.first"),
-    condition: Object.freeze({ kind: "cycleComplete" }),
-    ...ACHIEVEMENT_COPY_KEYS.cycleComplete,
-  }),
-  Object.freeze({
-    id: createAchievementId("topFive.first"),
-    condition: Object.freeze({ kind: "topFive" }),
-    ...ACHIEVEMENT_COPY_KEYS.topFive,
-  }),
-] satisfies readonly AchievementDefinition[])
+const topFiveAchievement = Object.freeze({
+  id: createAchievementId("topFive.first"),
+  condition: Object.freeze({ kind: "topFive" }),
+  ...ACHIEVEMENT_COPY_KEYS.topFive,
+}) satisfies AchievementDefinition
 
 const valueLevelAchievements = Object.freeze(
   VALUE_LEVEL_ACHIEVEMENT_THRESHOLDS.map(
@@ -117,7 +92,7 @@ const valueLevelAchievements = Object.freeze(
 
 export const ACHIEVEMENT_CATALOG = Object.freeze([
   ...battleCountAchievements,
-  ...completionAchievements,
+  topFiveAchievement,
   ...valueLevelAchievements,
 ])
 

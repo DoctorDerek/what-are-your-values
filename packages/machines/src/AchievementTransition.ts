@@ -69,7 +69,6 @@ function getNewlySatisfiedAchievements({
   resultingProfile,
   event,
   lifetimeBattleCount,
-  completedCycleCount,
   isNewBattle,
 }: {
   readonly priorState: AchievementState
@@ -77,7 +76,6 @@ function getNewlySatisfiedAchievements({
   readonly resultingProfile: BattleProfile
   readonly event: BattleChoiceAchievementEvent
   readonly lifetimeBattleCount: number
-  readonly completedCycleCount: number
   readonly isNewBattle: boolean
 }) {
   const unlockedIds = new Set(priorState.unlocks.map(({ id }) => id))
@@ -112,7 +110,6 @@ function getNewlySatisfiedAchievements({
       resultingProfile,
       event,
       lifetimeBattleCount,
-      completedCycleCount,
       isNewBattle,
       priorWinnerLevel,
       resultingWinnerLevel,
@@ -128,7 +125,6 @@ function isAchievementSatisfied({
   resultingProfile,
   event,
   lifetimeBattleCount,
-  completedCycleCount,
   isNewBattle,
   priorWinnerLevel,
   resultingWinnerLevel,
@@ -140,7 +136,6 @@ function isAchievementSatisfied({
   readonly resultingProfile: BattleProfile
   readonly event: BattleChoiceAchievementEvent
   readonly lifetimeBattleCount: number
-  readonly completedCycleCount: number
   readonly isNewBattle: boolean
   readonly priorWinnerLevel: number
   readonly resultingWinnerLevel: number
@@ -149,13 +144,6 @@ function isAchievementSatisfied({
   const { condition } = achievement
   if (condition.kind === "battleCount") {
     return isNewBattle && lifetimeBattleCount === condition.threshold
-  }
-  if (condition.kind === "cycleComplete") {
-    return (
-      isNewBattle &&
-      completedCycleCount === 1 &&
-      event.delta.cycleBoundary !== null
-    )
   }
   if (condition.kind === "topFive") {
     return (
@@ -226,7 +214,6 @@ function applyBattleChoiceAchievementTransition({
     resultingProfile,
     event,
     lifetimeBattleCount,
-    completedCycleCount,
     isNewBattle,
   })
 
