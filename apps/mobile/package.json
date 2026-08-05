@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@game/data": "workspace:*",
+    "@game/design-tokens": "workspace:*",
     "@game/machines": "workspace:*",
     "@game/utils": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",

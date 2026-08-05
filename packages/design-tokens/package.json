@@ -1,0 +1,11 @@
+{
+  "name": "@game/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "sideEffects": [
+    "./src/MapachitoVivid.css"
+  ],
+  "exports": {
+    "./mapachito-vivid.css": "./src/MapachitoVivid.css"
+  }
+}

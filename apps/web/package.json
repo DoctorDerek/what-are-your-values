@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@game/data": "workspace:*",
+    "@game/design-tokens": "workspace:*",
     "@game/utils": "workspace:*",
     "@game/machines": "workspace:*",
     "@xstate/react": "^5",
