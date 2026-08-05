@@ -189,11 +189,11 @@ describe("Achievement Transition", () => {
     expect(afterRedo.unlocks).toEqual(afterCompletion.unlocks)
   })
 
-  it("unlocks literal battle-count milestones without filling gaps", () => {
-    let profile = createInitialBattleProfile("ten-battle-achievement-seed")
+  it("unlocks every early battle-count milestone without filling gaps", () => {
+    let profile = createInitialBattleProfile("early-battle-achievement-seed")
     let state = createInitialAchievementState(profile.activeDeck)
 
-    for (let comparison = 1; comparison <= 10; comparison += 1) {
+    for (let comparison = 1; comparison <= 77; comparison += 1) {
       const { transition, event } = chooseWinner(profile)
       state = applyAchievementTransition({
         state,
@@ -207,7 +207,7 @@ describe("Achievement Transition", () => {
       profile = transition.profile
     }
 
-    expect(state.progress.lifetimeBattleCount).toBe(10)
+    expect(state.progress.lifetimeBattleCount).toBe(77)
     expect(
       state.unlocks
         .map(({ id }) => id)
@@ -216,6 +216,38 @@ describe("Achievement Transition", () => {
       readAchievementId("battle.first", "Achievement ID"),
       readAchievementId("battle.5", "Achievement ID"),
       readAchievementId("battle.10", "Achievement ID"),
+      readAchievementId("battle.25", "Achievement ID"),
+      readAchievementId("battle.37", "Achievement ID"),
+      readAchievementId("battle.50", "Achievement ID"),
+      readAchievementId("battle.77", "Achievement ID"),
+    ])
+  })
+
+  it("unlocks the terminal battle-count milestone at exactly 2,400", () => {
+    const profile = createInitialBattleProfile("terminal-battle-achievement-seed")
+    const { transition, event } = chooseWinner(profile)
+    const initialState = createInitialAchievementState(profile.activeDeck)
+    const state = createAchievementState({
+      activeDeck: profile.activeDeck,
+      unlocks: [],
+      presentedAchievementIds: [],
+      progress: {
+        ...initialState.progress,
+        lifetimeBattleCount: 2_399,
+      },
+    })
+
+    const resultingState = applyAchievementTransition({
+      state,
+      priorProfile: profile,
+      resultingProfile: transition.profile,
+      event,
+      occurredAt: OCCURRED_AT,
+    })
+
+    expect(resultingState.progress.lifetimeBattleCount).toBe(2_400)
+    expect(resultingState.unlocks.map(({ id }) => id)).toEqual([
+      readAchievementId("battle.2400", "Achievement ID"),
     ])
   })
 
@@ -263,7 +295,7 @@ describe("Achievement Transition", () => {
     })
     resultingProgressById.set(event.delta.winnerId, {
       ...winnerProgress,
-      totalXp: 20,
+      totalXp: 180,
       profileWins: 2,
       profileComparisons: 2,
       currentCycleWins: 2,
@@ -286,7 +318,7 @@ describe("Achievement Transition", () => {
     })
 
     expect(getLevelFromXP(4)).toBe(3)
-    expect(getLevelFromXP(20)).toBe(12)
+    expect(getLevelFromXP(180)).toBe(100)
     expect(
       applyAchievementTransition({
         state,
@@ -299,6 +331,11 @@ describe("Achievement Transition", () => {
       readAchievementId("battle.first", "Achievement ID"),
       readAchievementId("valueLevel.5", "Achievement ID"),
       readAchievementId("valueLevel.10", "Achievement ID"),
+      readAchievementId("valueLevel.25", "Achievement ID"),
+      readAchievementId("valueLevel.37", "Achievement ID"),
+      readAchievementId("valueLevel.50", "Achievement ID"),
+      readAchievementId("valueLevel.77", "Achievement ID"),
+      readAchievementId("valueLevel.100", "Achievement ID"),
     ])
   })
 
