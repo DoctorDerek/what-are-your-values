@@ -224,7 +224,9 @@ describe("Achievement Transition", () => {
   })
 
   it("unlocks the terminal battle-count milestone at exactly 2,400", () => {
-    const profile = createInitialBattleProfile("terminal-battle-achievement-seed")
+    const profile = createInitialBattleProfile(
+      "terminal-battle-achievement-seed",
+    )
     const { transition, event } = chooseWinner(profile)
     const initialState = createInitialAchievementState(profile.activeDeck)
     const state = createAchievementState({
