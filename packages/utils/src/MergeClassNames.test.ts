@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { mergeClassNames } from "./MergeClassNames"
+import { cn, mergeClassNames } from "./MergeClassNames"
 
 describe("mergeClassNames", () => {
   it("combines conditional class values without rendering disabled entries", () => {
@@ -15,5 +15,9 @@ describe("mergeClassNames", () => {
     expect(mergeClassNames("px-3 bg-primary", "px-5 bg-secondary")).toBe(
       "px-5 bg-secondary",
     )
+  })
+
+  it("exposes the source-registry compatibility alias", () => {
+    expect(cn).toBe(mergeClassNames)
   })
 })
