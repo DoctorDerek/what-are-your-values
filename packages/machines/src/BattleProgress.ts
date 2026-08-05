@@ -102,9 +102,8 @@ export function createBattleProgressCandidate({
     throw new Error("Battle progress is missing an active value")
   }
 
-  if (opponentPayoutTierAtCycleStart === undefined) {
+  if (opponentPayoutTierAtCycleStart === undefined)
     throw new Error("Battle snapshot is missing the losing value")
-  }
 
   const xpGained = calculateCycleSnapshotXpPayout(
     opponentPayoutTierAtCycleStart,

@@ -22,13 +22,8 @@ export function getLevelFromXP(totalXp: number) {
 const MAX_SUPPORTED_LEVEL = getLevelFromXP(MAX_SUPPORTED_TOTAL_XP)
 
 function validateLevel(level: number) {
-  if (
-    !Number.isSafeInteger(level) ||
-    level < 1 ||
-    level > MAX_SUPPORTED_LEVEL
-  ) {
+  if (!Number.isSafeInteger(level) || level < 1 || level > MAX_SUPPORTED_LEVEL)
     throw new Error(`Unsupported Level: ${level}`)
-  }
 }
 
 export function getMinimumReachableXpForLevel(level: number) {
@@ -59,11 +54,10 @@ export function calculateCycleSnapshotXpPayout(
   if (
     !Number.isSafeInteger(opponentPayoutTierAtCycleStart) ||
     opponentPayoutTierAtCycleStart < 1
-  ) {
+  )
     throw new Error(
       `Invalid cycle-snapshot opponent payout tier: ${opponentPayoutTierAtCycleStart}`,
     )
-  }
 
   return XP_QUANTUM * Math.min(opponentPayoutTierAtCycleStart, MAX_PAYOUT_TIER)
 }
