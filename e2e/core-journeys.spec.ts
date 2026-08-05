@@ -90,8 +90,8 @@ test("a returning player keeps Undo and Redo across reloads", async ({
     .getByRole("listitem")
     .filter({ has: page.getByLabel("Rank 1", { exact: true }) })
   await expect(firstRankedValue).toContainText(firstChoiceName)
-  await expect(firstRankedValue).toContainText("Level 2")
+  await expect(firstRankedValue).toContainText("Level 3")
   await expect(
-    page.getByRole("progressbar", { name: "XP toward Level 3" }),
+    page.getByRole("progressbar", { name: "XP toward Level 4" }),
   ).toHaveAttribute("aria-valuenow", "0")
 })
