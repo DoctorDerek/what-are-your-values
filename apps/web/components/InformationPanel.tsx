@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useId } from "react"
+import { Button } from "@/components/ui/button"
 
 export default function InformationPanel({
   title,
@@ -39,13 +40,14 @@ export default function InformationPanel({
         </div>
 
         <footer className="border-t-4 border-black bg-white px-5 py-5 sm:px-10 sm:py-6">
-          <button
+          <Button
             type="button"
+            size="lg"
             onClick={onPrimaryAction}
-            className="bg-mapache-vivid-primary-orange min-h-14 w-full cursor-pointer border-4 border-black px-4 py-4 text-4xl font-black text-white uppercase shadow-[8px_8px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black active:translate-x-[8px] active:translate-y-[8px] active:shadow-none sm:text-5xl"
+            className="w-full text-4xl sm:text-5xl"
           >
             {primaryActionLabel}
-          </button>
+          </Button>
         </footer>
       </section>
     </main>
