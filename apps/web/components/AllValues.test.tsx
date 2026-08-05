@@ -84,7 +84,14 @@ describe("All Values Component Integration", () => {
     )
 
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
+    expect(screen.getByLabelText("Value Name")).toHaveAttribute(
+      "data-slot",
+      "input",
+    )
     expect(screen.getByLabelText("Value Name")).toHaveValue("Ingenuity")
+    expect(
+      screen.getByLabelText("What This Value Means to Me"),
+    ).toHaveAttribute("data-slot", "textarea")
     expect(screen.getByLabelText("What This Value Means to Me")).toHaveValue(
       "To solve problems in original, resourceful, and practical ways.",
     )
