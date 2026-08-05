@@ -15,9 +15,9 @@ import {
   type CycleCompleteEventId,
 } from "./BattleIdentity"
 import {
-  validateCycleLevelSnapshot,
-  type CycleLevelSnapshot,
-} from "./CycleLevelSnapshot"
+  validateCyclePayoutTierSnapshot,
+  type CyclePayoutTierSnapshot,
+} from "./CyclePayoutTierSnapshot"
 import {
   readActiveValueId,
   readNonNegativeSafeInteger,
@@ -44,8 +44,8 @@ import {
 type EncodedCycleBoundaryTransition = readonly [
   version: number,
   cycleCompleteEventId: string,
-  priorCycleLevelSnapshot: readonly EncodedValueNumberEntry[],
-  resultingCycleLevelSnapshot: readonly EncodedValueNumberEntry[],
+  priorCyclePayoutTierSnapshot: readonly EncodedValueNumberEntry[],
+  resultingCyclePayoutTierSnapshot: readonly EncodedValueNumberEntry[],
   priorCurrentCycleWinsById: readonly EncodedValueNumberEntry[],
   resultingCurrentCycleWinsById: readonly EncodedValueNumberEntry[],
 ]
@@ -76,8 +76,8 @@ function encodeCycleBoundaryTransition(
   return [
     boundary.version,
     boundary.cycleCompleteEventId,
-    encodeValueNumberEntries(boundary.priorCycleLevelSnapshot),
-    encodeValueNumberEntries(boundary.resultingCycleLevelSnapshot),
+    encodeValueNumberEntries(boundary.priorCyclePayoutTierSnapshot),
+    encodeValueNumberEntries(boundary.resultingCyclePayoutTierSnapshot),
     encodeValueNumberEntries(boundary.priorCurrentCycleWinsById),
     encodeValueNumberEntries(boundary.resultingCurrentCycleWinsById),
   ]
@@ -134,24 +134,24 @@ function decodeCycleBoundaryTransition(
     throw new Error("Cycle-complete event identity is inconsistent")
   }
 
-  const priorCycleLevelSnapshot = validateCycleLevelSnapshot(
+  const priorCyclePayoutTierSnapshot = validateCyclePayoutTierSnapshot(
     activeDeck,
     decodeCompleteValueNumberMap(
       activeDeck,
       tuple[2],
-      "Prior Cycle Level Snapshot",
+      "Prior Cycle Payout Tier Snapshot",
       1,
     ),
-  )
-  const resultingCycleLevelSnapshot = validateCycleLevelSnapshot(
+  ) satisfies CyclePayoutTierSnapshot
+  const resultingCyclePayoutTierSnapshot = validateCyclePayoutTierSnapshot(
     activeDeck,
     decodeCompleteValueNumberMap(
       activeDeck,
       tuple[3],
-      "Resulting Cycle Level Snapshot",
+      "Resulting Cycle Payout Tier Snapshot",
       1,
     ),
-  )
+  ) satisfies CyclePayoutTierSnapshot
   const priorCurrentCycleWinsById = decodeCompleteValueNumberMap(
     activeDeck,
     tuple[4],
@@ -168,8 +168,8 @@ function decodeCycleBoundaryTransition(
   return Object.freeze({
     version: CYCLE_BOUNDARY_TRANSITION_VERSION,
     cycleCompleteEventId: expectedCycleCompleteEventId,
-    priorCycleLevelSnapshot,
-    resultingCycleLevelSnapshot,
+    priorCyclePayoutTierSnapshot,
+    resultingCyclePayoutTierSnapshot,
     priorCurrentCycleWinsById,
     resultingCurrentCycleWinsById,
   }) satisfies CycleBoundaryTransition

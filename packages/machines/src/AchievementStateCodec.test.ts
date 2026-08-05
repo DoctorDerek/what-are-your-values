@@ -64,7 +64,7 @@ describe("Achievement State Codec", () => {
     const { activeDeck, state } = createPopulatedAchievementState()
     const encoded = encodeAchievementState(state)
     const malformedCountedBattleProgress: unknown[] = [...encoded[3]]
-    malformedCountedBattleProgress[5] = "counted-battles"
+    malformedCountedBattleProgress[4] = "counted-battles"
 
     expect(() =>
       decodeAchievementState(activeDeck, [2, ...encoded.slice(1)]),
@@ -105,7 +105,7 @@ describe("Achievement State Codec", () => {
     const malformedProgress = [...encoded[3]]
 
     unknownUnlocks[0]![0] = "battle.11"
-    malformedProgress[5] = ["not-a-battle-id"]
+    malformedProgress[4] = ["not-a-battle-id"]
 
     expect(() =>
       decodeAchievementState(activeDeck, [

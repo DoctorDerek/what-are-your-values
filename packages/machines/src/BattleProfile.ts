@@ -40,7 +40,7 @@ function createBattleProfile(
   return Object.freeze({
     activeDeck: battleCycle.activeDeck,
     progressById: battleCycle.progressById,
-    cycleLevelSnapshot: battleCycle.cycleLevelSnapshot,
+    cyclePayoutTierSnapshot: battleCycle.cyclePayoutTierSnapshot,
     scheduler: battleCycle.scheduler,
     history: timeline.history,
     redo: timeline.redo,
@@ -74,8 +74,8 @@ function assertBattleCycleStateEquals(
     }
 
     if (
-      actual.cycleLevelSnapshot.get(valueId) !==
-      expected.cycleLevelSnapshot.get(valueId)
+      actual.cyclePayoutTierSnapshot.get(valueId) !==
+      expected.cyclePayoutTierSnapshot.get(valueId)
     ) {
       throw new Error(
         `Battle Profile cycle snapshot does not match retained History for ${valueId}`,
@@ -217,7 +217,7 @@ export function applyDeckRevision({
     profile: Object.freeze({
       activeDeck: candidate.activeDeck,
       progressById: candidate.progressById,
-      cycleLevelSnapshot: candidate.cycleLevelSnapshot,
+      cyclePayoutTierSnapshot: candidate.cyclePayoutTierSnapshot,
       scheduler: candidate.scheduler,
       history: [],
       redo: [],

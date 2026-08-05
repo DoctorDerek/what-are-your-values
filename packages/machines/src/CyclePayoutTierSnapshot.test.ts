@@ -3,25 +3,32 @@ import { createCustomValueId } from "@game/data/src/Value"
 import { createInitialValueProgress } from "@game/data/src/ValueProgress"
 import { describe, expect, it } from "vitest"
 import {
-  createCycleLevelSnapshot,
-  validateCycleLevelSnapshot,
-} from "./CycleLevelSnapshot"
+  createCyclePayoutTierSnapshot,
+  validateCyclePayoutTierSnapshot,
+} from "./CyclePayoutTierSnapshot"
 
-describe("Cycle Level Snapshot", () => {
-  it("freezes every canonical value at its cycle-start level", () => {
+describe("Cycle Payout Tier Snapshot", () => {
+  it("freezes every canonical value at its cycle-start payout tier", () => {
     const activeDeck = createActiveDeck([])
-    const snapshot = createCycleLevelSnapshot(
-      activeDeck,
-      createInitialValueProgress(activeDeck),
-    )
+    const progressById = new Map(createInitialValueProgress(activeDeck))
+    const [firstValueId] = activeDeck.valueIds
+    progressById.set(firstValueId, {
+      totalXp: 420,
+      profileWins: 1,
+      profileComparisons: 1,
+      currentCycleWins: 0,
+    })
+
+    const snapshot = createCyclePayoutTierSnapshot(activeDeck, progressById)
 
     expect(snapshot.size).toBe(100)
-    expect(new Set(snapshot.values())).toEqual(new Set([1]))
+    expect(snapshot.get(firstValueId)).toBe(15)
+    expect(new Set(snapshot.values())).toEqual(new Set([1, 15]))
   })
 
   it("rejects incomplete, inactive, and invalid imported snapshot state", () => {
     const activeDeck = createActiveDeck([])
-    const snapshot = createCycleLevelSnapshot(
+    const snapshot = createCyclePayoutTierSnapshot(
       activeDeck,
       createInitialValueProgress(activeDeck),
     )
@@ -30,7 +37,7 @@ describe("Cycle Level Snapshot", () => {
     const incompleteSnapshot = new Map(snapshot)
     incompleteSnapshot.delete(firstValueId)
     expect(() =>
-      validateCycleLevelSnapshot(activeDeck, incompleteSnapshot),
+      validateCyclePayoutTierSnapshot(activeDeck, incompleteSnapshot),
     ).toThrow("does not cover the complete Active Deck")
 
     const inactiveSnapshot = new Map(snapshot)
@@ -40,14 +47,14 @@ describe("Cycle Level Snapshot", () => {
       1,
     )
     expect(() =>
-      validateCycleLevelSnapshot(activeDeck, inactiveSnapshot),
+      validateCyclePayoutTierSnapshot(activeDeck, inactiveSnapshot),
     ).toThrow("contains an inactive ID")
 
-    const invalidLevelSnapshot = new Map(snapshot)
-    invalidLevelSnapshot.set(firstValueId, 0)
+    const invalidPayoutTierSnapshot = new Map(snapshot)
+    invalidPayoutTierSnapshot.set(firstValueId, 0)
     expect(() =>
-      validateCycleLevelSnapshot(activeDeck, invalidLevelSnapshot),
-    ).toThrow("Invalid cycle-snapshot level")
+      validateCyclePayoutTierSnapshot(activeDeck, invalidPayoutTierSnapshot),
+    ).toThrow("Invalid cycle-snapshot payout tier")
   })
 
   it("rejects progress that cannot initialize the complete snapshot", () => {
@@ -55,8 +62,8 @@ describe("Cycle Level Snapshot", () => {
     const progressById = new Map(createInitialValueProgress(activeDeck))
     progressById.delete(activeDeck.valueIds[0])
 
-    expect(() => createCycleLevelSnapshot(activeDeck, progressById)).toThrow(
-      "Value Progress is missing",
-    )
+    expect(() =>
+      createCyclePayoutTierSnapshot(activeDeck, progressById),
+    ).toThrow("Value Progress is missing")
   })
 })

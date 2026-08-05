@@ -2,21 +2,25 @@ import { describe, expect, it } from "vitest"
 import {
   ACHIEVEMENT_CATALOG,
   ACHIEVEMENT_COPY_KEYS,
+  BATTLE_ACHIEVEMENT_THRESHOLDS,
   getAchievementDefinition,
-  HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS,
   isAchievementId,
   readAchievementId,
   VALUE_LEVEL_ACHIEVEMENT_THRESHOLDS,
 } from "./AchievementCatalog"
 
 describe("Achievement Catalog", () => {
-  it("defines the complete literal Phase 0 milestone set", () => {
-    expect(HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS).toHaveLength(100)
-    expect(HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS[0]).toBe(100)
-    expect(HUNDRED_BATTLE_ACHIEVEMENT_THRESHOLDS.at(-1)).toBe(10_000)
-    expect(VALUE_LEVEL_ACHIEVEMENT_THRESHOLDS).toEqual([5, 10, 25, 50, 100])
-    expect(ACHIEVEMENT_CATALOG).toHaveLength(109)
-    expect(new Set(ACHIEVEMENT_CATALOG.map(({ id }) => id))).toHaveLength(109)
+  it("defines exactly 32 battle, one Top Five, and seven Level achievements", () => {
+    expect(BATTLE_ACHIEVEMENT_THRESHOLDS).toEqual([
+      1, 5, 10, 25, 37, 50, 77, 100, 200, 300, 400, 500, 600, 700, 777, 800,
+      900, 1_000, 1_100, 1_200, 1_300, 1_400, 1_500, 1_600, 1_700, 1_800, 1_900,
+      2_000, 2_100, 2_200, 2_300, 2_400,
+    ])
+    expect(VALUE_LEVEL_ACHIEVEMENT_THRESHOLDS).toEqual([
+      5, 10, 25, 37, 50, 77, 100,
+    ])
+    expect(ACHIEVEMENT_CATALOG).toHaveLength(40)
+    expect(new Set(ACHIEVEMENT_CATALOG.map(({ id }) => id))).toHaveLength(40)
   })
 
   it("keeps stable IDs and exact conditions for each family", () => {
@@ -27,16 +31,10 @@ describe("Achievement Catalog", () => {
       ...ACHIEVEMENT_COPY_KEYS.firstBattle,
     })
     expect(
-      getAchievementDefinition(readAchievementId("battle.10000", "ID")),
+      getAchievementDefinition(readAchievementId("battle.2400", "ID")),
     ).toMatchObject({
-      condition: { kind: "battleCount", threshold: 10_000 },
+      condition: { kind: "battleCount", threshold: 2_400 },
       ...ACHIEVEMENT_COPY_KEYS.battleCount,
-    })
-    expect(
-      getAchievementDefinition(readAchievementId("cycle.first", "ID")),
-    ).toMatchObject({
-      condition: { kind: "cycleComplete" },
-      ...ACHIEVEMENT_COPY_KEYS.cycleComplete,
     })
     expect(
       getAchievementDefinition(readAchievementId("topFive.first", "ID")),
@@ -53,8 +51,10 @@ describe("Achievement Catalog", () => {
   })
 
   it("accepts only catalog-owned permanent IDs", () => {
-    expect(isAchievementId("battle.100")).toBe(true)
-    expect(isAchievementId("battle.150")).toBe(false)
+    expect(isAchievementId("battle.37")).toBe(true)
+    expect(isAchievementId("battle.777")).toBe(true)
+    expect(isAchievementId("battle.10000")).toBe(false)
+    expect(isAchievementId("cycle.first")).toBe(false)
     expect(isAchievementId("valueLevel.1")).toBe(false)
     expect(() => readAchievementId("future.unknown", "Achievement ID")).toThrow(
       "Invalid Achievement ID",

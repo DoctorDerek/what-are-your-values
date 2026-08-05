@@ -100,7 +100,7 @@ export function createLevelsAndExperienceResetCandidate({
   const resetProfile = Object.freeze({
     activeDeck: candidate.activeDeck,
     progressById: candidate.progressById,
-    cycleLevelSnapshot: candidate.cycleLevelSnapshot,
+    cyclePayoutTierSnapshot: candidate.cyclePayoutTierSnapshot,
     scheduler: candidate.scheduler,
     history: [],
     redo: [],
@@ -144,7 +144,6 @@ export function createAchievementsResetCandidate({
           playerData.achievements,
         ),
         lifetimeBattleCount: 0,
-        completedCycleCount: 0,
         baselineLevelsByValue: new Map(
           profile.activeDeck.valueIds.map((valueId) => [
             valueId,

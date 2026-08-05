@@ -195,7 +195,7 @@ describe("Player Data Reset", () => {
           currentCycleWins === 0,
       ),
     ).toBe(true)
-    expect(new Set(candidate.profile.cycleLevelSnapshot.values())).toEqual(
+    expect(new Set(candidate.profile.cyclePayoutTierSnapshot.values())).toEqual(
       new Set([1]),
     )
     expect(candidate.achievements.unlocks).toEqual(
@@ -208,7 +208,6 @@ describe("Player Data Reset", () => {
       achievementProgressGeneration:
         playerData.achievements.progress.achievementProgressGeneration,
       lifetimeBattleCount: playerData.achievements.progress.lifetimeBattleCount,
-      completedCycleCount: playerData.achievements.progress.completedCycleCount,
       topFiveAlreadyRevealedAtReset: false,
       countedBattleWindow: { ids: [] },
     })
@@ -239,7 +238,6 @@ describe("Player Data Reset", () => {
       achievementProgressGeneration:
         playerData.achievements.progress.achievementProgressGeneration + 1,
       lifetimeBattleCount: 0,
-      completedCycleCount: 0,
       countedBattleWindow: {
         ids: [...playerData.profile.history, ...playerData.profile.redo].map(
           ({ battleId }) => battleId,

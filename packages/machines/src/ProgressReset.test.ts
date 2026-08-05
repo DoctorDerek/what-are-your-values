@@ -33,7 +33,7 @@ describe("Progress Reset", () => {
     const progressById = new Map(createInitialValueProgress(activeDeck)).set(
       firstValueId,
       {
-        totalXp: 55,
+        totalXp: 56,
         profileWins: 10,
         profileComparisons: 20,
         currentCycleWins: 4,
@@ -65,11 +65,11 @@ describe("Progress Reset", () => {
       ),
     ).toBe(true)
     expect(
-      Array.from(candidate.cycleLevelSnapshot.values()).every(
-        (level) => level === 1,
+      Array.from(candidate.cyclePayoutTierSnapshot.values()).every(
+        (payoutTier) => payoutTier === 1,
       ),
     ).toBe(true)
-    expect(progressById.get(firstValueId)?.totalXp).toBe(55)
+    expect(progressById.get(firstValueId)?.totalXp).toBe(56)
   })
 
   it("rejects corrupt profiles and unsafe generation boundaries", () => {

@@ -51,14 +51,6 @@ function validateAchievementUnlockProgress(achievements: AchievementState) {
         `Achievement unlock exceeds its lifetime battle count: ${id}`,
       )
     }
-    if (
-      condition.kind === "cycleComplete" &&
-      achievements.progress.completedCycleCount < 1
-    ) {
-      throw new Error(
-        `Cycle achievement unlock exceeds its completed-cycle count: ${id}`,
-      )
-    }
   })
 }
 

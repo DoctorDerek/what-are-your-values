@@ -77,7 +77,7 @@ describe("Value Progress construction", () => {
 
   it("defensively clones validated progress records in Active Deck order", () => {
     const activeDeck = createActiveDeck([])
-    const candidate = createPlayedProgress(8, 3, 5, 2)
+    const candidate = createPlayedProgress(12, 3, 5, 2)
     const entries = activeDeck.valueIds
       .map(
         (valueId, index) =>
@@ -101,7 +101,7 @@ describe("Value Progress reconfiguration", () => {
     const priorActiveDeck = createActiveDeck([])
     const revisedActiveDeck = createActiveDeck([ingenuity])
     const curiosityId = priorActiveDeck.valueIds[22]
-    const playedProgress = createPlayedProgress(34, 8, 12, 3)
+    const playedProgress = createPlayedProgress(36, 8, 12, 3)
     const progressById = replaceProgress(
       createInitialValueProgress(priorActiveDeck),
       curiosityId,
@@ -137,8 +137,8 @@ describe("Value Progress reconfiguration", () => {
       }),
       destiny,
     ])
-    const ingenuityProgress = createPlayedProgress(21, 6, 9, 2)
-    const destinyProgress = createPlayedProgress(13, 4, 7, 1)
+    const ingenuityProgress = createPlayedProgress(24, 6, 9, 2)
+    const destinyProgress = createPlayedProgress(16, 4, 7, 1)
     const progressById = replaceProgress(
       replaceProgress(
         createInitialValueProgress(priorActiveDeck),
@@ -190,8 +190,8 @@ describe("Value Progress reconfiguration", () => {
   it("starts the next pair cycle without erasing lifetime evidence", () => {
     const activeDeck = createActiveDeck([])
     const [firstValueId, secondValueId] = activeDeck.valueIds
-    const firstProgress = createPlayedProgress(21, 6, 9, 2)
-    const secondProgress = createPlayedProgress(13, 4, 7, 1)
+    const firstProgress = createPlayedProgress(24, 6, 9, 2)
+    const secondProgress = createPlayedProgress(16, 4, 7, 1)
     const progressById = replaceProgress(
       replaceProgress(
         createInitialValueProgress(activeDeck),
@@ -221,14 +221,14 @@ describe("Value Progress reconfiguration", () => {
 describe("Value Progress validation", () => {
   it("exposes one canonical validator for durable progress boundaries", () => {
     const valueId = createActiveDeck([]).valueIds[0]
-    const candidate = createPlayedProgress(8, 3, 5, 2)
+    const candidate = createPlayedProgress(12, 3, 5, 2)
     const progress = createValueProgress(valueId, candidate)
 
     expect(progress).toEqual(candidate)
     expect(progress).not.toBe(candidate)
     expect(Object.isFrozen(progress)).toBe(true)
     expect(() =>
-      createValueProgress(valueId, createPlayedProgress(3, 3, 2, 0)),
+      createValueProgress(valueId, createPlayedProgress(12, 3, 2, 0)),
     ).toThrow("Profile wins exceed comparisons")
   })
 
@@ -254,9 +254,11 @@ describe("Value Progress validation", () => {
   it.each([
     [createPlayedProgress(-1, 0, 0, 0), "Invalid total XP"],
     [createPlayedProgress(0, 0, -1, 0), "Invalid profile comparisons"],
-    [createPlayedProgress(1, 2, 2, 0), "Total XP is lower"],
-    [createPlayedProgress(3, 3, 2, 0), "Profile wins exceed"],
-    [createPlayedProgress(3, 2, 3, 3), "Current-cycle wins exceed"],
+    [createPlayedProgress(2, 0, 0, 0), "Total XP is not divisible by 4"],
+    [createPlayedProgress(666, 0, 0, 0), "Total XP is not divisible by 4"],
+    [createPlayedProgress(4, 2, 2, 0), "Total XP is lower"],
+    [createPlayedProgress(12, 3, 2, 0), "Profile wins exceed"],
+    [createPlayedProgress(8, 2, 3, 3), "Current-cycle wins exceed"],
   ])("rejects inconsistent counters: %s", (invalidProgress, error) => {
     const activeDeck = createActiveDeck([])
     const entries = Array.from(createInitialValueProgress(activeDeck))

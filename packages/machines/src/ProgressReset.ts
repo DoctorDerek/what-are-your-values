@@ -5,9 +5,9 @@ import {
   type ValueProgressById,
 } from "@game/data/src/ValueProgress"
 import {
-  createCycleLevelSnapshot,
-  type CycleLevelSnapshot,
-} from "./CycleLevelSnapshot"
+  createCyclePayoutTierSnapshot,
+  type CyclePayoutTierSnapshot,
+} from "./CyclePayoutTierSnapshot"
 import {
   createSchedulerRestorePoint,
   type SchedulerRestorePoint,
@@ -16,7 +16,7 @@ import {
 export type ProgressResetCandidate = {
   readonly activeDeck: ActiveDeck
   readonly progressById: ValueProgressById
-  readonly cycleLevelSnapshot: CycleLevelSnapshot
+  readonly cyclePayoutTierSnapshot: CyclePayoutTierSnapshot
   readonly scheduler: SchedulerRestorePoint
   readonly deckRevision: number
   readonly progressGeneration: number
@@ -51,7 +51,7 @@ export function createProgressResetCandidate({
 
   const nextProgressGeneration = progressGeneration + 1
   const resetProgressById = resetValueProgress(activeDeck)
-  const cycleLevelSnapshot = createCycleLevelSnapshot(
+  const cyclePayoutTierSnapshot = createCyclePayoutTierSnapshot(
     activeDeck,
     resetProgressById,
   )
@@ -66,7 +66,7 @@ export function createProgressResetCandidate({
   return Object.freeze({
     activeDeck,
     progressById: resetProgressById,
-    cycleLevelSnapshot,
+    cyclePayoutTierSnapshot,
     scheduler,
     deckRevision,
     progressGeneration: nextProgressGeneration,

@@ -107,7 +107,7 @@ describe("Hub Component Integration", () => {
         name: `Open ${getValueDisplayName(winner)} in All Values`,
       }),
     ).toBeVisible()
-    expect(screen.getByText("Level 2")).toBeVisible()
+    expect(screen.getByText("Level 3")).toBeVisible()
   })
 
   it("routes action and row presses with stable focus target identifiers", () => {

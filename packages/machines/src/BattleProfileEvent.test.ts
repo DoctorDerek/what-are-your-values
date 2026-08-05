@@ -2,6 +2,7 @@ import {
   createCustomValueId,
   type CustomValueDefinition,
 } from "@game/data/src/Value"
+import { XP_QUANTUM } from "@game/utils/src/LevelMath"
 import { describe, expect, it } from "vitest"
 import { encodeBattleDelta } from "./BattleDeltaCodec"
 import {
@@ -141,14 +142,14 @@ describe("Battle Profile Event", () => {
     const event = createBattleChoiceEvent(chooseFirstValue(initial))
     const encodedDelta = encodeBattleDelta(event.delta)
     const tamperedResultingWinnerProgress = [
-      encodedDelta[11][0] + 1,
+      encodedDelta[11][0] + XP_QUANTUM,
       encodedDelta[11][1],
       encodedDelta[11][2],
       encodedDelta[11][3],
     ]
     const tamperedDelta = [
       ...encodedDelta.slice(0, 9),
-      encodedDelta[9] + 1,
+      encodedDelta[9] + XP_QUANTUM,
       encodedDelta[10],
       tamperedResultingWinnerProgress,
       ...encodedDelta.slice(12),

@@ -32,7 +32,6 @@ type EncodedAchievementUnlock = readonly [
 type EncodedAchievementProgress = readonly [
   achievementProgressGeneration: number,
   lifetimeBattleCount: number,
-  completedCycleCount: number,
   baselineLevelsByValue: readonly EncodedValueNumberEntry[],
   topFiveAlreadyRevealedAtReset: boolean,
   countedBattleWindow: readonly string[],
@@ -61,7 +60,6 @@ export function encodeAchievementState(
     [
       state.progress.achievementProgressGeneration,
       state.progress.lifetimeBattleCount,
-      state.progress.completedCycleCount,
       encodeValueNumberEntries(state.progress.baselineLevelsByValue),
       state.progress.topFiveAlreadyRevealedAtReset,
       state.progress.countedBattleWindow.ids,
@@ -116,7 +114,7 @@ export function decodeAchievementState(activeDeck: ActiveDeck, value: unknown) {
     )
   }
 
-  const progressTuple = readTuple(tuple[3], 6, "Achievement Progress")
+  const progressTuple = readTuple(tuple[3], 5, "Achievement Progress")
   const state = createAchievementState({
     activeDeck,
     unlocks: decodeAchievementUnlocks(tuple[1]),
@@ -130,22 +128,18 @@ export function decodeAchievementState(activeDeck: ActiveDeck, value: unknown) {
         progressTuple[1],
         "Achievement lifetime battle count",
       ),
-      completedCycleCount: readNonNegativeSafeInteger(
-        progressTuple[2],
-        "Achievement completed-cycle count",
-      ),
       baselineLevelsByValue: decodeCompleteValueNumberMap(
         activeDeck,
-        progressTuple[3],
+        progressTuple[2],
         "Achievement baseline levels",
         1,
       ),
       topFiveAlreadyRevealedAtReset: readBoolean(
-        progressTuple[4],
+        progressTuple[3],
         "Top Five achievement reset baseline",
       ),
       countedBattleWindow: {
-        ids: decodeCountedBattleWindow(progressTuple[5]),
+        ids: decodeCountedBattleWindow(progressTuple[4]),
         capacity: COUNTED_BATTLE_WINDOW_CAPACITY,
       },
     },

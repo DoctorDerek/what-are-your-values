@@ -11,7 +11,7 @@ import {
 import type { BattleProfile } from "./BattleProfile"
 import { validateBattleProfile } from "./BattleProfile"
 import { getBattleTimelineCapacity } from "./BattleTimeline"
-import { validateCycleLevelSnapshot } from "./CycleLevelSnapshot"
+import { validateCyclePayoutTierSnapshot } from "./CyclePayoutTierSnapshot"
 import { readNonNegativeSafeInteger, readTuple } from "./PersistenceValidation"
 import {
   decodeSchedulerRestorePoint,
@@ -35,7 +35,7 @@ export type EncodedBattleProfile = readonly [
   version: number,
   activeDeck: EncodedActiveDeck,
   progress: readonly EncodedValueProgressEntry[],
-  cycleLevelSnapshot: readonly EncodedValueNumberEntry[],
+  cyclePayoutTierSnapshot: readonly EncodedValueNumberEntry[],
   scheduler: EncodedSchedulerRestorePoint,
   history: readonly EncodedBattleDelta[],
   redo: readonly EncodedBattleDelta[],
@@ -48,7 +48,7 @@ export function encodeBattleProfile(
     BATTLE_PROFILE_CODEC_VERSION,
     encodeActiveDeck(profile.activeDeck),
     encodeValueProgressEntries(profile.progressById),
-    encodeValueNumberEntries(profile.cycleLevelSnapshot),
+    encodeValueNumberEntries(profile.cyclePayoutTierSnapshot),
     encodeSchedulerRestorePoint(profile.scheduler),
     profile.history.map(encodeBattleDelta),
     profile.redo.map(encodeBattleDelta),
@@ -84,12 +84,12 @@ export function decodeBattleProfile(value: unknown) {
   const profile = validateBattleProfile({
     activeDeck,
     progressById: decodeValueProgressById(activeDeck, tuple[2]),
-    cycleLevelSnapshot: validateCycleLevelSnapshot(
+    cyclePayoutTierSnapshot: validateCyclePayoutTierSnapshot(
       activeDeck,
       decodeCompleteValueNumberMap(
         activeDeck,
         tuple[3],
-        "Cycle Level Snapshot",
+        "Cycle Payout Tier Snapshot",
         1,
       ),
     ),

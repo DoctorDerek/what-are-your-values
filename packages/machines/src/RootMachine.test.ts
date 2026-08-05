@@ -731,7 +731,7 @@ describe("Root Machine", () => {
     expect(committedBattleProfile.history).toHaveLength(1)
     expect(committedBattleProfile.redo).toEqual([])
     expect(committedBattleProfile.progressById.get(winnerId)).toMatchObject({
-      totalXp: 1,
+      totalXp: 4,
       profileWins: 1,
       profileComparisons: 1,
     })
@@ -1734,7 +1734,6 @@ describe("Root Machine", () => {
         playerDataBeforeReset.achievements.progress
           .achievementProgressGeneration + 1,
       lifetimeBattleCount: 0,
-      completedCycleCount: 0,
       countedBattleWindow: { ids: reachableBattleIds },
     })
   })
@@ -2168,7 +2167,7 @@ describe("Root Machine", () => {
     expect(
       committedSnapshot.context.playerData?.profile.progressById.get(winnerId)
         ?.totalXp,
-    ).toBe(1)
+    ).toBe(4)
   })
 
   it("exports the exact captured corrupt records as diagnostic evidence before recovery", async () => {

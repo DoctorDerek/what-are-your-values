@@ -1,4 +1,4 @@
-import { MAX_SUPPORTED_TOTAL_XP } from "@game/utils/src/LevelMath"
+import { MAX_SUPPORTED_TOTAL_XP, XP_QUANTUM } from "@game/utils/src/LevelMath"
 import type { ActiveDeck } from "./ActiveDeck"
 import type { ValueId } from "./Value"
 
@@ -33,6 +33,9 @@ export function createValueProgress(valueId: ValueId, progress: ValueProgress) {
   validateCounter(progress.profileComparisons, "profile comparisons", valueId)
   validateCounter(progress.currentCycleWins, "current-cycle wins", valueId)
 
+  if (progress.totalXp % XP_QUANTUM !== 0)
+    throw new Error(`Total XP is not divisible by ${XP_QUANTUM} for ${valueId}`)
+
   if (progress.profileWins > progress.profileComparisons) {
     throw new Error(`Profile wins exceed comparisons for ${valueId}`)
   }
@@ -41,9 +44,8 @@ export function createValueProgress(valueId: ValueId, progress: ValueProgress) {
     throw new Error(`Current-cycle wins exceed profile wins for ${valueId}`)
   }
 
-  if (progress.totalXp < progress.profileWins) {
+  if (progress.profileWins > progress.totalXp / XP_QUANTUM)
     throw new Error(`Total XP is lower than profile wins for ${valueId}`)
-  }
 
   return Object.freeze({ ...progress })
 }

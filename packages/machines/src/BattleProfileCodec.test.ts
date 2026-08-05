@@ -13,7 +13,7 @@ import {
   type BattleProfile,
 } from "./BattleProfile"
 import { decodeBattleProfile, encodeBattleProfile } from "./BattleProfileCodec"
-import { createCycleLevelSnapshot } from "./CycleLevelSnapshot"
+import { createCyclePayoutTierSnapshot } from "./CyclePayoutTierSnapshot"
 import {
   createSchedulerRestorePoint,
   projectScheduledPair,
@@ -52,7 +52,10 @@ function createCustomProfile(): BattleProfile {
   return {
     activeDeck,
     progressById,
-    cycleLevelSnapshot: createCycleLevelSnapshot(activeDeck, progressById),
+    cyclePayoutTierSnapshot: createCyclePayoutTierSnapshot(
+      activeDeck,
+      progressById,
+    ),
     scheduler: createSchedulerRestorePoint({
       activeDeck,
       progressGeneration: 0,
