@@ -13,10 +13,12 @@ describe("Player Data Recovery Actions", () => {
       onTryAgain: vi.fn(),
     }
     const importBackupButtonRef = createRef<HTMLButtonElement>()
+    const deleteAllDataButtonRef = createRef<HTMLButtonElement>()
 
     render(
       <PlayerDataRecoveryActions
         mode="unreadable-data"
+        deleteAllDataButtonRef={deleteAllDataButtonRef}
         hasLastKnownGoodSave
         importBackupButtonRef={importBackupButtonRef}
         isBusy={false}
@@ -38,6 +40,9 @@ describe("Player Data Recovery Actions", () => {
     expect(importBackupButtonRef.current).toBe(
       screen.getByRole("button", { name: "Import Backup" }),
     )
+    expect(deleteAllDataButtonRef.current).toBe(
+      screen.getByRole("button", { name: "Delete All Data" }),
+    )
     for (const handler of Object.values(handlers)) {
       expect(handler).toHaveBeenCalledOnce()
     }
@@ -47,6 +52,7 @@ describe("Player Data Recovery Actions", () => {
     render(
       <PlayerDataRecoveryActions
         mode="unreadable-data"
+        deleteAllDataButtonRef={createRef<HTMLButtonElement>()}
         hasLastKnownGoodSave={false}
         importBackupButtonRef={createRef<HTMLButtonElement>()}
         isBusy={false}

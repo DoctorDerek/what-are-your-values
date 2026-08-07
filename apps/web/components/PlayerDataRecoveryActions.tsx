@@ -11,6 +11,7 @@ type SharedRecoveryActions = {
 
 type UnreadableDataRecoveryActions = SharedRecoveryActions & {
   readonly mode: "unreadable-data"
+  readonly deleteAllDataButtonRef: Ref<HTMLButtonElement>
   readonly hasLastKnownGoodSave: boolean
   readonly importBackupButtonRef: Ref<HTMLButtonElement>
   readonly onDeleteAllData: () => void
@@ -82,6 +83,7 @@ export default function PlayerDataRecoveryActions(
           {actions.tryAgain}
         </Button>
         <Button
+          ref={props.deleteAllDataButtonRef}
           type="button"
           variant="destructive"
           size="lg"
