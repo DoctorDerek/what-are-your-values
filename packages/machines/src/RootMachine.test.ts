@@ -1263,6 +1263,10 @@ describe("Root Machine", () => {
       playerDataPortabilityCopy.exportFailure,
     )
     expect(snapshot.context.portabilityNotice).toBeNull()
+
+    actor.send({ type: "DATA_MANAGEMENT.IMPORT_FILE_READ_REQUESTED" })
+    expect(actor.getSnapshot().context.playerData).toBe(currentPlayerData)
+    expect(actor.getSnapshot().context.portabilityIssue).toBeNull()
   })
 
   it("surfaces export and pre-import backup creation failures without abandoning current data", async () => {

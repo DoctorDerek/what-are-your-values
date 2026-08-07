@@ -121,6 +121,7 @@ type RootMachineEvent =
   | { type: "DATA_MANAGEMENT.CLOSE_REQUESTED" }
   | { type: "DATA_MANAGEMENT.EXPORT_REQUESTED" }
   | { type: "DATA_MANAGEMENT.EXPORT_CONSUMED" }
+  | { type: "DATA_MANAGEMENT.IMPORT_FILE_READ_REQUESTED" }
   | { type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED"; issue: string }
   | {
       type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED"
@@ -593,6 +594,9 @@ export const rootMachine = setup({
             },
             "DATA_MANAGEMENT.EXPORT_CONSUMED": {
               actions: assign({ preparedDownload: null }),
+            },
+            "DATA_MANAGEMENT.IMPORT_FILE_READ_REQUESTED": {
+              actions: "clearPortabilityFeedback",
             },
             "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
               actions: assign({

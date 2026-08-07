@@ -451,6 +451,9 @@ describe("GameClient Integration", () => {
       target: { files: [backupFile] },
     })
     expect(
+      screen.queryByText(playerDataPortabilityCopy.importCancelled),
+    ).not.toBeInTheDocument()
+    expect(
       await screen.findByRole("heading", { name: "Review Import" }),
     ).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Import & Replace" }))

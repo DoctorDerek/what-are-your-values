@@ -128,6 +128,7 @@ export default function GameClient() {
   )
   const handleImportFile = useCallback(
     async (file: File) => {
+      send({ type: "DATA_MANAGEMENT.IMPORT_FILE_READ_REQUESTED" })
       setIsReadingImportFile(true)
       try {
         const serialized = await readPlayerDataFile(file)
