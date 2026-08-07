@@ -317,6 +317,37 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
   })
 
+  it("keeps corrupt data recoverable when the browser cannot read a selected backup", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    const unreadableBackup = new File(
+      ['["wayvm-export"]'],
+      "unreadable-recovery-backup.json",
+      { type: "application/json" },
+    )
+    vi.spyOn(unreadableBackup, "text").mockRejectedValue(
+      new Error("Browser file access failed"),
+    )
+
+    render(<GameClient />)
+
+    await screen.findByRole("heading", {
+      name: "Your Saved Data Needs Attention",
+    })
+    fireEvent.change(
+      screen.getByLabelText("Choose WAYVM JSON backup for recovery"),
+      { target: { files: [unreadableBackup] } },
+    )
+
+    const issue = await screen.findByRole("alert")
+    expect(issue).toHaveTextContent(playerDataPortabilityCopy.importInvalid)
+    expect(issue).toHaveFocus()
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Import Backup" })).toBeEnabled()
+  })
+
   it("exports the in-memory profile and returns safely after first-run persistence fails", async () => {
     durableStoreFailure.writeEnabled = true
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
