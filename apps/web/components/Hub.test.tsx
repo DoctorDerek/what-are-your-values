@@ -22,8 +22,10 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        dataNotice={null}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
+        onOpenDataManagement={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -47,8 +49,10 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        dataNotice={null}
         onBrowseAllValues={vi.fn()}
         onAddCustomValue={vi.fn()}
+        onOpenDataManagement={vi.fn()}
         onOpenValue={vi.fn()}
         onStartBattle={vi.fn()}
       />,
@@ -61,6 +65,9 @@ describe("Hub Component Integration", () => {
     ).toBeVisible()
     expect(
       screen.getByRole("button", { name: "Add Custom Value" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Import & Export" }),
     ).toBeVisible()
     expect(screen.getByRole("button", { name: "Battle" })).toBeVisible()
   })
@@ -92,8 +99,10 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        dataNotice={null}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
+        onOpenDataManagement={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -113,6 +122,7 @@ describe("Hub Component Integration", () => {
   it("routes action and row presses with stable focus target identifiers", () => {
     const onBrowseAllValues = vi.fn()
     const onAddCustomValue = vi.fn()
+    const onOpenDataManagement = vi.fn()
     const onOpenValue = vi.fn()
     const battleCycle = createInitialBattleCycle("action-hub-seed")
 
@@ -122,8 +132,10 @@ describe("Hub Component Integration", () => {
           battleCycle.activeDeck,
           battleCycle.progressById,
         )}
+        dataNotice={null}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
+        onOpenDataManagement={onOpenDataManagement}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -131,6 +143,7 @@ describe("Hub Component Integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Browse All Values" }))
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
+    fireEvent.click(screen.getByRole("button", { name: "Import & Export" }))
     fireEvent.click(
       screen.getByRole("button", { name: "Open Acceptance in All Values" }),
     )
@@ -139,9 +152,36 @@ describe("Hub Component Integration", () => {
       "hub-browse-all-values-button",
     )
     expect(onAddCustomValue).toHaveBeenCalledWith("hub-add-custom-value-button")
+    expect(onOpenDataManagement).toHaveBeenCalledWith(
+      "hub-import-export-button",
+    )
     expect(onOpenValue).toHaveBeenCalledWith(
       "pvcs-2011:acceptance",
       "hub-value-pvcs-2011:acceptance-button",
     )
+  })
+
+  it("announces a restored backup while keeping every value visible", () => {
+    const battleCycle = createInitialBattleCycle("restored-hub-seed")
+
+    render(
+      <Hub
+        rankedValues={rankValues(
+          battleCycle.activeDeck,
+          battleCycle.progressById,
+        )}
+        dataNotice="Backup restored. Your imported progress is ready."
+        onBrowseAllValues={vi.fn()}
+        onAddCustomValue={vi.fn()}
+        onOpenDataManagement={vi.fn()}
+        onOpenValue={vi.fn()}
+        onStartBattle={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText("Backup restored. Your imported progress is ready."),
+    ).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(100)
   })
 })
