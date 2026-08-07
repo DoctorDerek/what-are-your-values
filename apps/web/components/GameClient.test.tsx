@@ -238,6 +238,51 @@ describe("GameClient Integration", () => {
     expect(screen.getByText("Last known-good save restored.")).toBeVisible()
   })
 
+  it("validates and explicitly imports a selected backup over corrupt browser storage", async () => {
+    const serializedBackup = await createSerializedGameClientBackup({
+      schedulerSeed: "selected-browser-recovery",
+      sourceBuild: "selected-browser-build",
+    })
+    const backupFile = new File(
+      [serializedBackup],
+      "selected-wayvm-recovery.json",
+      { type: "application/json" },
+    )
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+
+    render(<GameClient />)
+
+    await screen.findByRole("heading", {
+      name: "Your Saved Data Needs Attention",
+    })
+    fireEvent.change(
+      screen.getByLabelText("Choose WAYVM JSON backup for recovery"),
+      { target: { files: [backupFile] } },
+    )
+    expect(
+      await screen.findByRole("heading", { name: "Review Import" }),
+    ).toBeVisible()
+    expect(screen.getByText("selected-browser-build")).toBeVisible()
+    expect(
+      screen.getByText(
+        "Import this backup? The unreadable current save will be preserved until replacement succeeds.",
+      ),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Import & Replace" }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(
+      screen.getByText("Your backup replaced the unreadable local data."),
+    ).toBeVisible()
+  })
+
   it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000047",
