@@ -40,4 +40,17 @@ describe("Introduction Component Integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Start" }))
     expect(onComplete).toHaveBeenCalledTimes(1)
   })
+
+  it("announces completed local erasure before a fresh start", () => {
+    render(
+      <Splash
+        notice="All local WAYVM player data was deleted."
+        onComplete={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "All local WAYVM player data was deleted.",
+    )
+  })
 })

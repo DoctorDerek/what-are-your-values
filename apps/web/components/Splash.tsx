@@ -3,7 +3,13 @@
 import InformationPanel from "@/components/InformationPanel"
 import { introductionCopy } from "@/content/IntroductionCopy"
 
-export default function Splash({ onComplete }: { onComplete: () => void }) {
+export default function Splash({
+  notice = null,
+  onComplete,
+}: {
+  notice?: string | null
+  onComplete: () => void
+}) {
   return (
     <InformationPanel
       title={introductionCopy.title}
@@ -11,6 +17,14 @@ export default function Splash({ onComplete }: { onComplete: () => void }) {
       onPrimaryAction={onComplete}
     >
       <div className="flex flex-col gap-6 text-black">
+        {notice ? (
+          <p
+            role="status"
+            className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark border-4 border-black p-4 text-xl font-black shadow-[6px_6px_0px_0px_#000000]"
+          >
+            {notice}
+          </p>
+        ) : null}
         <p className="text-2xl leading-relaxed font-bold">
           {introductionCopy.tagline}
         </p>

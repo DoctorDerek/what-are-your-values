@@ -1853,6 +1853,17 @@ describe("Root Machine", () => {
     actor.send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
     actor.send({
       type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId: "stale-complete-erasure-review",
+      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    })
+    expect(
+      actor.getSnapshot().matches({ DataManagement: "ReviewingReset" }),
+    ).toBe(true)
+    expect((await durableStore.readAll()).size).toBeGreaterThan(0)
+
+    actor.send({
+      type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
       phrase: "I understand this cannot be undone.",
     })
     expect(
@@ -1862,6 +1873,7 @@ describe("Root Machine", () => {
 
     actor.send({
       type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
       phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
     })
     const erasedSnapshot = await waitFor(actor, (candidate) =>
@@ -1879,7 +1891,10 @@ describe("Root Machine", () => {
     ).toHaveLength(100)
 
     actor.send({ type: "INTRODUCTION.COMPLETED" })
-    await waitFor(actor, (candidate) => candidate.matches("Hub"))
+    const freshProfileSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("Hub"),
+    )
+    expect(freshProfileSnapshot.context.portabilityNotice).toBeNull()
     expect((await durableStore.readAll()).size).toBe(2)
   })
 
@@ -2076,6 +2091,39 @@ describe("Root Machine", () => {
     expect(failureSnapshot.context.preparedDownload).toBeNull()
   })
 
+  it("retains reset review when the platform cannot deliver a prepared backup", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-reset-delivery-failure-seed",
+    })
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({ type: "RESET.ACHIEVEMENTS_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    await waitFor(
+      actor,
+      (candidate) => candidate.context.preparedDownload !== null,
+    )
+
+    actor.send({
+      type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+      issue: "Browser backup delivery failed",
+    })
+    const failureSnapshot = actor.getSnapshot()
+
+    expect(failureSnapshot.matches({ DataManagement: "ReviewingReset" })).toBe(
+      true,
+    )
+    expect(failureSnapshot.context.pendingResetReview).toMatchObject({
+      resetKind: "reset-achievements",
+      confirmationId,
+    })
+    expect(failureSnapshot.context.preparedDownload).toBeNull()
+    expect(failureSnapshot.context.portabilityIssue).toBe(
+      "Browser backup delivery failed",
+    )
+    expect(failureSnapshot.context.portabilityNotice).toBeNull()
+  })
+
   it("retains reset review after the scoped reset actor fails", async () => {
     const failingScopedResetActor = fromPromise(async () => {
       throw new Error("Scoped reset actor failed")
@@ -2128,6 +2176,7 @@ describe("Root Machine", () => {
 
     actor.send({
       type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
       phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
     })
     const failureSnapshot = await waitFor(

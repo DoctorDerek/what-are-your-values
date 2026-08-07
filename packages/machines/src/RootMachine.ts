@@ -48,19 +48,19 @@ import {
 import {
   DELETE_ALL_DATA_ACKNOWLEDGMENT,
   type PlayerDataResetKind,
+  type PlayerDataResetReview,
   type ScopedPlayerDataResetKind,
 } from "./PlayerDataReset"
 import {
   applyScopedPlayerDataResetActor,
   deleteAllPlayerDataActor,
 } from "./PlayerDataResetActors"
+import {
+  playerDataResetBackupReadyNotice,
+  playerDataResetCopy,
+} from "./PlayerDataResetCopy"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
-
-type PendingResetReview = {
-  readonly resetKind: PlayerDataResetKind
-  readonly confirmationId: string
-}
 
 type PendingRecoveryImportSource = "last-known-good" | "selected-backup"
 
@@ -79,7 +79,7 @@ type RootMachineContext = {
   pendingImport: PreparedWayvmImport | null
   preImportBackupBytes: string | null
   preparedDownload: PreparedWayvmDownload | null
-  pendingResetReview: PendingResetReview | null
+  pendingResetReview: PlayerDataResetReview | null
   recoveryEntries: ReadonlyMap<string, string> | null
   pendingRecoveryImportSource: PendingRecoveryImportSource | null
   persistenceFailureOrigin: PersistenceFailureOrigin | null
@@ -142,7 +142,11 @@ type RootMachineEvent =
   | { type: "RESET.ACHIEVEMENTS_REQUESTED" }
   | { type: "RESET.ACHIEVEMENTS_CONFIRMED"; confirmationId: string }
   | { type: "DELETE_ALL_DATA.REQUESTED" }
-  | { type: "DELETE_ALL_DATA.CONFIRMED"; phrase: string }
+  | {
+      type: "DELETE_ALL_DATA.CONFIRMED"
+      confirmationId: string
+      phrase: string
+    }
   | { type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" }
   | { type: "RECOVERY.EXPORT_REQUESTED" }
   | { type: "RECOVERY.EXPORT_CONSUMED" }
@@ -250,30 +254,19 @@ function requirePendingScopedResetKind(
   return resetKind
 }
 
-function isMatchingScopedResetConfirmation({
+function isMatchingResetConfirmation({
   context,
   confirmationId,
   resetKind,
 }: {
   readonly context: RootMachineContext
   readonly confirmationId: string
-  readonly resetKind: ScopedPlayerDataResetKind
+  readonly resetKind: PlayerDataResetKind
 }) {
   return (
     context.pendingResetReview?.resetKind === resetKind &&
     context.pendingResetReview.confirmationId === confirmationId
   )
-}
-
-function getResetSuccessNotice(resetKind: ScopedPlayerDataResetKind) {
-  if (resetKind === "delete-all-custom-values") {
-    return "All Custom Values were deleted. Canonical value progress, achievements, and settings were kept."
-  }
-  if (resetKind === "reset-levels-and-experience") {
-    return "Levels and experience were reset. Custom Values, achievements, and settings were kept."
-  }
-
-  return "Achievements and achievement progress were reset. Your values, ranking, and settings were kept."
 }
 
 function createFreshPlayerDataAfterDeletion(context: RootMachineContext) {
@@ -333,6 +326,14 @@ export const rootMachine = setup({
       portabilityIssue: null,
       portabilityNotice: null,
     }),
+    reportDataManagementPlatformFailure: assign({
+      preparedDownload: null,
+      portabilityIssue: ({ event }) =>
+        event.type === "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED"
+          ? event.issue
+          : null,
+      portabilityNotice: null,
+    }),
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -360,28 +361,32 @@ export const rootMachine = setup({
       requireBattleProfile(context).redo.length > 0,
     canConfirmDeleteAllCustomValues: ({ context, event }) =>
       event.type === "CUSTOM_VALUE.DELETE_ALL_CONFIRMED" &&
-      isMatchingScopedResetConfirmation({
+      isMatchingResetConfirmation({
         context,
         confirmationId: event.confirmationId,
         resetKind: "delete-all-custom-values",
       }),
     canConfirmLevelsAndExperienceReset: ({ context, event }) =>
       event.type === "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED" &&
-      isMatchingScopedResetConfirmation({
+      isMatchingResetConfirmation({
         context,
         confirmationId: event.confirmationId,
         resetKind: "reset-levels-and-experience",
       }),
     canConfirmAchievementsReset: ({ context, event }) =>
       event.type === "RESET.ACHIEVEMENTS_CONFIRMED" &&
-      isMatchingScopedResetConfirmation({
+      isMatchingResetConfirmation({
         context,
         confirmationId: event.confirmationId,
         resetKind: "reset-achievements",
       }),
     canConfirmDeleteAllData: ({ context, event }) =>
       event.type === "DELETE_ALL_DATA.CONFIRMED" &&
-      context.pendingResetReview?.resetKind === "delete-all-data" &&
+      isMatchingResetConfirmation({
+        context,
+        confirmationId: event.confirmationId,
+        resetKind: "delete-all-data",
+      }) &&
       event.phrase === DELETE_ALL_DATA_ACKNOWLEDGMENT,
     hasRecoveryEntries: ({ context }) => context.recoveryEntries !== null,
     hasStoredRecoveryBackup: ({ context }) =>
@@ -509,7 +514,10 @@ export const rootMachine = setup({
     },
     Splash: {
       on: {
-        "INTRODUCTION.COMPLETED": { target: "InitializingProfile" },
+        "INTRODUCTION.COMPLETED": {
+          target: "InitializingProfile",
+          actions: "clearPortabilityFeedback",
+        },
       },
     },
     InitializingProfile: {
@@ -599,11 +607,7 @@ export const rootMachine = setup({
               actions: "clearPortabilityFeedback",
             },
             "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
-              actions: assign({
-                preparedDownload: null,
-                portabilityIssue: ({ event }) => event.issue,
-                portabilityNotice: null,
-              }),
+              actions: "reportDataManagementPlatformFailure",
             },
             "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED": {
               target: "PreparingImport",
@@ -772,6 +776,9 @@ export const rootMachine = setup({
             "DATA_MANAGEMENT.EXPORT_CONSUMED": {
               actions: assign({ preparedDownload: null }),
             },
+            "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
+              actions: "reportDataManagementPlatformFailure",
+            },
             "CUSTOM_VALUE.DELETE_ALL_CONFIRMED": {
               guard: "canConfirmDeleteAllCustomValues",
               target: "ApplyingScopedReset",
@@ -820,8 +827,7 @@ export const rootMachine = setup({
               actions: assign({
                 preparedDownload: ({ event }) => event.output,
                 portabilityIssue: null,
-                portabilityNotice:
-                  "Your private backup is ready. Review the reset when you are ready.",
+                portabilityNotice: playerDataResetBackupReadyNotice,
               }),
             },
             onError: {
@@ -849,7 +855,8 @@ export const rootMachine = setup({
                 playerData: ({ event }) => event.output.head.playerData,
                 battleProfileStoreState: ({ event }) => event.output,
                 portabilityNotice: ({ context }) =>
-                  getResetSuccessNotice(requirePendingScopedResetKind(context)),
+                  playerDataResetCopy[requirePendingScopedResetKind(context)]
+                    .successAnnouncement,
                 pendingResetReview: null,
                 preparedDownload: null,
                 portabilityIssue: null,
@@ -884,7 +891,8 @@ export const rootMachine = setup({
                 preparedDownload: null,
                 persistenceIssue: null,
                 portabilityIssue: null,
-                portabilityNotice: "All local WAYVM player data was deleted.",
+                portabilityNotice:
+                  playerDataResetCopy["delete-all-data"].successAnnouncement,
               }),
             },
             onError: {

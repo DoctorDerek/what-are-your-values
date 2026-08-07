@@ -1,43 +1,63 @@
 "use client"
 
+import type {
+  PlayerDataResetKind,
+  PlayerDataResetReview as PlayerDataResetReviewState,
+} from "@game/machines/src/PlayerDataReset"
 import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { WAYVM_IMPORT_FILE_ACCEPT } from "@/lib/PlayerDataFiles"
 import PlayerDataImportPreview from "./PlayerDataImportPreview"
+import PlayerDataResetActions from "./PlayerDataResetActions"
+import PlayerDataResetReview from "./PlayerDataResetReview"
 
 export type DataManagementActivity =
   | "Creating backup…"
   | "Checking backup…"
   | "Creating safety backup…"
   | "Restoring backup…"
+  | "Applying reset…"
+  | "Deleting data…"
 
 export default function DataManagement({
   activity,
+  customValueCount,
   issue,
   notice,
   preview,
+  resetReview,
   onCancelImport,
+  onCancelReset,
   onClose,
   onConfirmImport,
+  onConfirmReset,
   onExport,
   onImportFile,
+  onRequestReset,
 }: {
   activity: DataManagementActivity | null
+  customValueCount: number
   issue: string | null
   notice: string | null
   preview: WayvmImportPreview | null
+  resetReview: PlayerDataResetReviewState | null
   onCancelImport: () => void
+  onCancelReset: () => void
   onClose: () => void
   onConfirmImport: () => void
+  onConfirmReset: (review: PlayerDataResetReviewState) => void
   onExport: () => void
   onImportFile: (file: File) => void
+  onRequestReset: (resetKind: PlayerDataResetKind) => void
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const issueRef = useRef<HTMLParagraphElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const chooseBackupButtonRef = useRef<HTMLButtonElement>(null)
   const shouldRestoreChooseBackupFocusRef = useRef(false)
+  const resetActionFocusTargetIdRef = useRef<string | null>(null)
+  const previousResetReviewRef = useRef(resetReview)
   const isBusy = activity !== null
 
   useEffect(() => {
@@ -55,9 +75,29 @@ export default function DataManagement({
     chooseBackupButtonRef.current?.focus()
   }, [preview])
 
+  useEffect(() => {
+    if (
+      previousResetReviewRef.current &&
+      !resetReview &&
+      resetActionFocusTargetIdRef.current
+    ) {
+      document.getElementById(resetActionFocusTargetIdRef.current)?.focus()
+    }
+
+    previousResetReviewRef.current = resetReview
+  }, [resetReview])
+
   const handleCancelImport = () => {
     shouldRestoreChooseBackupFocusRef.current = true
     onCancelImport()
+  }
+
+  const handleRequestReset = (
+    resetKind: PlayerDataResetKind,
+    focusTargetId: string,
+  ) => {
+    resetActionFocusTargetIdRef.current = focusTargetId
+    onRequestReset(resetKind)
   }
 
   return (
@@ -117,7 +157,16 @@ export default function DataManagement({
           </p>
         ) : null}
 
-        {preview ? (
+        {resetReview ? (
+          <PlayerDataResetReview
+            key={resetReview.confirmationId}
+            isBusy={isBusy}
+            review={resetReview}
+            onCancel={onCancelReset}
+            onConfirm={onConfirmReset}
+            onExport={onExport}
+          />
+        ) : preview ? (
           <PlayerDataImportPreview
             isBusy={isBusy}
             preview={preview}
@@ -125,73 +174,80 @@ export default function DataManagement({
             onConfirm={onConfirmImport}
           />
         ) : (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <section
-              aria-labelledby="export-data-heading"
-              className="flex flex-col border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-8"
-            >
-              <h2
-                id="export-data-heading"
-                className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase sm:text-4xl"
+          <>
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <section
+                aria-labelledby="export-data-heading"
+                className="flex flex-col border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-8"
               >
-                Export Data
-              </h2>
-              <p className="text-mapache-vivid-dark flex-1 py-5 text-lg font-bold sm:text-xl">
-                Save a versioned JSON backup of your progress, Custom Values,
-                achievements, language, settings, and other portable WAYVM data.
-                Exporting does not upload your data to us.
-              </p>
-              <Button
-                type="button"
-                size="lg"
-                disabled={isBusy}
-                onClick={onExport}
-                className="w-full"
-              >
-                Export Data
-              </Button>
-            </section>
+                <h2
+                  id="export-data-heading"
+                  className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase sm:text-4xl"
+                >
+                  Export Data
+                </h2>
+                <p className="text-mapache-vivid-dark flex-1 py-5 text-lg font-bold sm:text-xl">
+                  Save a versioned JSON backup of your progress, Custom Values,
+                  achievements, language, settings, and other portable WAYVM
+                  data. Exporting does not upload your data to us.
+                </p>
+                <Button
+                  type="button"
+                  size="lg"
+                  disabled={isBusy}
+                  onClick={onExport}
+                  className="w-full"
+                >
+                  Export Data
+                </Button>
+              </section>
 
-            <section
-              aria-labelledby="import-data-heading"
-              className="flex flex-col border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-8"
-            >
-              <h2
-                id="import-data-heading"
-                className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase sm:text-4xl"
+              <section
+                aria-labelledby="import-data-heading"
+                className="flex flex-col border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-8"
               >
-                Import Data
-              </h2>
-              <p className="text-mapache-vivid-dark flex-1 py-5 text-lg font-bold sm:text-xl">
-                Choose a WAYVM JSON backup. The app will validate it and show
-                you a preview before replacing data on this device.
-              </p>
-              <input
-                ref={importInputRef}
-                type="file"
-                accept={WAYVM_IMPORT_FILE_ACCEPT}
-                disabled={isBusy}
-                aria-label="Choose WAYVM JSON backup"
-                className="sr-only"
-                onChange={(event) => {
-                  const file = event.currentTarget.files?.[0]
-                  event.currentTarget.value = ""
-                  if (file) onImportFile(file)
-                }}
-              />
-              <Button
-                ref={chooseBackupButtonRef}
-                type="button"
-                variant="secondary"
-                size="lg"
-                disabled={isBusy}
-                onClick={() => importInputRef.current?.click()}
-                className="w-full"
-              >
-                Choose Backup
-              </Button>
-            </section>
-          </div>
+                <h2
+                  id="import-data-heading"
+                  className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase sm:text-4xl"
+                >
+                  Import Data
+                </h2>
+                <p className="text-mapache-vivid-dark flex-1 py-5 text-lg font-bold sm:text-xl">
+                  Choose a WAYVM JSON backup. The app will validate it and show
+                  you a preview before replacing data on this device.
+                </p>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept={WAYVM_IMPORT_FILE_ACCEPT}
+                  disabled={isBusy}
+                  aria-label="Choose WAYVM JSON backup"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0]
+                    event.currentTarget.value = ""
+                    if (file) onImportFile(file)
+                  }}
+                />
+                <Button
+                  ref={chooseBackupButtonRef}
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  disabled={isBusy}
+                  onClick={() => importInputRef.current?.click()}
+                  className="w-full"
+                >
+                  Choose Backup
+                </Button>
+              </section>
+            </div>
+            <PlayerDataResetActions
+              customValueCount={customValueCount}
+              isBusy={isBusy}
+              onRequestReset={handleRequestReset}
+            />
+          </>
         )}
       </div>
     </main>

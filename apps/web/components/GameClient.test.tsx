@@ -6,6 +6,8 @@ import {
   createPlayerData,
 } from "@game/machines/src/PlayerData"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
+import { DELETE_ALL_DATA_ACKNOWLEDGMENT } from "@game/machines/src/PlayerDataReset"
+import { playerDataResetCopy } from "@game/machines/src/PlayerDataResetCopy"
 import {
   createWayvmExport,
   serializeWayvmExport,
@@ -545,5 +547,266 @@ describe("GameClient Integration", () => {
     expect(issue).toHaveTextContent(playerDataPortabilityCopy.importInvalid)
     expect(issue).toHaveFocus()
     expect(screen.getByRole("button", { name: "Choose Backup" })).toBeEnabled()
+  })
+
+  it("deletes every Custom Value through one exact review without touching canonical values", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000060",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Add Custom Value" }),
+    )
+    fireEvent.change(await screen.findByLabelText("Value Name"), {
+      target: { value: "Ingenuity" },
+    })
+    fireEvent.change(screen.getByLabelText("What This Value Means to Me"), {
+      target: { value: "To make original solutions." },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
+    expect(await screen.findByText("101 Active Values")).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete All Custom Values" }),
+    )
+    expect(
+      await screen.findByRole("heading", {
+        name: "Delete All Custom Values?",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(/The active deck returns to the 100 canonical values/),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Delete All Custom Values" }),
+      ).toHaveFocus(),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete All Custom Values" }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Delete All Custom Values",
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["delete-all-custom-values"].successAnnouncement,
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Delete All Custom Values" }),
+    ).toBeDisabled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+    expect(await screen.findAllByRole("listitem")).toHaveLength(100)
+    expect(
+      screen.queryByRole("button", {
+        name: "Open Ingenuity in All Values",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("resets played levels and ranking through the durable scoped flow", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000061",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) throw new Error("The reset test winner is unavailable")
+    fireEvent.click(winnerCard)
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
+    )
+    fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
+    expect(await screen.findByText("Level 3")).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Import & Export" }))
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset Levels & Experience" }),
+    )
+    expect(
+      await screen.findByText(/Your current value ranking restarts/),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset Levels & Experience" }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-levels-and-experience"].successAnnouncement,
+      ),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+    expect(
+      await screen.findByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
+    ).toBeVisible()
+    expect(screen.queryByRole("heading", { name: "Top Five" })).toBeNull()
+    expect(screen.getAllByText("Level 1")).toHaveLength(100)
+  })
+
+  it("exports a private backup without dismissing the reviewed reset", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000062",
+    )
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:reset-backup")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined)
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
+
+    expect(
+      await screen.findByText(
+        "Your private backup is ready. Review the reset when you are ready.",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Reset Achievements" }),
+    ).toBeEnabled()
+    expect(click).toHaveBeenCalledOnce()
+  })
+
+  it("keeps the reviewed reset available after browser backup delivery fails", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000065",
+    )
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      throw new Error("Browser download failed")
+    })
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      playerDataPortabilityCopy.exportFailure,
+    )
+    expect(
+      screen.getByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Reset Achievements" }),
+    ).toBeEnabled()
+  })
+
+  it("preserves the reviewed reset and current data after a failed write then retries", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000063",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+
+    durableStoreFailure.writeEnabled = true
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+
+    const issue = await screen.findByRole("alert")
+    expect(issue).toHaveTextContent("IndexedDB write failed")
+    expect(issue).toHaveFocus()
+    expect(
+      screen.getByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Reset Achievements" }),
+    ).toBeEnabled()
+
+    durableStoreFailure.writeEnabled = false
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-achievements"].successAnnouncement,
+      ),
+    ).toBeVisible()
+  })
+
+  it("requires acknowledgment then deletes all local data and returns to Introduction", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000064",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete All Data" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Delete All Data?" }),
+    ).toBeVisible()
+    const confirmation = screen.getByRole("button", {
+      name: "Delete All Data",
+    })
+    expect(confirmation).toBeDisabled()
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      }),
+    )
+    expect(confirmation).toBeEnabled()
+    fireEvent.click(confirmation)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      playerDataResetCopy["delete-all-data"].successAnnouncement,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+    expect(
+      await screen.findByRole("heading", { name: "Your Values" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        playerDataResetCopy["delete-all-data"].successAnnouncement,
+      ),
+    ).not.toBeInTheDocument()
   })
 })

@@ -7,6 +7,11 @@ import {
   type BattleSchedulerRestorePoint,
 } from "@game/machines/src/BattleScheduler"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
+import {
+  DELETE_ALL_DATA_ACKNOWLEDGMENT,
+  type PlayerDataResetKind,
+  type PlayerDataResetReview,
+} from "@game/machines/src/PlayerDataReset"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
@@ -147,6 +152,46 @@ export default function GameClient() {
     },
     [send],
   )
+  const handleResetRequested = useCallback(
+    (resetKind: PlayerDataResetKind) => {
+      if (resetKind === "delete-all-custom-values")
+        return send({ type: "CUSTOM_VALUE.DELETE_ALL_REQUESTED" })
+      if (resetKind === "reset-levels-and-experience")
+        return send({ type: "RESET.LEVELS_AND_EXPERIENCE_REQUESTED" })
+      if (resetKind === "reset-achievements")
+        return send({ type: "RESET.ACHIEVEMENTS_REQUESTED" })
+
+      return send({ type: "DELETE_ALL_DATA.REQUESTED" })
+    },
+    [send],
+  )
+  const handleResetConfirmed = useCallback(
+    (review: PlayerDataResetReview) => {
+      const { confirmationId, resetKind } = review
+      if (resetKind === "delete-all-custom-values")
+        return send({
+          type: "CUSTOM_VALUE.DELETE_ALL_CONFIRMED",
+          confirmationId,
+        })
+      if (resetKind === "reset-levels-and-experience")
+        return send({
+          type: "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED",
+          confirmationId,
+        })
+      if (resetKind === "reset-achievements")
+        return send({
+          type: "RESET.ACHIEVEMENTS_CONFIRMED",
+          confirmationId,
+        })
+
+      return send({
+        type: "DELETE_ALL_DATA.CONFIRMED",
+        confirmationId,
+        phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      })
+    },
+    [send],
+  )
 
   useEffect(() => {
     send({
@@ -192,7 +237,13 @@ export default function GameClient() {
           ? "Creating safety backup…"
           : state.matches({ DataManagement: "ReplacingImport" })
             ? "Restoring backup…"
-            : null
+            : state.matches({ DataManagement: "ExportingResetBackup" })
+              ? "Creating backup…"
+              : state.matches({ DataManagement: "ApplyingScopedReset" })
+                ? "Applying reset…"
+                : state.matches({ DataManagement: "DeletingAllData" })
+                  ? "Deleting data…"
+                  : null
 
   if (
     state.matches("Hydrating") ||
@@ -221,7 +272,10 @@ export default function GameClient() {
 
   if (state.matches("Splash")) {
     return (
-      <Splash onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })} />
+      <Splash
+        notice={state.context.portabilityNotice}
+        onComplete={() => send({ type: "INTRODUCTION.COMPLETED" })}
+      />
     )
   }
 
@@ -252,18 +306,25 @@ export default function GameClient() {
     return (
       <DataManagement
         activity={dataManagementActivity}
+        customValueCount={battleProfile.activeDeck.customValues.length}
         issue={state.context.portabilityIssue}
         notice={state.context.portabilityNotice}
         preview={state.context.pendingImport?.preview ?? null}
+        resetReview={state.context.pendingResetReview}
         onCancelImport={() =>
           send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+        }
+        onCancelReset={() =>
+          send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
         }
         onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
         onConfirmImport={() =>
           send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
         }
+        onConfirmReset={handleResetConfirmed}
         onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
         onImportFile={(file) => void handleImportFile(file)}
+        onRequestReset={handleResetRequested}
       />
     )
   }
