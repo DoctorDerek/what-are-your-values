@@ -23,13 +23,20 @@ function PreviewFact({
 }
 
 export default function PlayerDataImportPreview({
+  confirmLabel = "Import & Replace",
   isBusy,
   preview,
+  title = "Review Import",
+  warning =
+    "Importing this backup will replace the current WAYVM data on this device. A local safety backup will be created first.",
   onCancel,
   onConfirm,
 }: {
+  confirmLabel?: string
   isBusy: boolean
   preview: WayvmImportPreview
+  title?: string
+  warning?: string
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -55,7 +62,7 @@ export default function PlayerDataImportPreview({
         tabIndex={-1}
         className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase outline-none sm:text-4xl"
       >
-        Review Import
+        {title}
       </h2>
 
       <dl className="text-mapache-vivid-dark my-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -105,8 +112,7 @@ export default function PlayerDataImportPreview({
       </dl>
 
       <p className="bg-mapache-vivid-primary-yellow text-mapache-vivid-dark border-4 border-black p-4 text-lg font-black">
-        Importing this backup will replace the current WAYVM data on this
-        device. A local safety backup will be created first.
+        {warning}
       </p>
 
       <div className="mt-6 flex flex-col gap-4 sm:flex-row">
@@ -127,7 +133,7 @@ export default function PlayerDataImportPreview({
           onClick={onConfirm}
           className="flex-1"
         >
-          Import &amp; Replace
+          {confirmLabel}
         </Button>
       </div>
     </section>
