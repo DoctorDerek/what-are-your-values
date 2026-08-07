@@ -14,6 +14,8 @@ describe("Player Data Recovery Actions", () => {
     }
     const importBackupButtonRef = createRef<HTMLButtonElement>()
     const deleteAllDataButtonRef = createRef<HTMLButtonElement>()
+    const restoreLastKnownGoodSaveButtonRef =
+      createRef<HTMLButtonElement>()
 
     render(
       <PlayerDataRecoveryActions
@@ -21,6 +23,9 @@ describe("Player Data Recovery Actions", () => {
         deleteAllDataButtonRef={deleteAllDataButtonRef}
         hasLastKnownGoodSave
         importBackupButtonRef={importBackupButtonRef}
+        restoreLastKnownGoodSaveButtonRef={
+          restoreLastKnownGoodSaveButtonRef
+        }
         isBusy={false}
         {...handlers}
       />,
@@ -43,6 +48,9 @@ describe("Player Data Recovery Actions", () => {
     expect(deleteAllDataButtonRef.current).toBe(
       screen.getByRole("button", { name: "Delete All Data" }),
     )
+    expect(restoreLastKnownGoodSaveButtonRef.current).toBe(
+      screen.getByRole("button", { name: "Restore Last Known-Good Save" }),
+    )
     for (const handler of Object.values(handlers)) {
       expect(handler).toHaveBeenCalledOnce()
     }
@@ -55,6 +63,7 @@ describe("Player Data Recovery Actions", () => {
         deleteAllDataButtonRef={createRef<HTMLButtonElement>()}
         hasLastKnownGoodSave={false}
         importBackupButtonRef={createRef<HTMLButtonElement>()}
+        restoreLastKnownGoodSaveButtonRef={createRef<HTMLButtonElement>()}
         isBusy={false}
         onDeleteAllData={vi.fn()}
         onExportUnreadableData={vi.fn()}

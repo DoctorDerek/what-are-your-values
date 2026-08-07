@@ -14,6 +14,7 @@ type UnreadableDataRecoveryActions = SharedRecoveryActions & {
   readonly deleteAllDataButtonRef: Ref<HTMLButtonElement>
   readonly hasLastKnownGoodSave: boolean
   readonly importBackupButtonRef: Ref<HTMLButtonElement>
+  readonly restoreLastKnownGoodSaveButtonRef: Ref<HTMLButtonElement>
   readonly onDeleteAllData: () => void
   readonly onExportUnreadableData: () => void
   readonly onImportBackup: () => void
@@ -42,6 +43,7 @@ export default function PlayerDataRecoveryActions(
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {props.hasLastKnownGoodSave ? (
           <Button
+            ref={props.restoreLastKnownGoodSaveButtonRef}
             type="button"
             size="lg"
             disabled={props.isBusy}
