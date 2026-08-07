@@ -117,6 +117,14 @@ describe("GameClient Integration", () => {
     expect(
       screen.queryByRole("button", { name: "Delete All Data" }),
     ).not.toBeInTheDocument()
+
+    durableStoreFailure.readEnabled = false
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
+      }),
+    ).toBeVisible()
   })
 
   it("downloads captured unreadable records without claiming they were erased", async () => {
