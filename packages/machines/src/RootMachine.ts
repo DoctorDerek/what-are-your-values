@@ -505,7 +505,6 @@ export const rootMachine = setup({
         onError: {
           target: "PersistenceFailure",
           actions: assign({
-            recoveryEntries: null,
             pendingRecoveryImportSource: null,
             persistenceFailureOrigin: "loading",
             persistenceIssue: ({ event }) => getErrorMessage(event.error),
@@ -1200,6 +1199,16 @@ export const rootMachine = setup({
               }),
             },
             "STORAGE_RECOVERY.RETRY_REQUESTED": [
+              {
+                guard: "hasRecoveryEntries",
+                target: "#root.LoadingProfile",
+                actions: assign({
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
               {
                 guard: "isLoadingStorageFailure",
                 target: "#root.LoadingProfile",
