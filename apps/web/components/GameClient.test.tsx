@@ -343,6 +343,47 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
   })
 
+  it("returns to the unchanged Hub when a battle result cannot become durable", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000113",
+    )
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) throw new Error("The recovery test winner is unavailable")
+
+    durableStoreFailure.writeEnabled = true
+    fireEvent.click(winnerCard)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "IndexedDB write failed",
+    )
+    expect(
+      screen.getByRole("button", { name: "Export Current Data" }),
+    ).toBeEnabled()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("heading", { name: "Top Five" }),
+    ).not.toBeInTheDocument()
+  })
+
   it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000047",
