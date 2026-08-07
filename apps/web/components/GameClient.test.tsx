@@ -1,3 +1,4 @@
+import * as AchievementPresentation from "@game/machines/src/AchievementPresentation"
 import { createInitialAchievementState } from "@game/machines/src/AchievementState"
 import {
   BATTLE_PROFILE_MANIFEST_KEY,
@@ -24,6 +25,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react"
+import { Component, type ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
@@ -65,6 +67,25 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
     },
   }
 })
+
+class InvariantErrorBoundary extends Component<
+  Readonly<{ children: ReactNode }>,
+  Readonly<{ message: string | null }>
+> {
+  state: Readonly<{ message: string | null }> = { message: null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { message: error.message }
+  }
+
+  render() {
+    return this.state.message ? (
+      <p>{this.state.message}</p>
+    ) : (
+      this.props.children
+    )
+  }
+}
 
 async function createSerializedGameClientBackup({
   schedulerSeed,
@@ -698,6 +719,121 @@ describe("GameClient Integration", () => {
     expect(
       within(firstBattle).queryByText("1 of 1 comparisons"),
     ).not.toBeInTheDocument()
+  })
+
+  it("announces the first durable milestone without blocking the next comparison and persists explicit dismissal", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000055",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) throw new Error("Banner test winner is unavailable")
+    fireEvent.click(winnerCard)
+
+    expect(
+      await screen.findByRole("heading", { name: "First Battle" }),
+    ).toBeVisible()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Achievement unlocked: First Battle.",
+    )
+    const battleSurface = screen.getByRole("main", { name: "Value battle" })
+    expect(battleSurface).toHaveClass("pb-[min(50dvh,17rem)]")
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
+    )
+    expect(battleSurface).toHaveAttribute("aria-busy", "false")
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss achievement" }))
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "Achievement unlocked" }),
+      ).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole("main", { name: "Value battle" })).not.toHaveClass(
+      "pb-[min(50dvh,17rem)]",
+    )
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled()
+  })
+
+  it("fails loudly when a pending milestone loses its canonical presentation", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000057",
+    )
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    render(
+      <InvariantErrorBoundary>
+        <GameClient />
+      </InvariantErrorBoundary>,
+    )
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard)
+      throw new Error("Invariant banner test winner is unavailable")
+
+    vi.spyOn(
+      AchievementPresentation,
+      "projectAchievementCatalog",
+    ).mockReturnValue(Object.freeze([]))
+    fireEvent.click(winnerCard)
+
+    expect(
+      await screen.findByText(
+        "Pending achievement presentation is unavailable",
+      ),
+    ).toBeVisible()
+  })
+
+  it("preserves the unlocked milestone and complete recovery choices when banner acknowledgement cannot persist", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000056",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard)
+      throw new Error("Banner recovery test winner is unavailable")
+    fireEvent.click(winnerCard)
+    await screen.findByRole("heading", { name: "First Battle" })
+
+    durableStoreFailure.writeEnabled = true
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss achievement" }))
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "IndexedDB write failed",
+    )
+    expect(
+      screen.getByRole("button", { name: "Export Current Data" }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    ).toBeEnabled()
+    expect(screen.getByRole("button", { name: "Try Again" })).toBeEnabled()
+
+    durableStoreFailure.writeEnabled = false
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
+
+    expect(
+      await screen.findByRole("main", { name: "Value battle" }),
+    ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("complementary", { name: "Achievement unlocked" }),
+      ).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled()
   })
 
   it("opens a specific Hub value in All Values and restores focus on return", async () => {

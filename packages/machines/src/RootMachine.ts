@@ -1,6 +1,9 @@
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { assign, setup } from "xstate"
+import type { AchievementId } from "./AchievementCatalog"
+import { recordAchievementPresentationActor } from "./AchievementPresentationActors"
+import { getPendingAchievementUnlocks } from "./AchievementState"
 import {
   createBattleChoiceCommit,
   createBattleRedoCommit,
@@ -65,7 +68,10 @@ import type { PreparedWayvmImport } from "./WayvmImportPreview"
 
 type PendingRecoveryImportSource = "last-known-good" | "selected-backup"
 
-type PersistenceFailureOrigin = "loading" | "initialization" | "crucible"
+type AchievementPresentationReturnTarget = "hub" | "achievements" | "crucible"
+
+type PersistenceFailureOrigin =
+  "loading" | "initialization" | "crucible" | "achievement-presentation"
 
 type RootMachineContext = {
   readonly durableStore: DurableStoreAdapter
@@ -76,6 +82,8 @@ type RootMachineContext = {
   playerData: PlayerData | null
   battleProfileStoreState: BattleProfileStoreState | null
   pendingBattleProfileCommit: BattleProfileCommit | null
+  pendingAchievementPresentationId: AchievementId | null
+  achievementPresentationReturnTarget: AchievementPresentationReturnTarget | null
   pendingImportBytes: string | null
   pendingImport: PreparedWayvmImport | null
   preImportBackupBytes: string | null
@@ -98,6 +106,7 @@ type RootMachineEvent =
   | { type: "BATTLE.START_REQUESTED" }
   | { type: "ACHIEVEMENTS.OPEN_REQUESTED" }
   | { type: "ACHIEVEMENTS.CLOSE_REQUESTED" }
+  | { type: "ACHIEVEMENT.PRESENTED"; achievementId: AchievementId }
   | { type: "ALL_VALUES.OPEN_REQUESTED" }
   | { type: "ALL_VALUES.CLOSE_REQUESTED" }
   | {
@@ -180,6 +189,13 @@ type RootMachineInput = {
   readonly randomUuid: () => string
 }
 
+const CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT = Object.freeze({
+  pendingAchievementPresentationId: null,
+  achievementPresentationReturnTarget: null,
+  persistenceFailureOrigin: null,
+  persistenceIssue: null,
+} as const)
+
 function requirePlayerData(context: RootMachineContext) {
   if (!context.playerData) {
     throw new Error("Player data is not initialized")
@@ -206,6 +222,14 @@ function requirePendingBattleProfileCommit(context: RootMachineContext) {
   }
 
   return context.pendingBattleProfileCommit
+}
+
+function requirePendingAchievementPresentationId(context: RootMachineContext) {
+  if (!context.pendingAchievementPresentationId) {
+    throw new Error("Achievement presentation is not prepared")
+  }
+
+  return context.pendingAchievementPresentationId
 }
 
 function requirePendingImportBytes(context: RootMachineContext) {
@@ -321,6 +345,7 @@ export const rootMachine = setup({
     hydrateBattleProfile: hydrateBattleProfileActor,
     initializeBattleProfile: initializeBattleProfileActor,
     commitBattleProfileEvent: commitBattleProfileEventActor,
+    recordAchievementPresentation: recordAchievementPresentationActor,
     createWayvmExport: createWayvmExportActor,
     prepareWayvmImport: prepareWayvmImportActor,
     replacePlayerData: replacePlayerDataActor,
@@ -429,6 +454,29 @@ export const rootMachine = setup({
       context.persistenceFailureOrigin === "initialization",
     isCrucibleStorageFailure: ({ context }) =>
       context.persistenceFailureOrigin === "crucible",
+    isAchievementPresentationStorageFailure: ({ context }) =>
+      context.persistenceFailureOrigin === "achievement-presentation",
+    canRecordAchievementPresentation: ({ context, event }) =>
+      event.type === "ACHIEVEMENT.PRESENTED" &&
+      context.battleProfileStoreState !== null &&
+      context.playerData !== null &&
+      getPendingAchievementUnlocks(context.playerData.achievements)[0]?.id ===
+        event.achievementId,
+    hasPendingAchievementPresentation: ({ context }) =>
+      context.pendingAchievementPresentationId !== null,
+    shouldReturnAchievementPresentationToAchievements: ({ context }) =>
+      context.achievementPresentationReturnTarget === "achievements",
+    shouldReturnAchievementPresentationToCrucible: ({ context }) =>
+      context.achievementPresentationReturnTarget === "crucible",
+    shouldReturnFailedAchievementPresentationToAchievements: ({ context }) =>
+      context.persistenceFailureOrigin === "achievement-presentation" &&
+      context.achievementPresentationReturnTarget === "achievements",
+    shouldReturnFailedAchievementPresentationToCrucible: ({ context }) =>
+      context.persistenceFailureOrigin === "achievement-presentation" &&
+      context.achievementPresentationReturnTarget === "crucible",
+    shouldReturnFailedAchievementPresentationToHub: ({ context }) =>
+      context.persistenceFailureOrigin === "achievement-presentation" &&
+      context.achievementPresentationReturnTarget === "hub",
   },
 }).createMachine({
   id: "root",
@@ -437,6 +485,8 @@ export const rootMachine = setup({
     playerData: null,
     battleProfileStoreState: null,
     pendingBattleProfileCommit: null,
+    pendingAchievementPresentationId: null,
+    achievementPresentationReturnTarget: null,
     pendingImportBytes: null,
     pendingImport: null,
     preImportBackupBytes: null,
@@ -592,6 +642,15 @@ export const rootMachine = setup({
           target: "Achievements",
           actions: "clearPortabilityFeedback",
         },
+        "ACHIEVEMENT.PRESENTED": {
+          guard: "canRecordAchievementPresentation",
+          target: "RecordingAchievementPresentation",
+          actions: assign({
+            pendingAchievementPresentationId: ({ event }) =>
+              event.achievementId,
+            achievementPresentationReturnTarget: "hub",
+          }),
+        },
         "ALL_VALUES.OPEN_REQUESTED": {
           target: "AllValues",
           actions: "clearPortabilityFeedback",
@@ -605,6 +664,15 @@ export const rootMachine = setup({
     Achievements: {
       on: {
         "ACHIEVEMENTS.CLOSE_REQUESTED": { target: "Hub" },
+        "ACHIEVEMENT.PRESENTED": {
+          guard: "canRecordAchievementPresentation",
+          target: "RecordingAchievementPresentation",
+          actions: assign({
+            pendingAchievementPresentationId: ({ event }) =>
+              event.achievementId,
+            achievementPresentationReturnTarget: "achievements",
+          }),
+        },
       },
     },
     DataManagement: {
@@ -1088,6 +1156,15 @@ export const rootMachine = setup({
         Ready: {
           on: {
             "BATTLE.EXIT_REQUESTED": { target: "#root.Hub" },
+            "ACHIEVEMENT.PRESENTED": {
+              guard: "canRecordAchievementPresentation",
+              target: "#root.RecordingAchievementPresentation",
+              actions: assign({
+                pendingAchievementPresentationId: ({ event }) =>
+                  event.achievementId,
+                achievementPresentationReturnTarget: "crucible",
+              }),
+            },
             "BATTLE.WINNER_SELECTED": {
               guard: "isCurrentBattleSelection",
               target: "Persisting",
@@ -1135,6 +1212,16 @@ export const rootMachine = setup({
           },
         },
         Persisting: {
+          on: {
+            "ACHIEVEMENT.PRESENTED": {
+              guard: "canRecordAchievementPresentation",
+              actions: assign({
+                pendingAchievementPresentationId: ({ event }) =>
+                  event.achievementId,
+                achievementPresentationReturnTarget: "crucible",
+              }),
+            },
+          },
           invoke: {
             src: "commitBattleProfileEvent",
             input: ({ context }) => ({
@@ -1143,14 +1230,25 @@ export const rootMachine = setup({
               event: requirePendingBattleProfileCommit(context).event,
               committedAt: context.now(),
             }),
-            onDone: {
-              target: "Ready",
-              actions: assign({
-                playerData: ({ event }) => event.output.head.playerData,
-                battleProfileStoreState: ({ event }) => event.output,
-                pendingBattleProfileCommit: null,
-              }),
-            },
+            onDone: [
+              {
+                guard: "hasPendingAchievementPresentation",
+                target: "#root.RecordingAchievementPresentation",
+                actions: assign({
+                  playerData: ({ event }) => event.output.head.playerData,
+                  battleProfileStoreState: ({ event }) => event.output,
+                  pendingBattleProfileCommit: null,
+                }),
+              },
+              {
+                target: "Ready",
+                actions: assign({
+                  playerData: ({ event }) => event.output.head.playerData,
+                  battleProfileStoreState: ({ event }) => event.output,
+                  pendingBattleProfileCommit: null,
+                }),
+              },
+            ],
             onError: {
               target: "#root.PersistenceFailure",
               actions: assign({
@@ -1162,6 +1260,54 @@ export const rootMachine = setup({
               }),
             },
           },
+        },
+      },
+    },
+    RecordingAchievementPresentation: {
+      invoke: {
+        src: "recordAchievementPresentation",
+        input: ({ context }) => ({
+          store: context.durableStore,
+          state: requireBattleProfileStoreState(context),
+          achievementId: requirePendingAchievementPresentationId(context),
+          presentedAt: context.now(),
+        }),
+        onDone: [
+          {
+            guard: "shouldReturnAchievementPresentationToAchievements",
+            target: "Achievements",
+            actions: assign({
+              playerData: ({ event }) => event.output.head.playerData,
+              battleProfileStoreState: ({ event }) => event.output,
+              ...CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT,
+            }),
+          },
+          {
+            guard: "shouldReturnAchievementPresentationToCrucible",
+            target: "Crucible.Ready",
+            actions: assign({
+              playerData: ({ event }) => event.output.head.playerData,
+              battleProfileStoreState: ({ event }) => event.output,
+              ...CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT,
+            }),
+          },
+          {
+            target: "Hub",
+            actions: assign({
+              playerData: ({ event }) => event.output.head.playerData,
+              battleProfileStoreState: ({ event }) => event.output,
+              ...CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT,
+            }),
+          },
+        ],
+        onError: {
+          target: "PersistenceFailure",
+          actions: assign({
+            recoveryEntries: null,
+            pendingRecoveryImportSource: null,
+            persistenceFailureOrigin: "achievement-presentation",
+            persistenceIssue: ({ event }) => getErrorMessage(event.error),
+          }),
         },
       },
     },
@@ -1268,6 +1414,16 @@ export const rootMachine = setup({
                   portabilityNotice: null,
                 }),
               },
+              {
+                guard: "isAchievementPresentationStorageFailure",
+                target: "#root.RecordingAchievementPresentation",
+                actions: assign({
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
             ],
             "STORAGE_RECOVERY.RETURN_REQUESTED": [
               {
@@ -1287,6 +1443,34 @@ export const rootMachine = setup({
                 actions: assign({
                   persistenceFailureOrigin: null,
                   persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+              {
+                guard:
+                  "shouldReturnFailedAchievementPresentationToAchievements",
+                target: "#root.Achievements",
+                actions: assign({
+                  ...CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+              {
+                guard: "shouldReturnFailedAchievementPresentationToCrucible",
+                target: "#root.Crucible.Ready",
+                actions: assign({
+                  ...CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
+              {
+                guard: "shouldReturnFailedAchievementPresentationToHub",
+                target: "#root.Hub",
+                actions: assign({
+                  ...CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT,
                   portabilityIssue: null,
                   portabilityNotice: null,
                 }),

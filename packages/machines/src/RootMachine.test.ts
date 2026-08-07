@@ -1,6 +1,8 @@
 import { createCustomValueId } from "@game/data/src/Value"
 import { describe, expect, it, vi } from "vitest"
 import { createActor, fromPromise, waitFor } from "xstate"
+import { ACHIEVEMENT_CATALOG } from "./AchievementCatalog"
+import { getPendingAchievementUnlocks } from "./AchievementState"
 import {
   createRecoveryBundleActor,
   deleteUnrecoverablePlayerDataActor,
@@ -187,6 +189,44 @@ async function commitOneBattle(
   return committedProfile
 }
 
+function createToggleableWriteFailureStore() {
+  const memoryStore = createInMemoryDurableStore()
+  let writeIssue: string | null = null
+
+  return {
+    durableStore: Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (writeIssue) throw new Error(writeIssue)
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter,
+    setWriteIssue: (issue: string | null) => {
+      writeIssue = issue
+    },
+  }
+}
+
+async function bootRootActorWithPendingAchievement({
+  durableStore,
+  schedulerSeed,
+}: {
+  readonly durableStore: DurableStoreAdapter
+  readonly schedulerSeed: string
+}) {
+  const root = await bootRootActor({ durableStore, schedulerSeed })
+  await commitOneBattle(root.actor)
+  const playerData = root.actor.getSnapshot().context.playerData
+  if (!playerData)
+    throw new Error("Pending achievement Player Data is unavailable")
+
+  const [pendingUnlock] = getPendingAchievementUnlocks(playerData.achievements)
+  if (!pendingUnlock) throw new Error("Pending achievement is unavailable")
+
+  return { ...root, pendingUnlock }
+}
+
 function expectActorEventError(
   actor: ReturnType<typeof createRootActor>["actor"],
   event: Parameters<ReturnType<typeof createRootActor>["actor"]["send"]>[0],
@@ -291,6 +331,364 @@ describe("Root Machine", () => {
     )
     await expect(durableStore.readAll()).resolves.toEqual(durableEntries)
   })
+
+  it("records only the first pending milestone and returns to the Hub without changing battle progress", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "achievement-hub-presentation-seed",
+    })
+    const committedProfile = await commitOneBattle(actor)
+    const unlockedSnapshot = actor.getSnapshot()
+    const unlockedPlayerData = unlockedSnapshot.context.playerData
+    const unlockedStoreState = unlockedSnapshot.context.battleProfileStoreState
+    if (!unlockedPlayerData || !unlockedStoreState)
+      throw new Error("Achievement presentation state is unavailable")
+
+    const [pendingUnlock] = getPendingAchievementUnlocks(
+      unlockedPlayerData.achievements,
+    )
+    if (!pendingUnlock)
+      throw new Error("First Battle achievement did not unlock")
+
+    actor.send({ type: "BATTLE.EXIT_REQUESTED" })
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: ACHIEVEMENT_CATALOG[1].id,
+    })
+
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+    expect(
+      actor.getSnapshot().context.pendingAchievementPresentationId,
+    ).toBeNull()
+
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: pendingUnlock.id,
+    })
+    const presentedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches("Hub") &&
+        candidate.context.playerData?.achievements.presentedAchievementIds.includes(
+          pendingUnlock.id,
+        ) === true,
+    )
+
+    expect(presentedSnapshot.context.playerData?.profile).toEqual(
+      committedProfile,
+    )
+    expect(
+      presentedSnapshot.context.battleProfileStoreState?.head.generation,
+    ).toBe(unlockedStoreState.head.generation + 1)
+    expect(
+      presentedSnapshot.context.pendingAchievementPresentationId,
+    ).toBeNull()
+    expect(
+      presentedSnapshot.context.achievementPresentationReturnTarget,
+    ).toBeNull()
+  })
+
+  it("refuses to skip an unlocked milestone and exposes the next queued presentation only after durable acknowledgement", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "achievement-fifo-presentation-seed",
+    })
+    for (let battleIndex = 0; battleIndex < 5; battleIndex += 1)
+      await commitOneBattle(actor)
+
+    const playerData = actor.getSnapshot().context.playerData
+    if (!playerData)
+      throw new Error("Achievement FIFO Player Data is unavailable")
+
+    const [firstPendingUnlock, secondPendingUnlock] =
+      getPendingAchievementUnlocks(playerData.achievements)
+    if (!firstPendingUnlock || !secondPendingUnlock)
+      throw new Error("Achievement FIFO requires multiple pending unlocks")
+
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: secondPendingUnlock.id,
+    })
+
+    expect(actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(true)
+    expect(
+      actor.getSnapshot().context.pendingAchievementPresentationId,
+    ).toBeNull()
+    expect(
+      actor.getSnapshot().context.playerData?.achievements
+        .presentedAchievementIds,
+    ).toEqual([])
+
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: firstPendingUnlock.id,
+    })
+    const acknowledgedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Crucible: "Ready" }) &&
+        candidate.context.playerData?.achievements
+          .presentedAchievementIds[0] === firstPendingUnlock.id,
+    )
+    const acknowledgedPlayerData = acknowledgedSnapshot.context.playerData
+    if (!acknowledgedPlayerData)
+      throw new Error("Achievement FIFO acknowledgement lost Player Data")
+
+    expect(
+      getPendingAchievementUnlocks(acknowledgedPlayerData.achievements)[0]?.id,
+    ).toBe(secondPendingUnlock.id)
+  })
+
+  it("returns a durable milestone presentation to the unchanged Crucible pair", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "achievement-crucible-presentation-seed",
+    })
+    await commitOneBattle(actor)
+    const unlockedPlayerData = actor.getSnapshot().context.playerData
+    if (!unlockedPlayerData)
+      throw new Error("Crucible achievement state is unavailable")
+
+    const [pendingUnlock] = getPendingAchievementUnlocks(
+      unlockedPlayerData.achievements,
+    )
+    if (!pendingUnlock)
+      throw new Error("Crucible pending achievement is unavailable")
+
+    const presentedPair = projectBattlePair(
+      unlockedPlayerData.profile.activeDeck,
+      unlockedPlayerData.profile.scheduler,
+    )
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: pendingUnlock.id,
+    })
+    const presentedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Crucible: "Ready" }) &&
+        candidate.context.playerData?.achievements.presentedAchievementIds.includes(
+          pendingUnlock.id,
+        ) === true,
+    )
+    const presentedProfile = presentedSnapshot.context.playerData?.profile
+    if (!presentedProfile)
+      throw new Error("Presented Crucible profile is unavailable")
+
+    expect(
+      projectBattlePair(
+        presentedProfile.activeDeck,
+        presentedProfile.scheduler,
+      ),
+    ).toEqual(presentedPair)
+    expect(
+      presentedSnapshot.context.achievementPresentationReturnTarget,
+    ).toBeNull()
+  })
+
+  it("returns a durable milestone presentation to the open Achievements catalog", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "achievement-catalog-presentation-seed",
+    })
+    await commitOneBattle(actor)
+    actor.send({ type: "BATTLE.EXIT_REQUESTED" })
+    actor.send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+    const playerData = actor.getSnapshot().context.playerData
+    if (!playerData)
+      throw new Error("Achievement catalog Player Data is unavailable")
+
+    const [pendingUnlock] = getPendingAchievementUnlocks(
+      playerData.achievements,
+    )
+    if (!pendingUnlock)
+      throw new Error("Achievement catalog pending unlock is unavailable")
+
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: pendingUnlock.id,
+    })
+    const presentedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches("Achievements") &&
+        candidate.context.playerData?.achievements.presentedAchievementIds.includes(
+          pendingUnlock.id,
+        ) === true,
+    )
+
+    expect(
+      presentedSnapshot.context.achievementPresentationReturnTarget,
+    ).toBeNull()
+  })
+
+  it("serializes milestone acknowledgement behind an in-flight battle write", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let pauseNextWrite = false
+    let releasePendingWrite: (() => void) | null = null
+    let reportPendingWriteStarted: (() => void) | null = null
+    const pendingWriteStarted = new Promise<void>((resolve) => {
+      reportPendingWriteStarted = resolve
+    })
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (pauseNextWrite) {
+          pauseNextWrite = false
+          reportPendingWriteStarted?.()
+          await new Promise<void>((resolve) => {
+            releasePendingWrite = resolve
+          })
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "serialized-achievement-presentation-seed",
+    })
+    await commitOneBattle(actor)
+    const firstCommittedPlayerData = actor.getSnapshot().context.playerData
+    if (!firstCommittedPlayerData)
+      throw new Error("Serialized presentation Player Data is unavailable")
+
+    const [firstPendingUnlock] = getPendingAchievementUnlocks(
+      firstCommittedPlayerData.achievements,
+    )
+    if (!firstPendingUnlock)
+      throw new Error("Serialized presentation unlock is unavailable")
+
+    const secondProfile = firstCommittedPlayerData.profile
+    const [secondWinnerId] = projectBattlePair(
+      secondProfile.activeDeck,
+      secondProfile.scheduler,
+    )
+    pauseNextWrite = true
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId: secondWinnerId,
+      expectedScheduler: secondProfile.scheduler,
+    })
+    await pendingWriteStarted
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: firstPendingUnlock.id,
+    })
+    releasePendingWrite?.()
+
+    const serializedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Crucible: "Ready" }) &&
+        candidate.context.playerData?.profile.history.length === 2 &&
+        candidate.context.playerData.achievements.presentedAchievementIds.includes(
+          firstPendingUnlock.id,
+        ),
+    )
+
+    expect(serializedSnapshot.context.persistenceIssue).toBeNull()
+    expect(serializedSnapshot.context.pendingBattleProfileCommit).toBeNull()
+    expect(
+      serializedSnapshot.context.pendingAchievementPresentationId,
+    ).toBeNull()
+  })
+
+  it("retries rejected milestone acknowledgement without losing its pending unlock or Crucible return", async () => {
+    const failureStore = createToggleableWriteFailureStore()
+    const { actor, pendingUnlock } = await bootRootActorWithPendingAchievement({
+      durableStore: failureStore.durableStore,
+      schedulerSeed: "achievement-presentation-retry-seed",
+    })
+
+    failureStore.setWriteIssue("Achievement presentation write failed")
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: pendingUnlock.id,
+    })
+    const failedSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "Reviewing" }),
+    )
+
+    expect(failedSnapshot.context.persistenceFailureOrigin).toBe(
+      "achievement-presentation",
+    )
+    expect(failedSnapshot.context.pendingAchievementPresentationId).toBe(
+      pendingUnlock.id,
+    )
+    expect(failedSnapshot.context.achievementPresentationReturnTarget).toBe(
+      "crucible",
+    )
+    const failedPlayerData = failedSnapshot.context.playerData
+    if (!failedPlayerData)
+      throw new Error("Failed presentation lost Player Data")
+    expect(
+      getPendingAchievementUnlocks(failedPlayerData.achievements).map(
+        ({ id }) => id,
+      ),
+    ).toContain(pendingUnlock.id)
+
+    failureStore.setWriteIssue(null)
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const retriedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Crucible: "Ready" }) &&
+        candidate.context.playerData?.achievements.presentedAchievementIds.includes(
+          pendingUnlock.id,
+        ) === true,
+    )
+
+    expect(retriedSnapshot.context.persistenceIssue).toBeNull()
+    expect(retriedSnapshot.context.pendingAchievementPresentationId).toBeNull()
+  })
+
+  it.each(["hub", "achievements", "crucible"] as const)(
+    "returns safely to the %s surface after rejected milestone acknowledgement without falsely presenting it",
+    async (returnTarget) => {
+      const failureStore = createToggleableWriteFailureStore()
+      const { actor, pendingUnlock } =
+        await bootRootActorWithPendingAchievement({
+          durableStore: failureStore.durableStore,
+          schedulerSeed: `achievement-presentation-${returnTarget}-return-seed`,
+        })
+      if (returnTarget !== "crucible")
+        actor.send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (returnTarget === "achievements")
+        actor.send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+
+      failureStore.setWriteIssue("Achievement presentation return failed")
+      actor.send({
+        type: "ACHIEVEMENT.PRESENTED",
+        achievementId: pendingUnlock.id,
+      })
+      await waitFor(actor, (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }),
+      )
+      actor.send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
+
+      const returnedSnapshot = actor.getSnapshot()
+      expect(
+        returnTarget === "crucible"
+          ? returnedSnapshot.matches({ Crucible: "Ready" })
+          : returnedSnapshot.matches(
+              returnTarget === "hub" ? "Hub" : "Achievements",
+            ),
+      ).toBe(true)
+      expect(
+        returnedSnapshot.context.playerData?.achievements.presentedAchievementIds.includes(
+          pendingUnlock.id,
+        ),
+      ).toBe(false)
+      expect(
+        returnedSnapshot.context.pendingAchievementPresentationId,
+      ).toBeNull()
+      const returnedPlayerData = returnedSnapshot.context.playerData
+      if (!returnedPlayerData)
+        throw new Error("Presentation return lost Player Data")
+      expect(
+        getPendingAchievementUnlocks(returnedPlayerData.achievements).map(
+          ({ id }) => id,
+        ),
+      ).toContain(pendingUnlock.id)
+    },
+  )
 
   it("adds a custom value through the All Values durable update flow", async () => {
     const randomUuid = vi.fn(() => "00000000-0000-4000-8000-000000000001")
