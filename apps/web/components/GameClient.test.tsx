@@ -170,6 +170,32 @@ describe("GameClient Integration", () => {
     expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
   })
 
+  it("keeps unreadable data recoverable when browser diagnostic delivery fails", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      throw new Error("Browser download failed")
+    })
+
+    render(<GameClient />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Export Unreadable Data",
+      }),
+    )
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      playerDataPortabilityCopy.exportFailure,
+    )
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Export Unreadable Data" }),
+    ).toBeEnabled()
+  })
+
   it("deletes captured unreadable records only after exact complete-erasure acknowledgment", async () => {
     durableStoreFailure.initialEntries = [
       [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
