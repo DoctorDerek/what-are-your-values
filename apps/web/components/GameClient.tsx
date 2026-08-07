@@ -498,6 +498,7 @@ export default function GameClient() {
         progressById={battleProfile.progressById}
         canUndo={battleProfile.history.length > 0}
         canRedo={battleProfile.redo.length > 0}
+        hasAchievementBanner={false}
         isPersistencePending={!isBattleReady}
         onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
         onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
