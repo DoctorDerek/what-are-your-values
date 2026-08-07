@@ -30,8 +30,10 @@ describe("Player Data Files", () => {
 
     const backupBlob = createObjectURL.mock.calls[0]?.[0]
     expect(backupBlob).toBeInstanceOf(Blob)
-    await expect(backupBlob?.text()).resolves.toBe('["wayvm-export"]')
-    expect(backupBlob?.type).toBe("application/json;charset=utf-8")
+    if (!(backupBlob instanceof Blob))
+      throw new Error("Prepared browser download is not a Blob")
+    await expect(backupBlob.text()).resolves.toBe('["wayvm-export"]')
+    expect(backupBlob.type).toBe("application/json;charset=utf-8")
     expect(click).toHaveBeenCalledOnce()
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:wayvm-backup")
     expect(document.querySelector('a[download="wayvm-backup.json"]')).toBeNull()
