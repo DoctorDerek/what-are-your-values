@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react"
-import { createRef } from "react"
 import { describe, expect, it, vi } from "vitest"
-import PlayerDataRecoveryActions from "./PlayerDataRecoveryActions"
+import PlayerDataRecoveryActions, {
+  playerDataRecoveryActionIds,
+} from "./PlayerDataRecoveryActions"
 
 describe("Player Data Recovery Actions", () => {
   it("offers every safe unreadable-save path when a known-good save exists", () => {
@@ -12,17 +13,10 @@ describe("Player Data Recovery Actions", () => {
       onRestoreLastKnownGoodSave: vi.fn(),
       onTryAgain: vi.fn(),
     }
-    const importBackupButtonRef = createRef<HTMLButtonElement>()
-    const deleteAllDataButtonRef = createRef<HTMLButtonElement>()
-    const restoreLastKnownGoodSaveButtonRef = createRef<HTMLButtonElement>()
-
     render(
       <PlayerDataRecoveryActions
         mode="unreadable-data"
-        deleteAllDataButtonRef={deleteAllDataButtonRef}
         hasLastKnownGoodSave
-        importBackupButtonRef={importBackupButtonRef}
-        restoreLastKnownGoodSaveButtonRef={restoreLastKnownGoodSaveButtonRef}
         isBusy={false}
         {...handlers}
       />,
@@ -39,14 +33,17 @@ describe("Player Data Recovery Actions", () => {
       expect(action).toBeEnabled()
       fireEvent.click(action)
     }
-    expect(importBackupButtonRef.current).toBe(
+    expect(
       screen.getByRole("button", { name: "Import Backup" }),
-    )
-    expect(deleteAllDataButtonRef.current).toBe(
+    ).toHaveAttribute("id", playerDataRecoveryActionIds.importBackup)
+    expect(
       screen.getByRole("button", { name: "Delete All Data" }),
-    )
-    expect(restoreLastKnownGoodSaveButtonRef.current).toBe(
+    ).toHaveAttribute("id", playerDataRecoveryActionIds.deleteAllData)
+    expect(
       screen.getByRole("button", { name: "Restore Last Known-Good Save" }),
+    ).toHaveAttribute(
+      "id",
+      playerDataRecoveryActionIds.restoreLastKnownGoodSave,
     )
     for (const handler of Object.values(handlers)) {
       expect(handler).toHaveBeenCalledOnce()
@@ -57,10 +54,7 @@ describe("Player Data Recovery Actions", () => {
     render(
       <PlayerDataRecoveryActions
         mode="unreadable-data"
-        deleteAllDataButtonRef={createRef<HTMLButtonElement>()}
         hasLastKnownGoodSave={false}
-        importBackupButtonRef={createRef<HTMLButtonElement>()}
-        restoreLastKnownGoodSaveButtonRef={createRef<HTMLButtonElement>()}
         isBusy={false}
         onDeleteAllData={vi.fn()}
         onExportUnreadableData={vi.fn()}

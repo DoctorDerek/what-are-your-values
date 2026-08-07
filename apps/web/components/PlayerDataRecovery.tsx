@@ -6,7 +6,9 @@ import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
 import { useEffect, useRef } from "react"
 import { WAYVM_IMPORT_FILE_ACCEPT } from "@/lib/PlayerDataFiles"
 import PlayerDataImportPreview from "./PlayerDataImportPreview"
-import PlayerDataRecoveryActions from "./PlayerDataRecoveryActions"
+import PlayerDataRecoveryActions, {
+  playerDataRecoveryActionIds,
+} from "./PlayerDataRecoveryActions"
 import PlayerDataResetReview from "./PlayerDataResetReview"
 
 export type PlayerDataRecoveryActivity =
@@ -54,12 +56,7 @@ export default function PlayerDataRecovery(props: PlayerDataRecoveryProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const issueRef = useRef<HTMLParagraphElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
-  const importBackupButtonRef = useRef<HTMLButtonElement>(null)
-  const restoreLastKnownGoodSaveButtonRef = useRef<HTMLButtonElement>(null)
-  const deleteAllDataButtonRef = useRef<HTMLButtonElement>(null)
-  const previewFocusTargetRef = useRef<
-    "import-backup" | "restore-last-known-good-save" | null
-  >(null)
+  const previewFocusTargetIdRef = useRef<string | null>(null)
   const shouldRestorePreviewFocusRef = useRef(false)
   const shouldRestoreDeleteFocusRef = useRef(false)
   const currentPreview = props.mode === "unreadable-data" ? props.preview : null
@@ -88,11 +85,8 @@ export default function PlayerDataRecovery(props: PlayerDataRecoveryProps) {
       shouldRestorePreviewFocusRef.current
     ) {
       shouldRestorePreviewFocusRef.current = false
-      const focusTarget =
-        previewFocusTargetRef.current === "restore-last-known-good-save"
-          ? restoreLastKnownGoodSaveButtonRef.current
-          : importBackupButtonRef.current
-      focusTarget?.focus()
+      if (previewFocusTargetIdRef.current)
+        document.getElementById(previewFocusTargetIdRef.current)?.focus()
     }
 
     previousPreviewRef.current = currentPreview
@@ -105,7 +99,9 @@ export default function PlayerDataRecovery(props: PlayerDataRecoveryProps) {
       shouldRestoreDeleteFocusRef.current
     ) {
       shouldRestoreDeleteFocusRef.current = false
-      deleteAllDataButtonRef.current?.focus()
+      document
+        .getElementById(playerDataRecoveryActionIds.deleteAllData)
+        ?.focus()
     }
 
     previousResetReviewRef.current = currentResetReview
@@ -225,24 +221,21 @@ export default function PlayerDataRecovery(props: PlayerDataRecoveryProps) {
             ) : (
               <PlayerDataRecoveryActions
                 mode="unreadable-data"
-                deleteAllDataButtonRef={deleteAllDataButtonRef}
                 hasLastKnownGoodSave={props.hasLastKnownGoodSave}
-                importBackupButtonRef={importBackupButtonRef}
                 isBusy={isBusy}
-                restoreLastKnownGoodSaveButtonRef={
-                  restoreLastKnownGoodSaveButtonRef
-                }
                 onDeleteAllData={() => {
                   shouldRestoreDeleteFocusRef.current = false
                   props.onDeleteAllData()
                 }}
                 onExportUnreadableData={props.onExportUnreadableData}
                 onImportBackup={() => {
-                  previewFocusTargetRef.current = "import-backup"
+                  previewFocusTargetIdRef.current =
+                    playerDataRecoveryActionIds.importBackup
                   importInputRef.current?.click()
                 }}
                 onRestoreLastKnownGoodSave={() => {
-                  previewFocusTargetRef.current = "restore-last-known-good-save"
+                  previewFocusTargetIdRef.current =
+                    playerDataRecoveryActionIds.restoreLastKnownGoodSave
                   props.onRestoreLastKnownGoodSave()
                 }}
                 onTryAgain={props.onTryAgain}

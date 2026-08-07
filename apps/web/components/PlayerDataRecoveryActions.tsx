@@ -1,8 +1,14 @@
 "use client"
 
 import { playerDataRecoveryCopy } from "@game/machines/src/PlayerDataRecoveryCopy"
-import type { Ref } from "react"
 import { Button } from "@/components/ui/button"
+
+export const playerDataRecoveryActionIds = Object.freeze({
+  restoreLastKnownGoodSave:
+    "player-data-recovery-restore-last-known-good-save-button",
+  importBackup: "player-data-recovery-import-backup-button",
+  deleteAllData: "player-data-recovery-delete-all-data-button",
+} as const)
 
 type SharedRecoveryActions = {
   readonly isBusy: boolean
@@ -11,10 +17,7 @@ type SharedRecoveryActions = {
 
 type UnreadableDataRecoveryActions = SharedRecoveryActions & {
   readonly mode: "unreadable-data"
-  readonly deleteAllDataButtonRef: Ref<HTMLButtonElement>
   readonly hasLastKnownGoodSave: boolean
-  readonly importBackupButtonRef: Ref<HTMLButtonElement>
-  readonly restoreLastKnownGoodSaveButtonRef: Ref<HTMLButtonElement>
   readonly onDeleteAllData: () => void
   readonly onExportUnreadableData: () => void
   readonly onImportBackup: () => void
@@ -42,7 +45,7 @@ export default function PlayerDataRecoveryActions(
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {props.hasLastKnownGoodSave ? (
           <Button
-            ref={props.restoreLastKnownGoodSaveButtonRef}
+            id={playerDataRecoveryActionIds.restoreLastKnownGoodSave}
             type="button"
             size="lg"
             disabled={props.isBusy}
@@ -53,7 +56,7 @@ export default function PlayerDataRecoveryActions(
           </Button>
         ) : null}
         <Button
-          ref={props.importBackupButtonRef}
+          id={playerDataRecoveryActionIds.importBackup}
           type="button"
           variant="secondary"
           size="lg"
@@ -84,7 +87,7 @@ export default function PlayerDataRecoveryActions(
           {actions.tryAgain}
         </Button>
         <Button
-          ref={props.deleteAllDataButtonRef}
+          id={playerDataRecoveryActionIds.deleteAllData}
           type="button"
           variant="destructive"
           size="lg"
