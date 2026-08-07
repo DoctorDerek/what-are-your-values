@@ -6,6 +6,7 @@ import {
   createPlayerData,
 } from "@game/machines/src/PlayerData"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
+import { DELETE_ALL_DATA_ACKNOWLEDGMENT } from "@game/machines/src/PlayerDataReset"
 import { playerDataResetCopy } from "@game/machines/src/PlayerDataResetCopy"
 import {
   createWayvmExport,
@@ -729,5 +730,52 @@ describe("GameClient Integration", () => {
         playerDataResetCopy["reset-achievements"].successAnnouncement,
       ),
     ).toBeVisible()
+  })
+
+  it("requires acknowledgment then deletes all local data and returns to Introduction", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000064",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete All Data" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Delete All Data?" }),
+    ).toBeVisible()
+    const confirmation = screen.getByRole("button", {
+      name: "Delete All Data",
+    })
+    expect(confirmation).toBeDisabled()
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      }),
+    )
+    expect(confirmation).toBeEnabled()
+    fireEvent.click(confirmation)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      playerDataResetCopy["delete-all-data"].successAnnouncement,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+    expect(
+      await screen.findByRole("heading", { name: "Your Values" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        playerDataResetCopy["delete-all-data"].successAnnouncement,
+      ),
+    ).not.toBeInTheDocument()
   })
 })
