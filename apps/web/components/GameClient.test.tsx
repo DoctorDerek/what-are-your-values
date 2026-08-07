@@ -659,6 +659,47 @@ describe("GameClient Integration", () => {
     ).toHaveFocus()
   })
 
+  it("opens the complete live achievement catalog and restores focus to its Hub action", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000054",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Achievements" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Achievements", level: 1 }),
+    ).toHaveFocus()
+    expect(screen.getByText("0 of 40 unlocked")).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(40)
+    expect(screen.getByText("2,400 Battles")).toBeVisible()
+    expect(screen.getByText("Reach Level 100")).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+    expect(
+      await screen.findByRole("button", { name: "Achievements" }),
+    ).toHaveFocus()
+
+    fireEvent.click(screen.getByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) throw new Error("Achievement test winner is unavailable")
+    fireEvent.click(winnerCard)
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
+    )
+    fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
+    fireEvent.click(await screen.findByRole("button", { name: "Achievements" }))
+
+    expect(await screen.findByText("1 of 40 unlocked")).toBeVisible()
+    const firstBattle = screen.getAllByRole("listitem")[0]!
+    expect(within(firstBattle).getAllByText("Unlocked")).toHaveLength(2)
+    expect(within(firstBattle).getByRole("time")).toBeVisible()
+    expect(
+      within(firstBattle).queryByText("1 of 1 comparisons"),
+    ).not.toBeInTheDocument()
+  })
+
   it("opens a specific Hub value in All Values and restores focus on return", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000046",
