@@ -49,8 +49,7 @@ export function getWayvmImportValidationIssue(error: unknown) {
   if (issue.startsWith("Unsupported"))
     return playerDataPortabilityCopy.importUnsupported
 
-  if (isUnsafeImportIssue(issue))
-    return playerDataPortabilityCopy.importUnsafe
+  if (isUnsafeImportIssue(issue)) return playerDataPortabilityCopy.importUnsafe
 
   return playerDataPortabilityCopy.importInvalid
 }
