@@ -42,6 +42,10 @@ import {
   type PreparedWayvmDownload,
 } from "./PlayerDataPortabilityActors"
 import {
+  getWayvmImportValidationIssue,
+  playerDataPortabilityCopy,
+} from "./PlayerDataPortabilityCopy"
+import {
   DELETE_ALL_DATA_ACKNOWLEDGMENT,
   type PlayerDataResetKind,
   type ScopedPlayerDataResetKind,
@@ -117,6 +121,7 @@ type RootMachineEvent =
   | { type: "DATA_MANAGEMENT.CLOSE_REQUESTED" }
   | { type: "DATA_MANAGEMENT.EXPORT_REQUESTED" }
   | { type: "DATA_MANAGEMENT.EXPORT_CONSUMED" }
+  | { type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED"; issue: string }
   | {
       type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED"
       serialized: string
@@ -321,6 +326,12 @@ export const rootMachine = setup({
     createRecoveryBundle: createRecoveryBundleActor,
     replaceUnrecoverablePlayerData: replaceUnrecoverablePlayerDataActor,
     deleteUnrecoverablePlayerData: deleteUnrecoverablePlayerDataActor,
+  },
+  actions: {
+    clearPortabilityFeedback: assign({
+      portabilityIssue: null,
+      portabilityNotice: null,
+    }),
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -542,9 +553,18 @@ export const rootMachine = setup({
     },
     Hub: {
       on: {
-        "BATTLE.START_REQUESTED": { target: "Crucible" },
-        "ALL_VALUES.OPEN_REQUESTED": { target: "AllValues" },
-        "DATA_MANAGEMENT.OPEN_REQUESTED": { target: "DataManagement" },
+        "BATTLE.START_REQUESTED": {
+          target: "Crucible",
+          actions: "clearPortabilityFeedback",
+        },
+        "ALL_VALUES.OPEN_REQUESTED": {
+          target: "AllValues",
+          actions: "clearPortabilityFeedback",
+        },
+        "DATA_MANAGEMENT.OPEN_REQUESTED": {
+          target: "DataManagement",
+          actions: "clearPortabilityFeedback",
+        },
       },
     },
     DataManagement: {
@@ -573,6 +593,13 @@ export const rootMachine = setup({
             },
             "DATA_MANAGEMENT.EXPORT_CONSUMED": {
               actions: assign({ preparedDownload: null }),
+            },
+            "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => event.issue,
+                portabilityNotice: null,
+              }),
             },
             "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED": {
               target: "PreparingImport",
@@ -643,14 +670,14 @@ export const rootMachine = setup({
               actions: assign({
                 preparedDownload: ({ event }) => event.output,
                 portabilityIssue: null,
-                portabilityNotice: "Your private backup is ready.",
+                portabilityNotice: playerDataPortabilityCopy.exportSuccess,
               }),
             },
             onError: {
               target: "Browsing",
               actions: assign({
                 preparedDownload: null,
-                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+                portabilityIssue: playerDataPortabilityCopy.exportFailure,
                 portabilityNotice: null,
               }),
             },
@@ -675,7 +702,8 @@ export const rootMachine = setup({
               actions: assign({
                 pendingImportBytes: null,
                 pendingImport: null,
-                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+                portabilityIssue: ({ event }) =>
+                  getWayvmImportValidationIssue(event.error),
               }),
             },
           },
@@ -697,6 +725,7 @@ export const rootMachine = setup({
                 pendingImport: null,
                 preImportBackupBytes: null,
                 portabilityIssue: null,
+                portabilityNotice: playerDataPortabilityCopy.importCancelled,
               }),
             },
             "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED": {
@@ -881,7 +910,7 @@ export const rootMachine = setup({
               target: "ReviewingImport",
               actions: assign({
                 preImportBackupBytes: null,
-                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+                portabilityIssue: playerDataPortabilityCopy.exportFailure,
               }),
             },
           },
@@ -897,22 +926,22 @@ export const rootMachine = setup({
               replacedAt: context.now(),
             }),
             onDone: {
-              target: "Browsing",
+              target: "#root.Hub",
               actions: assign({
                 playerData: ({ event }) => event.output.head.playerData,
                 battleProfileStoreState: ({ event }) => event.output,
                 pendingImport: null,
                 preImportBackupBytes: null,
                 portabilityIssue: null,
-                portabilityNotice:
-                  "Your imported values and progress are now active.",
+                portabilityNotice: playerDataPortabilityCopy.importSuccess,
               }),
             },
             onError: {
               target: "ReviewingImport",
               actions: assign({
                 preImportBackupBytes: null,
-                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+                portabilityIssue:
+                  playerDataPortabilityCopy.importRestoreFailure,
               }),
             },
           },

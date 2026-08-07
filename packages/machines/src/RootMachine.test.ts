@@ -23,6 +23,7 @@ import {
   createWayvmExportActor,
   prepareWayvmImportActor,
 } from "./PlayerDataPortabilityActors"
+import { playerDataPortabilityCopy } from "./PlayerDataPortabilityCopy"
 import { DELETE_ALL_DATA_ACKNOWLEDGMENT } from "./PlayerDataReset"
 import {
   applyScopedPlayerDataResetActor,
@@ -1229,12 +1230,39 @@ describe("Root Machine", () => {
     })
     expect(preparedDownload.filename).toContain("2026-07-21")
     expect(snapshot.context.portabilityNotice).toBe(
-      "Your private backup is ready.",
+      playerDataPortabilityCopy.exportSuccess,
     )
 
     actor.send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
 
     expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+  })
+
+  it("reports browser delivery failure without retaining prepared private bytes", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-platform-export-failure-seed",
+    })
+    const currentPlayerData = actor.getSnapshot().context.playerData
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    await waitFor(
+      actor,
+      (candidate) => candidate.context.preparedDownload !== null,
+    )
+    actor.send({
+      type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+      issue: playerDataPortabilityCopy.exportFailure,
+    })
+
+    const snapshot = actor.getSnapshot()
+    expect(snapshot.matches({ DataManagement: "Browsing" })).toBe(true)
+    expect(snapshot.context.playerData).toBe(currentPlayerData)
+    expect(snapshot.context.preparedDownload).toBeNull()
+    expect(snapshot.context.portabilityIssue).toBe(
+      playerDataPortabilityCopy.exportFailure,
+    )
+    expect(snapshot.context.portabilityNotice).toBeNull()
   })
 
   it("surfaces export and pre-import backup creation failures without abandoning current data", async () => {
@@ -1256,7 +1284,8 @@ describe("Root Machine", () => {
       actor,
       (candidate) =>
         candidate.matches({ DataManagement: "Browsing" }) &&
-        candidate.context.portabilityIssue === "Private backup creation failed",
+        candidate.context.portabilityIssue ===
+          playerDataPortabilityCopy.exportFailure,
     )
 
     expect(failureSnapshot.context.playerData).toBe(currentPlayerData)
@@ -1277,7 +1306,8 @@ describe("Root Machine", () => {
       actor,
       (candidate) =>
         candidate.matches({ DataManagement: "ReviewingImport" }) &&
-        candidate.context.portabilityIssue === "Private backup creation failed",
+        candidate.context.portabilityIssue ===
+          playerDataPortabilityCopy.exportFailure,
     )
 
     expect(failureSnapshot.context.playerData).toBe(currentPlayerData)
@@ -1300,7 +1330,8 @@ describe("Root Machine", () => {
       actor,
       (candidate) =>
         candidate.matches({ DataManagement: "Browsing" }) &&
-        candidate.context.portabilityIssue === "Persisted JSON is malformed",
+        candidate.context.portabilityIssue ===
+          playerDataPortabilityCopy.importInvalid,
     )
 
     expect(failureSnapshot.context.playerData).toBe(currentPlayerData)
@@ -1407,7 +1438,7 @@ describe("Root Machine", () => {
     expect(snapshot.context.playerData).toBe(currentPlayerData)
     expect(snapshot.context.pendingImport).toBeNull()
     expect(snapshot.context.portabilityIssue).toBe(
-      "Persisted JSON must use tuple arrays rather than objects",
+      playerDataPortabilityCopy.importInvalid,
     )
   })
 
@@ -1454,6 +1485,9 @@ describe("Root Machine", () => {
     ).toBe(true)
     expect(target.actor.getSnapshot().context.playerData).toBe(targetPlayerData)
     expect(target.actor.getSnapshot().context.pendingImport).toBeNull()
+    expect(target.actor.getSnapshot().context.portabilityNotice).toBe(
+      playerDataPortabilityCopy.importCancelled,
+    )
 
     target.actor.send({
       type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
@@ -1466,9 +1500,9 @@ describe("Root Machine", () => {
     const importedSnapshot = await waitFor(
       target.actor,
       (candidate) =>
-        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.matches("Hub") &&
         candidate.context.portabilityNotice ===
-          "Your imported values and progress are now active.",
+          playerDataPortabilityCopy.importSuccess,
     )
 
     expect(importedSnapshot.context.playerData?.profile.scheduler.seed).toBe(
@@ -1540,7 +1574,8 @@ describe("Root Machine", () => {
       target.actor,
       (candidate) =>
         candidate.matches({ DataManagement: "ReviewingImport" }) &&
-        candidate.context.portabilityIssue === "Import replacement failed",
+        candidate.context.portabilityIssue ===
+          playerDataPortabilityCopy.importRestoreFailure,
     )
 
     expect(failedSnapshot.context.playerData).toBe(targetPlayerData)
@@ -1552,9 +1587,9 @@ describe("Root Machine", () => {
     const retriedSnapshot = await waitFor(
       target.actor,
       (candidate) =>
-        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.matches("Hub") &&
         candidate.context.portabilityNotice ===
-          "Your imported values and progress are now active.",
+          playerDataPortabilityCopy.importSuccess,
     )
 
     expect(retriedSnapshot.context.portabilityIssue).toBeNull()
