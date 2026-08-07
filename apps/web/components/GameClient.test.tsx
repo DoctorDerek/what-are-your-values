@@ -66,21 +66,30 @@ describe("GameClient Integration", () => {
     vi.restoreAllMocks()
   })
 
-  it("renders the safe persistence failure screen without exposing saved data", async () => {
+  it("limits a loading-origin storage failure to retry without inventing player data", async () => {
     durableStoreFailure.readEnabled = true
 
     render(<GameClient />)
 
     expect(
       await screen.findByRole("heading", {
-        name: "We couldn’t safely load your values.",
+        name: "Progress Cannot Be Saved Reliably",
       }),
     ).toBeVisible()
     expect(
-      screen.getByText(
-        "Your saved data was left unchanged. Reload this page to try again.",
-      ),
+      screen.getByText(/Continuing without a reliable save could lose/),
     ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent("IndexedDB unavailable")
+    expect(screen.getByRole("button", { name: "Try Again" })).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: "Export Current Data" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Return Without New Changes" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Delete All Data" }),
+    ).not.toBeInTheDocument()
   })
 
   it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {
