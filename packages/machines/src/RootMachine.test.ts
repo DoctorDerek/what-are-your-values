@@ -265,6 +265,33 @@ describe("Root Machine", () => {
     expect(actor.getSnapshot().context.playerData?.profile).toBe(battleProfile)
   })
 
+  it("opens and closes Achievements without replacing complete Player Data or durable state", async () => {
+    const { actor, durableStore } = await bootRootActor({
+      schedulerSeed: "achievements-navigation-seed",
+    })
+    const hubSnapshot = actor.getSnapshot()
+    const playerData = hubSnapshot.context.playerData
+    const battleProfileStoreState = hubSnapshot.context.battleProfileStoreState
+    const durableEntries = await durableStore.readAll()
+
+    actor.send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("Achievements")).toBe(true)
+    expect(actor.getSnapshot().context.playerData).toBe(playerData)
+    expect(actor.getSnapshot().context.battleProfileStoreState).toBe(
+      battleProfileStoreState,
+    )
+
+    actor.send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+    expect(actor.getSnapshot().context.playerData).toBe(playerData)
+    expect(actor.getSnapshot().context.battleProfileStoreState).toBe(
+      battleProfileStoreState,
+    )
+    await expect(durableStore.readAll()).resolves.toEqual(durableEntries)
+  })
+
   it("adds a custom value through the All Values durable update flow", async () => {
     const randomUuid = vi.fn(() => "00000000-0000-4000-8000-000000000001")
     const { actor } = await bootRootActor({
