@@ -48,7 +48,12 @@ export default function AchievementBanner({
       onAnimationComplete={() => onPresented(achievement.id)}
       className="pointer-events-none fixed right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[60] mx-auto max-w-2xl"
     >
-      <p role="status" aria-atomic="true" className="sr-only">
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
         Achievement unlocked: {achievement.title}.
       </p>
       <div className="bg-mapache-vivid-primary-yellow text-mapache-vivid-dark pointer-events-auto max-h-[min(50dvh,16rem)] overflow-y-auto border-4 border-black p-4 shadow-[8px_8px_0px_0px_#000000] sm:p-5">
