@@ -440,6 +440,19 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
     expect(screen.getByText("portable-build-49")).toBeVisible()
     expect(screen.queryByText("Ingenuity")).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.importCancelled),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Choose Backup" })).toHaveFocus()
+    expect(screen.queryByText("Ingenuity")).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
+      target: { files: [backupFile] },
+    })
+    expect(
+      await screen.findByRole("heading", { name: "Review Import" }),
+    ).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Import & Replace" }))
 
     expect(
@@ -501,5 +514,33 @@ describe("GameClient Integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
     expect(await screen.findAllByRole("listitem")).toHaveLength(100)
+  })
+
+  it("normalizes an unreadable browser file and keeps backup selection retryable", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000053",
+    )
+    const unreadableBackup = new File(
+      ['["wayvm-export"]'],
+      "unreadable-wayvm-backup.json",
+      { type: "application/json" },
+    )
+    vi.spyOn(unreadableBackup, "text").mockRejectedValue(
+      new Error("Browser file access failed"),
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
+      target: { files: [unreadableBackup] },
+    })
+
+    const issue = await screen.findByRole("alert")
+    expect(issue).toHaveTextContent(playerDataPortabilityCopy.importInvalid)
+    expect(issue).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Choose Backup" })).toBeEnabled()
   })
 })

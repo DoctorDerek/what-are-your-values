@@ -69,11 +69,14 @@ describe("Data Management", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
     const importInput = screen.getByLabelText("Choose WAYVM JSON backup")
+    const inputClick = vi.spyOn(importInput, "click")
     expect(importInput).toHaveAttribute("accept", WAYVM_IMPORT_FILE_ACCEPT)
+    fireEvent.click(screen.getByRole("button", { name: "Choose Backup" }))
     fireEvent.change(importInput, { target: { files: [file] } })
     fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
 
     expect(props.onExport).toHaveBeenCalledOnce()
+    expect(inputClick).toHaveBeenCalledOnce()
     expect(props.onImportFile).toHaveBeenCalledWith(file)
     expect(props.onClose).toHaveBeenCalledOnce()
     expect(
