@@ -26,6 +26,7 @@ import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import DataManagement, { type DataManagementActivity } from "./DataManagement"
 import Hub from "./Hub"
+import PlayerDataLoading from "./PlayerDataLoading"
 import Splash from "./Splash"
 
 export default function GameClient() {
@@ -250,11 +251,7 @@ export default function GameClient() {
     state.matches("LoadingProfile") ||
     state.matches("InitializingProfile")
   ) {
-    return (
-      <div className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex h-[100dvh] w-[100dvw] items-center justify-center text-6xl font-black uppercase drop-shadow-[4px_4px_0px_#000000]">
-        Booting Machine...
-      </div>
-    )
+    return <PlayerDataLoading />
   }
 
   if (state.matches("PersistenceFailure")) {
