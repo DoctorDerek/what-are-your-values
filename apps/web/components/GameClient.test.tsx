@@ -211,6 +211,14 @@ describe("GameClient Integration", () => {
     expect(
       await screen.findByRole("heading", { name: "Delete All Data?" }),
     ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Delete All Data" }),
+      ).toHaveFocus(),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete All Data" }))
+    await screen.findByRole("heading", { name: "Delete All Data?" })
     const deleteAllDataButton = screen.getByRole("button", {
       name: "Delete All Data",
     })
@@ -262,6 +270,20 @@ describe("GameClient Integration", () => {
     expect(
       screen.getByText(/unreadable current save will be preserved/),
     ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "Restore Last Known-Good Save",
+        }),
+      ).toHaveFocus(),
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "Restore Last Known-Good Save" }),
+    )
+    await screen.findByRole("heading", {
+      name: "Restore Last Known-Good Save?",
+    })
     fireEvent.click(screen.getByRole("button", { name: "Restore Save" }))
 
     expect(
