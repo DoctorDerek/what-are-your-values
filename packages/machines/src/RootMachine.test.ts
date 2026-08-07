@@ -387,6 +387,56 @@ describe("Root Machine", () => {
     ).toBeNull()
   })
 
+  it("refuses to skip an unlocked milestone and exposes the next queued presentation only after durable acknowledgement", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "achievement-fifo-presentation-seed",
+    })
+    for (let battleIndex = 0; battleIndex < 5; battleIndex += 1)
+      await commitOneBattle(actor)
+
+    const playerData = actor.getSnapshot().context.playerData
+    if (!playerData)
+      throw new Error("Achievement FIFO Player Data is unavailable")
+
+    const [firstPendingUnlock, secondPendingUnlock] =
+      getPendingAchievementUnlocks(playerData.achievements)
+    if (!firstPendingUnlock || !secondPendingUnlock)
+      throw new Error("Achievement FIFO requires multiple pending unlocks")
+
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: secondPendingUnlock.id,
+    })
+
+    expect(actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(true)
+    expect(
+      actor.getSnapshot().context.pendingAchievementPresentationId,
+    ).toBeNull()
+    expect(
+      actor.getSnapshot().context.playerData?.achievements
+        .presentedAchievementIds,
+    ).toEqual([])
+
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: firstPendingUnlock.id,
+    })
+    const acknowledgedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Crucible: "Ready" }) &&
+        candidate.context.playerData?.achievements
+          .presentedAchievementIds[0] === firstPendingUnlock.id,
+    )
+    const acknowledgedPlayerData = acknowledgedSnapshot.context.playerData
+    if (!acknowledgedPlayerData)
+      throw new Error("Achievement FIFO acknowledgement lost Player Data")
+
+    expect(
+      getPendingAchievementUnlocks(acknowledgedPlayerData.achievements)[0]?.id,
+    ).toBe(secondPendingUnlock.id)
+  })
+
   it("returns a durable milestone presentation to the unchanged Crucible pair", async () => {
     const { actor } = await bootRootActor({
       schedulerSeed: "achievement-crucible-presentation-seed",
