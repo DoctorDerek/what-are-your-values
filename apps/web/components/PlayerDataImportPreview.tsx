@@ -100,9 +100,7 @@ export default function PlayerDataImportPreview({
         </PreviewFact>
         <PreviewFact label="Language">{preview.locale}</PreviewFact>
         <PreviewFact label="Replacement">
-          {preview.replacesCurrentLocalData
-            ? "Replaces current data on this device"
-            : "Does not replace current data"}
+          Replaces current data on this device
         </PreviewFact>
       </dl>
 
