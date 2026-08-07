@@ -30,14 +30,19 @@ function renderDataManagement(
 ) {
   const props = {
     activity: null,
+    customValueCount: 0,
     issue: null,
     notice: null,
     preview: null,
+    resetReview: null,
     onCancelImport: vi.fn(),
+    onCancelReset: vi.fn(),
     onClose: vi.fn(),
     onConfirmImport: vi.fn(),
+    onConfirmReset: vi.fn(),
     onExport: vi.fn(),
     onImportFile: vi.fn(),
+    onRequestReset: vi.fn(),
     ...overrides,
   } satisfies Parameters<typeof DataManagement>[0]
 
@@ -80,8 +85,11 @@ describe("Data Management", () => {
     expect(props.onImportFile).toHaveBeenCalledWith(file)
     expect(props.onClose).toHaveBeenCalledOnce()
     expect(
-      screen.queryByRole("button", { name: "Reset Achievements" }),
-    ).not.toBeInTheDocument()
+      screen.getByRole("button", { name: "Reset Achievements" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Delete All Custom Values" }),
+    ).toBeDisabled()
   })
 
   it("returns focus to backup selection after cancelling a reviewed import", async () => {
@@ -92,6 +100,7 @@ describe("Data Management", () => {
       return (
         <DataManagement
           activity={null}
+          customValueCount={0}
           issue={null}
           notice={
             candidatePreview
@@ -99,11 +108,15 @@ describe("Data Management", () => {
               : "Import cancelled. Your data was not changed."
           }
           preview={candidatePreview}
+          resetReview={null}
           onCancelImport={() => setCandidatePreview(null)}
+          onCancelReset={vi.fn()}
           onClose={vi.fn()}
           onConfirmImport={vi.fn()}
+          onConfirmReset={vi.fn()}
           onExport={vi.fn()}
           onImportFile={vi.fn()}
+          onRequestReset={vi.fn()}
         />
       )
     }
