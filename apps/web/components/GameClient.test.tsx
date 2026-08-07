@@ -291,6 +291,58 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
   })
 
+  it("exports the in-memory profile and returns safely after first-run persistence fails", async () => {
+    durableStoreFailure.writeEnabled = true
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000112",
+    )
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    vi.spyOn(URL, "createObjectURL").mockReturnValue(
+      "blob:initialization-recovery",
+    )
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined)
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "IndexedDB write failed",
+    )
+    expect(
+      screen.getByRole("button", { name: "Export Current Data" }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: "Delete All Data" }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Export Current Data" }),
+    )
+    expect(
+      await screen.findByText("Your current data backup is ready."),
+    ).toBeVisible()
+    expect(click).toHaveBeenCalledOnce()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
+      }),
+    ).toBeVisible()
+  })
+
   it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000047",
