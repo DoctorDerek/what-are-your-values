@@ -1,6 +1,7 @@
 import { createInitialAchievementState } from "@game/machines/src/AchievementState"
 import {
   BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
 } from "@game/machines/src/BattleProfileStore"
 import { createCustomValueAddCommit } from "@game/machines/src/CustomValueCommands"
@@ -64,6 +65,24 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
     },
   }
 })
+
+async function createSerializedGameClientBackup({
+  schedulerSeed,
+  sourceBuild,
+}: {
+  schedulerSeed: string
+  sourceBuild: string
+}) {
+  const createdAt = "2026-08-07T12:00:00.000Z"
+  const wayvmExport = await createWayvmExport({
+    exportedAt: createdAt,
+    sourceAppVersion: "5.2.0",
+    sourceBuild,
+    playerData: createInitialPlayerData({ schedulerSeed, createdAt }),
+  })
+
+  return serializeWayvmExport(wayvmExport)
+}
 
 describe("GameClient Integration", () => {
   afterEach(() => {
@@ -182,6 +201,41 @@ describe("GameClient Integration", () => {
         playerDataResetCopy["delete-all-data"].successAnnouncement,
       ),
     ).toBeVisible()
+  })
+
+  it("restores a retained last-known-good save only after validated browser review", async () => {
+    const serializedBackup = await createSerializedGameClientBackup({
+      schedulerSeed: "known-good-browser-recovery",
+      sourceBuild: "known-good-browser-build",
+    })
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, serializedBackup],
+    ]
+
+    render(<GameClient />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Restore Last Known-Good Save",
+      }),
+    )
+    expect(
+      await screen.findByRole("heading", {
+        name: "Restore Last Known-Good Save?",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText("known-good-browser-build")).toBeVisible()
+    expect(
+      screen.getByText(/unreadable current save will be preserved/),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Restore Save" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(screen.getByText("Last known-good save restored.")).toBeVisible()
   })
 
   it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {
