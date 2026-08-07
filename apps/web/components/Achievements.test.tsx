@@ -52,6 +52,26 @@ function createPresentationsWithFirstBattleUnlocked() {
   })
 }
 
+function createPresentationsAfterTopFiveReset() {
+  const battleProfile = createInitialBattleProfile(
+    "reset-achievement-component-seed",
+  )
+  const initialState = createInitialAchievementState(battleProfile.activeDeck)
+
+  return projectAchievementCatalog({
+    achievementState: createAchievementState({
+      activeDeck: battleProfile.activeDeck,
+      unlocks: [],
+      presentedAchievementIds: [],
+      progress: {
+        ...initialState.progress,
+        topFiveAlreadyRevealedAtReset: true,
+      },
+    }),
+    battleProfile,
+  })
+}
+
 describe("Achievements", () => {
   it("renders all forty milestones once in canonical order and focuses the screen heading", async () => {
     const achievements = createInitialPresentations()
@@ -121,5 +141,26 @@ describe("Achievements", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1)
     fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it("renders reset eligibility guidance without inventing numeric progress", () => {
+    render(
+      <Achievements
+        achievements={createPresentationsAfterTopFiveReset()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    const topFiveRow = screen
+      .getByRole("heading", { name: "Reveal Your Top Five" })
+      .closest("li")
+    if (!topFiveRow) throw new Error("Top Five achievement row is unavailable")
+
+    expect(
+      within(topFiveRow).getByText(
+        "Reset Levels & Experience before revealing your Top Five again.",
+      ),
+    ).toBeVisible()
+    expect(topFiveRow.querySelector("progress")).not.toBeInTheDocument()
   })
 })
