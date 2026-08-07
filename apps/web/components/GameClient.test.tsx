@@ -1,3 +1,4 @@
+import * as AchievementPresentation from "@game/machines/src/AchievementPresentation"
 import { createInitialAchievementState } from "@game/machines/src/AchievementState"
 import {
   BATTLE_PROFILE_MANIFEST_KEY,
@@ -24,6 +25,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react"
+import { Component, type ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
@@ -65,6 +67,25 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
     },
   }
 })
+
+class InvariantErrorBoundary extends Component<
+  Readonly<{ children: ReactNode }>,
+  Readonly<{ message: string | null }>
+> {
+  state: Readonly<{ message: string | null }> = { message: null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { message: error.message }
+  }
+
+  render() {
+    return this.state.message ? (
+      <p>{this.state.message}</p>
+    ) : (
+      this.props.children
+    )
+  }
+}
 
 async function createSerializedGameClientBackup({
   schedulerSeed,
@@ -736,6 +757,36 @@ describe("GameClient Integration", () => {
       "pb-[min(50dvh,17rem)]",
     )
     expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled()
+  })
+
+  it("fails loudly when a pending milestone loses its canonical presentation", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000057",
+    )
+    vi.spyOn(console, "error").mockImplementation(() => undefined)
+
+    render(
+      <InvariantErrorBoundary>
+        <GameClient />
+      </InvariantErrorBoundary>,
+    )
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard)
+      throw new Error("Invariant banner test winner is unavailable")
+
+    vi.spyOn(
+      AchievementPresentation,
+      "projectAchievementCatalog",
+    ).mockReturnValue(Object.freeze([]))
+    fireEvent.click(winnerCard)
+
+    expect(
+      await screen.findByText(
+        "Pending achievement presentation is unavailable",
+      ),
+    ).toBeVisible()
   })
 
   it("preserves the unlocked milestone and complete recovery choices when banner acknowledgement cannot persist", async () => {
