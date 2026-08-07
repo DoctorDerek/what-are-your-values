@@ -18,6 +18,7 @@
     "@game/utils": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@rn-primitives/slot": "^1",
+    "@xstate/react": "^5",
     "class-variance-authority": "^0.7.1",
     "expo": "57.0.9",
     "expo-constants": "~57.0.8",
@@ -35,7 +36,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2",
     "react-native-worklets": "0.10.1",
-    "uniwind": "^1"
+    "uniwind": "^1",
+    "xstate": "^5"
   },
   "devDependencies": {
     "@types/react": "^19",
