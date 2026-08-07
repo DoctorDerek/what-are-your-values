@@ -2,6 +2,7 @@
 
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
+import { projectAchievementCatalog } from "@game/machines/src/AchievementPresentation"
 import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "@game/machines/src/BattleProfileStore"
 import {
   projectBattlePair,
@@ -23,6 +24,7 @@ import {
   readPlayerDataFile,
 } from "@/lib/PlayerDataFiles"
 import packageMetadata from "@/package.json"
+import Achievements from "./Achievements"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import DataManagement, { type DataManagementActivity } from "./DataManagement"
@@ -63,6 +65,16 @@ export default function GameClient() {
         ? rankValues(battleProfile.activeDeck, battleProfile.progressById)
         : [],
     [battleProfile],
+  )
+  const achievementPresentations = useMemo(
+    () =>
+      state.context.playerData
+        ? projectAchievementCatalog({
+            achievementState: state.context.playerData.achievements,
+            battleProfile: state.context.playerData.profile,
+          })
+        : [],
+    [state.context.playerData],
   )
   const presentedBattle = useMemo(
     () =>
@@ -135,6 +147,14 @@ export default function GameClient() {
       returnFocusTargetIdRef.current = focusTargetId
       shouldRestoreHubFocusRef.current = true
       send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    },
+    [send],
+  )
+  const openAchievements = useCallback(
+    (focusTargetId: string) => {
+      returnFocusTargetIdRef.current = focusTargetId
+      shouldRestoreHubFocusRef.current = true
+      send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
     },
     [send],
   )
@@ -403,11 +423,21 @@ export default function GameClient() {
         onAddCustomValue={(focusTargetId) =>
           openAllValues({ focusTargetId, openCustomValueBuilder: true })
         }
+        onOpenAchievements={openAchievements}
         onOpenDataManagement={openDataManagement}
         onOpenValue={(valueId, focusTargetId) =>
           openAllValues({ focusTargetId, valueId })
         }
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+      />
+    )
+  }
+
+  if (state.matches("Achievements")) {
+    return (
+      <Achievements
+        achievements={achievementPresentations}
+        onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
       />
     )
   }

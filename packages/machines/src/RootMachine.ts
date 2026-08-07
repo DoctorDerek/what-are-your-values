@@ -96,6 +96,8 @@ type RootMachineEvent =
     }
   | { type: "INTRODUCTION.COMPLETED" }
   | { type: "BATTLE.START_REQUESTED" }
+  | { type: "ACHIEVEMENTS.OPEN_REQUESTED" }
+  | { type: "ACHIEVEMENTS.CLOSE_REQUESTED" }
   | { type: "ALL_VALUES.OPEN_REQUESTED" }
   | { type: "ALL_VALUES.CLOSE_REQUESTED" }
   | {
@@ -586,6 +588,10 @@ export const rootMachine = setup({
           target: "Crucible",
           actions: "clearPortabilityFeedback",
         },
+        "ACHIEVEMENTS.OPEN_REQUESTED": {
+          target: "Achievements",
+          actions: "clearPortabilityFeedback",
+        },
         "ALL_VALUES.OPEN_REQUESTED": {
           target: "AllValues",
           actions: "clearPortabilityFeedback",
@@ -594,6 +600,11 @@ export const rootMachine = setup({
           target: "DataManagement",
           actions: "clearPortabilityFeedback",
         },
+      },
+    },
+    Achievements: {
+      on: {
+        "ACHIEVEMENTS.CLOSE_REQUESTED": { target: "Hub" },
       },
     },
     DataManagement: {
