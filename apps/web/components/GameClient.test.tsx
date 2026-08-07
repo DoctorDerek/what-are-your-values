@@ -1,4 +1,8 @@
 import { createInitialAchievementState } from "@game/machines/src/AchievementState"
+import {
+  BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_SNAPSHOT_A_KEY,
+} from "@game/machines/src/BattleProfileStore"
 import { createCustomValueAddCommit } from "@game/machines/src/CustomValueCommands"
 import type { DurableStoreTransaction } from "@game/machines/src/DurableStoreAdapter"
 import {
@@ -94,6 +98,90 @@ describe("GameClient Integration", () => {
     expect(
       screen.queryByRole("button", { name: "Delete All Data" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("downloads captured unreadable records without claiming they were erased", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:unreadable-wayvm-data")
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined)
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your Saved Data Needs Attention",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(
+      screen.getByText(/No last known-good save is available\./),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Export Unreadable Data" }),
+    )
+
+    expect(
+      await screen.findByText(
+        "Your unreadable local data is ready as a diagnostic recovery file.",
+      ),
+    ).toBeVisible()
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(click).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledWith(
+      "blob:unreadable-wayvm-data",
+    )
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+  })
+
+  it("deletes captured unreadable records only after exact complete-erasure acknowledgment", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000111",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Delete All Data" }),
+    )
+    expect(
+      await screen.findByRole("heading", { name: "Delete All Data?" }),
+    ).toBeVisible()
+    const deleteAllDataButton = screen.getByRole("button", {
+      name: "Delete All Data",
+    })
+    expect(deleteAllDataButton).toBeDisabled()
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      }),
+    )
+    expect(deleteAllDataButton).toBeEnabled()
+    fireEvent.click(deleteAllDataButton)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        playerDataResetCopy["delete-all-data"].successAnnouncement,
+      ),
+    ).toBeVisible()
   })
 
   it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {
