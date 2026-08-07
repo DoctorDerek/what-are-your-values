@@ -2091,6 +2091,39 @@ describe("Root Machine", () => {
     expect(failureSnapshot.context.preparedDownload).toBeNull()
   })
 
+  it("retains reset review when the platform cannot deliver a prepared backup", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "root-reset-delivery-failure-seed",
+    })
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({ type: "RESET.ACHIEVEMENTS_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    await waitFor(
+      actor,
+      (candidate) => candidate.context.preparedDownload !== null,
+    )
+
+    actor.send({
+      type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+      issue: "Browser backup delivery failed",
+    })
+    const failureSnapshot = actor.getSnapshot()
+
+    expect(failureSnapshot.matches({ DataManagement: "ReviewingReset" })).toBe(
+      true,
+    )
+    expect(failureSnapshot.context.pendingResetReview).toMatchObject({
+      resetKind: "reset-achievements",
+      confirmationId,
+    })
+    expect(failureSnapshot.context.preparedDownload).toBeNull()
+    expect(failureSnapshot.context.portabilityIssue).toBe(
+      "Browser backup delivery failed",
+    )
+    expect(failureSnapshot.context.portabilityNotice).toBeNull()
+  })
+
   it("retains reset review after the scoped reset actor fails", async () => {
     const failingScopedResetActor = fromPromise(async () => {
       throw new Error("Scoped reset actor failed")

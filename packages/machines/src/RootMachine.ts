@@ -326,6 +326,14 @@ export const rootMachine = setup({
       portabilityIssue: null,
       portabilityNotice: null,
     }),
+    reportDataManagementPlatformFailure: assign({
+      preparedDownload: null,
+      portabilityIssue: ({ event }) =>
+        event.type === "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED"
+          ? event.issue
+          : null,
+      portabilityNotice: null,
+    }),
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -599,11 +607,7 @@ export const rootMachine = setup({
               actions: "clearPortabilityFeedback",
             },
             "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
-              actions: assign({
-                preparedDownload: null,
-                portabilityIssue: ({ event }) => event.issue,
-                portabilityNotice: null,
-              }),
+              actions: "reportDataManagementPlatformFailure",
             },
             "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED": {
               target: "PreparingImport",
@@ -771,6 +775,9 @@ export const rootMachine = setup({
             },
             "DATA_MANAGEMENT.EXPORT_CONSUMED": {
               actions: assign({ preparedDownload: null }),
+            },
+            "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
+              actions: "reportDataManagementPlatformFailure",
             },
             "CUSTOM_VALUE.DELETE_ALL_CONFIRMED": {
               guard: "canConfirmDeleteAllCustomValues",
