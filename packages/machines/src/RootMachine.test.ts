@@ -916,6 +916,58 @@ describe("Root Machine", () => {
     expect(actor.getSnapshot().context.persistenceFailureOrigin).toBeNull()
   })
 
+  it("retries captured unreadable data without losing evidence when storage becomes unavailable", async () => {
+    const memoryStore = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ])
+    let shouldFailRead = false
+    const durableStore = Object.freeze({
+      readAll: async () => {
+        if (shouldFailRead) throw new Error("IndexedDB became unavailable")
+
+        return memoryStore.readAll()
+      },
+      compareAndSwapVerified: memoryStore.compareAndSwapVerified,
+    }) satisfies DurableStoreAdapter
+    const { actor } = createRootActor({ durableStore })
+    actor.start()
+    actor.send({
+      type: "APP.HYDRATED",
+      schedulerSeed: "captured-recovery-retry-seed",
+    })
+
+    const capturedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.recoveryEntries !== null,
+    )
+    const capturedEntries = capturedSnapshot.context.recoveryEntries
+
+    shouldFailRead = true
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const unavailableSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.persistenceFailureOrigin === "loading",
+    )
+    expect(unavailableSnapshot.context.recoveryEntries).toEqual(
+      capturedEntries,
+    )
+
+    shouldFailRead = false
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const retriedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.persistenceFailureOrigin === null,
+    )
+    expect(retriedSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+  })
+
   it("exports current first-run data and returns safely after durable initialization failure", async () => {
     let shouldFail = true
     const memoryStore = createInMemoryDurableStore()
