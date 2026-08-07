@@ -2555,6 +2555,66 @@ describe("Root Machine", () => {
     )
   })
 
+  it("cancels complete recovery deletion without erasing captured corrupt records", async () => {
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+    })
+
+    actor.send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    actor.send({ type: "RECOVERY.DELETE_ALL_CANCEL_REQUESTED" })
+
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    expect(actor.getSnapshot().context.pendingResetReview).toBeNull()
+    actor.send({
+      type: "RECOVERY.DELETE_ALL_CONFIRMED",
+      confirmationId,
+      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    })
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    await expect(durableStore.readAll()).resolves.toEqual(
+      new Map([
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ]),
+    )
+  })
+
+  it("keeps complete recovery deletion under review while exporting captured evidence", async () => {
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+    })
+    const capturedEntries = await durableStore.readAll()
+
+    actor.send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    actor.send({ type: "RECOVERY.EXPORT_REQUESTED" })
+    const exportedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "ReviewingDeletion" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+
+    expect(exportedSnapshot.context.pendingResetReview?.confirmationId).toBe(
+      confirmationId,
+    )
+    expect(exportedSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+    actor.send({ type: "RECOVERY.EXPORT_CONSUMED" })
+    expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+    await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
+  })
+
   it("keeps destructive recovery events inert when a runtime failure has no captured hydration evidence", async () => {
     let compareAndSwapCallCount = 0
     const durableStore = Object.freeze({
