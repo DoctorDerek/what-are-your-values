@@ -189,6 +189,44 @@ async function commitOneBattle(
   return committedProfile
 }
 
+function createToggleableWriteFailureStore() {
+  const memoryStore = createInMemoryDurableStore()
+  let writeIssue: string | null = null
+
+  return {
+    durableStore: Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (writeIssue) throw new Error(writeIssue)
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter,
+    setWriteIssue: (issue: string | null) => {
+      writeIssue = issue
+    },
+  }
+}
+
+async function bootRootActorWithPendingAchievement({
+  durableStore,
+  schedulerSeed,
+}: {
+  readonly durableStore: DurableStoreAdapter
+  readonly schedulerSeed: string
+}) {
+  const root = await bootRootActor({ durableStore, schedulerSeed })
+  await commitOneBattle(root.actor)
+  const playerData = root.actor.getSnapshot().context.playerData
+  if (!playerData)
+    throw new Error("Pending achievement Player Data is unavailable")
+
+  const [pendingUnlock] = getPendingAchievementUnlocks(playerData.achievements)
+  if (!pendingUnlock) throw new Error("Pending achievement is unavailable")
+
+  return { ...root, pendingUnlock }
+}
+
 function expectActorEventError(
   actor: ReturnType<typeof createRootActor>["actor"],
   event: Parameters<ReturnType<typeof createRootActor>["actor"]["send"]>[0],
@@ -501,6 +539,106 @@ describe("Root Machine", () => {
       serializedSnapshot.context.pendingAchievementPresentationId,
     ).toBeNull()
   })
+
+  it("retries rejected milestone acknowledgement without losing its pending unlock or Crucible return", async () => {
+    const failureStore = createToggleableWriteFailureStore()
+    const { actor, pendingUnlock } = await bootRootActorWithPendingAchievement({
+      durableStore: failureStore.durableStore,
+      schedulerSeed: "achievement-presentation-retry-seed",
+    })
+
+    failureStore.setWriteIssue("Achievement presentation write failed")
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: pendingUnlock.id,
+    })
+    const failedSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches({ PersistenceFailure: "Reviewing" }),
+    )
+
+    expect(failedSnapshot.context.persistenceFailureOrigin).toBe(
+      "achievement-presentation",
+    )
+    expect(failedSnapshot.context.pendingAchievementPresentationId).toBe(
+      pendingUnlock.id,
+    )
+    expect(failedSnapshot.context.achievementPresentationReturnTarget).toBe(
+      "crucible",
+    )
+    const failedPlayerData = failedSnapshot.context.playerData
+    if (!failedPlayerData)
+      throw new Error("Failed presentation lost Player Data")
+    expect(
+      getPendingAchievementUnlocks(failedPlayerData.achievements).map(
+        ({ id }) => id,
+      ),
+    ).toContain(pendingUnlock.id)
+
+    failureStore.setWriteIssue(null)
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const retriedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Crucible: "Ready" }) &&
+        candidate.context.playerData?.achievements.presentedAchievementIds.includes(
+          pendingUnlock.id,
+        ) === true,
+    )
+
+    expect(retriedSnapshot.context.persistenceIssue).toBeNull()
+    expect(retriedSnapshot.context.pendingAchievementPresentationId).toBeNull()
+  })
+
+  it.each(["hub", "achievements", "crucible"] as const)(
+    "returns safely to the %s surface after rejected milestone acknowledgement without falsely presenting it",
+    async (returnTarget) => {
+      const failureStore = createToggleableWriteFailureStore()
+      const { actor, pendingUnlock } =
+        await bootRootActorWithPendingAchievement({
+          durableStore: failureStore.durableStore,
+          schedulerSeed: `achievement-presentation-${returnTarget}-return-seed`,
+        })
+      if (returnTarget !== "crucible")
+        actor.send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (returnTarget === "achievements")
+        actor.send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+
+      failureStore.setWriteIssue("Achievement presentation return failed")
+      actor.send({
+        type: "ACHIEVEMENT.PRESENTED",
+        achievementId: pendingUnlock.id,
+      })
+      await waitFor(actor, (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }),
+      )
+      actor.send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
+
+      const returnedSnapshot = actor.getSnapshot()
+      expect(
+        returnTarget === "crucible"
+          ? returnedSnapshot.matches({ Crucible: "Ready" })
+          : returnedSnapshot.matches(
+              returnTarget === "hub" ? "Hub" : "Achievements",
+            ),
+      ).toBe(true)
+      expect(
+        returnedSnapshot.context.playerData?.achievements.presentedAchievementIds.includes(
+          pendingUnlock.id,
+        ),
+      ).toBe(false)
+      expect(
+        returnedSnapshot.context.pendingAchievementPresentationId,
+      ).toBeNull()
+      const returnedPlayerData = returnedSnapshot.context.playerData
+      if (!returnedPlayerData)
+        throw new Error("Presentation return lost Player Data")
+      expect(
+        getPendingAchievementUnlocks(returnedPlayerData.achievements).map(
+          ({ id }) => id,
+        ),
+      ).toContain(pendingUnlock.id)
+    },
+  )
 
   it("adds a custom value through the All Values durable update flow", async () => {
     const randomUuid = vi.fn(() => "00000000-0000-4000-8000-000000000001")
