@@ -18,6 +18,12 @@ export const playerDataRecoveryCopy = Object.freeze({
     ] as const),
     restoreConfirmation:
       "Restore the last known-good save? The unreadable current save will be preserved until restoration succeeds.",
+    restoreReviewTitle: "Restore Last Known-Good Save?",
+    restoreReviewAction: "Restore Save",
+    selectedBackupConfirmation:
+      "Import this backup? The unreadable current save will be preserved until replacement succeeds.",
+    selectedBackupReviewTitle: "Review Import",
+    selectedBackupReviewAction: "Import & Replace",
     restoreSuccess: "Last known-good save restored.",
     selectedBackupSuccess:
       "Your backup replaced the unreadable local data.",

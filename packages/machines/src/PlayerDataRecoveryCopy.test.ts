@@ -11,6 +11,17 @@ describe("Player Data Recovery Copy", () => {
     expect(playerDataRecoveryCopy.unreadableData.restoreConfirmation).toBe(
       "Restore the last known-good save? The unreadable current save will be preserved until restoration succeeds.",
     )
+    expect(
+      playerDataRecoveryCopy.unreadableData.selectedBackupConfirmation,
+    ).toBe(
+      "Import this backup? The unreadable current save will be preserved until replacement succeeds.",
+    )
+    expect(playerDataRecoveryCopy.unreadableData).toMatchObject({
+      restoreReviewTitle: "Restore Last Known-Good Save?",
+      restoreReviewAction: "Restore Save",
+      selectedBackupReviewTitle: "Review Import",
+      selectedBackupReviewAction: "Import & Replace",
+    })
     expect(playerDataRecoveryCopy.unreadableData.noKnownGoodSave).toBe(
       "No last known-good save is available. You can import a backup, export the unreadable data, or choose Delete All Data.",
     )
