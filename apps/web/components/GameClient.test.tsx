@@ -657,4 +657,77 @@ describe("GameClient Integration", () => {
     expect(screen.queryByRole("heading", { name: "Top Five" })).toBeNull()
     expect(screen.getAllByText("Level 1")).toHaveLength(100)
   })
+
+  it("exports a private backup without dismissing the reviewed reset", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000062",
+    )
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:reset-backup")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined)
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
+
+    expect(
+      await screen.findByText(
+        "Your private backup is ready. Review the reset when you are ready.",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Reset Achievements" }),
+    ).toBeEnabled()
+    expect(click).toHaveBeenCalledOnce()
+  })
+
+  it("preserves the reviewed reset and current data after a failed write then retries", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000063",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+
+    durableStoreFailure.writeEnabled = true
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+
+    const issue = await screen.findByRole("alert")
+    expect(issue).toHaveTextContent("IndexedDB write failed")
+    expect(issue).toHaveFocus()
+    expect(
+      screen.getByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Reset Achievements" }),
+    ).toBeEnabled()
+
+    durableStoreFailure.writeEnabled = false
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-achievements"].successAnnouncement,
+      ),
+    ).toBeVisible()
+  })
 })
