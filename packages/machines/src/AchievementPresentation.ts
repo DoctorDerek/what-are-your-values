@@ -158,7 +158,13 @@ function getLockedAchievementProgress({
     })
   }
   if (condition.kind === "topFive") {
-    if (achievementState.progress.topFiveAlreadyRevealedAtReset) {
+    const valuesWithExperience = Array.from(
+      battleProfile.progressById.values(),
+    ).filter(({ totalXp }) => totalXp > 0).length
+    if (
+      achievementState.progress.topFiveAlreadyRevealedAtReset ||
+      valuesWithExperience >= 5
+    ) {
       return Object.freeze({
         kind: "eligibility",
         label:
@@ -166,17 +172,10 @@ function getLockedAchievementProgress({
       })
     }
 
-    const current = Math.min(
-      Array.from(battleProfile.progressById.values()).filter(
-        ({ totalXp }) => totalXp > 0,
-      ).length,
-      5,
-    )
-
     return createNumericProgress({
-      current,
+      current: valuesWithExperience,
       target: 5,
-      label: `${current} of 5 values have earned XP`,
+      label: `${valuesWithExperience} of 5 values have earned XP`,
     })
   }
 
