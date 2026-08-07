@@ -1,4 +1,15 @@
+import { createInitialAchievementState } from "@game/machines/src/AchievementState"
+import { createCustomValueAddCommit } from "@game/machines/src/CustomValueCommands"
 import type { DurableStoreTransaction } from "@game/machines/src/DurableStoreAdapter"
+import {
+  createInitialPlayerData,
+  createPlayerData,
+} from "@game/machines/src/PlayerData"
+import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
+import {
+  createWayvmExport,
+  serializeWayvmExport,
+} from "@game/machines/src/WayvmExport"
 import {
   fireEvent,
   render,
@@ -341,5 +352,198 @@ describe("GameClient Integration", () => {
       expect(screen.getAllByRole("listitem")).toHaveLength(100),
     )
     expect(screen.getByText("100 Active Values")).toBeVisible()
+  })
+
+  it("downloads a private JSON backup and restores Hub focus after closing", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000048",
+    )
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:game-client-backup")
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined)
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
+
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.exportSuccess),
+    ).toBeVisible()
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(click).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:game-client-backup")
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Import & Export" }),
+    ).toHaveFocus()
+  })
+
+  it("previews and restores a complete local backup before returning to Hub", async () => {
+    const createdAt = "2026-08-06T12:00:00.000Z"
+    const initialPlayerData = createInitialPlayerData({
+      schedulerSeed: "imported-game-client-seed",
+      createdAt,
+    })
+    const customValueCommit = createCustomValueAddCommit({
+      profile: initialPlayerData.profile,
+      name: "Ingenuity",
+      definition: "To make original solutions.",
+      now: () => createdAt,
+      randomUuid: () => "00000000-0000-4000-8000-000000000049",
+    })
+    const importedPlayerData = createPlayerData({
+      ...initialPlayerData,
+      profile: customValueCommit.profile,
+      achievements: createInitialAchievementState(
+        customValueCommit.profile.activeDeck,
+      ),
+    })
+    const wayvmExport = await createWayvmExport({
+      exportedAt: createdAt,
+      sourceAppVersion: "5.2.0",
+      sourceBuild: "portable-build-49",
+      playerData: importedPlayerData,
+    })
+    const backupFile = new File(
+      [serializeWayvmExport(wayvmExport)],
+      "wayvm-backup.json",
+      { type: "application/json" },
+    )
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000050",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
+      target: { files: [backupFile] },
+    })
+
+    expect(
+      await screen.findByRole("heading", { name: "Review Import" }),
+    ).toBeVisible()
+    expect(screen.getByText("portable-build-49")).toBeVisible()
+    expect(screen.queryByText("Ingenuity")).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.importCancelled),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Choose Backup" })).toHaveFocus()
+    expect(screen.queryByText("Ingenuity")).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
+      target: { files: [backupFile] },
+    })
+    expect(
+      screen.queryByText(playerDataPortabilityCopy.importCancelled),
+    ).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { name: "Review Import" }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Import & Replace" }))
+
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.importSuccess),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "Open Ingenuity in All Values",
+      }),
+    ).toBeVisible()
+    expect(screen.getAllByRole("listitem")).toHaveLength(101)
+    expect(
+      screen.getByRole("button", { name: "Import & Export" }),
+    ).toHaveFocus()
+  })
+
+  it("reports browser backup delivery failure without leaving private bytes pending", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000051",
+    )
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      throw new Error("Browser download failed")
+    })
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      playerDataPortabilityCopy.exportFailure,
+    )
+    expect(screen.getByRole("button", { name: "Export Data" })).toBeEnabled()
+  })
+
+  it("rejects an invalid selected backup and preserves the current Hub values", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000052",
+    )
+    const invalidBackup = new File(["{}"], "invalid-wayvm-backup.json", {
+      type: "application/json",
+    })
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
+      target: { files: [invalidBackup] },
+    })
+
+    const issue = await screen.findByRole("alert")
+    expect(issue).toHaveTextContent(playerDataPortabilityCopy.importInvalid)
+    expect(issue).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Choose Backup" })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
+    expect(await screen.findAllByRole("listitem")).toHaveLength(100)
+  })
+
+  it("normalizes an unreadable browser file and keeps backup selection retryable", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000053",
+    )
+    const unreadableBackup = new File(
+      ['["wayvm-export"]'],
+      "unreadable-wayvm-backup.json",
+      { type: "application/json" },
+    )
+    vi.spyOn(unreadableBackup, "text").mockRejectedValue(
+      new Error("Browser file access failed"),
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
+      target: { files: [unreadableBackup] },
+    })
+
+    const issue = await screen.findByRole("alert")
+    expect(issue).toHaveTextContent(playerDataPortabilityCopy.importInvalid)
+    expect(issue).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Choose Backup" })).toBeEnabled()
   })
 })

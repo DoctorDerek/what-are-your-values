@@ -6,6 +6,7 @@ import {
   type RankedValue,
 } from "@game/data/src/ValueRanking"
 import type { Ref } from "react"
+import { Button } from "@/components/ui/button"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 function ValueRow({
@@ -55,17 +56,19 @@ function ValueActionRail({
   browseAllValuesButtonRef,
   onBrowseAllValues,
   onAddCustomValue,
+  onOpenDataManagement,
   onStartBattle,
 }: {
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
+  onOpenDataManagement: (focusTargetId: string) => void
   onStartBattle: () => void
 }) {
   return (
     <nav
       aria-label="Value actions"
-      className="mt-6 flex w-full flex-col gap-4 sm:flex-row"
+      className="mt-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
       <button
         type="button"
@@ -91,6 +94,16 @@ function ValueActionRail({
       >
         Add Custom Value
       </button>
+      <Button
+        id="hub-import-export-button"
+        type="button"
+        variant="outline"
+        size="lg"
+        onClick={(event) => onOpenDataManagement(event.currentTarget.id)}
+        className="h-full min-h-16 w-full whitespace-normal"
+      >
+        Import &amp; Export
+      </Button>
     </nav>
   )
 }
@@ -98,15 +111,19 @@ function ValueActionRail({
 export default function Hub({
   rankedValues,
   browseAllValuesButtonRef,
+  dataNotice,
   onBrowseAllValues,
   onAddCustomValue,
+  onOpenDataManagement,
   onOpenValue,
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
+  dataNotice: string | null
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
+  onOpenDataManagement: (focusTargetId: string) => void
   onOpenValue: (valueId: ValueId, focusTargetId: string) => void
   onStartBattle: () => void
 }) {
@@ -143,6 +160,14 @@ export default function Hub({
             ? "Your ranking is based on your committed battles."
             : "Not ranked yet. Browse the included values, then battle when you are ready."}
         </p>
+        {dataNotice ? (
+          <p
+            role="status"
+            className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark mb-5 border-4 border-black p-4 text-xl font-black shadow-[6px_6px_0px_0px_#000000]"
+          >
+            {dataNotice}
+          </p>
+        ) : null}
 
         {hasComparisons ? (
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2">
@@ -168,6 +193,7 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
+              onOpenDataManagement={onOpenDataManagement}
               onStartBattle={onStartBattle}
             />
             <div className="bg-mapache-vivid-primary-cyan border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
@@ -195,6 +221,7 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
+              onOpenDataManagement={onOpenDataManagement}
               onStartBattle={onStartBattle}
             />
             <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2">
