@@ -506,7 +506,10 @@ export const rootMachine = setup({
     },
     Splash: {
       on: {
-        "INTRODUCTION.COMPLETED": { target: "InitializingProfile" },
+        "INTRODUCTION.COMPLETED": {
+          target: "InitializingProfile",
+          actions: "clearPortabilityFeedback",
+        },
       },
     },
     InitializingProfile: {

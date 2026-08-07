@@ -1891,7 +1891,10 @@ describe("Root Machine", () => {
     ).toHaveLength(100)
 
     actor.send({ type: "INTRODUCTION.COMPLETED" })
-    await waitFor(actor, (candidate) => candidate.matches("Hub"))
+    const freshProfileSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("Hub"),
+    )
+    expect(freshProfileSnapshot.context.portabilityNotice).toBeNull()
     expect((await durableStore.readAll()).size).toBe(2)
   })
 
