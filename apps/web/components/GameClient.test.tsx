@@ -24,6 +24,7 @@ import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
 
 const durableStoreFailure = vi.hoisted(() => ({
+  initialEntries: [] as [string, string][],
   readEnabled: false,
   writeEnabled: false,
 }))
@@ -34,7 +35,9 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
 
   return {
     createIndexedDbDurableStore: () => {
-      const durableStore = createInMemoryDurableStore()
+      const durableStore = createInMemoryDurableStore(
+        durableStoreFailure.initialEntries,
+      )
 
       return {
         readAll: async () => {
@@ -60,6 +63,7 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
 
 describe("GameClient Integration", () => {
   afterEach(() => {
+    durableStoreFailure.initialEntries = []
     durableStoreFailure.readEnabled = false
     durableStoreFailure.writeEnabled = false
     localStorage.clear()
