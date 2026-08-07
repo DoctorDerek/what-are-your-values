@@ -22,6 +22,8 @@ import {
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import CustomValueFieldFeedback from "@/components/CustomValueFieldFeedback"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 const STARTER_EXAMPLES = Object.freeze([
@@ -350,7 +352,7 @@ export default function AllValues({
               >
                 Value Name
               </label>
-              <input
+              <Input
                 id={`custom-value-name-${definition.id}`}
                 value={editName}
                 disabled={isPersistencePending}
@@ -361,7 +363,7 @@ export default function AllValues({
                   editValidation.name.validationCode !== null
                 }
                 aria-describedby={`custom-value-name-feedback-${definition.id}`}
-                className="focus-visible:ring-mapache-vivid-primary-cyan mb-3 w-full border-4 border-black px-4 py-3 text-2xl font-bold outline-none focus-visible:ring-8"
+                className="mb-3 text-2xl focus-visible:ring-8"
               />
               <CustomValueFieldFeedback
                 id={`custom-value-name-feedback-${definition.id}`}
@@ -379,7 +381,7 @@ export default function AllValues({
               >
                 What This Value Means to Me
               </label>
-              <textarea
+              <Textarea
                 id={`custom-value-definition-${definition.id}`}
                 value={editDefinition}
                 disabled={isPersistencePending}
@@ -391,7 +393,7 @@ export default function AllValues({
                 }
                 aria-describedby={`custom-value-definition-feedback-${definition.id}`}
                 rows={4}
-                className="focus-visible:ring-mapache-vivid-primary-cyan w-full border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
+                className="text-xl focus-visible:ring-8"
               />
               <CustomValueFieldFeedback
                 id={`custom-value-definition-feedback-${definition.id}`}
@@ -496,13 +498,13 @@ export default function AllValues({
         >
           Search All Values
         </label>
-        <input
+        <Input
           id="all-values-search"
           type="search"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Search by value name or definition"
-          className="text-mapache-vivid-dark focus-visible:ring-mapache-vivid-primary-cyan w-full border-4 border-black bg-white px-5 py-4 text-2xl font-bold shadow-[8px_8px_0px_0px_#000000] outline-none focus-visible:ring-8"
+          className="px-5 py-4 text-2xl shadow-[8px_8px_0px_0px_#000000] focus-visible:ring-8"
         />
         <p
           role="status"
@@ -585,7 +587,7 @@ export default function AllValues({
                 >
                   Value Name
                 </label>
-                <input
+                <Input
                   id="custom-value-name"
                   type="text"
                   value={addName}
@@ -597,7 +599,7 @@ export default function AllValues({
                     addValidation.name.validationCode !== null
                   }
                   aria-describedby="custom-value-name-feedback"
-                  className="focus-visible:ring-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-2xl font-bold outline-none focus-visible:ring-8"
+                  className="text-2xl focus-visible:ring-8"
                 />
                 <CustomValueFieldFeedback
                   id="custom-value-name-feedback"
@@ -616,7 +618,7 @@ export default function AllValues({
                 >
                   What This Value Means to Me
                 </label>
-                <textarea
+                <Textarea
                   ref={addDefinitionRef}
                   id="custom-value-definition"
                   value={addDefinition}
@@ -629,7 +631,7 @@ export default function AllValues({
                   }
                   aria-describedby="custom-value-definition-feedback"
                   rows={4}
-                  className="focus-visible:ring-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-xl font-bold outline-none focus-visible:ring-8"
+                  className="text-xl focus-visible:ring-8"
                 />
                 <CustomValueFieldFeedback
                   id="custom-value-definition-feedback"

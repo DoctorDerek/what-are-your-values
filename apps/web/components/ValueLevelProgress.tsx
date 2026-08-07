@@ -1,11 +1,9 @@
 import { getLevelProgressFromXP } from "@game/utils/src/LevelMath"
+import { Progress } from "@/components/ui/progress"
 
 export default function ValueLevelProgress({ totalXp }: { totalXp: number }) {
   const { level, earnedXpTowardNextLevel, requiredXpForNextLevel } =
     getLevelProgressFromXP(totalXp)
-  const progressPercentage =
-    (earnedXpTowardNextLevel / requiredXpForNextLevel) * 100
-
   return (
     <div
       aria-label={`Level ${level}: ${earnedXpTowardNextLevel} of ${requiredXpForNextLevel} XP toward Level ${level + 1}`}
@@ -17,19 +15,13 @@ export default function ValueLevelProgress({ totalXp }: { totalXp: number }) {
           {earnedXpTowardNextLevel}/{requiredXpForNextLevel} XP
         </span>
       </div>
-      <div
-        role="progressbar"
+      <Progress
         aria-label={`XP toward Level ${level + 1}`}
-        aria-valuemin={0}
-        aria-valuemax={requiredXpForNextLevel}
-        aria-valuenow={earnedXpTowardNextLevel}
+        value={earnedXpTowardNextLevel}
+        max={requiredXpForNextLevel}
         className="mt-2 h-3 overflow-hidden border-2 border-black bg-white"
-      >
-        <div
-          className="bg-mapache-vivid-primary-raspberry h-full"
-          style={{ width: `${progressPercentage}%` }}
-        />
-      </div>
+        indicatorClassName="bg-mapache-vivid-primary-raspberry"
+      />
     </div>
   )
 }

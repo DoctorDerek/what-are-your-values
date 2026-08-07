@@ -9,11 +9,14 @@
   },
   "dependencies": {
     "@game/data": "workspace:*",
+    "@game/design-tokens": "workspace:*",
     "@game/utils": "workspace:*",
     "@game/machines": "workspace:*",
     "@xstate/react": "^5",
+    "class-variance-authority": "^0.7.1",
     "motion": "^12",
     "next": "^16",
+    "radix-ui": "^1",
     "react": "^19",
     "react-dom": "^19",
     "xstate": "^5"

@@ -9,9 +9,12 @@ describe("ValueLevelProgress Component Integration", () => {
     expect(
       screen.getByLabelText("Level 3: 0 of 2 XP toward Level 4"),
     ).toBeVisible()
-    expect(
-      screen.getByRole("progressbar", { name: "XP toward Level 4" }),
-    ).toHaveAttribute("aria-valuenow", "0")
+    const progress = screen.getByRole("progressbar", {
+      name: "XP toward Level 4",
+    })
+    expect(progress).toHaveAttribute("data-slot", "progress")
+    expect(progress).toHaveAttribute("aria-valuenow", "0")
+    expect(progress).toHaveAttribute("aria-valuemax", "2")
     expect(screen.getByText("0/2 XP")).toBeVisible()
   })
 

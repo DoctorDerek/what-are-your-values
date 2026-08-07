@@ -2,6 +2,10 @@
   "name": "@game/utils",
   "version": "0.1.0",
   "private": true,
+  "dependencies": {
+    "clsx": "^2",
+    "tailwind-merge": "^3"
+  },
   "devDependencies": {
     "typescript": "^6"
   }

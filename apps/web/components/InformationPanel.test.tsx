@@ -27,7 +27,11 @@ describe("InformationPanel Component Integration", () => {
       "overflow-y-auto",
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Start" }))
+    const primaryAction = screen.getByRole("button", { name: "Start" })
+    expect(primaryAction).toHaveAttribute("data-slot", "button")
+    expect(primaryAction).toHaveClass("w-full", "text-4xl", "sm:text-5xl")
+
+    fireEvent.click(primaryAction)
     expect(onPrimaryAction).toHaveBeenCalledTimes(1)
   })
 })
