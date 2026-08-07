@@ -1,3 +1,5 @@
+import type { PlayerDataResetReview as PlayerDataResetReviewState } from "@game/machines/src/PlayerDataReset"
+import { playerDataResetCopy } from "@game/machines/src/PlayerDataResetCopy"
 import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
@@ -162,5 +164,77 @@ describe("Data Management", () => {
     expect(
       screen.queryByRole("heading", { name: "Reset or Delete" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("restores the initiating reset action after cancellation and scoped completion", async () => {
+    function ResetHarness() {
+      const [resetReview, setResetReview] =
+        useState<PlayerDataResetReviewState | null>(null)
+      const [notice, setNotice] = useState<string | null>(null)
+
+      return (
+        <DataManagement
+          activity={null}
+          customValueCount={1}
+          issue={null}
+          notice={notice}
+          preview={null}
+          resetReview={resetReview}
+          onCancelImport={vi.fn()}
+          onCancelReset={() => setResetReview(null)}
+          onClose={vi.fn()}
+          onConfirmImport={vi.fn()}
+          onConfirmReset={(review) => {
+            setNotice(playerDataResetCopy[review.resetKind].successAnnouncement)
+            setResetReview(null)
+          }}
+          onExport={vi.fn()}
+          onImportFile={vi.fn()}
+          onRequestReset={(resetKind) => {
+            setNotice(null)
+            setResetReview({
+              resetKind,
+              confirmationId: `${resetKind}-review`,
+            })
+          }}
+        />
+      )
+    }
+
+    render(<ResetHarness />)
+    const achievementsAction = screen.getByRole("button", {
+      name: "Reset Achievements",
+    })
+    fireEvent.click(achievementsAction)
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Reset Achievements?" }),
+      ).toHaveFocus(),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Reset Achievements" }),
+      ).toHaveFocus(),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Reset Levels & Experience" }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Reset Levels & Experience",
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-levels-and-experience"].successAnnouncement,
+      ),
+    ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Reset Levels & Experience" }),
+      ).toHaveFocus(),
+    )
   })
 })
