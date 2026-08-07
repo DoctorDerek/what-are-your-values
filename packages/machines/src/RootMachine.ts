@@ -59,6 +59,7 @@ import {
   playerDataResetBackupReadyNotice,
   playerDataResetCopy,
 } from "./PlayerDataResetCopy"
+import { playerDataRecoveryCopy } from "./PlayerDataRecoveryCopy"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
 
@@ -298,8 +299,8 @@ function requireStoredRecoveryBackup(context: RootMachineContext) {
 
 function getRecoveryReplacementNotice(context: RootMachineContext) {
   return context.pendingRecoveryImportSource === "last-known-good"
-    ? "Last known-good save restored."
-    : "Your backup replaced the unreadable local data."
+    ? playerDataRecoveryCopy.unreadableData.restoreSuccess
+    : playerDataRecoveryCopy.unreadableData.selectedBackupSuccess
 }
 
 export const rootMachine = setup({
@@ -1269,7 +1270,8 @@ export const rootMachine = setup({
               actions: assign({
                 preparedDownload: ({ event }) => event.output,
                 portabilityIssue: null,
-                portabilityNotice: "Your current data backup is ready.",
+                portabilityNotice:
+                  playerDataRecoveryCopy.storageUnavailable.currentBackupReady,
               }),
             },
             onError: {
@@ -1297,7 +1299,7 @@ export const rootMachine = setup({
                 preparedDownload: ({ event }) => event.output,
                 portabilityIssue: null,
                 portabilityNotice:
-                  "Your unreadable local data is ready as a diagnostic recovery file.",
+                  playerDataRecoveryCopy.unreadableData.diagnosticReady,
               }),
             },
             onError: {
@@ -1410,7 +1412,8 @@ export const rootMachine = setup({
                 persistenceFailureOrigin: null,
                 persistenceIssue: null,
                 portabilityIssue: null,
-                portabilityNotice: "All local WAYVM player data was deleted.",
+                portabilityNotice:
+                  playerDataResetCopy["delete-all-data"].successAnnouncement,
               }),
             },
             onError: {
