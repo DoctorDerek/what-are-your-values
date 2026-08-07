@@ -142,7 +142,11 @@ type RootMachineEvent =
   | { type: "RESET.ACHIEVEMENTS_REQUESTED" }
   | { type: "RESET.ACHIEVEMENTS_CONFIRMED"; confirmationId: string }
   | { type: "DELETE_ALL_DATA.REQUESTED" }
-  | { type: "DELETE_ALL_DATA.CONFIRMED"; phrase: string }
+  | {
+      type: "DELETE_ALL_DATA.CONFIRMED"
+      confirmationId: string
+      phrase: string
+    }
   | { type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" }
   | { type: "RECOVERY.EXPORT_REQUESTED" }
   | { type: "RECOVERY.EXPORT_CONSUMED" }
@@ -250,14 +254,14 @@ function requirePendingScopedResetKind(
   return resetKind
 }
 
-function isMatchingScopedResetConfirmation({
+function isMatchingResetConfirmation({
   context,
   confirmationId,
   resetKind,
 }: {
   readonly context: RootMachineContext
   readonly confirmationId: string
-  readonly resetKind: ScopedPlayerDataResetKind
+  readonly resetKind: PlayerDataResetKind
 }) {
   return (
     context.pendingResetReview?.resetKind === resetKind &&
@@ -349,28 +353,32 @@ export const rootMachine = setup({
       requireBattleProfile(context).redo.length > 0,
     canConfirmDeleteAllCustomValues: ({ context, event }) =>
       event.type === "CUSTOM_VALUE.DELETE_ALL_CONFIRMED" &&
-      isMatchingScopedResetConfirmation({
+      isMatchingResetConfirmation({
         context,
         confirmationId: event.confirmationId,
         resetKind: "delete-all-custom-values",
       }),
     canConfirmLevelsAndExperienceReset: ({ context, event }) =>
       event.type === "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED" &&
-      isMatchingScopedResetConfirmation({
+      isMatchingResetConfirmation({
         context,
         confirmationId: event.confirmationId,
         resetKind: "reset-levels-and-experience",
       }),
     canConfirmAchievementsReset: ({ context, event }) =>
       event.type === "RESET.ACHIEVEMENTS_CONFIRMED" &&
-      isMatchingScopedResetConfirmation({
+      isMatchingResetConfirmation({
         context,
         confirmationId: event.confirmationId,
         resetKind: "reset-achievements",
       }),
     canConfirmDeleteAllData: ({ context, event }) =>
       event.type === "DELETE_ALL_DATA.CONFIRMED" &&
-      context.pendingResetReview?.resetKind === "delete-all-data" &&
+      isMatchingResetConfirmation({
+        context,
+        confirmationId: event.confirmationId,
+        resetKind: "delete-all-data",
+      }) &&
       event.phrase === DELETE_ALL_DATA_ACKNOWLEDGMENT,
     hasRecoveryEntries: ({ context }) => context.recoveryEntries !== null,
     hasStoredRecoveryBackup: ({ context }) =>

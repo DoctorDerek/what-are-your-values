@@ -1853,6 +1853,17 @@ describe("Root Machine", () => {
     actor.send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
     actor.send({
       type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId: "stale-complete-erasure-review",
+      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    })
+    expect(
+      actor.getSnapshot().matches({ DataManagement: "ReviewingReset" }),
+    ).toBe(true)
+    expect((await durableStore.readAll()).size).toBeGreaterThan(0)
+
+    actor.send({
+      type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
       phrase: "I understand this cannot be undone.",
     })
     expect(
@@ -1862,6 +1873,7 @@ describe("Root Machine", () => {
 
     actor.send({
       type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
       phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
     })
     const erasedSnapshot = await waitFor(actor, (candidate) =>
@@ -2128,6 +2140,7 @@ describe("Root Machine", () => {
 
     actor.send({
       type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
       phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
     })
     const failureSnapshot = await waitFor(
