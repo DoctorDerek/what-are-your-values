@@ -164,9 +164,7 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
     expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
     expect(click).toHaveBeenCalledOnce()
-    expect(revokeObjectURL).toHaveBeenCalledWith(
-      "blob:unreadable-wayvm-data",
-    )
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:unreadable-wayvm-data")
     expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
   })
 
@@ -305,9 +303,7 @@ describe("GameClient Integration", () => {
         "Import this backup? The unreadable current save will be preserved until replacement succeeds.",
       ),
     ).toBeVisible()
-    fireEvent.click(
-      screen.getByRole("button", { name: "Import & Replace" }),
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Import & Replace" }))
 
     expect(
       await screen.findByRole("heading", { name: "Your Values", level: 1 }),
@@ -382,9 +378,7 @@ describe("GameClient Integration", () => {
       screen.queryByRole("button", { name: "Delete All Data" }),
     ).not.toBeInTheDocument()
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Export Current Data" }),
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Export Current Data" }))
     expect(
       await screen.findByText("Your current data backup is ready."),
     ).toBeVisible()

@@ -25,8 +25,7 @@ export const playerDataRecoveryCopy = Object.freeze({
     selectedBackupReviewTitle: "Review Import",
     selectedBackupReviewAction: "Import & Replace",
     restoreSuccess: "Last known-good save restored.",
-    selectedBackupSuccess:
-      "Your backup replaced the unreadable local data.",
+    selectedBackupSuccess: "Your backup replaced the unreadable local data.",
     noKnownGoodSave:
       "No last known-good save is available. You can import a backup, export the unreadable data, or choose Delete All Data.",
     diagnosticReady:

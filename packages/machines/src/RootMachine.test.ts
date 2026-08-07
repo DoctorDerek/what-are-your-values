@@ -953,9 +953,7 @@ describe("Root Machine", () => {
         candidate.matches({ PersistenceFailure: "Reviewing" }) &&
         candidate.context.persistenceFailureOrigin === "loading",
     )
-    expect(unavailableSnapshot.context.recoveryEntries).toEqual(
-      capturedEntries,
-    )
+    expect(unavailableSnapshot.context.recoveryEntries).toEqual(capturedEntries)
 
     shouldFailRead = false
     actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })

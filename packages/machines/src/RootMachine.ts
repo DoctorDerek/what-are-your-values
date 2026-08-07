@@ -45,6 +45,7 @@ import {
   getWayvmImportValidationIssue,
   playerDataPortabilityCopy,
 } from "./PlayerDataPortabilityCopy"
+import { playerDataRecoveryCopy } from "./PlayerDataRecoveryCopy"
 import {
   DELETE_ALL_DATA_ACKNOWLEDGMENT,
   type PlayerDataResetKind,
@@ -59,7 +60,6 @@ import {
   playerDataResetBackupReadyNotice,
   playerDataResetCopy,
 } from "./PlayerDataResetCopy"
-import { playerDataRecoveryCopy } from "./PlayerDataRecoveryCopy"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
 
@@ -416,8 +416,7 @@ export const rootMachine = setup({
         resetKind: "delete-all-data",
       }) &&
       event.phrase === DELETE_ALL_DATA_ACKNOWLEDGMENT,
-    hasPendingResetReview: ({ context }) =>
-      context.pendingResetReview !== null,
+    hasPendingResetReview: ({ context }) => context.pendingResetReview !== null,
     canExportCurrentDataAfterStorageFailure: ({ context }) =>
       context.playerData !== null &&
       context.persistenceFailureOrigin !== null &&

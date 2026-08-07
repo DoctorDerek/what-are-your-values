@@ -30,8 +30,7 @@ type StorageUnavailableRecoveryActions = SharedRecoveryActions & {
 }
 
 type PlayerDataRecoveryActionsProps =
-  | UnreadableDataRecoveryActions
-  | StorageUnavailableRecoveryActions
+  UnreadableDataRecoveryActions | StorageUnavailableRecoveryActions
 
 export default function PlayerDataRecoveryActions(
   props: PlayerDataRecoveryActionsProps,

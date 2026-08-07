@@ -139,9 +139,7 @@ describe("Player Data Import Preview", () => {
         "Restore the last known-good save? The unreadable current save will be preserved until restoration succeeds.",
       ),
     ).toBeVisible()
-    expect(
-      screen.getByRole("button", { name: "Restore Save" }),
-    ).toBeEnabled()
+    expect(screen.getByRole("button", { name: "Restore Save" })).toBeEnabled()
     expect(getPreviewValue("Total Comparisons")).toHaveTextContent("42")
   })
 })

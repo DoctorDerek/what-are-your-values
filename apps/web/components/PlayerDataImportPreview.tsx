@@ -27,8 +27,7 @@ export default function PlayerDataImportPreview({
   isBusy,
   preview,
   title = "Review Import",
-  warning =
-    "Importing this backup will replace the current WAYVM data on this device. A local safety backup will be created first.",
+  warning = "Importing this backup will replace the current WAYVM data on this device. A local safety backup will be created first.",
   onCancel,
   onConfirm,
 }: {

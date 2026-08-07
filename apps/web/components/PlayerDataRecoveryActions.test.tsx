@@ -14,8 +14,7 @@ describe("Player Data Recovery Actions", () => {
     }
     const importBackupButtonRef = createRef<HTMLButtonElement>()
     const deleteAllDataButtonRef = createRef<HTMLButtonElement>()
-    const restoreLastKnownGoodSaveButtonRef =
-      createRef<HTMLButtonElement>()
+    const restoreLastKnownGoodSaveButtonRef = createRef<HTMLButtonElement>()
 
     render(
       <PlayerDataRecoveryActions
@@ -23,9 +22,7 @@ describe("Player Data Recovery Actions", () => {
         deleteAllDataButtonRef={deleteAllDataButtonRef}
         hasLastKnownGoodSave
         importBackupButtonRef={importBackupButtonRef}
-        restoreLastKnownGoodSaveButtonRef={
-          restoreLastKnownGoodSaveButtonRef
-        }
+        restoreLastKnownGoodSaveButtonRef={restoreLastKnownGoodSaveButtonRef}
         isBusy={false}
         {...handlers}
       />,
