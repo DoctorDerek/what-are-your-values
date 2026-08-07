@@ -194,6 +194,34 @@ describe("GameClient Integration", () => {
     ).toBeEnabled()
   })
 
+  it("preserves captured unreadable records when retry encounters a temporary storage outage", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+
+    render(<GameClient />)
+
+    await screen.findByRole("heading", {
+      name: "Your Saved Data Needs Attention",
+    })
+    durableStoreFailure.readEnabled = true
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "IndexedDB unavailable",
+    )
+    expect(
+      screen.getByRole("heading", {
+        name: "Your Saved Data Needs Attention",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Export Unreadable Data" }),
+    ).toBeEnabled()
+  })
+
   it("deletes captured unreadable records only after exact complete-erasure acknowledgment", async () => {
     durableStoreFailure.initialEntries = [
       [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
