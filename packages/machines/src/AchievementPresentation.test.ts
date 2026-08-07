@@ -7,6 +7,7 @@ import { ACHIEVEMENT_CATALOG, readAchievementId } from "./AchievementCatalog"
 import {
   formatAchievementUnlockedDate,
   getAchievementEnglishCopy,
+  getPendingAchievementPresentation,
   projectAchievementCatalog,
 } from "./AchievementPresentation"
 import {
@@ -225,22 +226,23 @@ describe("Achievement presentation", () => {
     )
     const initialState = createInitialAchievementState(battleProfile.activeDeck)
     const firstBattleId = readAchievementId("battle.first", "Achievement ID")
-    const catalog = projectAchievementCatalog({
-      achievementState: createAchievementState({
-        activeDeck: battleProfile.activeDeck,
-        unlocks: [
-          {
-            id: firstBattleId,
-            unlockedAt: UNLOCKED_AT,
-            eventToken: "first-battle-presentation-event",
-          },
-        ],
-        presentedAchievementIds: [],
-        progress: {
-          ...initialState.progress,
-          lifetimeBattleCount: 1,
+    const achievementState = createAchievementState({
+      activeDeck: battleProfile.activeDeck,
+      unlocks: [
+        {
+          id: firstBattleId,
+          unlockedAt: UNLOCKED_AT,
+          eventToken: "first-battle-presentation-event",
         },
-      }),
+      ],
+      presentedAchievementIds: [],
+      progress: {
+        ...initialState.progress,
+        lifetimeBattleCount: 1,
+      },
+    })
+    const catalog = projectAchievementCatalog({
+      achievementState,
       battleProfile,
     })
 
@@ -255,6 +257,37 @@ describe("Achievement presentation", () => {
       unlockedAt: null,
       unlockedDate: null,
     })
+    expect(
+      getPendingAchievementPresentation({
+        achievementState,
+        achievementPresentations: catalog,
+      }),
+    ).toMatchObject({ id: firstBattleId, status: "unlocked" })
+    expect(() =>
+      getPendingAchievementPresentation({
+        achievementState,
+        achievementPresentations: [],
+      }),
+    ).toThrow("Pending achievement presentation is unavailable")
+  })
+
+  it("returns no pending presentation when every unlock is already presented", () => {
+    const battleProfile = createInitialBattleProfile(
+      "no-pending-achievement-presentation-seed",
+    )
+    const achievementState = createInitialAchievementState(
+      battleProfile.activeDeck,
+    )
+
+    expect(
+      getPendingAchievementPresentation({
+        achievementState,
+        achievementPresentations: projectAchievementCatalog({
+          achievementState,
+          battleProfile,
+        }),
+      }),
+    ).toBeNull()
   })
 
   it("fails loudly when achievement baselines or value progress omit an active value", () => {

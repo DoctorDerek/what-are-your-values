@@ -3,10 +3,10 @@
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
+  getPendingAchievementPresentation,
   projectAchievementCatalog,
   type AchievementPresentation,
 } from "@game/machines/src/AchievementPresentation"
-import { getPendingAchievementUnlocks } from "@game/machines/src/AchievementState"
 import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "@game/machines/src/BattleProfileStore"
 import {
   projectBattlePair,
@@ -85,18 +85,10 @@ export default function GameClient() {
   const pendingAchievementPresentation = useMemo(() => {
     if (!playerData) return null
 
-    const pendingAchievementId = getPendingAchievementUnlocks(
-      playerData.achievements,
-    )[0]?.id
-    if (!pendingAchievementId) return null
-
-    const presentation = achievementPresentations.find(
-      ({ id }) => id === pendingAchievementId,
-    )
-    if (!presentation)
-      throw new Error("Pending achievement presentation is unavailable")
-
-    return presentation
+    return getPendingAchievementPresentation({
+      achievementState: playerData.achievements,
+      achievementPresentations,
+    })
   }, [achievementPresentations, playerData])
   const presentedBattle = useMemo(
     () =>
