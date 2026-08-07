@@ -24,6 +24,7 @@ function createHistoryProps() {
   return {
     canUndo: false,
     canRedo: false,
+    hasAchievementBanner: false,
     isPersistencePending: false,
     onUndo: vi.fn(),
     onRedo: vi.fn(),
@@ -31,6 +32,28 @@ function createHistoryProps() {
 }
 
 describe("Crucible Component Integration", () => {
+  it("reserves bounded viewport space so achievement feedback never covers choice targets", () => {
+    const { battleCycle, battle } = createBattleProps(
+      "achievement-banner-space-seed",
+    )
+
+    render(
+      <Crucible
+        {...createHistoryProps()}
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        hasAchievementBanner
+        onExit={vi.fn()}
+        onWinnerSelected={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("main", { name: "Value battle" })).toHaveClass(
+      "pb-[min(50dvh,17rem)]",
+    )
+  })
+
   it("renders semantic canonical values and commits a keyboard selection once", async () => {
     const onWinnerSelected = vi.fn()
     const { battleCycle, battle } = createBattleProps("keyboard-battle-seed")
@@ -261,6 +284,7 @@ describe("Crucible Component Integration", () => {
         progressById={battleCycle.progressById}
         canUndo
         canRedo
+        hasAchievementBanner={false}
         isPersistencePending={false}
         onExit={vi.fn()}
         onUndo={onUndo}
@@ -298,6 +322,7 @@ describe("Crucible Component Integration", () => {
         progressById={battleCycle.progressById}
         canUndo
         canRedo
+        hasAchievementBanner={false}
         isPersistencePending={false}
         onExit={vi.fn()}
         onUndo={onUndo}
@@ -345,6 +370,7 @@ describe("Crucible Component Integration", () => {
         progressById={battleCycle.progressById}
         canUndo
         canRedo
+        hasAchievementBanner={false}
         isPersistencePending
         onExit={onExit}
         onUndo={onUndo}
