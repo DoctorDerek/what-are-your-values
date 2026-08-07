@@ -6,13 +6,20 @@ import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
 } from "@game/machines/src/BattleScheduler"
+import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import { rootMachine } from "@game/machines/src/RootMachine"
+import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
+import {
+  downloadPlayerDataFile,
+  readPlayerDataFile,
+} from "@/lib/PlayerDataFiles"
 import packageMetadata from "@/package.json"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
+import DataManagement, { type DataManagementActivity } from "./DataManagement"
 import Hub from "./Hub"
 import Splash from "./Splash"
 
@@ -35,6 +42,8 @@ export default function GameClient() {
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
     useState(false)
   const shouldRestoreHubFocusRef = useRef(false)
+  const deliveredDownloadsRef = useRef(new WeakSet<object>())
+  const [isReadingImportFile, setIsReadingImportFile] = useState(false)
   const battleProfile = state.context.playerData?.profile ?? null
   const rankedValues = useMemo(
     () =>
@@ -109,6 +118,34 @@ export default function GameClient() {
     },
     [send],
   )
+  const openDataManagement = useCallback(
+    (focusTargetId: string) => {
+      returnFocusTargetIdRef.current = focusTargetId
+      shouldRestoreHubFocusRef.current = true
+      send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    },
+    [send],
+  )
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      setIsReadingImportFile(true)
+      try {
+        const serialized = await readPlayerDataFile(file)
+        send({
+          type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+          serialized,
+        })
+      } catch (error) {
+        send({
+          type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+          issue: getErrorMessage(error),
+        })
+      } finally {
+        setIsReadingImportFile(false)
+      }
+    },
+    [send],
+  )
 
   useEffect(() => {
     send({
@@ -123,6 +160,38 @@ export default function GameClient() {
       document.getElementById(returnFocusTargetIdRef.current)?.focus()
     }
   }, [state])
+
+  useEffect(() => {
+    const preparedDownload = state.context.preparedDownload
+    if (
+      !state.matches("DataManagement") ||
+      !preparedDownload ||
+      deliveredDownloadsRef.current.has(preparedDownload)
+    )
+      return
+
+    deliveredDownloadsRef.current.add(preparedDownload)
+    try {
+      downloadPlayerDataFile(preparedDownload)
+      send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+    } catch {
+      send({
+        type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+        issue: playerDataPortabilityCopy.exportFailure,
+      })
+    }
+  }, [send, state])
+
+  const dataManagementActivity: DataManagementActivity | null =
+    isReadingImportFile || state.matches({ DataManagement: "PreparingImport" })
+      ? "Checking backup…"
+      : state.matches({ DataManagement: "Exporting" })
+        ? "Creating backup…"
+        : state.matches({ DataManagement: "CreatingPreImportBackup" })
+          ? "Creating safety backup…"
+          : state.matches({ DataManagement: "ReplacingImport" })
+            ? "Restoring backup…"
+            : null
 
   if (
     state.matches("Hydrating") ||
@@ -164,14 +233,36 @@ export default function GameClient() {
       <Hub
         rankedValues={rankedValues}
         browseAllValuesButtonRef={browseAllValuesButtonRef}
+        dataNotice={state.context.portabilityNotice}
         onBrowseAllValues={(focusTargetId) => openAllValues({ focusTargetId })}
         onAddCustomValue={(focusTargetId) =>
           openAllValues({ focusTargetId, openCustomValueBuilder: true })
         }
+        onOpenDataManagement={openDataManagement}
         onOpenValue={(valueId, focusTargetId) =>
           openAllValues({ focusTargetId, valueId })
         }
         onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+      />
+    )
+  }
+
+  if (state.matches("DataManagement")) {
+    return (
+      <DataManagement
+        activity={dataManagementActivity}
+        issue={state.context.portabilityIssue}
+        notice={state.context.portabilityNotice}
+        preview={state.context.pendingImport?.preview ?? null}
+        onCancelImport={() =>
+          send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+        }
+        onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
+        onConfirmImport={() =>
+          send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+        }
+        onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+        onImportFile={(file) => void handleImportFile(file)}
       />
     )
   }
