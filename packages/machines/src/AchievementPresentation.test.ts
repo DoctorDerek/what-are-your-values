@@ -256,4 +256,48 @@ describe("Achievement presentation", () => {
       unlockedDate: null,
     })
   })
+
+  it("fails loudly when achievement baselines or value progress omit an active value", () => {
+    const battleProfile = createInitialBattleProfile(
+      "invalid-achievement-presentation-seed",
+    )
+    const achievementState = createInitialAchievementState(
+      battleProfile.activeDeck,
+    )
+    const [missingValueId] = battleProfile.activeDeck.valueIds
+    if (!missingValueId) throw new Error("Achievement test deck is empty")
+
+    const incompleteBaselines = new Map(
+      achievementState.progress.baselineLevelsByValue,
+    )
+    incompleteBaselines.delete(missingValueId)
+    const incompleteProgress = new Map(battleProfile.progressById)
+    incompleteProgress.delete(missingValueId)
+
+    expect(() =>
+      projectAchievementCatalog({
+        achievementState: {
+          ...achievementState,
+          progress: {
+            ...achievementState.progress,
+            baselineLevelsByValue: incompleteBaselines,
+          },
+        },
+        battleProfile,
+      }),
+    ).toThrow(
+      `Achievement progress is unavailable for active value: ${missingValueId}`,
+    )
+    expect(() =>
+      projectAchievementCatalog({
+        achievementState,
+        battleProfile: {
+          ...battleProfile,
+          progressById: incompleteProgress,
+        },
+      }),
+    ).toThrow(
+      `Achievement progress is unavailable for active value: ${missingValueId}`,
+    )
+  })
 })
