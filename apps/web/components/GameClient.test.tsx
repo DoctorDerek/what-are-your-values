@@ -695,6 +695,37 @@ describe("GameClient Integration", () => {
     expect(click).toHaveBeenCalledOnce()
   })
 
+  it("keeps the reviewed reset available after browser backup delivery fails", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000065",
+    )
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      throw new Error("Browser download failed")
+    })
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Import & Export" }),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      playerDataPortabilityCopy.exportFailure,
+    )
+    expect(
+      screen.getByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Reset Achievements" }),
+    ).toBeEnabled()
+  })
+
   it("preserves the reviewed reset and current data after a failed write then retries", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000063",
