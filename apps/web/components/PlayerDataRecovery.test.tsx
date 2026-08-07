@@ -92,11 +92,14 @@ describe("Player Data Recovery", () => {
     const file = new File(["{}"], "wayvm-backup.json", {
       type: "application/json",
     })
-
-    fireEvent.change(
-      screen.getByLabelText("Choose WAYVM JSON backup for recovery"),
-      { target: { files: [file] } },
+    const recoveryInput = screen.getByLabelText(
+      "Choose WAYVM JSON backup for recovery",
     )
+    const clickRecoveryInput = vi.spyOn(recoveryInput, "click")
+
+    fireEvent.click(screen.getByRole("button", { name: "Import Backup" }))
+    expect(clickRecoveryInput).toHaveBeenCalledOnce()
+    fireEvent.change(recoveryInput, { target: { files: [file] } })
 
     expect(onImportFile).toHaveBeenCalledWith(file)
   })
