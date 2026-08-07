@@ -54,6 +54,10 @@ import {
   applyScopedPlayerDataResetActor,
   deleteAllPlayerDataActor,
 } from "./PlayerDataResetActors"
+import {
+  playerDataResetBackupReadyNotice,
+  playerDataResetCopy,
+} from "./PlayerDataResetCopy"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
 
@@ -263,17 +267,6 @@ function isMatchingScopedResetConfirmation({
     context.pendingResetReview?.resetKind === resetKind &&
     context.pendingResetReview.confirmationId === confirmationId
   )
-}
-
-function getResetSuccessNotice(resetKind: ScopedPlayerDataResetKind) {
-  if (resetKind === "delete-all-custom-values") {
-    return "All Custom Values were deleted. Canonical value progress, achievements, and settings were kept."
-  }
-  if (resetKind === "reset-levels-and-experience") {
-    return "Levels and experience were reset. Custom Values, achievements, and settings were kept."
-  }
-
-  return "Achievements and achievement progress were reset. Your values, ranking, and settings were kept."
 }
 
 function createFreshPlayerDataAfterDeletion(context: RootMachineContext) {
@@ -820,8 +813,7 @@ export const rootMachine = setup({
               actions: assign({
                 preparedDownload: ({ event }) => event.output,
                 portabilityIssue: null,
-                portabilityNotice:
-                  "Your private backup is ready. Review the reset when you are ready.",
+                portabilityNotice: playerDataResetBackupReadyNotice,
               }),
             },
             onError: {
@@ -849,7 +841,8 @@ export const rootMachine = setup({
                 playerData: ({ event }) => event.output.head.playerData,
                 battleProfileStoreState: ({ event }) => event.output,
                 portabilityNotice: ({ context }) =>
-                  getResetSuccessNotice(requirePendingScopedResetKind(context)),
+                  playerDataResetCopy[requirePendingScopedResetKind(context)]
+                    .successAnnouncement,
                 pendingResetReview: null,
                 preparedDownload: null,
                 portabilityIssue: null,
@@ -884,7 +877,8 @@ export const rootMachine = setup({
                 preparedDownload: null,
                 persistenceIssue: null,
                 portabilityIssue: null,
-                portabilityNotice: "All local WAYVM player data was deleted.",
+                portabilityNotice:
+                  playerDataResetCopy["delete-all-data"].successAnnouncement,
               }),
             },
             onError: {
