@@ -9,6 +9,7 @@ type RecoveryActionCopy = {
 }
 
 export const playerDataRecoveryCopy = Object.freeze({
+  loading: "Loading your values…",
   unreadableData: Object.freeze({
     title: "Your Saved Data Needs Attention",
     body: Object.freeze([
