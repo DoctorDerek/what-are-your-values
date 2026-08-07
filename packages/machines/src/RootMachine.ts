@@ -48,6 +48,7 @@ import {
 import {
   DELETE_ALL_DATA_ACKNOWLEDGMENT,
   type PlayerDataResetKind,
+  type PlayerDataResetReview,
   type ScopedPlayerDataResetKind,
 } from "./PlayerDataReset"
 import {
@@ -60,11 +61,6 @@ import {
 } from "./PlayerDataResetCopy"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
-
-type PendingResetReview = {
-  readonly resetKind: PlayerDataResetKind
-  readonly confirmationId: string
-}
 
 type PendingRecoveryImportSource = "last-known-good" | "selected-backup"
 
@@ -83,7 +79,7 @@ type RootMachineContext = {
   pendingImport: PreparedWayvmImport | null
   preImportBackupBytes: string | null
   preparedDownload: PreparedWayvmDownload | null
-  pendingResetReview: PendingResetReview | null
+  pendingResetReview: PlayerDataResetReview | null
   recoveryEntries: ReadonlyMap<string, string> | null
   pendingRecoveryImportSource: PendingRecoveryImportSource | null
   persistenceFailureOrigin: PersistenceFailureOrigin | null

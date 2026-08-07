@@ -29,6 +29,11 @@ export type ScopedPlayerDataResetKind = Exclude<
   "delete-all-data"
 >
 
+export type PlayerDataResetReview = {
+  readonly resetKind: PlayerDataResetKind
+  readonly confirmationId: string
+}
+
 function incrementAchievementProgressGeneration(state: AchievementState) {
   const generation = state.progress.achievementProgressGeneration
   if (generation === Number.MAX_SAFE_INTEGER) {
