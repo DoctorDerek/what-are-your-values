@@ -210,8 +210,10 @@ export default function GameClient() {
 
   useEffect(() => {
     const preparedDownload = state.context.preparedDownload
+    const isDataManagementDownload = state.matches("DataManagement")
+    const isRecoveryDownload = state.matches("PersistenceFailure")
     if (
-      !state.matches("DataManagement") ||
+      (!isDataManagementDownload && !isRecoveryDownload) ||
       !preparedDownload ||
       deliveredDownloadsRef.current.has(preparedDownload)
     )
@@ -220,12 +222,20 @@ export default function GameClient() {
     deliveredDownloadsRef.current.add(preparedDownload)
     try {
       downloadPlayerDataFile(preparedDownload)
-      send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+      if (isDataManagementDownload)
+        send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+      if (isRecoveryDownload) send({ type: "RECOVERY.EXPORT_CONSUMED" })
     } catch {
-      send({
-        type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
-        issue: playerDataPortabilityCopy.exportFailure,
-      })
+      if (isDataManagementDownload)
+        send({
+          type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+          issue: playerDataPortabilityCopy.exportFailure,
+        })
+      if (isRecoveryDownload)
+        send({
+          type: "RECOVERY.PLATFORM_FAILURE_REPORTED",
+          issue: playerDataPortabilityCopy.exportFailure,
+        })
     }
   }, [send, state])
 
