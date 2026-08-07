@@ -430,6 +430,78 @@ describe("Root Machine", () => {
     ).toBeNull()
   })
 
+  it("serializes milestone acknowledgement behind an in-flight battle write", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let pauseNextWrite = false
+    let releasePendingWrite: (() => void) | null = null
+    let reportPendingWriteStarted: (() => void) | null = null
+    const pendingWriteStarted = new Promise<void>((resolve) => {
+      reportPendingWriteStarted = resolve
+    })
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (pauseNextWrite) {
+          pauseNextWrite = false
+          reportPendingWriteStarted?.()
+          await new Promise<void>((resolve) => {
+            releasePendingWrite = resolve
+          })
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "serialized-achievement-presentation-seed",
+    })
+    await commitOneBattle(actor)
+    const firstCommittedPlayerData = actor.getSnapshot().context.playerData
+    if (!firstCommittedPlayerData)
+      throw new Error("Serialized presentation Player Data is unavailable")
+
+    const [firstPendingUnlock] = getPendingAchievementUnlocks(
+      firstCommittedPlayerData.achievements,
+    )
+    if (!firstPendingUnlock)
+      throw new Error("Serialized presentation unlock is unavailable")
+
+    const secondProfile = firstCommittedPlayerData.profile
+    const [secondWinnerId] = projectBattlePair(
+      secondProfile.activeDeck,
+      secondProfile.scheduler,
+    )
+    pauseNextWrite = true
+    actor.send({
+      type: "BATTLE.WINNER_SELECTED",
+      winnerId: secondWinnerId,
+      expectedScheduler: secondProfile.scheduler,
+    })
+    await pendingWriteStarted
+    actor.send({
+      type: "ACHIEVEMENT.PRESENTED",
+      achievementId: firstPendingUnlock.id,
+    })
+    releasePendingWrite?.()
+
+    const serializedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Crucible: "Ready" }) &&
+        candidate.context.playerData?.profile.history.length === 2 &&
+        candidate.context.playerData.achievements.presentedAchievementIds.includes(
+          firstPendingUnlock.id,
+        ),
+    )
+
+    expect(serializedSnapshot.context.persistenceIssue).toBeNull()
+    expect(serializedSnapshot.context.pendingBattleProfileCommit).toBeNull()
+    expect(
+      serializedSnapshot.context.pendingAchievementPresentationId,
+    ).toBeNull()
+  })
+
   it("adds a custom value through the All Values durable update flow", async () => {
     const randomUuid = vi.fn(() => "00000000-0000-4000-8000-000000000001")
     const { actor } = await bootRootActor({
