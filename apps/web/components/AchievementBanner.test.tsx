@@ -74,7 +74,10 @@ describe("AchievementBanner Integration", () => {
       "data-motion-initial",
       JSON.stringify({ opacity: 0, y: 24 }),
     )
-    expect(screen.getByRole("status")).toHaveTextContent(
+    const announcement = screen.getByRole("status")
+    expect(announcement).toHaveAttribute("aria-live", "polite")
+    expect(announcement).toHaveAttribute("aria-atomic", "true")
+    expect(announcement).toHaveTextContent(
       "Achievement unlocked: First Battle.",
     )
     expect(
