@@ -2,6 +2,7 @@
 
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
+import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "@game/machines/src/BattleProfileStore"
 import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
@@ -26,6 +27,10 @@ import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import DataManagement, { type DataManagementActivity } from "./DataManagement"
 import Hub from "./Hub"
+import PlayerDataLoading from "./PlayerDataLoading"
+import PlayerDataRecovery, {
+  type PlayerDataRecoveryActivity,
+} from "./PlayerDataRecovery"
 import Splash from "./Splash"
 
 export default function GameClient() {
@@ -49,6 +54,8 @@ export default function GameClient() {
   const shouldRestoreHubFocusRef = useRef(false)
   const deliveredDownloadsRef = useRef(new WeakSet<object>())
   const [isReadingImportFile, setIsReadingImportFile] = useState(false)
+  const [isReadingRecoveryImportFile, setIsReadingRecoveryImportFile] =
+    useState(false)
   const battleProfile = state.context.playerData?.profile ?? null
   const rankedValues = useMemo(
     () =>
@@ -165,6 +172,26 @@ export default function GameClient() {
     },
     [send],
   )
+  const handleRecoveryImportFile = useCallback(
+    async (file: File) => {
+      setIsReadingRecoveryImportFile(true)
+      try {
+        const serialized = await readPlayerDataFile(file)
+        send({
+          type: "RECOVERY.IMPORT_PREPARE_REQUESTED",
+          serialized,
+        })
+      } catch (error) {
+        send({
+          type: "RECOVERY.PLATFORM_FAILURE_REPORTED",
+          issue: getErrorMessage(error),
+        })
+      } finally {
+        setIsReadingRecoveryImportFile(false)
+      }
+    },
+    [send],
+  )
   const handleResetConfirmed = useCallback(
     (review: PlayerDataResetReview) => {
       const { confirmationId, resetKind } = review
@@ -209,8 +236,10 @@ export default function GameClient() {
 
   useEffect(() => {
     const preparedDownload = state.context.preparedDownload
+    const isDataManagementDownload = state.matches("DataManagement")
+    const isRecoveryDownload = state.matches("PersistenceFailure")
     if (
-      !state.matches("DataManagement") ||
+      (!isDataManagementDownload && !isRecoveryDownload) ||
       !preparedDownload ||
       deliveredDownloadsRef.current.has(preparedDownload)
     )
@@ -219,12 +248,20 @@ export default function GameClient() {
     deliveredDownloadsRef.current.add(preparedDownload)
     try {
       downloadPlayerDataFile(preparedDownload)
-      send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+      if (isDataManagementDownload)
+        send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+      if (isRecoveryDownload) send({ type: "RECOVERY.EXPORT_CONSUMED" })
     } catch {
-      send({
-        type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
-        issue: playerDataPortabilityCopy.exportFailure,
-      })
+      if (isDataManagementDownload)
+        send({
+          type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
+          issue: playerDataPortabilityCopy.exportFailure,
+        })
+      if (isRecoveryDownload)
+        send({
+          type: "RECOVERY.PLATFORM_FAILURE_REPORTED",
+          issue: playerDataPortabilityCopy.exportFailure,
+        })
     }
   }, [send, state])
 
@@ -244,29 +281,102 @@ export default function GameClient() {
                 : state.matches({ DataManagement: "DeletingAllData" })
                   ? "Deleting data…"
                   : null
+  const playerDataRecoveryActivity: PlayerDataRecoveryActivity | null =
+    isReadingRecoveryImportFile ||
+    state.matches({ PersistenceFailure: "PreparingImport" })
+      ? "Checking backup…"
+      : state.matches({ PersistenceFailure: "ExportingCurrentData" })
+        ? "Creating backup…"
+        : state.matches({ PersistenceFailure: "ExportingEvidence" })
+          ? "Creating diagnostic file…"
+          : state.matches({ PersistenceFailure: "ReplacingPlayerData" })
+            ? "Restoring backup…"
+            : state.matches({ PersistenceFailure: "DeletingAllData" })
+              ? "Deleting data…"
+              : null
 
   if (
     state.matches("Hydrating") ||
     state.matches("LoadingProfile") ||
     state.matches("InitializingProfile")
   ) {
-    return (
-      <div className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex h-[100dvh] w-[100dvw] items-center justify-center text-6xl font-black uppercase drop-shadow-[4px_4px_0px_#000000]">
-        Booting Machine...
-      </div>
-    )
+    return <PlayerDataLoading />
   }
 
   if (state.matches("PersistenceFailure")) {
+    const issue =
+      state.context.portabilityIssue ?? state.context.persistenceIssue
+    const hasRecoveryEntries = state.context.recoveryEntries !== null
+
+    if (hasRecoveryEntries)
+      return (
+        <PlayerDataRecovery
+          mode="unreadable-data"
+          activity={playerDataRecoveryActivity}
+          hasLastKnownGoodSave={
+            state.context.recoveryEntries?.has(
+              BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+            ) ?? false
+          }
+          issue={issue}
+          notice={state.context.portabilityNotice}
+          pendingImportSource={state.context.pendingRecoveryImportSource}
+          preview={state.context.pendingImport?.preview ?? null}
+          resetReview={state.context.pendingResetReview}
+          onCancelImport={() =>
+            send({ type: "RECOVERY.IMPORT_CANCEL_REQUESTED" })
+          }
+          onCancelReset={() =>
+            send({ type: "RECOVERY.DELETE_ALL_CANCEL_REQUESTED" })
+          }
+          onConfirmImport={() =>
+            send({ type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" })
+          }
+          onConfirmReset={(review) =>
+            send({
+              type: "RECOVERY.DELETE_ALL_CONFIRMED",
+              confirmationId: review.confirmationId,
+              phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+            })
+          }
+          onDeleteAllData={() =>
+            send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+          }
+          onExportUnreadableData={() =>
+            send({ type: "RECOVERY.EXPORT_REQUESTED" })
+          }
+          onImportFile={(file) => void handleRecoveryImportFile(file)}
+          onRestoreLastKnownGoodSave={() =>
+            send({ type: "RECOVERY.RESTORE_BACKUP_REQUESTED" })
+          }
+          onTryAgain={() => send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })}
+        />
+      )
+
+    const canExportCurrentData =
+      state.context.playerData !== null &&
+      state.context.persistenceFailureOrigin !== null &&
+      state.context.persistenceFailureOrigin !== "loading"
+    const canReturnWithoutNewChanges =
+      state.context.persistenceFailureOrigin === "initialization" ||
+      state.context.persistenceFailureOrigin === "crucible"
+
     return (
-      <main className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-primary-cyan flex min-h-[100dvh] w-full flex-col items-center justify-center gap-6 p-8 text-center">
-        <h1 className="max-w-4xl text-4xl font-black uppercase drop-shadow-[4px_4px_0px_#000000] sm:text-6xl">
-          We couldn’t safely load your values.
-        </h1>
-        <p className="max-w-2xl text-xl font-bold text-white sm:text-2xl">
-          Your saved data was left unchanged. Reload this page to try again.
-        </p>
-      </main>
+      <PlayerDataRecovery
+        mode="storage-unavailable"
+        activity={playerDataRecoveryActivity}
+        canExportCurrentData={canExportCurrentData}
+        canReturnWithoutNewChanges={canReturnWithoutNewChanges}
+        issue={issue}
+        notice={state.context.portabilityNotice}
+        onExportCurrentData={() =>
+          send({ type: "STORAGE_RECOVERY.EXPORT_REQUESTED" })
+        }
+        onReturnWithoutNewChanges={() =>
+          send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
+        }
+        onTryAgain={() => send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })}
+      />
     )
   }
 

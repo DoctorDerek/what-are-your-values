@@ -115,4 +115,31 @@ describe("Player Data Import Preview", () => {
       screen.getByRole("button", { name: "Import & Replace" }),
     ).toBeDisabled()
   })
+
+  it("adapts the validated preview language without changing its evidence", () => {
+    render(
+      <PlayerDataImportPreview
+        confirmLabel="Restore Save"
+        isBusy={false}
+        preview={preview}
+        title="Restore Last Known-Good Save?"
+        warning="Restore the last known-good save? The unreadable current save will be preserved until restoration succeeds."
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Restore Last Known-Good Save?",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Restore the last known-good save? The unreadable current save will be preserved until restoration succeeds.",
+      ),
+    ).toBeVisible()
+    expect(screen.getByRole("button", { name: "Restore Save" })).toBeEnabled()
+    expect(getPreviewValue("Total Comparisons")).toHaveTextContent("42")
+  })
 })

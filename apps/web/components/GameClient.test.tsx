@@ -1,4 +1,9 @@
 import { createInitialAchievementState } from "@game/machines/src/AchievementState"
+import {
+  BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+  BATTLE_PROFILE_SNAPSHOT_A_KEY,
+} from "@game/machines/src/BattleProfileStore"
 import { createCustomValueAddCommit } from "@game/machines/src/CustomValueCommands"
 import type { DurableStoreTransaction } from "@game/machines/src/DurableStoreAdapter"
 import {
@@ -24,6 +29,7 @@ import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
 
 const durableStoreFailure = vi.hoisted(() => ({
+  initialEntries: [] as [string, string][],
   readEnabled: false,
   writeEnabled: false,
 }))
@@ -34,7 +40,9 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
 
   return {
     createIndexedDbDurableStore: () => {
-      const durableStore = createInMemoryDurableStore()
+      const durableStore = createInMemoryDurableStore(
+        durableStoreFailure.initialEntries,
+      )
 
       return {
         readAll: async () => {
@@ -58,29 +66,423 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
   }
 })
 
+async function createSerializedGameClientBackup({
+  schedulerSeed,
+  sourceBuild,
+}: {
+  schedulerSeed: string
+  sourceBuild: string
+}) {
+  const createdAt = "2026-08-07T12:00:00.000Z"
+  const wayvmExport = await createWayvmExport({
+    exportedAt: createdAt,
+    sourceAppVersion: "5.2.0",
+    sourceBuild,
+    playerData: createInitialPlayerData({ schedulerSeed, createdAt }),
+  })
+
+  return serializeWayvmExport(wayvmExport)
+}
+
 describe("GameClient Integration", () => {
   afterEach(() => {
+    durableStoreFailure.initialEntries = []
     durableStoreFailure.readEnabled = false
     durableStoreFailure.writeEnabled = false
     localStorage.clear()
     vi.restoreAllMocks()
   })
 
-  it("renders the safe persistence failure screen without exposing saved data", async () => {
+  it("limits a loading-origin storage failure to retry without inventing player data", async () => {
     durableStoreFailure.readEnabled = true
 
     render(<GameClient />)
 
     expect(
       await screen.findByRole("heading", {
-        name: "We couldn’t safely load your values.",
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(/Continuing without a reliable save could lose/),
+    ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent("IndexedDB unavailable")
+    expect(screen.getByRole("button", { name: "Try Again" })).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: "Export Current Data" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Return Without New Changes" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Delete All Data" }),
+    ).not.toBeInTheDocument()
+
+    durableStoreFailure.readEnabled = false
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
+      }),
+    ).toBeVisible()
+  })
+
+  it("downloads captured unreadable records without claiming they were erased", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:unreadable-wayvm-data")
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined)
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your Saved Data Needs Attention",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(
+      screen.getByText(/No last known-good save is available\./),
+    ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Export Unreadable Data" }),
+    )
+
+    expect(
+      await screen.findByText(
+        "Your unreadable local data is ready as a diagnostic recovery file.",
+      ),
+    ).toBeVisible()
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(click).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:unreadable-wayvm-data")
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+  })
+
+  it("keeps unreadable data recoverable when browser diagnostic delivery fails", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      throw new Error("Browser download failed")
+    })
+
+    render(<GameClient />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Export Unreadable Data",
+      }),
+    )
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      playerDataPortabilityCopy.exportFailure,
+    )
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Export Unreadable Data" }),
+    ).toBeEnabled()
+  })
+
+  it("preserves captured unreadable records when retry encounters a temporary storage outage", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+
+    render(<GameClient />)
+
+    await screen.findByRole("heading", {
+      name: "Your Saved Data Needs Attention",
+    })
+    durableStoreFailure.readEnabled = true
+    fireEvent.click(screen.getByRole("button", { name: "Try Again" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "IndexedDB unavailable",
+    )
+    expect(
+      screen.getByRole("heading", {
+        name: "Your Saved Data Needs Attention",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Export Unreadable Data" }),
+    ).toBeEnabled()
+  })
+
+  it("deletes captured unreadable records only after exact complete-erasure acknowledgment", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000111",
+    )
+
+    render(<GameClient />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Delete All Data" }),
+    )
+    expect(
+      await screen.findByRole("heading", { name: "Delete All Data?" }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Delete All Data" }),
+      ).toHaveFocus(),
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete All Data" }))
+    await screen.findByRole("heading", { name: "Delete All Data?" })
+    const deleteAllDataButton = screen.getByRole("button", {
+      name: "Delete All Data",
+    })
+    expect(deleteAllDataButton).toBeDisabled()
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      }),
+    )
+    expect(deleteAllDataButton).toBeEnabled()
+    fireEvent.click(deleteAllDataButton)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
       }),
     ).toBeVisible()
     expect(
       screen.getByText(
-        "Your saved data was left unchanged. Reload this page to try again.",
+        playerDataResetCopy["delete-all-data"].successAnnouncement,
       ),
     ).toBeVisible()
+  })
+
+  it("restores a retained last-known-good save only after validated browser review", async () => {
+    const serializedBackup = await createSerializedGameClientBackup({
+      schedulerSeed: "known-good-browser-recovery",
+      sourceBuild: "known-good-browser-build",
+    })
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, serializedBackup],
+    ]
+
+    render(<GameClient />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Restore Last Known-Good Save",
+      }),
+    )
+    expect(
+      await screen.findByRole("heading", {
+        name: "Restore Last Known-Good Save?",
+      }),
+    ).toBeVisible()
+    expect(screen.getByText("known-good-browser-build")).toBeVisible()
+    expect(
+      screen.getByText(/unreadable current save will be preserved/),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "Restore Last Known-Good Save",
+        }),
+      ).toHaveFocus(),
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "Restore Last Known-Good Save" }),
+    )
+    await screen.findByRole("heading", {
+      name: "Restore Last Known-Good Save?",
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Restore Save" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(screen.getByText("Last known-good save restored.")).toBeVisible()
+  })
+
+  it("validates and explicitly imports a selected backup over corrupt browser storage", async () => {
+    const serializedBackup = await createSerializedGameClientBackup({
+      schedulerSeed: "selected-browser-recovery",
+      sourceBuild: "selected-browser-build",
+    })
+    const backupFile = new File(
+      [serializedBackup],
+      "selected-wayvm-recovery.json",
+      { type: "application/json" },
+    )
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+
+    render(<GameClient />)
+
+    await screen.findByRole("heading", {
+      name: "Your Saved Data Needs Attention",
+    })
+    fireEvent.change(
+      screen.getByLabelText("Choose WAYVM JSON backup for recovery"),
+      { target: { files: [backupFile] } },
+    )
+    expect(
+      await screen.findByRole("heading", { name: "Review Import" }),
+    ).toBeVisible()
+    expect(screen.getByText("selected-browser-build")).toBeVisible()
+    expect(
+      screen.getByText(
+        "Import this backup? The unreadable current save will be preserved until replacement succeeds.",
+      ),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Import & Replace" }))
+
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(
+      screen.getByText("Your backup replaced the unreadable local data."),
+    ).toBeVisible()
+  })
+
+  it("keeps corrupt data recoverable when the browser cannot read a selected backup", async () => {
+    durableStoreFailure.initialEntries = [
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ]
+    const unreadableBackup = new File(
+      ['["wayvm-export"]'],
+      "unreadable-recovery-backup.json",
+      { type: "application/json" },
+    )
+    vi.spyOn(unreadableBackup, "text").mockRejectedValue(
+      new Error("Browser file access failed"),
+    )
+
+    render(<GameClient />)
+
+    await screen.findByRole("heading", {
+      name: "Your Saved Data Needs Attention",
+    })
+    fireEvent.change(
+      screen.getByLabelText("Choose WAYVM JSON backup for recovery"),
+      { target: { files: [unreadableBackup] } },
+    )
+
+    const issue = await screen.findByRole("alert")
+    expect(issue).toHaveTextContent(playerDataPortabilityCopy.importInvalid)
+    expect(issue).toHaveFocus()
+    expect(screen.getByText(/Nothing has been erased\./)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Import Backup" })).toBeEnabled()
+  })
+
+  it("exports the in-memory profile and returns safely after first-run persistence fails", async () => {
+    durableStoreFailure.writeEnabled = true
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000112",
+    )
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => undefined)
+    vi.spyOn(URL, "createObjectURL").mockReturnValue(
+      "blob:initialization-recovery",
+    )
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined)
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "IndexedDB write failed",
+    )
+    expect(
+      screen.getByRole("button", { name: "Export Current Data" }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: "Delete All Data" }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Export Current Data" }))
+    expect(
+      await screen.findByText("Your current data backup is ready."),
+    ).toBeVisible()
+    expect(click).toHaveBeenCalledOnce()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    )
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "What Are Your Values, Mapache?",
+      }),
+    ).toBeVisible()
+  })
+
+  it("returns to the unchanged Hub when a battle result cannot become durable", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000113",
+    )
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
+    if (!winnerCard) throw new Error("The recovery test winner is unavailable")
+
+    durableStoreFailure.writeEnabled = true
+    fireEvent.click(winnerCard)
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Progress Cannot Be Saved Reliably",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "IndexedDB write failed",
+    )
+    expect(
+      screen.getByRole("button", { name: "Export Current Data" }),
+    ).toBeEnabled()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Return Without New Changes" }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Your Values", level: 1 }),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Not ranked yet. Browse the included values, then battle when you are ready.",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("heading", { name: "Top Five" }),
+    ).not.toBeInTheDocument()
   })
 
   it("preserves a Custom Value draft after a failed write and commits it on retry", async () => {

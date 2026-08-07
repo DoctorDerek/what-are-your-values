@@ -45,6 +45,7 @@ import {
   getWayvmImportValidationIssue,
   playerDataPortabilityCopy,
 } from "./PlayerDataPortabilityCopy"
+import { playerDataRecoveryCopy } from "./PlayerDataRecoveryCopy"
 import {
   DELETE_ALL_DATA_ACKNOWLEDGMENT,
   type PlayerDataResetKind,
@@ -157,7 +158,13 @@ type RootMachineEvent =
   | { type: "RECOVERY.RESTORE_BACKUP_REQUESTED" }
   | { type: "RECOVERY.IMPORT_CANCEL_REQUESTED" }
   | { type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" }
-  | { type: "RECOVERY.DELETE_ALL_REQUESTED"; phrase: string }
+  | { type: "RECOVERY.DELETE_ALL_REQUESTED" }
+  | {
+      type: "RECOVERY.DELETE_ALL_CONFIRMED"
+      confirmationId: string
+      phrase: string
+    }
+  | { type: "RECOVERY.DELETE_ALL_CANCEL_REQUESTED" }
   | { type: "RECOVERY.PLATFORM_FAILURE_REPORTED"; issue: string }
   | { type: "STORAGE_RECOVERY.EXPORT_REQUESTED" }
   | { type: "STORAGE_RECOVERY.RETRY_REQUESTED" }
@@ -298,8 +305,8 @@ function requireStoredRecoveryBackup(context: RootMachineContext) {
 
 function getRecoveryReplacementNotice(context: RootMachineContext) {
   return context.pendingRecoveryImportSource === "last-known-good"
-    ? "Last known-good save restored."
-    : "Your backup replaced the unreadable local data."
+    ? playerDataRecoveryCopy.unreadableData.restoreSuccess
+    : playerDataRecoveryCopy.unreadableData.selectedBackupSuccess
 }
 
 export const rootMachine = setup({
@@ -330,6 +337,14 @@ export const rootMachine = setup({
       preparedDownload: null,
       portabilityIssue: ({ event }) =>
         event.type === "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED"
+          ? event.issue
+          : null,
+      portabilityNotice: null,
+    }),
+    reportRecoveryPlatformFailure: assign({
+      preparedDownload: null,
+      portabilityIssue: ({ event }) =>
+        event.type === "RECOVERY.PLATFORM_FAILURE_REPORTED"
           ? event.issue
           : null,
       portabilityNotice: null,
@@ -394,8 +409,14 @@ export const rootMachine = setup({
       false,
     canConfirmRecoveryDeletion: ({ context, event }) =>
       context.recoveryEntries !== null &&
-      event.type === "RECOVERY.DELETE_ALL_REQUESTED" &&
+      event.type === "RECOVERY.DELETE_ALL_CONFIRMED" &&
+      isMatchingResetConfirmation({
+        context,
+        confirmationId: event.confirmationId,
+        resetKind: "delete-all-data",
+      }) &&
       event.phrase === DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    hasPendingResetReview: ({ context }) => context.pendingResetReview !== null,
     canExportCurrentDataAfterStorageFailure: ({ context }) =>
       context.playerData !== null &&
       context.persistenceFailureOrigin !== null &&
@@ -504,7 +525,6 @@ export const rootMachine = setup({
         onError: {
           target: "PersistenceFailure",
           actions: assign({
-            recoveryEntries: null,
             pendingRecoveryImportSource: null,
             persistenceFailureOrigin: "loading",
             persistenceIssue: ({ event }) => getErrorMessage(event.error),
@@ -1175,19 +1195,17 @@ export const rootMachine = setup({
               }),
             },
             "RECOVERY.DELETE_ALL_REQUESTED": {
-              guard: "canConfirmRecoveryDeletion",
-              target: "DeletingAllData",
+              guard: "hasRecoveryEntries",
+              target: "ReviewingDeletion",
               actions: assign({
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(context, "delete-all-data"),
                 portabilityIssue: null,
                 portabilityNotice: null,
               }),
             },
             "RECOVERY.PLATFORM_FAILURE_REPORTED": {
-              actions: assign({
-                preparedDownload: null,
-                portabilityIssue: ({ event }) => event.issue,
-                portabilityNotice: null,
-              }),
+              actions: "reportRecoveryPlatformFailure",
             },
             "STORAGE_RECOVERY.EXPORT_REQUESTED": {
               guard: "canExportCurrentDataAfterStorageFailure",
@@ -1199,6 +1217,16 @@ export const rootMachine = setup({
               }),
             },
             "STORAGE_RECOVERY.RETRY_REQUESTED": [
+              {
+                guard: "hasRecoveryEntries",
+                target: "#root.LoadingProfile",
+                actions: assign({
+                  persistenceFailureOrigin: null,
+                  persistenceIssue: null,
+                  portabilityIssue: null,
+                  portabilityNotice: null,
+                }),
+              },
               {
                 guard: "isLoadingStorageFailure",
                 target: "#root.LoadingProfile",
@@ -1255,6 +1283,40 @@ export const rootMachine = setup({
             ],
           },
         },
+        ReviewingDeletion: {
+          on: {
+            "RECOVERY.EXPORT_REQUESTED": {
+              guard: "hasRecoveryEntries",
+              target: "ExportingEvidence",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.EXPORT_CONSUMED": {
+              actions: assign({ preparedDownload: null }),
+            },
+            "RECOVERY.DELETE_ALL_CANCEL_REQUESTED": {
+              target: "Reviewing",
+              actions: assign({
+                pendingResetReview: null,
+                portabilityIssue: null,
+              }),
+            },
+            "RECOVERY.DELETE_ALL_CONFIRMED": {
+              guard: "canConfirmRecoveryDeletion",
+              target: "DeletingAllData",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RECOVERY.PLATFORM_FAILURE_REPORTED": {
+              actions: "reportRecoveryPlatformFailure",
+            },
+          },
+        },
         ExportingCurrentData: {
           invoke: {
             src: "createWayvmExport",
@@ -1269,7 +1331,8 @@ export const rootMachine = setup({
               actions: assign({
                 preparedDownload: ({ event }) => event.output,
                 portabilityIssue: null,
-                portabilityNotice: "Your current data backup is ready.",
+                portabilityNotice:
+                  playerDataRecoveryCopy.storageUnavailable.currentBackupReady,
               }),
             },
             onError: {
@@ -1292,22 +1355,31 @@ export const rootMachine = setup({
               sourceBuild: context.sourceBuild,
             }),
             onDone: {
-              target: "Reviewing",
+              target: "ReturningFromEvidenceExport",
               actions: assign({
                 preparedDownload: ({ event }) => event.output,
                 portabilityIssue: null,
                 portabilityNotice:
-                  "Your unreadable local data is ready as a diagnostic recovery file.",
+                  playerDataRecoveryCopy.unreadableData.diagnosticReady,
               }),
             },
             onError: {
-              target: "Reviewing",
+              target: "ReturningFromEvidenceExport",
               actions: assign({
                 preparedDownload: null,
                 portabilityIssue: ({ event }) => getErrorMessage(event.error),
               }),
             },
           },
+        },
+        ReturningFromEvidenceExport: {
+          always: [
+            {
+              guard: "hasPendingResetReview",
+              target: "ReviewingDeletion",
+            },
+            { target: "Reviewing" },
+          ],
         },
         PreparingImport: {
           invoke: {
@@ -1410,11 +1482,12 @@ export const rootMachine = setup({
                 persistenceFailureOrigin: null,
                 persistenceIssue: null,
                 portabilityIssue: null,
-                portabilityNotice: "All local WAYVM player data was deleted.",
+                portabilityNotice:
+                  playerDataResetCopy["delete-all-data"].successAnnouncement,
               }),
             },
             onError: {
-              target: "Reviewing",
+              target: "ReviewingDeletion",
               actions: assign({
                 portabilityIssue: ({ event }) => getErrorMessage(event.error),
               }),

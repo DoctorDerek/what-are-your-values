@@ -916,6 +916,56 @@ describe("Root Machine", () => {
     expect(actor.getSnapshot().context.persistenceFailureOrigin).toBeNull()
   })
 
+  it("retries captured unreadable data without losing evidence when storage becomes unavailable", async () => {
+    const memoryStore = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ])
+    let shouldFailRead = false
+    const durableStore = Object.freeze({
+      readAll: async () => {
+        if (shouldFailRead) throw new Error("IndexedDB became unavailable")
+
+        return memoryStore.readAll()
+      },
+      compareAndSwapVerified: memoryStore.compareAndSwapVerified,
+    }) satisfies DurableStoreAdapter
+    const { actor } = createRootActor({ durableStore })
+    actor.start()
+    actor.send({
+      type: "APP.HYDRATED",
+      schedulerSeed: "captured-recovery-retry-seed",
+    })
+
+    const capturedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.recoveryEntries !== null,
+    )
+    const capturedEntries = capturedSnapshot.context.recoveryEntries
+
+    shouldFailRead = true
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const unavailableSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.persistenceFailureOrigin === "loading",
+    )
+    expect(unavailableSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+
+    shouldFailRead = false
+    actor.send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })
+    const retriedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.context.persistenceFailureOrigin === null,
+    )
+    expect(retriedSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+  })
+
   it("exports current first-run data and returns safely after durable initialization failure", async () => {
     let shouldFail = true
     const memoryStore = createInMemoryDurableStore()
@@ -2455,17 +2505,41 @@ describe("Root Machine", () => {
       ],
     })
 
+    actor.send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    expect(
+      actor.getSnapshot().matches({
+        PersistenceFailure: "ReviewingDeletion",
+      }),
+    ).toBe(true)
+
     actor.send({
-      type: "RECOVERY.DELETE_ALL_REQUESTED",
+      type: "RECOVERY.DELETE_ALL_CONFIRMED",
+      confirmationId,
       phrase: "I am not acknowledging this deletion.",
     })
     expect(
-      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+      actor.getSnapshot().matches({
+        PersistenceFailure: "ReviewingDeletion",
+      }),
     ).toBe(true)
     expect((await durableStore.readAll()).size).toBe(2)
 
     actor.send({
-      type: "RECOVERY.DELETE_ALL_REQUESTED",
+      type: "RECOVERY.DELETE_ALL_CONFIRMED",
+      confirmationId: `${confirmationId}-stale`,
+      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    })
+    expect(
+      actor.getSnapshot().matches({
+        PersistenceFailure: "ReviewingDeletion",
+      }),
+    ).toBe(true)
+    expect((await durableStore.readAll()).size).toBe(2)
+
+    actor.send({
+      type: "RECOVERY.DELETE_ALL_CONFIRMED",
+      confirmationId,
       phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
     })
     const deletedSnapshot = await waitFor(actor, (candidate) =>
@@ -2477,6 +2551,66 @@ describe("Root Machine", () => {
     expect(deletedSnapshot.context.portabilityNotice).toBe(
       "All local WAYVM player data was deleted.",
     )
+  })
+
+  it("cancels complete recovery deletion without erasing captured corrupt records", async () => {
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+    })
+
+    actor.send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    actor.send({ type: "RECOVERY.DELETE_ALL_CANCEL_REQUESTED" })
+
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    expect(actor.getSnapshot().context.pendingResetReview).toBeNull()
+    actor.send({
+      type: "RECOVERY.DELETE_ALL_CONFIRMED",
+      confirmationId,
+      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    })
+    expect(
+      actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
+    ).toBe(true)
+    await expect(durableStore.readAll()).resolves.toEqual(
+      new Map([
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ]),
+    )
+  })
+
+  it("keeps complete recovery deletion under review while exporting captured evidence", async () => {
+    const { actor, durableStore } = await bootCorruptRootActor({
+      initialEntries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ],
+    })
+    const capturedEntries = await durableStore.readAll()
+
+    actor.send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    actor.send({ type: "RECOVERY.EXPORT_REQUESTED" })
+    const exportedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ PersistenceFailure: "ReviewingDeletion" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+
+    expect(exportedSnapshot.context.pendingResetReview?.confirmationId).toBe(
+      confirmationId,
+    )
+    expect(exportedSnapshot.context.recoveryEntries).toEqual(capturedEntries)
+    actor.send({ type: "RECOVERY.EXPORT_CONSUMED" })
+    expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+    await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
   })
 
   it("keeps destructive recovery events inert when a runtime failure has no captured hydration evidence", async () => {
@@ -2504,10 +2638,7 @@ describe("Root Machine", () => {
       type: "RECOVERY.IMPORT_PREPARE_REQUESTED",
       serialized: "{}",
     })
-    actor.send({
-      type: "RECOVERY.DELETE_ALL_REQUESTED",
-      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
-    })
+    actor.send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
 
     expect(
       actor.getSnapshot().matches({ PersistenceFailure: "Reviewing" }),
@@ -2680,17 +2811,23 @@ describe("Root Machine", () => {
     })
     const capturedEntries = await durableStore.readAll()
 
+    actor.send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
     actor.send({
-      type: "RECOVERY.DELETE_ALL_REQUESTED",
+      type: "RECOVERY.DELETE_ALL_CONFIRMED",
+      confirmationId,
       phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
     })
     const failureSnapshot = await waitFor(
       actor,
       (candidate) =>
-        candidate.matches({ PersistenceFailure: "Reviewing" }) &&
+        candidate.matches({ PersistenceFailure: "ReviewingDeletion" }) &&
         candidate.context.portabilityIssue === "Recovery deletion failed",
     )
 
+    expect(failureSnapshot.context.pendingResetReview?.confirmationId).toBe(
+      confirmationId,
+    )
     expect(failureSnapshot.context.recoveryEntries).toEqual(capturedEntries)
     await expect(durableStore.readAll()).resolves.toEqual(capturedEntries)
   })
