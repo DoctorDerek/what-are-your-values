@@ -1,6 +1,7 @@
 "use client"
 
 import { CANONICAL_VALUES } from "@game/data/src/CanonicalValues"
+import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
 import { useEffect, useRef, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
@@ -23,11 +24,11 @@ function PreviewFact({
 }
 
 export default function PlayerDataImportPreview({
-  confirmLabel = "Import & Replace",
+  confirmLabel = playerDataPortabilityCopy.importReplaceAction,
   isBusy,
   preview,
-  title = "Review Import",
-  warning = "Importing this backup will replace the current WAYVM data on this device. A local safety backup will be created first.",
+  title = playerDataPortabilityCopy.importPreviewTitle,
+  warning = playerDataPortabilityCopy.importPreviewWarning,
   onCancel,
   onConfirm,
 }: {
@@ -123,7 +124,7 @@ export default function PlayerDataImportPreview({
           onClick={onCancel}
           className="flex-1"
         >
-          Cancel
+          {playerDataPortabilityCopy.importCancelAction}
         </Button>
         <Button
           type="button"

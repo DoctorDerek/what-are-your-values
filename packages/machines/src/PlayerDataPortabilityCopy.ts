@@ -3,9 +3,25 @@ import { BATTLE_PROFILE_CHECKPOINT_SCHEMA_VERSION } from "./BattleProfileCheckpo
 import { WAYVM_EXPORT_FORMAT_VERSION } from "./WayvmExport"
 
 export const playerDataPortabilityCopy = Object.freeze({
+  screenTitle: "Import & Export",
+  introduction:
+    "Your progress, Custom Values, achievements, language, and settings are stored on this device. Export a JSON backup to keep a portable copy or move your data between supported WAYVM apps.",
+  exportTitle: "Export Data",
+  exportDescription:
+    "Save a versioned JSON backup of your progress, Custom Values, achievements, language, settings, and other portable WAYVM data. Exporting does not upload your data to us.",
+  exportAction: "Export Data",
   exportSuccess: "Your WAYVM backup is ready.",
   exportFailure:
     "WAYVM could not create a backup. Your saved data was not changed. Please try again or check available device storage.",
+  importTitle: "Import Data",
+  importDescription:
+    "Choose a WAYVM JSON backup. The app will validate it and show you a preview before replacing data on this device.",
+  chooseBackupAction: "Choose Backup",
+  importPreviewTitle: "Review Import",
+  importPreviewWarning:
+    "Importing this backup will replace the current WAYVM data on this device. A local safety backup will be created first.",
+  importCancelAction: "Cancel",
+  importReplaceAction: "Import & Replace",
   importCancelled: "Import cancelled. Your data was not changed.",
   importSuccess: "Backup restored. Your imported progress is ready.",
   importInvalid:
