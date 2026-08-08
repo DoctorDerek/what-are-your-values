@@ -1,15 +1,11 @@
 "use client"
 
-import type { PlayerDataResetKind } from "@game/machines/src/PlayerDataReset"
+import {
+  PLAYER_DATA_RESET_KINDS,
+  type PlayerDataResetKind,
+} from "@game/machines/src/PlayerDataReset"
 import { playerDataResetCopy } from "@game/machines/src/PlayerDataResetCopy"
 import { Button } from "@/components/ui/button"
-
-const playerDataResetKinds = Object.freeze([
-  "delete-all-custom-values",
-  "reset-levels-and-experience",
-  "reset-achievements",
-  "delete-all-data",
-]) satisfies readonly PlayerDataResetKind[]
 
 export default function PlayerDataResetActions({
   customValueCount,
@@ -35,7 +31,7 @@ export default function PlayerDataResetActions({
         Reset or Delete
       </h2>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {playerDataResetKinds.map((resetKind) => {
+        {PLAYER_DATA_RESET_KINDS.map((resetKind) => {
           const copy = playerDataResetCopy[resetKind]
           const buttonId = `player-data-${resetKind}-button`
           const descriptionId = `${buttonId}-description`
