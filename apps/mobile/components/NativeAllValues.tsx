@@ -1,13 +1,10 @@
+import { projectAllValues } from "@game/data/src/AllValuesProjection"
 import {
   getValueDisplayName,
   type CustomValueId,
   type ValueId,
 } from "@game/data/src/Value"
-import {
-  sortRankedValuesAlphabetically,
-  type RankedValue,
-} from "@game/data/src/ValueRanking"
-import { filterRankedValuesByQuery } from "@game/data/src/ValueSearch"
+import type { RankedValue } from "@game/data/src/ValueRanking"
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
   FlatList,
@@ -62,26 +59,9 @@ export default function NativeAllValues({
   const [highlightedValueId, setHighlightedValueId] = useState<ValueId | null>(
     initialValueId,
   )
-  const hasComparisons = rankedValues.some(
-    ({ progress }) => progress.profileComparisons > 0,
-  )
-  const orderedValues = useMemo(
-    () =>
-      hasComparisons
-        ? rankedValues
-        : sortRankedValuesAlphabetically(rankedValues),
-    [hasComparisons, rankedValues],
-  )
-  const visibleValues = useMemo(
-    () => filterRankedValuesByQuery(orderedValues, searchQuery),
-    [orderedValues, searchQuery],
-  )
-  const existingCustomValues = useMemo(
-    () =>
-      rankedValues.flatMap(({ definition }) =>
-        definition.kind === "custom" ? [definition] : [],
-      ),
-    [rankedValues],
+  const { existingCustomValues, hasComparisons, visibleValues } = useMemo(
+    () => projectAllValues({ rankedValues, searchQuery }),
+    [rankedValues, searchQuery],
   )
 
   useEffect(() => {

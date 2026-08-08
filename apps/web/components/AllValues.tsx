@@ -1,5 +1,6 @@
 "use client"
 
+import { projectAllValues } from "@game/data/src/AllValuesProjection"
 import { CUSTOM_VALUE_STARTER_EXAMPLES } from "@game/data/src/CustomValueStarterExamples"
 import {
   CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES,
@@ -12,14 +13,8 @@ import {
   type CustomValueId,
   type ValueId,
 } from "@game/data/src/Value"
-import {
-  sortRankedValuesAlphabetically,
-  type RankedValue,
-} from "@game/data/src/ValueRanking"
-import {
-  filterRankedValuesByQuery,
-  findRankedValueNameMatches,
-} from "@game/data/src/ValueSearch"
+import type { RankedValue } from "@game/data/src/ValueRanking"
+import { findRankedValueNameMatches } from "@game/data/src/ValueSearch"
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import CustomValueFieldFeedback from "@/components/CustomValueFieldFeedback"
@@ -76,22 +71,9 @@ export default function AllValues({
   )
   const addDefinitionRef = useRef<HTMLTextAreaElement>(null)
 
-  const hasComparisons = rankedValues.some(
-    ({ progress }) => progress.profileComparisons > 0,
-  )
-  const orderedValues = hasComparisons
-    ? rankedValues
-    : sortRankedValuesAlphabetically(rankedValues)
-  const visibleValues = useMemo(
-    () => filterRankedValuesByQuery(orderedValues, searchQuery),
-    [orderedValues, searchQuery],
-  )
-  const existingCustomValues = useMemo(
-    () =>
-      rankedValues.flatMap(({ definition }) =>
-        definition.kind === "custom" ? [definition] : [],
-      ),
-    [rankedValues],
+  const { existingCustomValues, hasComparisons, visibleValues } = useMemo(
+    () => projectAllValues({ rankedValues, searchQuery }),
+    [rankedValues, searchQuery],
   )
   const addValidation = useMemo(
     () =>
