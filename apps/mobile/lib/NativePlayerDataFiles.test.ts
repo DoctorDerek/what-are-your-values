@@ -123,7 +123,7 @@ describe("createNativePlayerDataFileAdapter", () => {
     const adapter = createNativePlayerDataFileAdapter(services)
 
     await expect(adapter.selectJsonForImport()).rejects.toThrow(
-      "Backup file exceeds the 8 MiB import limit",
+      "Persisted JSON exceeds its byte limit",
     )
     expect(selectedFile.text).not.toHaveBeenCalled()
   })
@@ -137,7 +137,7 @@ describe("createNativePlayerDataFileAdapter", () => {
     const adapter = createNativePlayerDataFileAdapter(services)
 
     await expect(adapter.selectJsonForImport()).rejects.toThrow(
-      "Backup file exceeds the 8 MiB import limit",
+      "Persisted JSON exceeds its byte limit",
     )
     expect(selectedFile.text).toHaveBeenCalledOnce()
   })

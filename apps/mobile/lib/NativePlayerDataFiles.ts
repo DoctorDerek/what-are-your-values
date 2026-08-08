@@ -22,7 +22,7 @@ export type NativePlayerDataFileServices = {
 
 function validateImportByteLength(byteLength: number) {
   if (byteLength > MAX_PERSISTED_JSON_BYTES) {
-    throw new Error("Backup file exceeds the 8 MiB import limit")
+    throw new Error("Persisted JSON exceeds its byte limit")
   }
 }
 
