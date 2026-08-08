@@ -4,7 +4,10 @@ import {
   type AchievementDefinition,
   type AchievementId,
 } from "./AchievementCatalog"
-import type { AchievementState } from "./AchievementState"
+import {
+  getPendingAchievementUnlocks,
+  type AchievementState,
+} from "./AchievementState"
 import type { BattleProfile } from "./BattleProfile"
 
 const englishNumberFormatter = new Intl.NumberFormat("en-US")
@@ -39,6 +42,26 @@ export type AchievementPresentation = Readonly<{
   unlockedAt: string | null
   unlockedDate: string | null
 }>
+
+export function getPendingAchievementPresentation({
+  achievementState,
+  achievementPresentations,
+}: {
+  readonly achievementState: AchievementState
+  readonly achievementPresentations: readonly AchievementPresentation[]
+}) {
+  const pendingAchievementId =
+    getPendingAchievementUnlocks(achievementState)[0]?.id
+  if (!pendingAchievementId) return null
+
+  const presentation = achievementPresentations.find(
+    ({ id }) => id === pendingAchievementId,
+  )
+  if (!presentation)
+    throw new Error("Pending achievement presentation is unavailable")
+
+  return presentation
+}
 
 export function getAchievementEnglishCopy(
   achievement: AchievementDefinition,

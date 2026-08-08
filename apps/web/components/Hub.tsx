@@ -1,10 +1,8 @@
 "use client"
 
+import { projectHubValues } from "@game/data/src/HubValueProjection"
 import { getValueDisplayName, type ValueId } from "@game/data/src/Value"
-import {
-  sortRankedValuesAlphabetically,
-  type RankedValue,
-} from "@game/data/src/ValueRanking"
+import type { RankedValue } from "@game/data/src/ValueRanking"
 import type { Ref } from "react"
 import { Button } from "@/components/ui/button"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
@@ -139,14 +137,8 @@ export default function Hub({
   onOpenValue: (valueId: ValueId, focusTargetId: string) => void
   onStartBattle: () => void
 }) {
-  const hasComparisons = rankedValues.some(
-    ({ progress }) => progress.profileComparisons > 0,
-  )
-  const visibleValues = hasComparisons
-    ? rankedValues
-    : sortRankedValuesAlphabetically(rankedValues)
-  const topFive = visibleValues.slice(0, 5)
-  const remainingValues = visibleValues.slice(5)
+  const { hasComparisons, visibleValues, topFive, remainingValues } =
+    projectHubValues(rankedValues)
 
   return (
     <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 sm:p-8">

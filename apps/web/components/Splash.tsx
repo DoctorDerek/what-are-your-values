@@ -1,7 +1,7 @@
 "use client"
 
+import { introductionCopy } from "@game/data/src/IntroductionCopy"
 import InformationPanel from "@/components/InformationPanel"
-import { introductionCopy } from "@/content/IntroductionCopy"
 
 export default function Splash({
   notice = null,

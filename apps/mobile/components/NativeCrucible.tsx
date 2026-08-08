@@ -1,0 +1,147 @@
+import type { ActiveDeck } from "@game/data/src/ActiveDeck"
+import type { ValueId } from "@game/data/src/Value"
+import type { ValueProgressById } from "@game/data/src/ValueProgress"
+import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
+import {
+  combatMachine,
+  type PresentedBattle,
+} from "@game/machines/src/CombatMachine"
+import { getLevelFromXP } from "@game/utils/src/LevelMath"
+import { useMachine } from "@xstate/react"
+import { useCallback, useEffect } from "react"
+import { useWindowDimensions, View } from "react-native"
+import MapacheScreen from "@/components/MapacheScreen"
+import NativeBattleActionBar from "@/components/NativeBattleActionBar"
+import NativeValueChoiceCard from "@/components/NativeValueChoiceCard"
+import { Text } from "@/components/ui/text"
+import { cn } from "@/lib/utils"
+
+const MINIMUM_SIDE_BY_SIDE_CARD_WIDTH = 320
+const BATTLE_CARD_GAP = 8
+
+export default function NativeCrucible({
+  activeDeck,
+  battle,
+  progressById,
+  canUndo,
+  canRedo,
+  hasAchievementBanner,
+  isPersistencePending,
+  onExit,
+  onUndo,
+  onRedo,
+  onWinnerSelected,
+}: {
+  activeDeck: ActiveDeck
+  battle: PresentedBattle
+  progressById: ValueProgressById
+  canUndo: boolean
+  canRedo: boolean
+  hasAchievementBanner: boolean
+  isPersistencePending: boolean
+  onExit: () => void
+  onUndo: () => void
+  onRedo: () => void
+  onWinnerSelected: (
+    winnerId: ValueId,
+    expectedScheduler: BattleSchedulerRestorePoint,
+  ) => void
+}) {
+  const [state, send] = useMachine(combatMachine, {
+    input: { onWinnerSelected },
+  })
+  const { width, height } = useWindowDimensions()
+
+  useEffect(() => {
+    send({ type: "BATTLE.PROJECTED", battle })
+  }, [battle, send])
+
+  const isInteractive = state.matches("AwaitingInput") && !isPersistencePending
+  const isAnimating = state.matches("AnimatingResult")
+  const currentPair = state.context.currentBattle?.pair ?? null
+  const handleSelect = useCallback(
+    (winnerId: ValueId) => {
+      if (!isInteractive) return
+      send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
+    },
+    [isInteractive, send],
+  )
+  const handleAnimationComplete = useCallback(() => {
+    if (isAnimating) send({ type: "ANIMATION.RESULT_FINISHED" })
+  }, [isAnimating, send])
+
+  if (!currentPair) {
+    return (
+      <MapacheScreen className="items-center justify-center px-6">
+        <Text
+          accessibilityLiveRegion="polite"
+          variant="h1"
+          className="text-mapache-vivid-primary-cyan text-4xl uppercase"
+        >
+          Forging Matrix…
+        </Text>
+      </MapacheScreen>
+    )
+  }
+
+  const [firstValueId, secondValueId] = currentPair
+  const firstValue = activeDeck.values.find(({ id }) => id === firstValueId)
+  const secondValue = activeDeck.values.find(({ id }) => id === secondValueId)
+  const firstProgress = progressById.get(firstValueId)
+  const secondProgress = progressById.get(secondValueId)
+
+  if (!firstValue || !secondValue || !firstProgress || !secondProgress)
+    throw new Error("Projected battle is missing Active Deck data")
+
+  const shouldDisplaySideBySide =
+    width >= MINIMUM_SIDE_BY_SIDE_CARD_WIDTH * 2 + BATTLE_CARD_GAP &&
+    width > height
+
+  return (
+    <MapacheScreen
+      accessibilityLabel="Value battle"
+      accessibilityState={{ busy: isPersistencePending }}
+    >
+      <NativeBattleActionBar
+        canUndo={isInteractive && canUndo}
+        canRedo={isInteractive && canRedo}
+        canStop={isInteractive}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onStop={onExit}
+      />
+      <View
+        className={cn(
+          "min-h-0 flex-1 gap-2 px-3",
+          shouldDisplaySideBySide ? "flex-row" : "flex-col",
+          hasAchievementBanner ? "pb-44" : "pb-3",
+        )}
+      >
+        <NativeValueChoiceCard
+          key={`first:${firstValueId}:${secondValueId}`}
+          position="first"
+          value={firstValue}
+          level={getLevelFromXP(firstProgress.totalXp)}
+          winnerId={state.context.winnerId}
+          isEnabled={isInteractive}
+          isAnimating={isAnimating}
+          reportsAnimationCompletion
+          onActivate={handleSelect}
+          onAnimationComplete={handleAnimationComplete}
+        />
+        <NativeValueChoiceCard
+          key={`second:${secondValueId}:${firstValueId}`}
+          position="second"
+          value={secondValue}
+          level={getLevelFromXP(secondProgress.totalXp)}
+          winnerId={state.context.winnerId}
+          isEnabled={isInteractive}
+          isAnimating={isAnimating}
+          reportsAnimationCompletion={false}
+          onActivate={handleSelect}
+          onAnimationComplete={handleAnimationComplete}
+        />
+      </View>
+    </MapacheScreen>
+  )
+}
