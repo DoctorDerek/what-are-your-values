@@ -22,8 +22,6 @@ describe("Custom Value Validation Messages", () => {
     })
     expect(Object.isFrozen(customValueValidationMessages)).toBe(true)
     expect(Object.isFrozen(customValueValidationMessages.name)).toBe(true)
-    expect(Object.isFrozen(customValueValidationMessages.definition)).toBe(
-      true,
-    )
+    expect(Object.isFrozen(customValueValidationMessages.definition)).toBe(true)
   })
 })
