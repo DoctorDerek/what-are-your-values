@@ -1,5 +1,6 @@
 "use client"
 
+import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import type {
   PlayerDataResetKind,
   PlayerDataResetReview as PlayerDataResetReviewState,
@@ -108,7 +109,7 @@ export default function DataManagement({
           tabIndex={-1}
           className="text-mapache-vivid-primary-cyan text-4xl font-black uppercase drop-shadow-[5px_5px_0px_#000000] outline-none sm:text-6xl"
         >
-          Import &amp; Export
+          {playerDataPortabilityCopy.screenTitle}
         </h1>
         <Button
           type="button"
@@ -125,9 +126,7 @@ export default function DataManagement({
         className="mt-8 flex w-full max-w-5xl flex-col gap-5"
       >
         <p className="text-lg font-bold text-white sm:text-xl">
-          Your progress, Custom Values, achievements, language, and settings are
-          stored on this device. Export a JSON backup to keep a portable copy or
-          move your data between supported WAYVM apps.
+          {playerDataPortabilityCopy.introduction}
         </p>
 
         {activity ? (
@@ -184,12 +183,10 @@ export default function DataManagement({
                   id="export-data-heading"
                   className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase sm:text-4xl"
                 >
-                  Export Data
+                  {playerDataPortabilityCopy.exportTitle}
                 </h2>
                 <p className="text-mapache-vivid-dark flex-1 py-5 text-lg font-bold sm:text-xl">
-                  Save a versioned JSON backup of your progress, Custom Values,
-                  achievements, language, settings, and other portable WAYVM
-                  data. Exporting does not upload your data to us.
+                  {playerDataPortabilityCopy.exportDescription}
                 </p>
                 <Button
                   type="button"
@@ -198,7 +195,7 @@ export default function DataManagement({
                   onClick={onExport}
                   className="w-full"
                 >
-                  Export Data
+                  {playerDataPortabilityCopy.exportAction}
                 </Button>
               </section>
 
@@ -210,11 +207,10 @@ export default function DataManagement({
                   id="import-data-heading"
                   className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase sm:text-4xl"
                 >
-                  Import Data
+                  {playerDataPortabilityCopy.importTitle}
                 </h2>
                 <p className="text-mapache-vivid-dark flex-1 py-5 text-lg font-bold sm:text-xl">
-                  Choose a WAYVM JSON backup. The app will validate it and show
-                  you a preview before replacing data on this device.
+                  {playerDataPortabilityCopy.importDescription}
                 </p>
                 <input
                   ref={importInputRef}
@@ -238,7 +234,7 @@ export default function DataManagement({
                   onClick={() => importInputRef.current?.click()}
                   className="w-full"
                 >
-                  Choose Backup
+                  {playerDataPortabilityCopy.chooseBackupAction}
                 </Button>
               </section>
             </div>

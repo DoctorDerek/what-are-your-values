@@ -1,73 +1,58 @@
-"use client"
-
 import { CANONICAL_VALUES } from "@game/data/src/CanonicalValues"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
-import { useEffect, useRef, type ReactNode } from "react"
+import type { ReactNode } from "react"
+import { View } from "react-native"
 import { Button } from "@/components/ui/button"
+import { Text } from "@/components/ui/text"
 
 function PreviewFact({
   label,
   children,
 }: {
-  label: string
-  children: ReactNode
+  readonly label: string
+  readonly children: ReactNode
 }) {
   return (
-    <div className="border-4 border-black bg-white p-4">
-      <dt className="text-sm font-black tracking-wide uppercase">{label}</dt>
-      <dd className="mt-1 min-w-0 text-lg font-bold [overflow-wrap:anywhere]">
+    <View className="border-4 border-black bg-white p-4">
+      <Text className="text-sm font-black tracking-wide text-black uppercase">
+        {label}
+      </Text>
+      <Text className="mt-1 text-lg leading-7 font-bold text-black">
         {children}
-      </dd>
-    </div>
+      </Text>
+    </View>
   )
 }
 
-export default function PlayerDataImportPreview({
-  confirmLabel = playerDataPortabilityCopy.importReplaceAction,
+export default function NativePlayerDataImportPreview({
   isBusy,
   preview,
-  title = playerDataPortabilityCopy.importPreviewTitle,
-  warning = playerDataPortabilityCopy.importPreviewWarning,
   onCancel,
   onConfirm,
 }: {
-  confirmLabel?: string
-  isBusy: boolean
-  preview: WayvmImportPreview
-  title?: string
-  warning?: string
-  onCancel: () => void
-  onConfirm: () => void
+  readonly isBusy: boolean
+  readonly preview: WayvmImportPreview
+  readonly onCancel: () => void
+  readonly onConfirm: () => void
 }) {
-  const headingRef = useRef<HTMLHeadingElement>(null)
   const formattedExportTimestamp = new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(preview.exportedAt))
 
-  useEffect(() => {
-    headingRef.current?.focus()
-  }, [])
-
   return (
-    <section
-      aria-labelledby="import-preview-heading"
-      aria-busy={isBusy}
-      className="border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-8"
-    >
-      <h2
-        ref={headingRef}
-        id="import-preview-heading"
-        tabIndex={-1}
-        className="text-mapache-vivid-dark border-b-4 border-black pb-4 text-3xl font-black uppercase outline-none sm:text-4xl"
+    <View className="gap-5 border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000]">
+      <Text
+        variant="h2"
+        className="border-b-4 border-black text-black uppercase"
       >
-        {title}
-      </h2>
+        {playerDataPortabilityCopy.importPreviewTitle}
+      </Text>
 
-      <dl className="text-mapache-vivid-dark my-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <View className="gap-3">
         <PreviewFact label="Backup Created">
-          <time dateTime={preview.exportedAt}>{formattedExportTimestamp}</time>
+          {formattedExportTimestamp}
         </PreviewFact>
         <PreviewFact label="Source Application">
           Version {preview.sourceAppVersion}
@@ -109,33 +94,23 @@ export default function PlayerDataImportPreview({
         <PreviewFact label="Replacement">
           Replaces current data on this device
         </PreviewFact>
-      </dl>
+      </View>
 
-      <p className="bg-mapache-vivid-primary-yellow text-mapache-vivid-dark border-4 border-black p-4 text-lg font-black">
-        {warning}
-      </p>
+      <Text
+        accessibilityRole="alert"
+        className="bg-mapache-vivid-primary-yellow border-4 border-black p-4 text-lg leading-7 font-black text-black"
+      >
+        {playerDataPortabilityCopy.importPreviewWarning}
+      </Text>
 
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          disabled={isBusy}
-          onClick={onCancel}
-          className="flex-1"
-        >
-          {playerDataPortabilityCopy.importCancelAction}
+      <View className="gap-4">
+        <Button disabled={isBusy} variant="outline" onPress={onCancel}>
+          <Text>{playerDataPortabilityCopy.importCancelAction}</Text>
         </Button>
-        <Button
-          type="button"
-          size="lg"
-          disabled={isBusy}
-          onClick={onConfirm}
-          className="flex-1"
-        >
-          {confirmLabel}
+        <Button disabled={isBusy} onPress={onConfirm}>
+          <Text>{playerDataPortabilityCopy.importReplaceAction}</Text>
         </Button>
-      </div>
-    </section>
+      </View>
+    </View>
   )
 }

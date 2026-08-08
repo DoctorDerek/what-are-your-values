@@ -9,6 +9,11 @@ import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
 } from "@game/machines/src/BattleScheduler"
+import {
+  DELETE_ALL_DATA_ACKNOWLEDGMENT,
+  type PlayerDataResetKind,
+  type PlayerDataResetReview,
+} from "@game/machines/src/PlayerDataReset"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import * as ExpoCrypto from "expo-crypto"
@@ -18,10 +23,14 @@ import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeAchievements from "@/components/NativeAchievements"
 import NativeAllValues from "@/components/NativeAllValues"
 import NativeCrucible from "@/components/NativeCrucible"
+import NativeDataManagement, {
+  type NativeDataManagementActivity,
+} from "@/components/NativeDataManagement"
 import NativeHub from "@/components/NativeHub"
 import NativeIntroduction from "@/components/NativeIntroduction"
 import NativePersistenceFailure from "@/components/NativePersistenceFailure"
 import NativePlayerDataLoading from "@/components/NativePlayerDataLoading"
+import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
 import packageMetadata from "@/package.json"
 
@@ -41,6 +50,10 @@ export default function NativeGameClient() {
     useState(false)
   const [state, send] = useMachine(rootMachine, {
     input: nativeRootMachineInput,
+  })
+  const { isReadingImportFile, chooseBackup } = useNativePlayerDataFiles({
+    state,
+    send,
   })
   const playerData = state.context.playerData
   const battleProfile = playerData?.profile ?? null
@@ -130,6 +143,46 @@ export default function NativeGameClient() {
     },
     [send],
   )
+  const handleResetRequested = useCallback(
+    (resetKind: PlayerDataResetKind) => {
+      if (resetKind === "delete-all-custom-values")
+        return send({ type: "CUSTOM_VALUE.DELETE_ALL_REQUESTED" })
+      if (resetKind === "reset-levels-and-experience")
+        return send({ type: "RESET.LEVELS_AND_EXPERIENCE_REQUESTED" })
+      if (resetKind === "reset-achievements")
+        return send({ type: "RESET.ACHIEVEMENTS_REQUESTED" })
+
+      return send({ type: "DELETE_ALL_DATA.REQUESTED" })
+    },
+    [send],
+  )
+  const handleResetConfirmed = useCallback(
+    (review: PlayerDataResetReview) => {
+      const { confirmationId, resetKind } = review
+      if (resetKind === "delete-all-custom-values")
+        return send({
+          type: "CUSTOM_VALUE.DELETE_ALL_CONFIRMED",
+          confirmationId,
+        })
+      if (resetKind === "reset-levels-and-experience")
+        return send({
+          type: "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED",
+          confirmationId,
+        })
+      if (resetKind === "reset-achievements")
+        return send({
+          type: "RESET.ACHIEVEMENTS_CONFIRMED",
+          confirmationId,
+        })
+
+      return send({
+        type: "DELETE_ALL_DATA.CONFIRMED",
+        confirmationId,
+        phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      })
+    },
+    [send],
+  )
 
   useEffect(() => {
     send({ type: "APP.HYDRATED", schedulerSeed })
@@ -210,6 +263,9 @@ export default function NativeGameClient() {
           onOpenAchievements={() =>
             send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
           }
+          onOpenDataManagement={() =>
+            send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+          }
           onOpenValue={(valueId) => openAllValues({ valueId })}
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
         />
@@ -227,6 +283,50 @@ export default function NativeGameClient() {
         {achievementBanner}
       </View>
     )
+
+  if (state.matches("DataManagement")) {
+    const activity: NativeDataManagementActivity | null =
+      isReadingImportFile ||
+      state.matches({ DataManagement: "PreparingImport" })
+        ? "Checking backup…"
+        : state.matches({ DataManagement: "Exporting" }) ||
+            state.matches({ DataManagement: "ExportingResetBackup" })
+          ? "Creating backup…"
+          : state.matches({ DataManagement: "CreatingPreImportBackup" })
+            ? "Creating safety backup…"
+            : state.matches({ DataManagement: "ReplacingImport" })
+              ? "Restoring backup…"
+              : state.matches({ DataManagement: "ApplyingScopedReset" })
+                ? "Applying reset…"
+                : state.matches({ DataManagement: "DeletingAllData" })
+                  ? "Deleting data…"
+                  : null
+
+    return (
+      <NativeDataManagement
+        activity={activity}
+        customValueCount={battleProfile.activeDeck.customValues.length}
+        issue={state.context.portabilityIssue}
+        notice={state.context.portabilityNotice}
+        preview={state.context.pendingImport?.preview ?? null}
+        resetReview={state.context.pendingResetReview}
+        onCancelImport={() =>
+          send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+        }
+        onCancelReset={() =>
+          send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+        }
+        onChooseBackup={() => void chooseBackup()}
+        onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
+        onConfirmImport={() =>
+          send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+        }
+        onConfirmReset={handleResetConfirmed}
+        onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+        onRequestReset={handleResetRequested}
+      />
+    )
+  }
 
   if (state.matches("AllValues"))
     return (

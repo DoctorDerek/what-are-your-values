@@ -18,11 +18,14 @@ import { createProgressResetCandidate } from "./ProgressReset"
 export const DELETE_ALL_DATA_ACKNOWLEDGMENT =
   "I understand that this cannot be undone." as const
 
-export type PlayerDataResetKind =
-  | "delete-all-custom-values"
-  | "reset-levels-and-experience"
-  | "reset-achievements"
-  | "delete-all-data"
+export const PLAYER_DATA_RESET_KINDS = Object.freeze([
+  "delete-all-custom-values",
+  "reset-levels-and-experience",
+  "reset-achievements",
+  "delete-all-data",
+] as const)
+
+export type PlayerDataResetKind = (typeof PLAYER_DATA_RESET_KINDS)[number]
 
 export type ScopedPlayerDataResetKind = Exclude<
   PlayerDataResetKind,
