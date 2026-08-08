@@ -1,4 +1,5 @@
 import { projectHubValues } from "@game/data/src/HubValueProjection"
+import type { ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import { Fragment } from "react"
 import { FlatList, View } from "react-native"
@@ -10,10 +11,12 @@ import { Text } from "@/components/ui/text"
 export default function NativeHub({
   rankedValues,
   dataNotice,
+  onOpenValue,
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
   dataNotice: string | null
+  onOpenValue: (valueId: ValueId) => void
   onStartBattle: () => void
 }) {
   const { hasComparisons, visibleValues } = projectHubValues(rankedValues)
@@ -79,6 +82,7 @@ export default function NativeHub({
               rankedValue={item}
               showRank={hasComparisons}
               isTopFive={hasComparisons && index < 5}
+              onOpen={() => onOpenValue(item.definition.id)}
             />
             {hasComparisons && index === 4 ? (
               <View>
