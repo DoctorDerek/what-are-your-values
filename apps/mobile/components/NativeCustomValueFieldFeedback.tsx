@@ -1,33 +1,37 @@
 import type { CustomValueFieldValidation } from "@game/data/src/CustomValueValidation"
 import { customValueValidationMessages } from "@game/data/src/CustomValueValidationMessages"
+import { View } from "react-native"
+import { Text } from "@/components/ui/text"
 
-export default function CustomValueFieldFeedback({
-  id,
+export default function NativeCustomValueFieldFeedback({
   field,
-  validation,
   maximumGraphemeCount,
   showValidationMessage,
+  validation,
 }: {
-  readonly id: string
   readonly field: "name" | "definition"
-  readonly validation: CustomValueFieldValidation
   readonly maximumGraphemeCount: number
   readonly showValidationMessage: boolean
+  readonly validation: CustomValueFieldValidation
 }) {
   const validationMessage = validation.validationCode
     ? customValueValidationMessages[field][validation.validationCode]
     : null
 
   return (
-    <div id={id} className="flex flex-wrap items-start justify-between gap-2">
-      <span className="text-sm font-bold">
+    <View className="flex-row flex-wrap items-start justify-between gap-2">
+      <Text className="text-sm font-bold text-black">
         {validation.graphemeCount} / {maximumGraphemeCount} characters
-      </span>
+      </Text>
       {showValidationMessage && validationMessage ? (
-        <span role="alert" className="text-sm font-black text-black">
+        <Text
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+          className="min-w-0 flex-1 text-right text-sm font-black text-red-700"
+        >
           {validationMessage}
-        </span>
+        </Text>
       ) : null}
-    </div>
+    </View>
   )
 }

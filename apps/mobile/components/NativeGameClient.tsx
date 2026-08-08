@@ -1,4 +1,4 @@
-import type { ValueId } from "@game/data/src/Value"
+import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
   getPendingAchievementPresentation,
@@ -15,6 +15,7 @@ import * as ExpoCrypto from "expo-crypto"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
+import NativeAllValues from "@/components/NativeAllValues"
 import NativeCrucible from "@/components/NativeCrucible"
 import NativeHub from "@/components/NativeHub"
 import NativeIntroduction from "@/components/NativeIntroduction"
@@ -33,6 +34,10 @@ const nativeRootMachineInput = Object.freeze({
 
 export default function NativeGameClient() {
   const [schedulerSeed] = useState(() => ExpoCrypto.randomUUID())
+  const [pendingAllValuesValueId, setPendingAllValuesValueId] =
+    useState<ValueId | null>(null)
+  const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
+    useState(false)
   const [state, send] = useMachine(rootMachine, {
     input: nativeRootMachineInput,
   })
@@ -89,6 +94,38 @@ export default function NativeGameClient() {
   const handleAchievementPresented = useCallback(
     (achievementId: AchievementPresentation["id"]) => {
       send({ type: "ACHIEVEMENT.PRESENTED", achievementId })
+    },
+    [send],
+  )
+  const openAllValues = useCallback(
+    ({
+      valueId = null,
+      openCustomValueBuilder = false,
+    }: {
+      readonly valueId?: ValueId | null
+      readonly openCustomValueBuilder?: boolean
+    }) => {
+      setPendingAllValuesValueId(valueId)
+      setShouldOpenCustomValueBuilder(openCustomValueBuilder)
+      send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    },
+    [send],
+  )
+  const handleAddCustomValue = useCallback(
+    (name: string, definition: string) => {
+      setShouldOpenCustomValueBuilder(false)
+      send({ type: "ALL_VALUES.ADD_REQUESTED", name, definition })
+    },
+    [send],
+  )
+  const handleUpdateCustomValue = useCallback(
+    (valueId: CustomValueId, name: string, definition: string) => {
+      send({
+        type: "ALL_VALUES.UPDATE_REQUESTED",
+        valueId,
+        name,
+        definition,
+      })
     },
     [send],
   )
@@ -161,10 +198,33 @@ export default function NativeGameClient() {
         <NativeHub
           rankedValues={rankedValues}
           dataNotice={state.context.portabilityNotice}
+          onAddCustomValue={() =>
+            openAllValues({ openCustomValueBuilder: true })
+          }
+          onBrowseAllValues={() => openAllValues({})}
+          onOpenValue={(valueId) => openAllValues({ valueId })}
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
         />
         {achievementBanner}
       </View>
+    )
+
+  if (state.matches("AllValues"))
+    return (
+      <NativeAllValues
+        key={battleProfile.scheduler.deckRevision}
+        initialValueId={pendingAllValuesValueId}
+        isPersistencePending={state.matches({ AllValues: "Persisting" })}
+        openCustomValueBuilder={shouldOpenCustomValueBuilder}
+        persistenceIssue={state.context.persistenceIssue}
+        rankedValues={rankedValues}
+        onAddCustomValue={handleAddCustomValue}
+        onClose={() => send({ type: "ALL_VALUES.CLOSE_REQUESTED" })}
+        onDeleteCustomValue={(valueId) =>
+          send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
+        }
+        onUpdateCustomValue={handleUpdateCustomValue}
+      />
     )
 
   if (isCrucibleSurface) {

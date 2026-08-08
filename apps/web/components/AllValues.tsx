@@ -1,5 +1,7 @@
 "use client"
 
+import { projectAllValues } from "@game/data/src/AllValuesProjection"
+import { CUSTOM_VALUE_STARTER_EXAMPLES } from "@game/data/src/CustomValueStarterExamples"
 import {
   CUSTOM_VALUE_DEFINITION_MAX_GRAPHEMES,
   CUSTOM_VALUE_NAME_MAX_GRAPHEMES,
@@ -11,39 +13,14 @@ import {
   type CustomValueId,
   type ValueId,
 } from "@game/data/src/Value"
-import {
-  sortRankedValuesAlphabetically,
-  type RankedValue,
-} from "@game/data/src/ValueRanking"
-import {
-  filterRankedValuesByQuery,
-  findRankedValueNameMatches,
-} from "@game/data/src/ValueSearch"
+import type { RankedValue } from "@game/data/src/ValueRanking"
+import { findRankedValueNameMatches } from "@game/data/src/ValueSearch"
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import CustomValueFieldFeedback from "@/components/CustomValueFieldFeedback"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
-
-const STARTER_EXAMPLES = Object.freeze([
-  Object.freeze({
-    name: "Ingenuity",
-    definition:
-      "To solve problems in original, resourceful, and practical ways.",
-    label: "Mapachito’s example",
-  }),
-  Object.freeze({
-    name: "Destiny",
-    definition: "To pursue the path I believe I am meant to fulfill.",
-    label: null,
-  }),
-  Object.freeze({
-    name: "Pets",
-    definition: "To care for, protect, and share life with companion animals.",
-    label: null,
-  }),
-])
 
 export default function AllValues({
   rankedValues,
@@ -94,22 +71,9 @@ export default function AllValues({
   )
   const addDefinitionRef = useRef<HTMLTextAreaElement>(null)
 
-  const hasComparisons = rankedValues.some(
-    ({ progress }) => progress.profileComparisons > 0,
-  )
-  const orderedValues = hasComparisons
-    ? rankedValues
-    : sortRankedValuesAlphabetically(rankedValues)
-  const visibleValues = useMemo(
-    () => filterRankedValuesByQuery(orderedValues, searchQuery),
-    [orderedValues, searchQuery],
-  )
-  const existingCustomValues = useMemo(
-    () =>
-      rankedValues.flatMap(({ definition }) =>
-        definition.kind === "custom" ? [definition] : [],
-      ),
-    [rankedValues],
+  const { existingCustomValues, hasComparisons, visibleValues } = useMemo(
+    () => projectAllValues({ rankedValues, searchQuery }),
+    [rankedValues, searchQuery],
   )
   const addValidation = useMemo(
     () =>
@@ -543,24 +507,26 @@ export default function AllValues({
               Examples—not recommendations
             </h3>
             <div className="mt-4 flex flex-wrap gap-3">
-              {STARTER_EXAMPLES.map(({ name, label, definition }) => (
-                <button
-                  key={name}
-                  type="button"
-                  disabled={isPersistencePending}
-                  onClick={() => {
-                    setAddName(name)
-                    setAddDefinition(definition)
-                    setIsAddNameTouched(false)
-                    setIsAddDefinitionTouched(false)
-                    setIsAddingCustomValue(true)
-                  }}
-                  className="bg-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
-                >
-                  + Start with {name}
-                  {label ? <span className="sr-only"> — {label}</span> : null}
-                </button>
-              ))}
+              {CUSTOM_VALUE_STARTER_EXAMPLES.map(
+                ({ name, label, definition }) => (
+                  <button
+                    key={name}
+                    type="button"
+                    disabled={isPersistencePending}
+                    onClick={() => {
+                      setAddName(name)
+                      setAddDefinition(definition)
+                      setIsAddNameTouched(false)
+                      setIsAddDefinitionTouched(false)
+                      setIsAddingCustomValue(true)
+                    }}
+                    className="bg-mapache-vivid-primary-cyan border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  >
+                    + Start with {name}
+                    {label ? <span className="sr-only"> — {label}</span> : null}
+                  </button>
+                ),
+              )}
             </div>
           </div>
           <button

@@ -1,6 +1,6 @@
 import { getValueDisplayName } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
-import { View } from "react-native"
+import { Pressable, View } from "react-native"
 import NativeValueLevelProgress from "@/components/NativeValueLevelProgress"
 import { Text } from "@/components/ui/text"
 import { cn } from "@/lib/utils"
@@ -9,19 +9,26 @@ export default function NativeHubValueRow({
   rankedValue,
   showRank,
   isTopFive,
+  onOpen,
 }: {
   rankedValue: RankedValue
   showRank: boolean
   isTopFive: boolean
+  onOpen: () => void
 }) {
   const { definition, progress, rank } = rankedValue
+  const displayName = getValueDisplayName(definition)
 
   return (
-    <View
+    <Pressable
+      accessibilityHint="Opens the complete value definition without changing your ranking."
+      accessibilityLabel={`Open ${displayName} in All Values`}
+      accessibilityRole="button"
       className={cn(
-        "mb-4 border-4 border-black p-4 shadow-[5px_5px_0px_0px_#000000]",
+        "mb-4 border-4 border-black p-4 shadow-[5px_5px_0px_0px_#000000] active:translate-x-[5px] active:translate-y-[5px] active:shadow-none",
         isTopFive ? "bg-mapache-vivid-secondary-gold" : "bg-white",
       )}
+      onPress={onOpen}
     >
       <View className="flex-row items-center gap-3">
         {showRank ? (
@@ -35,10 +42,10 @@ export default function NativeHubValueRow({
             isTopFive ? "text-white" : "text-black",
           )}
         >
-          {getValueDisplayName(definition)}
+          {displayName}
         </Text>
       </View>
       <NativeValueLevelProgress totalXp={progress.totalXp} />
-    </View>
+    </Pressable>
   )
 }
