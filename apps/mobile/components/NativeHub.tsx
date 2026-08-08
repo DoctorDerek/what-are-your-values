@@ -14,6 +14,7 @@ export default function NativeHub({
   onAddCustomValue,
   onBrowseAllValues,
   onOpenAchievements,
+  onOpenDataManagement,
   onOpenValue,
   onStartBattle,
 }: {
@@ -22,6 +23,7 @@ export default function NativeHub({
   onAddCustomValue: () => void
   onBrowseAllValues: () => void
   onOpenAchievements: () => void
+  onOpenDataManagement: () => void
   onOpenValue: (valueId: ValueId) => void
   onStartBattle: () => void
 }) {
@@ -44,6 +46,9 @@ export default function NativeHub({
         onPress={onOpenAchievements}
       >
         <Text>Achievements</Text>
+      </Button>
+      <Button variant="outline" onPress={onOpenDataManagement}>
+        <Text>Import &amp; Export</Text>
       </Button>
     </View>
   )
