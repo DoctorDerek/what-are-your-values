@@ -15,6 +15,7 @@ import * as ExpoCrypto from "expo-crypto"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
+import NativeAchievements from "@/components/NativeAchievements"
 import NativeAllValues from "@/components/NativeAllValues"
 import NativeCrucible from "@/components/NativeCrucible"
 import NativeHub from "@/components/NativeHub"
@@ -180,6 +181,10 @@ export default function NativeGameClient() {
     state.matches("Hub") ||
     (isRecordingAchievementPresentation &&
       achievementPresentationReturnTarget === "hub")
+  const isAchievementsSurface =
+    state.matches("Achievements") ||
+    (isRecordingAchievementPresentation &&
+      achievementPresentationReturnTarget === "achievements")
   const isCrucibleSurface =
     state.matches("Crucible") ||
     (isRecordingAchievementPresentation &&
@@ -202,8 +207,22 @@ export default function NativeGameClient() {
             openAllValues({ openCustomValueBuilder: true })
           }
           onBrowseAllValues={() => openAllValues({})}
+          onOpenAchievements={() =>
+            send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+          }
           onOpenValue={(valueId) => openAllValues({ valueId })}
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+        />
+        {achievementBanner}
+      </View>
+    )
+
+  if (isAchievementsSurface)
+    return (
+      <View className="flex-1">
+        <NativeAchievements
+          achievements={achievementPresentations}
+          onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
         />
         {achievementBanner}
       </View>

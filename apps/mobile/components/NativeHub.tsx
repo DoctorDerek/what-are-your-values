@@ -13,6 +13,7 @@ export default function NativeHub({
   dataNotice,
   onAddCustomValue,
   onBrowseAllValues,
+  onOpenAchievements,
   onOpenValue,
   onStartBattle,
 }: {
@@ -20,6 +21,7 @@ export default function NativeHub({
   dataNotice: string | null
   onAddCustomValue: () => void
   onBrowseAllValues: () => void
+  onOpenAchievements: () => void
   onOpenValue: (valueId: ValueId) => void
   onStartBattle: () => void
 }) {
@@ -35,6 +37,13 @@ export default function NativeHub({
       </Button>
       <Button variant="outline" onPress={onAddCustomValue}>
         <Text>Add Custom Value</Text>
+      </Button>
+      <Button
+        className="bg-mapache-vivid-secondary-gold"
+        variant="outline"
+        onPress={onOpenAchievements}
+      >
+        <Text>Achievements</Text>
       </Button>
     </View>
   )
