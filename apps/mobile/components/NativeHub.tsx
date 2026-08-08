@@ -11,20 +11,32 @@ import { Text } from "@/components/ui/text"
 export default function NativeHub({
   rankedValues,
   dataNotice,
+  onAddCustomValue,
+  onBrowseAllValues,
   onOpenValue,
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
   dataNotice: string | null
+  onAddCustomValue: () => void
+  onBrowseAllValues: () => void
   onOpenValue: (valueId: ValueId) => void
   onStartBattle: () => void
 }) {
   const { hasComparisons, visibleValues } = projectHubValues(rankedValues)
 
-  const battleAction = (
-    <Button className="my-5" size="large" onPress={onStartBattle}>
-      <Text>Battle</Text>
-    </Button>
+  const hubActionRail = (
+    <View className="my-5 gap-3">
+      <Button size="large" onPress={onStartBattle}>
+        <Text>Battle</Text>
+      </Button>
+      <Button variant="secondary" onPress={onBrowseAllValues}>
+        <Text>Browse All Values</Text>
+      </Button>
+      <Button variant="outline" onPress={onAddCustomValue}>
+        <Text>Add Custom Value</Text>
+      </Button>
+    </View>
   )
 
   return (
@@ -72,7 +84,7 @@ export default function NativeHub({
                 Top Five
               </Text>
             ) : (
-              battleAction
+              hubActionRail
             )}
           </View>
         }
@@ -86,7 +98,7 @@ export default function NativeHub({
             />
             {hasComparisons && index === 4 ? (
               <View>
-                {battleAction}
+                {hubActionRail}
                 <Text className="bg-mapache-vivid-primary-cyan mb-5 border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
                   All Other Values
                 </Text>

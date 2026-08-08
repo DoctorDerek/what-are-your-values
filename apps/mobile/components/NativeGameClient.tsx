@@ -198,6 +198,10 @@ export default function NativeGameClient() {
         <NativeHub
           rankedValues={rankedValues}
           dataNotice={state.context.portabilityNotice}
+          onAddCustomValue={() =>
+            openAllValues({ openCustomValueBuilder: true })
+          }
+          onBrowseAllValues={() => openAllValues({})}
           onOpenValue={(valueId) => openAllValues({ valueId })}
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
         />
