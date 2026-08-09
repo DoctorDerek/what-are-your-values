@@ -2,6 +2,8 @@ import {
   getValueDisplayDefinition,
   getValueDisplayName,
 } from "@game/data/src/Value"
+import { ACHIEVEMENT_CATALOG } from "@game/machines/src/AchievementCatalog"
+import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
@@ -22,17 +24,30 @@ function createBattleProps(seed: string) {
 
 function createHistoryProps() {
   return {
+    achievement: null,
     canUndo: false,
     canRedo: false,
-    hasAchievementBanner: false,
+    isAchievementAcknowledgementPending: false,
     isPersistencePending: false,
+    onAchievementPresented: vi.fn(),
     onUndo: vi.fn(),
     onRedo: vi.fn(),
   }
 }
 
+const firstAchievement = ACHIEVEMENT_CATALOG[0]
+const firstAchievementPresentation = Object.freeze({
+  id: firstAchievement.id,
+  title: "First Battle",
+  requirement: "Compare your first pair of values.",
+  status: "unlocked",
+  progress: null,
+  unlockedAt: "2026-08-07T12:34:56.000Z",
+  unlockedDate: "Aug 7, 2026",
+}) satisfies AchievementPresentation
+
 describe("Crucible Component Integration", () => {
-  it("reserves bounded viewport space so achievement feedback never covers choice targets", () => {
+  it("overlays battle feedback below controls without shrinking the value arena", () => {
     const { battleCycle, battle } = createBattleProps(
       "achievement-banner-space-seed",
     )
@@ -41,16 +56,30 @@ describe("Crucible Component Integration", () => {
       <Crucible
         {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
+        achievement={firstAchievementPresentation}
         battle={battle}
         progressById={battleCycle.progressById}
-        hasAchievementBanner
         onExit={vi.fn()}
         onWinnerSelected={vi.fn()}
       />,
     )
 
-    expect(screen.getByRole("main", { name: "Value battle" })).toHaveClass(
-      "pb-[min(50dvh,17rem)]",
+    const battleSurface = screen.getByRole("main", { name: "Value battle" })
+    const battleActions = screen.getByRole("navigation", {
+      name: "Battle actions",
+    })
+    const banner = screen.getByRole("complementary", {
+      name: "Achievement unlocked",
+    })
+
+    expect(battleSurface).not.toHaveClass("pb-[min(50dvh,17rem)]")
+    expect(battleActions).toHaveClass("relative", "shrink-0")
+    expect(banner).toHaveClass("relative")
+    expect(banner.parentElement).toHaveClass(
+      "pointer-events-none",
+      "absolute",
+      "top-0",
+      "flex-col",
     )
   })
 
@@ -279,13 +308,12 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
         canUndo
         canRedo
-        hasAchievementBanner={false}
-        isPersistencePending={false}
         onExit={vi.fn()}
         onUndo={onUndo}
         onRedo={onRedo}
@@ -317,13 +345,12 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
         canUndo
         canRedo
-        hasAchievementBanner={false}
-        isPersistencePending={false}
         onExit={vi.fn()}
         onUndo={onUndo}
         onRedo={onRedo}
@@ -365,12 +392,12 @@ describe("Crucible Component Integration", () => {
 
     render(
       <Crucible
+        {...createHistoryProps()}
         activeDeck={battleCycle.activeDeck}
         battle={battle}
         progressById={battleCycle.progressById}
         canUndo
         canRedo
-        hasAchievementBanner={false}
         isPersistencePending
         onExit={onExit}
         onUndo={onUndo}

@@ -92,6 +92,27 @@ describe("AchievementBanner Integration", () => {
     expect(onPresented).toHaveBeenCalledExactlyOnceWith(firstAchievement.id)
   })
 
+  it("anchors battle feedback to the top of its arena with compact landscape copy", () => {
+    render(
+      <AchievementBanner
+        achievement={firstAchievementPresentation}
+        isAcknowledgementPending={false}
+        placement="battle"
+        onPresented={vi.fn()}
+      />,
+    )
+
+    const banner = screen.getByRole("complementary", {
+      name: "Achievement unlocked",
+    })
+    expect(banner).toHaveClass("relative")
+    expect(banner).not.toHaveClass("fixed")
+    expect(screen.getByText("Compare your first pair of values.")).toHaveClass(
+      "landscape:mt-0",
+      "landscape:flex-1",
+    )
+  })
+
   it("acknowledges through semantic Motion completion without requiring dismissal", () => {
     const onPresented = vi.fn()
 
