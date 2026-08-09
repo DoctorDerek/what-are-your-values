@@ -107,38 +107,36 @@ export default function NativeCrucible({
         onRedo={onRedo}
         onStop={onExit}
       />
-      <View className="relative min-h-0 flex-1">
-        <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-row">
-          <NativeValueChoiceCard
-            key={`first:${firstValueId}:${secondValueId}`}
-            position="first"
-            value={firstValue}
-            level={getLevelFromXP(firstProgress.totalXp)}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            reportsAnimationCompletion
-            onActivate={handleSelect}
-            onAnimationComplete={handleAnimationComplete}
-          />
-          <NativeValueChoiceCard
-            key={`second:${secondValueId}:${firstValueId}`}
-            position="second"
-            value={secondValue}
-            level={getLevelFromXP(secondProgress.totalXp)}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            reportsAnimationCompletion={false}
-            onActivate={handleSelect}
-            onAnimationComplete={handleAnimationComplete}
-          />
-        </View>
-        <NativeAchievementBanner
-          achievement={achievement}
-          isAcknowledgementPending={isAchievementAcknowledgementPending}
-          placement="battle"
-          onPresented={onAchievementPresented}
+      <NativeAchievementBanner
+        achievement={achievement}
+        isAcknowledgementPending={isAchievementAcknowledgementPending}
+        placement="battle"
+        onPresented={onAchievementPresented}
+      />
+      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-row">
+        <NativeValueChoiceCard
+          key={`first:${firstValueId}:${secondValueId}`}
+          position="first"
+          value={firstValue}
+          level={getLevelFromXP(firstProgress.totalXp)}
+          winnerId={state.context.winnerId}
+          isEnabled={isInteractive}
+          isAnimating={isAnimating}
+          reportsAnimationCompletion
+          onActivate={handleSelect}
+          onAnimationComplete={handleAnimationComplete}
+        />
+        <NativeValueChoiceCard
+          key={`second:${secondValueId}:${firstValueId}`}
+          position="second"
+          value={secondValue}
+          level={getLevelFromXP(secondProgress.totalXp)}
+          winnerId={state.context.winnerId}
+          isEnabled={isInteractive}
+          isAnimating={isAnimating}
+          reportsAnimationCompletion={false}
+          onActivate={handleSelect}
+          onAnimationComplete={handleAnimationComplete}
         />
       </View>
     </MapacheScreen>

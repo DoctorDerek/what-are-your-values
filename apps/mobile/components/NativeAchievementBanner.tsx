@@ -1,6 +1,6 @@
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import { useEffect } from "react"
-import { useWindowDimensions, View } from "react-native"
+import { View } from "react-native"
 import Animated, {
   cancelAnimation,
   interpolate,
@@ -30,9 +30,7 @@ export default function NativeAchievementBanner({
 }) {
   const shouldReduceMotion = useReducedMotion()
   const safeAreaInsets = useSafeAreaInsets()
-  const { width, height } = useWindowDimensions()
   const isBattlePlacement = placement === "battle"
-  const isBattleLandscape = isBattlePlacement && width > height
   const presentationProgress = useSharedValue(0)
   const animatedStyle = useAnimatedStyle(() => {
     const progress = presentationProgress.get()
@@ -76,11 +74,10 @@ export default function NativeAchievementBanner({
       accessibilityLabel={`Achievement unlocked: ${achievement.title}`}
       accessibilityLiveRegion="polite"
       className={cn(
-        "bg-mapache-vivid-white z-50 max-h-56 border-4 border-black p-4 shadow-[7px_7px_0px_0px_#000000]",
+        "bg-mapache-vivid-white z-50 max-h-48 border-4 border-black p-3 shadow-[7px_7px_0px_0px_#000000] xl:max-h-56 xl:p-4",
         isBattlePlacement
-          ? "absolute top-0 right-3 left-3"
+          ? "mx-3 mb-3 shrink-0 xl:flex-row xl:items-center xl:gap-4"
           : "absolute right-3 left-3",
-        isBattleLandscape && "flex-row items-center gap-4",
       )}
       style={
         isBattlePlacement
@@ -88,7 +85,12 @@ export default function NativeAchievementBanner({
           : [animatedStyle, { bottom: safeAreaInsets.bottom + 12 }]
       }
     >
-      <View className={cn("min-w-0 pr-16", isBattleLandscape && "flex-1 pr-0")}>
+      <View
+        className={cn(
+          "min-w-0 pr-16",
+          isBattlePlacement && "xl:flex-1 xl:pr-0",
+        )}
+      >
         <Text className="text-mapache-vivid-black text-sm font-black uppercase">
           Achievement Unlocked
         </Text>
@@ -102,7 +104,7 @@ export default function NativeAchievementBanner({
       <Text
         className={cn(
           "text-mapache-vivid-black mt-3 text-base font-bold",
-          isBattleLandscape && "mt-0 min-w-0 flex-1 pr-16",
+          isBattlePlacement && "xl:mt-0 xl:min-w-0 xl:flex-1 xl:pr-16",
         )}
       >
         {achievement.requirement}
