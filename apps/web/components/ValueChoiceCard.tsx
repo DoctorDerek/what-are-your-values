@@ -89,7 +89,7 @@ export const ValueChoiceCard = forwardRef<
             <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(1.25rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:text-[clamp(2.5rem,4vw,4.75rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
               {displayName}
             </h2>
-            <span className="inline-block whitespace-nowrap border-2 border-black bg-white px-2 py-1 text-sm font-black text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[6px_6px_0px_0px_#000000]">
+            <span className="inline-block border-2 border-black bg-white px-2 py-1 text-sm font-black whitespace-nowrap text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[6px_6px_0px_0px_#000000]">
               LVL {level}
             </span>
           </div>

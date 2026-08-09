@@ -104,7 +104,8 @@ describe("Crucible Component Integration", () => {
     const firstDefinition = battleCycle.activeDeck.values.find(
       ({ id }) => id === battle.pair[0],
     )
-    if (!firstDefinition) throw new Error("Projected value definition is missing")
+    if (!firstDefinition)
+      throw new Error("Projected value definition is missing")
 
     render(
       <Crucible
@@ -124,7 +125,8 @@ describe("Crucible Component Integration", () => {
       name: getValueDisplayName(firstDefinition),
     })
     const identityRail = heading.parentElement
-    if (!identityRail) throw new Error("Value heading is missing its identity rail")
+    if (!identityRail)
+      throw new Error("Value heading is missing its identity rail")
 
     expect(identityRail).toHaveClass(
       "grid",

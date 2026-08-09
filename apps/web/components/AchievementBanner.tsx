@@ -66,9 +66,7 @@ export default function AchievementBanner({
       <div
         className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto relative overflow-y-auto border-4 border-black p-3 shadow-[8px_8px_0px_0px_#000000] xl:p-5 ${isBattlePlacement ? "max-h-[min(38dvh,12rem)] xl:grid xl:max-h-[min(50dvh,16rem)] xl:grid-cols-2 xl:items-center xl:gap-5" : "max-h-[min(50dvh,16rem)]"}`}
       >
-        <div
-          className={`min-w-0 pr-16 ${isBattlePlacement ? "xl:pr-0" : ""}`}
-        >
+        <div className={`min-w-0 pr-16 ${isBattlePlacement ? "xl:pr-0" : ""}`}>
           <p className="text-sm font-black uppercase">Achievement Unlocked</p>
           <h2 className="mt-1 text-2xl font-black [overflow-wrap:anywhere] uppercase xl:text-3xl">
             {achievement.title}
