@@ -743,11 +743,14 @@ describe("GameClient Integration", () => {
     const achievementBanner = screen.getByRole("complementary", {
       name: "Achievement unlocked",
     })
+    const presentationRegion = achievementBanner.parentElement
     expect(battleSurface).not.toHaveClass("pb-[min(50dvh,17rem)]")
-    expect(achievementBanner.parentElement).toHaveClass(
-      "absolute",
-      "top-0",
-      "flex-col",
+    expect(presentationRegion).toHaveClass("relative", "shrink-0", "flex-col")
+    expect(presentationRegion).not.toHaveClass("absolute")
+    expect(presentationRegion?.nextElementSibling).toHaveClass(
+      "min-h-0",
+      "flex-1",
+      "xl:flex-row",
     )
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
