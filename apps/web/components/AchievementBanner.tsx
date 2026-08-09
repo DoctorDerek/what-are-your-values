@@ -64,7 +64,7 @@ export default function AchievementBanner({
         Achievement unlocked: {achievement.title}.
       </p>
       <div
-        className={`bg-mapache-vivid-primary-yellow text-mapache-vivid-dark pointer-events-auto max-h-[min(50dvh,16rem)] overflow-y-auto border-4 border-black p-4 shadow-[8px_8px_0px_0px_#000000] sm:p-5 ${isBattlePlacement ? "landscape:flex landscape:items-center landscape:gap-4" : ""}`}
+        className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto max-h-[min(50dvh,16rem)] overflow-y-auto border-4 border-black p-4 shadow-[8px_8px_0px_0px_#000000] sm:p-5 ${isBattlePlacement ? "landscape:flex landscape:items-center landscape:gap-4" : ""}`}
       >
         <div
           className={`flex items-start justify-between gap-4 ${isBattlePlacement ? "landscape:min-w-0 landscape:flex-1" : ""}`}
