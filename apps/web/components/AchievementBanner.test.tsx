@@ -130,9 +130,7 @@ describe("AchievementBanner Integration", () => {
       "bg-mapache-vivid-white",
       "text-mapache-vivid-black",
     )
-    expect(achievementPanel).not.toHaveClass(
-      "bg-mapache-vivid-primary-yellow",
-    )
+    expect(achievementPanel).not.toHaveClass("bg-mapache-vivid-primary-yellow")
   })
 
   it("acknowledges through semantic Motion completion without requiring dismissal", () => {
