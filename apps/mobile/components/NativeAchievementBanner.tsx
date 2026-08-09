@@ -88,41 +88,35 @@ export default function NativeAchievementBanner({
           : [animatedStyle, { bottom: safeAreaInsets.bottom + 12 }]
       }
     >
-      <View
-        className={cn(
-          "flex-row items-start justify-between gap-3",
-          isBattleLandscape && "min-w-0 flex-1",
-        )}
-      >
-        <View className="min-w-0 flex-1">
-          <Text className="text-mapache-vivid-black text-sm font-black uppercase">
-            Achievement Unlocked
-          </Text>
-          <Text
-            variant="h2"
-            className="text-mapache-vivid-black mt-1 border-0 pb-0 text-left text-2xl uppercase"
-          >
-            {achievement.title}
-          </Text>
-        </View>
-        <Button
-          accessibilityLabel="Dismiss achievement"
-          disabled={isAcknowledgementPending}
-          size="compact"
-          variant="outline"
-          onPress={() => onPresented(achievement.id)}
+      <View className={cn("min-w-0 pr-16", isBattleLandscape && "flex-1 pr-0")}>
+        <Text className="text-mapache-vivid-black text-sm font-black uppercase">
+          Achievement Unlocked
+        </Text>
+        <Text
+          variant="h2"
+          className="text-mapache-vivid-black mt-1 border-0 pb-0 text-left text-2xl uppercase"
         >
-          <Text>×</Text>
-        </Button>
+          {achievement.title}
+        </Text>
       </View>
       <Text
         className={cn(
           "text-mapache-vivid-black mt-3 text-base font-bold",
-          isBattleLandscape && "mt-0 min-w-0 flex-1",
+          isBattleLandscape && "mt-0 min-w-0 flex-1 pr-16",
         )}
       >
         {achievement.requirement}
       </Text>
+      <Button
+        accessibilityLabel="Dismiss achievement"
+        className="absolute top-4 right-4 z-10"
+        disabled={isAcknowledgementPending}
+        size="compact"
+        variant="outline"
+        onPress={() => onPresented(achievement.id)}
+      >
+        <Text>×</Text>
+      </Button>
     </Animated.View>
   )
 }
