@@ -7,7 +7,14 @@ import type { AchievementPresentation } from "@game/machines/src/AchievementPres
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
@@ -47,7 +54,7 @@ const firstAchievementPresentation = Object.freeze({
 }) satisfies AchievementPresentation
 
 describe("Crucible Component Integration", () => {
-  it("overlays battle feedback below controls without shrinking the value arena", () => {
+  it("keeps battle feedback in flow between controls and playable value cards", () => {
     const { battleCycle, battle } = createBattleProps(
       "achievement-banner-space-seed",
     )
@@ -71,16 +78,62 @@ describe("Crucible Component Integration", () => {
     const banner = screen.getByRole("complementary", {
       name: "Achievement unlocked",
     })
+    const presentationRegion = banner.parentElement
 
-    expect(battleSurface).not.toHaveClass("pb-[min(50dvh,17rem)]")
+    expect(battleSurface).toHaveClass("overflow-hidden")
     expect(battleActions).toHaveClass("relative", "shrink-0")
     expect(banner).toHaveClass("relative")
-    expect(banner.parentElement).toHaveClass(
+    expect(presentationRegion).toHaveClass(
       "pointer-events-none",
-      "absolute",
-      "top-0",
+      "relative",
+      "shrink-0",
       "flex-col",
     )
+    expect(presentationRegion).not.toHaveClass("absolute")
+    expect(presentationRegion).toContainElement(battleActions)
+    expect(presentationRegion?.nextElementSibling).toHaveClass(
+      "min-h-0",
+      "flex-1",
+      "flex-col",
+      "xl:flex-row",
+    )
+  })
+
+  it("groups each shortcut, wrapping value name, and level in one identity rail", async () => {
+    const { battleCycle, battle } = createBattleProps("identity-rail-seed")
+    const firstDefinition = battleCycle.activeDeck.values.find(
+      ({ id }) => id === battle.pair[0],
+    )
+    if (!firstDefinition) throw new Error("Projected value definition is missing")
+
+    render(
+      <Crucible
+        {...createHistoryProps()}
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={vi.fn()}
+      />,
+    )
+
+    const choice = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+    })
+    const heading = within(choice).getByRole("heading", {
+      name: getValueDisplayName(firstDefinition),
+    })
+    const identityRail = heading.parentElement
+    if (!identityRail) throw new Error("Value heading is missing its identity rail")
+
+    expect(identityRail).toHaveClass(
+      "grid",
+      "grid-cols-[auto_minmax(0,1fr)_auto]",
+      "xl:gap-5",
+    )
+    expect(within(identityRail).getByText("[1 / A]")).toBeVisible()
+    expect(within(identityRail).getByText(/^LVL \d+$/)).toBeVisible()
+    expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
   })
 
   it("renders semantic canonical values and commits a keyboard selection once", async () => {
@@ -282,7 +335,7 @@ describe("Crucible Component Integration", () => {
       expect(choice.parentElement).toHaveClass(
         "min-h-0",
         "min-w-0",
-        "overflow-x-auto",
+        "overflow-x-hidden",
         "overflow-y-auto",
         "overscroll-contain",
       )
