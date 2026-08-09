@@ -64,32 +64,30 @@ export default function AchievementBanner({
         Achievement unlocked: {achievement.title}.
       </p>
       <div
-        className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto max-h-[min(50dvh,16rem)] overflow-y-auto border-4 border-black p-4 shadow-[8px_8px_0px_0px_#000000] sm:p-5 ${isBattlePlacement ? "landscape:flex landscape:items-center landscape:gap-4" : ""}`}
+        className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto relative max-h-[min(50dvh,16rem)] overflow-y-auto border-4 border-black p-4 shadow-[8px_8px_0px_0px_#000000] sm:p-5 ${isBattlePlacement ? "landscape:grid landscape:grid-cols-2 landscape:items-center landscape:gap-4" : ""}`}
       >
         <div
-          className={`flex items-start justify-between gap-4 ${isBattlePlacement ? "landscape:min-w-0 landscape:flex-1" : ""}`}
+          className={`min-w-0 pr-16 ${isBattlePlacement ? "landscape:pr-0" : ""}`}
         >
-          <div className="min-w-0">
-            <p className="text-sm font-black uppercase">Achievement Unlocked</p>
-            <h2 className="mt-1 text-2xl font-black [overflow-wrap:anywhere] uppercase sm:text-3xl">
-              {achievement.title}
-            </h2>
-          </div>
-          <button
-            type="button"
-            aria-label="Dismiss achievement"
-            disabled={isAcknowledgementPending}
-            onClick={() => onPresented(achievement.id)}
-            className="min-h-11 min-w-11 shrink-0 cursor-pointer border-4 border-black bg-white px-3 py-1 text-xl font-black text-black shadow-[4px_4px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60"
-          >
-            ×
-          </button>
+          <p className="text-sm font-black uppercase">Achievement Unlocked</p>
+          <h2 className="mt-1 text-2xl font-black [overflow-wrap:anywhere] uppercase sm:text-3xl">
+            {achievement.title}
+          </h2>
         </div>
         <p
-          className={`mt-3 text-lg font-bold [overflow-wrap:anywhere] ${isBattlePlacement ? "landscape:mt-0 landscape:min-w-0 landscape:flex-1" : ""}`}
+          className={`mt-3 text-lg font-bold [overflow-wrap:anywhere] ${isBattlePlacement ? "landscape:mt-0 landscape:min-w-0 landscape:pr-16" : ""}`}
         >
           {achievement.requirement}
         </p>
+        <button
+          type="button"
+          aria-label="Dismiss achievement"
+          disabled={isAcknowledgementPending}
+          onClick={() => onPresented(achievement.id)}
+          className="absolute top-4 right-4 min-h-11 min-w-11 cursor-pointer border-4 border-black bg-white px-3 py-1 text-xl font-black text-black shadow-[4px_4px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black disabled:cursor-wait disabled:opacity-60 sm:top-5 sm:right-5"
+        >
+          ×
+        </button>
       </div>
     </motion.aside>
   )
