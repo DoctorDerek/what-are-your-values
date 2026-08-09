@@ -111,7 +111,7 @@ export default function PlayerDataImportPreview({
         </PreviewFact>
       </dl>
 
-      <p className="bg-mapache-vivid-primary-yellow text-mapache-vivid-dark border-4 border-black p-4 text-lg font-black">
+      <p className="bg-mapache-vivid-secondary-gold text-mapache-vivid-black border-4 border-black p-4 text-lg font-black">
         {warning}
       </p>
 

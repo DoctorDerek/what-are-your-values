@@ -15,7 +15,7 @@ function AchievementCard({
     <li
       className={
         isUnlocked
-          ? "bg-mapache-vivid-primary-yellow text-mapache-vivid-dark min-w-0 border-4 border-black p-4 shadow-[5px_5px_0px_0px_#000000] sm:p-5"
+          ? "bg-mapache-vivid-secondary-gold text-mapache-vivid-black min-w-0 border-4 border-black p-4 shadow-[5px_5px_0px_0px_#000000] sm:p-5"
           : "text-mapache-vivid-dark min-w-0 border-4 border-black bg-white p-4 shadow-[5px_5px_0px_0px_#000000] sm:p-5"
       }
     >

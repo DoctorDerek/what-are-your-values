@@ -98,7 +98,7 @@ function ValueActionRail({
         id="hub-achievements-button"
         type="button"
         onClick={(event) => onOpenAchievements(event.currentTarget.id)}
-        className="bg-mapache-vivid-primary-yellow text-mapache-vivid-dark min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
+        className="bg-mapache-vivid-secondary-gold text-mapache-vivid-black min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
       >
         Achievements
       </button>

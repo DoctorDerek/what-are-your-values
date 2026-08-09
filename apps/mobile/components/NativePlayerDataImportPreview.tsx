@@ -98,7 +98,7 @@ export default function NativePlayerDataImportPreview({
 
       <Text
         accessibilityRole="alert"
-        className="bg-mapache-vivid-primary-yellow border-4 border-black p-4 text-lg leading-7 font-black text-black"
+        className="bg-mapache-vivid-secondary-gold border-4 border-black p-4 text-lg leading-7 font-black text-black"
       >
         {playerDataPortabilityCopy.importPreviewWarning}
       </Text>
