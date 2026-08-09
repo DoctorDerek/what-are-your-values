@@ -3,6 +3,7 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
+import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
@@ -12,29 +13,34 @@ import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
 import { useCallback, useEffect, useRef } from "react"
+import AchievementBanner from "./AchievementBanner"
 import BattleActionBar from "./BattleActionBar"
 import { ValueChoiceCard } from "./ValueChoiceCard"
 
 export default function Crucible({
   activeDeck,
+  achievement,
   battle,
   progressById,
   canUndo,
   canRedo,
-  hasAchievementBanner,
+  isAchievementAcknowledgementPending,
   isPersistencePending,
+  onAchievementPresented,
   onExit,
   onUndo,
   onRedo,
   onWinnerSelected,
 }: {
   activeDeck: ActiveDeck
+  achievement: AchievementPresentation | null
   battle: PresentedBattle
   progressById: ValueProgressById
   canUndo: boolean
   canRedo: boolean
-  hasAchievementBanner: boolean
+  isAchievementAcknowledgementPending: boolean
   isPersistencePending: boolean
+  onAchievementPresented: (achievementId: AchievementPresentation["id"]) => void
   onExit: () => void
   onUndo: () => void
   onRedo: () => void
@@ -160,52 +166,61 @@ export default function Crucible({
     <main
       aria-label="Value battle"
       aria-busy={isPersistencePending}
-      className={`noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none lg:flex-row ${
-        hasAchievementBanner ? "pb-[min(50dvh,17rem)]" : ""
-      }`}
+      className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none"
     >
-      <BattleActionBar
-        canUndo={isInteractive && canUndo}
-        canRedo={isInteractive && canRedo}
-        canStop={isInteractive}
-        onUndo={onUndo}
-        onRedo={onRedo}
-        onStop={onExit}
-      />
-
-      <AnimatePresence mode="popLayout">
-        <ValueChoiceCard
-          ref={firstChoiceRef}
-          key={`Card A: ${idA} vs. ${idB}`}
-          position="first"
-          value={valA}
-          level={levelA}
-          focusedId={focusedId}
-          winnerId={winnerId}
-          isEnabled={isInteractive}
-          isAnimating={isAnimating}
-          onActivate={handleSelect}
-          onFocus={handleCardFocus}
-          onAnimationComplete={handleAnimationComplete}
+      <div className="pointer-events-none absolute top-0 right-0 left-0 z-50 flex flex-col items-center">
+        <BattleActionBar
+          canUndo={isInteractive && canUndo}
+          canRedo={isInteractive && canRedo}
+          canStop={isInteractive}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          onStop={onExit}
         />
-      </AnimatePresence>
 
-      <AnimatePresence mode="popLayout">
-        <ValueChoiceCard
-          ref={secondChoiceRef}
-          key={`Card B: ${idB} vs. ${idA}`}
-          position="second"
-          value={valB}
-          level={levelB}
-          focusedId={focusedId}
-          winnerId={winnerId}
-          isEnabled={isInteractive}
-          isAnimating={isAnimating}
-          onActivate={handleSelect}
-          onFocus={handleCardFocus}
-          onAnimationComplete={handleAnimationComplete}
+        <AchievementBanner
+          achievement={achievement}
+          isAcknowledgementPending={isAchievementAcknowledgementPending}
+          placement="battle"
+          onPresented={onAchievementPresented}
         />
-      </AnimatePresence>
+      </div>
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+        <AnimatePresence mode="popLayout">
+          <ValueChoiceCard
+            ref={firstChoiceRef}
+            key={`Card A: ${idA} vs. ${idB}`}
+            position="first"
+            value={valA}
+            level={levelA}
+            focusedId={focusedId}
+            winnerId={winnerId}
+            isEnabled={isInteractive}
+            isAnimating={isAnimating}
+            onActivate={handleSelect}
+            onFocus={handleCardFocus}
+            onAnimationComplete={handleAnimationComplete}
+          />
+        </AnimatePresence>
+
+        <AnimatePresence mode="popLayout">
+          <ValueChoiceCard
+            ref={secondChoiceRef}
+            key={`Card B: ${idB} vs. ${idA}`}
+            position="second"
+            value={valB}
+            level={levelB}
+            focusedId={focusedId}
+            winnerId={winnerId}
+            isEnabled={isInteractive}
+            isAnimating={isAnimating}
+            onActivate={handleSelect}
+            onFocus={handleCardFocus}
+            onAnimationComplete={handleAnimationComplete}
+          />
+        </AnimatePresence>
+      </div>
     </main>
   )
 }
