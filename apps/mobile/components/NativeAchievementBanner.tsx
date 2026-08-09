@@ -76,7 +76,7 @@ export default function NativeAchievementBanner({
       accessibilityLabel={`Achievement unlocked: ${achievement.title}`}
       accessibilityLiveRegion="polite"
       className={cn(
-        "bg-mapache-vivid-secondary-gold z-50 max-h-56 border-4 border-black p-4 shadow-[7px_7px_0px_0px_#000000]",
+        "bg-mapache-vivid-white z-50 max-h-56 border-4 border-black p-4 shadow-[7px_7px_0px_0px_#000000]",
         isBattlePlacement
           ? "absolute top-0 right-3 left-3"
           : "absolute right-3 left-3",
@@ -95,12 +95,12 @@ export default function NativeAchievementBanner({
         )}
       >
         <View className="min-w-0 flex-1">
-          <Text className="text-sm font-black text-white uppercase">
+          <Text className="text-mapache-vivid-black text-sm font-black uppercase">
             Achievement Unlocked
           </Text>
           <Text
             variant="h2"
-            className="mt-1 border-0 pb-0 text-left text-2xl text-white uppercase"
+            className="text-mapache-vivid-black mt-1 border-0 pb-0 text-left text-2xl uppercase"
           >
             {achievement.title}
           </Text>
@@ -117,7 +117,7 @@ export default function NativeAchievementBanner({
       </View>
       <Text
         className={cn(
-          "mt-3 text-base font-bold text-white",
+          "text-mapache-vivid-black mt-3 text-base font-bold",
           isBattleLandscape && "mt-0 min-w-0 flex-1",
         )}
       >
