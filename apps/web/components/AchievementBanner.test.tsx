@@ -109,7 +109,42 @@ describe("AchievementBanner Integration", () => {
     expect(banner).not.toHaveClass("fixed")
     expect(screen.getByText("Compare your first pair of values.")).toHaveClass(
       "landscape:mt-0",
-      "landscape:flex-1",
+      "landscape:pr-16",
+    )
+  })
+
+  it("anchors dismissal at the top-right without dividing milestone copy", () => {
+    render(
+      <AchievementBanner
+        achievement={firstAchievementPresentation}
+        isAcknowledgementPending={false}
+        placement="battle"
+        onPresented={vi.fn()}
+      />,
+    )
+
+    const achievementHeading = screen.getByRole("heading", {
+      name: "First Battle",
+    })
+    const achievementPanel = achievementHeading.closest(".pointer-events-auto")
+    const dismissButton = screen.getByRole("button", {
+      name: "Dismiss achievement",
+    })
+
+    expect(achievementPanel).toHaveClass(
+      "relative",
+      "landscape:grid",
+      "landscape:grid-cols-2",
+    )
+    expect(achievementHeading.parentElement).toHaveClass(
+      "pr-16",
+      "landscape:pr-0",
+    )
+    expect(dismissButton).toHaveClass(
+      "absolute",
+      "top-4",
+      "right-4",
+      "focus-visible:outline-black",
     )
   })
 
