@@ -7,6 +7,13 @@ import { rootMachine } from "@game/machines/src/RootMachine"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { ActorRefFrom, SnapshotFrom } from "xstate"
 import { expoPlayerDataFileAdapter } from "@/lib/ExpoPlayerDataFiles"
+import {
+  createNativePlayerDataExportConsumedEvent,
+  createNativePlayerDataFileFailureEvent,
+  createNativePlayerDataFileReadStartedEvent,
+  createNativePlayerDataImportPreparedEvent,
+  type NativePlayerDataFileDestination,
+} from "@/lib/NativePlayerDataFileEvents"
 
 type RootMachineSnapshot = SnapshotFrom<typeof rootMachine>
 type RootMachineSend = ActorRefFrom<typeof rootMachine>["send"]
@@ -23,45 +30,56 @@ export default function useNativePlayerDataFiles({
 
   useEffect(() => {
     const preparedDownload = state.context.preparedDownload
+    const isDataManagementDownload = state.matches("DataManagement")
+    const isRecoveryDownload = state.matches("PersistenceFailure")
     if (
-      !state.matches("DataManagement") ||
+      (!isDataManagementDownload && !isRecoveryDownload) ||
       !preparedDownload ||
       deliveredDownloadsRef.current.has(preparedDownload)
     )
       return
 
+    const destination: NativePlayerDataFileDestination = isRecoveryDownload
+      ? "recovery"
+      : "data-management"
     deliveredDownloadsRef.current.add(preparedDownload)
     void expoPlayerDataFileAdapter
       .exportJson(preparedDownload)
-      .then(() => send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" }))
+      .then(() => send(createNativePlayerDataExportConsumedEvent(destination)))
       .catch(() =>
-        send({
-          type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
-          issue: playerDataPortabilityCopy.exportFailure,
-        }),
+        send(
+          createNativePlayerDataFileFailureEvent(
+            destination,
+            playerDataPortabilityCopy.exportFailure,
+          ),
+        ),
       )
   }, [send, state])
 
-  const chooseBackup = useCallback(async () => {
-    send({ type: "DATA_MANAGEMENT.IMPORT_FILE_READ_REQUESTED" })
-    setIsReadingImportFile(true)
-    try {
-      const serialized = await expoPlayerDataFileAdapter.selectJsonForImport()
-      if (serialized === null) return
+  const chooseBackup = useCallback(
+    async (destination: NativePlayerDataFileDestination) => {
+      const fileReadStartedEvent =
+        createNativePlayerDataFileReadStartedEvent(destination)
+      if (fileReadStartedEvent) send(fileReadStartedEvent)
+      setIsReadingImportFile(true)
+      try {
+        const serialized = await expoPlayerDataFileAdapter.selectJsonForImport()
+        if (serialized === null) return
 
-      send({
-        type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
-        serialized,
-      })
-    } catch (error: unknown) {
-      send({
-        type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
-        issue: getWayvmImportValidationIssue(error),
-      })
-    } finally {
-      setIsReadingImportFile(false)
-    }
-  }, [send])
+        send(createNativePlayerDataImportPreparedEvent(destination, serialized))
+      } catch (error: unknown) {
+        send(
+          createNativePlayerDataFileFailureEvent(
+            destination,
+            getWayvmImportValidationIssue(error),
+          ),
+        )
+      } finally {
+        setIsReadingImportFile(false)
+      }
+    },
+    [send],
+  )
 
   return { isReadingImportFile, chooseBackup }
 }

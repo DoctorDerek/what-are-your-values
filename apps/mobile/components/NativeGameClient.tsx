@@ -5,6 +5,7 @@ import {
   projectAchievementCatalog,
   type AchievementPresentation,
 } from "@game/machines/src/AchievementPresentation"
+import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "@game/machines/src/BattleProfileStore"
 import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
@@ -28,7 +29,9 @@ import NativeDataManagement, {
 } from "@/components/NativeDataManagement"
 import NativeHub from "@/components/NativeHub"
 import NativeIntroduction from "@/components/NativeIntroduction"
-import NativePersistenceFailure from "@/components/NativePersistenceFailure"
+import NativePersistenceFailure, {
+  type NativePlayerDataRecoveryActivity,
+} from "@/components/NativePersistenceFailure"
 import NativePlayerDataLoading from "@/components/NativePlayerDataLoading"
 import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
@@ -196,16 +199,88 @@ export default function NativeGameClient() {
     return <NativePlayerDataLoading />
 
   if (state.matches("PersistenceFailure")) {
+    const recoveryActivity: NativePlayerDataRecoveryActivity | null =
+      isReadingImportFile ||
+      state.matches({ PersistenceFailure: "PreparingImport" })
+        ? "Checking backup…"
+        : state.matches({ PersistenceFailure: "ExportingCurrentData" })
+          ? "Creating backup…"
+          : state.matches({ PersistenceFailure: "ExportingEvidence" })
+            ? "Creating diagnostic file…"
+            : state.matches({ PersistenceFailure: "ReplacingPlayerData" })
+              ? "Restoring backup…"
+              : state.matches({ PersistenceFailure: "DeletingAllData" })
+                ? "Deleting data…"
+                : null
+    const issue =
+      state.context.portabilityIssue ?? state.context.persistenceIssue
+    const hasRecoveryEntries = state.context.recoveryEntries !== null
     const canReturnWithoutNewChanges =
       state.context.persistenceFailureOrigin === "initialization" ||
       state.context.persistenceFailureOrigin === "crucible" ||
       state.context.persistenceFailureOrigin === "achievement-presentation"
 
+    if (hasRecoveryEntries)
+      return (
+        <NativePersistenceFailure
+          mode="unreadable-data"
+          activity={recoveryActivity}
+          hasLastKnownGoodSave={
+            state.context.recoveryEntries?.has(
+              BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
+            ) ?? false
+          }
+          issue={issue}
+          notice={state.context.portabilityNotice}
+          pendingImportSource={state.context.pendingRecoveryImportSource}
+          preview={state.context.pendingImport?.preview ?? null}
+          resetReview={state.context.pendingResetReview}
+          onCancelImport={() =>
+            send({ type: "RECOVERY.IMPORT_CANCEL_REQUESTED" })
+          }
+          onCancelReset={() =>
+            send({ type: "RECOVERY.DELETE_ALL_CANCEL_REQUESTED" })
+          }
+          onConfirmImport={() =>
+            send({ type: "RECOVERY.IMPORT_CONFIRM_REQUESTED" })
+          }
+          onConfirmReset={(review) =>
+            send({
+              type: "RECOVERY.DELETE_ALL_CONFIRMED",
+              confirmationId: review.confirmationId,
+              phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+            })
+          }
+          onDeleteAllData={() =>
+            send({ type: "RECOVERY.DELETE_ALL_REQUESTED" })
+          }
+          onExportUnreadableData={() =>
+            send({ type: "RECOVERY.EXPORT_REQUESTED" })
+          }
+          onImportBackup={() => void chooseBackup("recovery")}
+          onRestoreLastKnownGoodSave={() =>
+            send({ type: "RECOVERY.RESTORE_BACKUP_REQUESTED" })
+          }
+          onTryAgain={() => send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })}
+        />
+      )
+
+    const canExportCurrentData =
+      state.context.playerData !== null &&
+      state.context.persistenceFailureOrigin !== null &&
+      state.context.persistenceFailureOrigin !== "loading"
+
     return (
       <NativePersistenceFailure
-        hasRecoveryEntries={state.context.recoveryEntries !== null}
+        mode="storage-unavailable"
+        activity={recoveryActivity}
+        canExportCurrentData={canExportCurrentData}
         canReturnWithoutNewChanges={canReturnWithoutNewChanges}
-        issue={state.context.portabilityIssue ?? state.context.persistenceIssue}
+        issue={issue}
+        notice={state.context.portabilityNotice}
+        onExportCurrentData={() =>
+          send({ type: "STORAGE_RECOVERY.EXPORT_REQUESTED" })
+        }
         onTryAgain={() => send({ type: "STORAGE_RECOVERY.RETRY_REQUESTED" })}
         onReturnWithoutNewChanges={() =>
           send({ type: "STORAGE_RECOVERY.RETURN_REQUESTED" })
@@ -316,7 +391,7 @@ export default function NativeGameClient() {
         onCancelReset={() =>
           send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
         }
-        onChooseBackup={() => void chooseBackup()}
+        onChooseBackup={() => void chooseBackup("data-management")}
         onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
         onConfirmImport={() =>
           send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })

@@ -26,13 +26,19 @@ function PreviewFact({
 }
 
 export default function NativePlayerDataImportPreview({
+  confirmLabel = playerDataPortabilityCopy.importReplaceAction,
   isBusy,
   preview,
+  title = playerDataPortabilityCopy.importPreviewTitle,
+  warning = playerDataPortabilityCopy.importPreviewWarning,
   onCancel,
   onConfirm,
 }: {
+  readonly confirmLabel?: string
   readonly isBusy: boolean
   readonly preview: WayvmImportPreview
+  readonly title?: string
+  readonly warning?: string
   readonly onCancel: () => void
   readonly onConfirm: () => void
 }) {
@@ -47,7 +53,7 @@ export default function NativePlayerDataImportPreview({
         variant="h2"
         className="border-b-4 border-black text-black uppercase"
       >
-        {playerDataPortabilityCopy.importPreviewTitle}
+        {title}
       </Text>
 
       <View className="gap-3">
@@ -100,7 +106,7 @@ export default function NativePlayerDataImportPreview({
         accessibilityRole="alert"
         className="bg-mapache-vivid-secondary-gold border-4 border-black p-4 text-lg leading-7 font-black text-black"
       >
-        {playerDataPortabilityCopy.importPreviewWarning}
+        {warning}
       </Text>
 
       <View className="gap-4">
@@ -108,7 +114,7 @@ export default function NativePlayerDataImportPreview({
           <Text>{playerDataPortabilityCopy.importCancelAction}</Text>
         </Button>
         <Button disabled={isBusy} onPress={onConfirm}>
-          <Text>{playerDataPortabilityCopy.importReplaceAction}</Text>
+          <Text>{confirmLabel}</Text>
         </Button>
       </View>
     </View>
