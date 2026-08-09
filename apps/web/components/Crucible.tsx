@@ -168,7 +168,7 @@ export default function Crucible({
       aria-busy={isPersistencePending}
       className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none"
     >
-      <div className="pointer-events-none absolute top-0 right-0 left-0 z-50 flex flex-col items-center">
+      <div className="pointer-events-none relative z-50 flex shrink-0 flex-col items-center">
         <BattleActionBar
           canUndo={isInteractive && canUndo}
           canRedo={isInteractive && canRedo}
@@ -186,7 +186,7 @@ export default function Crucible({
         />
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col xl:flex-row">
         <AnimatePresence mode="popLayout">
           <ValueChoiceCard
             ref={firstChoiceRef}

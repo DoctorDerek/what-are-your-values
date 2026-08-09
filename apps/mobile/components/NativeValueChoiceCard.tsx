@@ -118,21 +118,23 @@ export default function NativeValueChoiceCard({
           accessibilityLabel={`Choose ${displayName}`}
           accessibilityRole="button"
           accessibilityState={{ disabled: !isEnabled, selected: isWinner }}
-          className="min-h-full flex-1 items-center justify-center px-5 py-7"
+          className="min-h-full flex-1 items-center justify-center px-3 py-4 xl:px-6 xl:py-8"
           disabled={!isEnabled}
           onPress={() => onActivate(value.id)}
         >
           <View className="w-full items-center">
-            <Text className="mb-5 border-4 border-black bg-white px-4 py-2 text-xl font-black text-black uppercase shadow-[5px_5px_0px_0px_#000000]">
-              Level {level}
-            </Text>
-            <Text
-              variant="h2"
-              className="border-0 pb-0 text-center text-4xl leading-[48px] text-white uppercase"
-            >
-              {displayName}
-            </Text>
-            <Text className="mt-6 w-full border-2 border-white bg-black/50 p-5 text-center text-xl leading-8 font-bold text-white">
+            <View className="w-full min-w-0 flex-row items-center gap-3 xl:gap-5">
+              <Text
+                variant="h2"
+                className="min-w-0 flex-1 border-0 pb-0 text-center text-3xl leading-9 text-white uppercase xl:text-5xl xl:leading-[56px]"
+              >
+                {displayName}
+              </Text>
+              <Text className="shrink-0 border-2 border-black bg-white px-2 py-1 text-sm font-black text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[5px_5px_0px_0px_#000000]">
+                LVL {level}
+              </Text>
+            </View>
+            <Text className="mt-3 w-full border-2 border-white bg-black/50 p-3 text-center text-lg leading-7 font-bold text-white xl:mt-6 xl:p-5 xl:text-xl xl:leading-8">
               “{displayDefinition}”
             </Text>
           </View>

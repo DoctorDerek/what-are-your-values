@@ -24,7 +24,7 @@ describe("Battle Action Bar", () => {
     expect(undo).toBeDisabled()
     expect(redo).toBeDisabled()
     for (const shortcut of ["[Z]", "[Y]", "[ESC]"]) {
-      expect(screen.getByText(shortcut)).toHaveClass("hidden", "sm:inline")
+      expect(screen.getByText(shortcut)).toHaveClass("hidden", "xl:inline")
     }
     fireEvent.click(undo)
     fireEvent.click(redo)

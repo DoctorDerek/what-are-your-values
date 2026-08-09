@@ -92,7 +92,7 @@ describe("AchievementBanner Integration", () => {
     expect(onPresented).toHaveBeenCalledExactlyOnceWith(firstAchievement.id)
   })
 
-  it("anchors battle feedback to the top of its arena with compact landscape copy", () => {
+  it("keeps battle feedback relative with compact base and xl copy", () => {
     render(
       <AchievementBanner
         achievement={firstAchievementPresentation}
@@ -108,8 +108,8 @@ describe("AchievementBanner Integration", () => {
     expect(banner).toHaveClass("relative")
     expect(banner).not.toHaveClass("fixed")
     expect(screen.getByText("Compare your first pair of values.")).toHaveClass(
-      "landscape:mt-0",
-      "landscape:pr-16",
+      "xl:mt-0",
+      "xl:pr-16",
     )
   })
 
@@ -133,13 +133,10 @@ describe("AchievementBanner Integration", () => {
 
     expect(achievementPanel).toHaveClass(
       "relative",
-      "landscape:grid",
-      "landscape:grid-cols-2",
+      "xl:grid",
+      "xl:grid-cols-2",
     )
-    expect(achievementHeading.parentElement).toHaveClass(
-      "pr-16",
-      "landscape:pr-0",
-    )
+    expect(achievementHeading.parentElement).toHaveClass("pr-16", "xl:pr-0")
     expect(dismissButton).toHaveClass(
       "absolute",
       "top-4",

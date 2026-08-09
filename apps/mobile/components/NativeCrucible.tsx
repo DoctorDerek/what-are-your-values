@@ -10,16 +10,12 @@ import {
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect } from "react"
-import { useWindowDimensions, View } from "react-native"
+import { View } from "react-native"
 import MapacheScreen from "@/components/MapacheScreen"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeBattleActionBar from "@/components/NativeBattleActionBar"
 import NativeValueChoiceCard from "@/components/NativeValueChoiceCard"
 import { Text } from "@/components/ui/text"
-import { cn } from "@/lib/utils"
-
-const MINIMUM_SIDE_BY_SIDE_CARD_WIDTH = 320
-const BATTLE_CARD_GAP = 8
 
 export default function NativeCrucible({
   activeDeck,
@@ -56,7 +52,6 @@ export default function NativeCrucible({
   const [state, send] = useMachine(combatMachine, {
     input: { onWinnerSelected },
   })
-  const { width, height } = useWindowDimensions()
 
   useEffect(() => {
     send({ type: "BATTLE.PROJECTED", battle })
@@ -99,10 +94,6 @@ export default function NativeCrucible({
   if (!firstValue || !secondValue || !firstProgress || !secondProgress)
     throw new Error("Projected battle is missing Active Deck data")
 
-  const shouldDisplaySideBySide =
-    width >= MINIMUM_SIDE_BY_SIDE_CARD_WIDTH * 2 + BATTLE_CARD_GAP &&
-    width > height
-
   return (
     <MapacheScreen
       accessibilityLabel="Value battle"
@@ -116,43 +107,36 @@ export default function NativeCrucible({
         onRedo={onRedo}
         onStop={onExit}
       />
-      <View className="relative min-h-0 flex-1">
-        <View
-          className={cn(
-            "min-h-0 flex-1 gap-2 px-3 pb-3",
-            shouldDisplaySideBySide ? "flex-row" : "flex-col",
-          )}
-        >
-          <NativeValueChoiceCard
-            key={`first:${firstValueId}:${secondValueId}`}
-            position="first"
-            value={firstValue}
-            level={getLevelFromXP(firstProgress.totalXp)}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            reportsAnimationCompletion
-            onActivate={handleSelect}
-            onAnimationComplete={handleAnimationComplete}
-          />
-          <NativeValueChoiceCard
-            key={`second:${secondValueId}:${firstValueId}`}
-            position="second"
-            value={secondValue}
-            level={getLevelFromXP(secondProgress.totalXp)}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            reportsAnimationCompletion={false}
-            onActivate={handleSelect}
-            onAnimationComplete={handleAnimationComplete}
-          />
-        </View>
-        <NativeAchievementBanner
-          achievement={achievement}
-          isAcknowledgementPending={isAchievementAcknowledgementPending}
-          placement="battle"
-          onPresented={onAchievementPresented}
+      <NativeAchievementBanner
+        achievement={achievement}
+        isAcknowledgementPending={isAchievementAcknowledgementPending}
+        placement="battle"
+        onPresented={onAchievementPresented}
+      />
+      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-row">
+        <NativeValueChoiceCard
+          key={`first:${firstValueId}:${secondValueId}`}
+          position="first"
+          value={firstValue}
+          level={getLevelFromXP(firstProgress.totalXp)}
+          winnerId={state.context.winnerId}
+          isEnabled={isInteractive}
+          isAnimating={isAnimating}
+          reportsAnimationCompletion
+          onActivate={handleSelect}
+          onAnimationComplete={handleAnimationComplete}
+        />
+        <NativeValueChoiceCard
+          key={`second:${secondValueId}:${firstValueId}`}
+          position="second"
+          value={secondValue}
+          level={getLevelFromXP(secondProgress.totalXp)}
+          winnerId={state.context.winnerId}
+          isEnabled={isInteractive}
+          isAnimating={isAnimating}
+          reportsAnimationCompletion={false}
+          onActivate={handleSelect}
+          onAnimationComplete={handleAnimationComplete}
         />
       </View>
     </MapacheScreen>
