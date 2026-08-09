@@ -316,7 +316,7 @@ export default function NativeGameClient() {
         onCancelReset={() =>
           send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
         }
-        onChooseBackup={() => void chooseBackup()}
+        onChooseBackup={() => void chooseBackup("data-management")}
         onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
         onConfirmImport={() =>
           send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
