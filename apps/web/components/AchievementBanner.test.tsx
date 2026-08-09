@@ -113,6 +113,28 @@ describe("AchievementBanner Integration", () => {
     )
   })
 
+  it("uses canonical opaque Vivid contrast tokens for battle feedback", () => {
+    render(
+      <AchievementBanner
+        achievement={firstAchievementPresentation}
+        isAcknowledgementPending={false}
+        placement="battle"
+        onPresented={vi.fn()}
+      />,
+    )
+
+    const achievementPanel = screen
+      .getByRole("heading", { name: "First Battle" })
+      .closest(".pointer-events-auto")
+    expect(achievementPanel).toHaveClass(
+      "bg-mapache-vivid-white",
+      "text-mapache-vivid-black",
+    )
+    expect(achievementPanel).not.toHaveClass(
+      "bg-mapache-vivid-primary-yellow",
+    )
+  })
+
   it("acknowledges through semantic Motion completion without requiring dismissal", () => {
     const onPresented = vi.fn()
 
