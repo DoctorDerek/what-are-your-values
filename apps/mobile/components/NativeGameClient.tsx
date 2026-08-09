@@ -350,22 +350,21 @@ export default function NativeGameClient() {
     const isBattleReady = state.matches({ Crucible: "Ready" })
 
     return (
-      <View className="flex-1">
-        <NativeCrucible
-          activeDeck={battleProfile.activeDeck}
-          battle={presentedBattle}
-          progressById={battleProfile.progressById}
-          canUndo={battleProfile.history.length > 0}
-          canRedo={battleProfile.redo.length > 0}
-          hasAchievementBanner={pendingAchievementPresentation !== null}
-          isPersistencePending={!isBattleReady}
-          onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
-          onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
-          onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
-          onWinnerSelected={handleWinnerSelected}
-        />
-        {achievementBanner}
-      </View>
+      <NativeCrucible
+        activeDeck={battleProfile.activeDeck}
+        achievement={pendingAchievementPresentation}
+        battle={presentedBattle}
+        progressById={battleProfile.progressById}
+        canUndo={battleProfile.history.length > 0}
+        canRedo={battleProfile.redo.length > 0}
+        isAchievementAcknowledgementPending={isRecordingAchievementPresentation}
+        isPersistencePending={!isBattleReady}
+        onAchievementPresented={handleAchievementPresented}
+        onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
+        onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
+        onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
+        onWinnerSelected={handleWinnerSelected}
+      />
     )
   }
 
