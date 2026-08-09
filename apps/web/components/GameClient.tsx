@@ -553,9 +553,7 @@ export default function GameClient() {
         progressById={battleProfile.progressById}
         canUndo={battleProfile.history.length > 0}
         canRedo={battleProfile.redo.length > 0}
-        isAchievementAcknowledgementPending={
-          isRecordingAchievementPresentation
-        }
+        isAchievementAcknowledgementPending={isRecordingAchievementPresentation}
         isPersistencePending={!isBattleReady}
         onAchievementPresented={handleAchievementPresented}
         onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
