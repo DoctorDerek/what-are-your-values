@@ -130,7 +130,7 @@ export default function PlayerDataRecovery(props: PlayerDataRecoveryProps) {
         !props.hasLastKnownGoodSave &&
         !props.preview &&
         !props.resetReview ? (
-          <p className="bg-mapache-vivid-primary-yellow text-mapache-vivid-dark border-4 border-black p-4 text-lg font-black shadow-[6px_6px_0px_0px_#000000] sm:text-xl">
+          <p className="bg-mapache-vivid-secondary-gold text-mapache-vivid-black border-4 border-black p-4 text-lg font-black shadow-[6px_6px_0px_0px_#000000] sm:text-xl">
             {playerDataRecoveryCopy.unreadableData.noKnownGoodSave}
           </p>
         ) : null}

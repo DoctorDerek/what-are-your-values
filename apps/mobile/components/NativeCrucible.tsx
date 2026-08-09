@@ -1,6 +1,7 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
+import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
@@ -11,6 +12,7 @@ import { useMachine } from "@xstate/react"
 import { useCallback, useEffect } from "react"
 import { useWindowDimensions, View } from "react-native"
 import MapacheScreen from "@/components/MapacheScreen"
+import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeBattleActionBar from "@/components/NativeBattleActionBar"
 import NativeValueChoiceCard from "@/components/NativeValueChoiceCard"
 import { Text } from "@/components/ui/text"
@@ -21,24 +23,28 @@ const BATTLE_CARD_GAP = 8
 
 export default function NativeCrucible({
   activeDeck,
+  achievement,
   battle,
   progressById,
   canUndo,
   canRedo,
-  hasAchievementBanner,
+  isAchievementAcknowledgementPending,
   isPersistencePending,
+  onAchievementPresented,
   onExit,
   onUndo,
   onRedo,
   onWinnerSelected,
 }: {
   activeDeck: ActiveDeck
+  achievement: AchievementPresentation | null
   battle: PresentedBattle
   progressById: ValueProgressById
   canUndo: boolean
   canRedo: boolean
-  hasAchievementBanner: boolean
+  isAchievementAcknowledgementPending: boolean
   isPersistencePending: boolean
+  onAchievementPresented: (achievementId: AchievementPresentation["id"]) => void
   onExit: () => void
   onUndo: () => void
   onRedo: () => void
@@ -110,36 +116,43 @@ export default function NativeCrucible({
         onRedo={onRedo}
         onStop={onExit}
       />
-      <View
-        className={cn(
-          "min-h-0 flex-1 gap-2 px-3",
-          shouldDisplaySideBySide ? "flex-row" : "flex-col",
-          hasAchievementBanner ? "pb-44" : "pb-3",
-        )}
-      >
-        <NativeValueChoiceCard
-          key={`first:${firstValueId}:${secondValueId}`}
-          position="first"
-          value={firstValue}
-          level={getLevelFromXP(firstProgress.totalXp)}
-          winnerId={state.context.winnerId}
-          isEnabled={isInteractive}
-          isAnimating={isAnimating}
-          reportsAnimationCompletion
-          onActivate={handleSelect}
-          onAnimationComplete={handleAnimationComplete}
-        />
-        <NativeValueChoiceCard
-          key={`second:${secondValueId}:${firstValueId}`}
-          position="second"
-          value={secondValue}
-          level={getLevelFromXP(secondProgress.totalXp)}
-          winnerId={state.context.winnerId}
-          isEnabled={isInteractive}
-          isAnimating={isAnimating}
-          reportsAnimationCompletion={false}
-          onActivate={handleSelect}
-          onAnimationComplete={handleAnimationComplete}
+      <View className="relative min-h-0 flex-1">
+        <View
+          className={cn(
+            "min-h-0 flex-1 gap-2 px-3 pb-3",
+            shouldDisplaySideBySide ? "flex-row" : "flex-col",
+          )}
+        >
+          <NativeValueChoiceCard
+            key={`first:${firstValueId}:${secondValueId}`}
+            position="first"
+            value={firstValue}
+            level={getLevelFromXP(firstProgress.totalXp)}
+            winnerId={state.context.winnerId}
+            isEnabled={isInteractive}
+            isAnimating={isAnimating}
+            reportsAnimationCompletion
+            onActivate={handleSelect}
+            onAnimationComplete={handleAnimationComplete}
+          />
+          <NativeValueChoiceCard
+            key={`second:${secondValueId}:${firstValueId}`}
+            position="second"
+            value={secondValue}
+            level={getLevelFromXP(secondProgress.totalXp)}
+            winnerId={state.context.winnerId}
+            isEnabled={isInteractive}
+            isAnimating={isAnimating}
+            reportsAnimationCompletion={false}
+            onActivate={handleSelect}
+            onAnimationComplete={handleAnimationComplete}
+          />
+        </View>
+        <NativeAchievementBanner
+          achievement={achievement}
+          isAcknowledgementPending={isAchievementAcknowledgementPending}
+          placement="battle"
+          onPresented={onAchievementPresented}
         />
       </View>
     </MapacheScreen>

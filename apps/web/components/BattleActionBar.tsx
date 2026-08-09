@@ -19,7 +19,7 @@ export default function BattleActionBar({
   return (
     <nav
       aria-label="Battle actions"
-      className="absolute top-3 left-1/2 z-50 grid w-[calc(100%-1.5rem)] max-w-2xl -translate-x-1/2 grid-cols-3 gap-2 sm:top-6 sm:gap-4"
+      className="pointer-events-auto relative z-50 mx-auto grid w-full max-w-2xl shrink-0 grid-cols-3 gap-2 p-3 sm:gap-4 sm:p-6"
     >
       <button
         type="button"
