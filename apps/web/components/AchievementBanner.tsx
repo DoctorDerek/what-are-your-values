@@ -51,7 +51,7 @@ export default function AchievementBanner({
       onAnimationComplete={() => onPresented(achievement.id)}
       className={
         isBattlePlacement
-          ? "pointer-events-none relative z-[60] mx-auto w-[calc(100%-1.5rem)] max-w-2xl"
+          ? "pointer-events-none relative z-[60] mx-auto w-[calc(100%-1.5rem)] max-w-7xl shrink-0"
           : "pointer-events-none fixed right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[60] mx-auto max-w-2xl"
       }
     >
@@ -64,18 +64,18 @@ export default function AchievementBanner({
         Achievement unlocked: {achievement.title}.
       </p>
       <div
-        className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto relative max-h-[min(50dvh,16rem)] overflow-y-auto border-4 border-black p-4 shadow-[8px_8px_0px_0px_#000000] sm:p-5 ${isBattlePlacement ? "landscape:grid landscape:grid-cols-2 landscape:items-center landscape:gap-4" : ""}`}
+        className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto relative overflow-y-auto border-4 border-black p-3 shadow-[8px_8px_0px_0px_#000000] xl:p-5 ${isBattlePlacement ? "max-h-[min(38dvh,12rem)] xl:grid xl:max-h-[min(50dvh,16rem)] xl:grid-cols-2 xl:items-center xl:gap-5" : "max-h-[min(50dvh,16rem)]"}`}
       >
         <div
-          className={`min-w-0 pr-16 ${isBattlePlacement ? "landscape:pr-0" : ""}`}
+          className={`min-w-0 pr-16 ${isBattlePlacement ? "xl:pr-0" : ""}`}
         >
           <p className="text-sm font-black uppercase">Achievement Unlocked</p>
-          <h2 className="mt-1 text-2xl font-black [overflow-wrap:anywhere] uppercase sm:text-3xl">
+          <h2 className="mt-1 text-2xl font-black [overflow-wrap:anywhere] uppercase xl:text-3xl">
             {achievement.title}
           </h2>
         </div>
         <p
-          className={`mt-3 text-lg font-bold [overflow-wrap:anywhere] ${isBattlePlacement ? "landscape:mt-0 landscape:min-w-0 landscape:pr-16" : ""}`}
+          className={`mt-3 text-lg font-bold [overflow-wrap:anywhere] ${isBattlePlacement ? "xl:mt-0 xl:min-w-0 xl:pr-16" : ""}`}
         >
           {achievement.requirement}
         </p>
@@ -84,7 +84,7 @@ export default function AchievementBanner({
           aria-label="Dismiss achievement"
           disabled={isAcknowledgementPending}
           onClick={() => onPresented(achievement.id)}
-          className="absolute top-4 right-4 min-h-11 min-w-11 cursor-pointer border-4 border-black bg-white px-3 py-1 text-xl font-black text-black shadow-[4px_4px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black disabled:cursor-wait disabled:opacity-60 sm:top-5 sm:right-5"
+          className="absolute top-4 right-4 min-h-11 min-w-11 cursor-pointer border-4 border-black bg-white px-3 py-1 text-xl font-black text-black shadow-[4px_4px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black disabled:cursor-wait disabled:opacity-60 xl:top-5 xl:right-5"
         >
           ×
         </button>
