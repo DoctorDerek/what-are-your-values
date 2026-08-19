@@ -9,6 +9,10 @@ import {
   MAX_EXPORT_METADATA_STRING_LENGTH,
   serializeWayvmExport,
 } from "./WayvmExport"
+import {
+  createWayvmExportV1TestVector,
+  WAYVM_EXPORT_V1_TEST_VECTOR,
+} from "./WayvmExportV1TestVector"
 
 const EXPORTED_AT = "2026-07-29T12:34:56.000Z"
 
@@ -34,6 +38,48 @@ describe("WAYVM Export", () => {
     expect(wayvmExport.activeDeckFingerprint).toBe(
       wayvmExport.playerData.profile.activeDeck.fingerprint,
     )
+  })
+
+  it("freezes representative schema-one bytes and every portable semantic field", async () => {
+    const { wayvmExport, serialized, customValueId, firstBattleAchievementId } =
+      await createWayvmExportV1TestVector()
+    const decoded = await decodeWayvmExport(serialized)
+
+    expect(new TextEncoder().encode(serialized)).toHaveLength(
+      WAYVM_EXPORT_V1_TEST_VECTOR.expectedByteLength,
+    )
+    expect(wayvmExport.contentHash).toBe(
+      WAYVM_EXPORT_V1_TEST_VECTOR.expectedContentHash,
+    )
+    expect(decoded).toEqual(wayvmExport)
+    expect(serializeWayvmExport(decoded)).toBe(serialized)
+    expect(decoded.playerData.profile.activeDeck.customValues).toEqual([
+      expect.objectContaining({
+        id: customValueId,
+        name: "Ingenuity 🦝",
+        definition:
+          "Finding creative, resourceful paths through meaningful problems—con curiosidad.",
+      }),
+    ])
+    expect(decoded.playerData.profile.scheduler.scheduleKind).toBe("join-pass")
+    expect(decoded.playerData.profile.history).toHaveLength(1)
+    expect(decoded.playerData.profile.redo).toHaveLength(1)
+    expect(
+      decoded.playerData.profile.progressById.get(customValueId)?.totalXp,
+    ).toBeGreaterThan(0)
+    expect(decoded.playerData.achievements.unlocks).toEqual([
+      expect.objectContaining({ id: firstBattleAchievementId }),
+    ])
+    expect(decoded.playerData.achievements.presentedAchievementIds).toEqual([
+      firstBattleAchievementId,
+    ])
+    expect(decoded.playerData.achievements.progress.lifetimeBattleCount).toBe(2)
+    expect(decoded.playerData.settings).toEqual({
+      locale: "en",
+      reducedMotion: "on",
+      controlHints: "always",
+      reflectionCards: "none",
+    })
   })
 
   it("rejects altered bytes and malformed integrity fields", async () => {
@@ -88,7 +134,7 @@ describe("WAYVM Export", () => {
     "rejects unsupported outer metadata at index $index",
     async ({ index, value, issue }) => {
       const tuple = parsePersistedJson(
-        serializeWayvmExport(await createExportFixture()),
+        (await createWayvmExportV1TestVector()).serialized,
       )
       if (!Array.isArray(tuple)) {
         throw new Error("The export fixture is not a tuple")
