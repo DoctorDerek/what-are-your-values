@@ -11,6 +11,7 @@ import {
   type BattleProfileCommit,
 } from "./BattleProfileCommit"
 import {
+  checkpointBattleProfileActor,
   commitBattleProfileEventActor,
   hydrateBattleProfileActor,
   initializeBattleProfileActor,
@@ -70,6 +71,9 @@ type PendingRecoveryImportSource = "last-known-good" | "selected-backup"
 
 type AchievementPresentationReturnTarget = "hub" | "achievements" | "crucible"
 
+type BackgroundCheckpointReturnTarget =
+  "hub" | "achievements" | "data-management" | "all-values" | "crucible"
+
 type PersistenceFailureOrigin =
   "loading" | "initialization" | "crucible" | "achievement-presentation"
 
@@ -84,6 +88,7 @@ type RootMachineContext = {
   pendingBattleProfileCommit: BattleProfileCommit | null
   pendingAchievementPresentationId: AchievementId | null
   achievementPresentationReturnTarget: AchievementPresentationReturnTarget | null
+  backgroundCheckpointReturnTarget: BackgroundCheckpointReturnTarget | null
   pendingImportBytes: string | null
   pendingImport: PreparedWayvmImport | null
   preImportBackupBytes: string | null
@@ -102,6 +107,7 @@ type RootMachineEvent =
       type: "APP.HYDRATED"
       schedulerSeed: string
     }
+  | { type: "APP.BACKGROUND_CHECKPOINT_REQUESTED" }
   | { type: "INTRODUCTION.COMPLETED" }
   | { type: "BATTLE.START_REQUESTED" }
   | { type: "ACHIEVEMENTS.OPEN_REQUESTED" }
@@ -345,6 +351,7 @@ export const rootMachine = setup({
     hydrateBattleProfile: hydrateBattleProfileActor,
     initializeBattleProfile: initializeBattleProfileActor,
     commitBattleProfileEvent: commitBattleProfileEventActor,
+    checkpointBattleProfile: checkpointBattleProfileActor,
     recordAchievementPresentation: recordAchievementPresentationActor,
     createWayvmExport: createWayvmExportActor,
     prepareWayvmImport: prepareWayvmImportActor,
@@ -375,6 +382,9 @@ export const rootMachine = setup({
           ? event.issue
           : null,
       portabilityNotice: null,
+    }),
+    clearBackgroundCheckpointReturnTarget: assign({
+      backgroundCheckpointReturnTarget: null,
     }),
   },
   guards: {
@@ -477,6 +487,16 @@ export const rootMachine = setup({
     shouldReturnFailedAchievementPresentationToHub: ({ context }) =>
       context.persistenceFailureOrigin === "achievement-presentation" &&
       context.achievementPresentationReturnTarget === "hub",
+    shouldReturnBackgroundCheckpointToHub: ({ context }) =>
+      context.backgroundCheckpointReturnTarget === "hub",
+    shouldReturnBackgroundCheckpointToAchievements: ({ context }) =>
+      context.backgroundCheckpointReturnTarget === "achievements",
+    shouldReturnBackgroundCheckpointToDataManagement: ({ context }) =>
+      context.backgroundCheckpointReturnTarget === "data-management",
+    shouldReturnBackgroundCheckpointToAllValues: ({ context }) =>
+      context.backgroundCheckpointReturnTarget === "all-values",
+    shouldReturnBackgroundCheckpointToCrucible: ({ context }) =>
+      context.backgroundCheckpointReturnTarget === "crucible",
   },
 }).createMachine({
   id: "root",
@@ -487,6 +507,7 @@ export const rootMachine = setup({
     pendingBattleProfileCommit: null,
     pendingAchievementPresentationId: null,
     achievementPresentationReturnTarget: null,
+    backgroundCheckpointReturnTarget: null,
     pendingImportBytes: null,
     pendingImport: null,
     preImportBackupBytes: null,
@@ -634,6 +655,12 @@ export const rootMachine = setup({
     },
     Hub: {
       on: {
+        "APP.BACKGROUND_CHECKPOINT_REQUESTED": {
+          target: "BackgroundCheckpointing",
+          actions: assign({
+            backgroundCheckpointReturnTarget: "hub",
+          }),
+        },
         "BATTLE.START_REQUESTED": {
           target: "Crucible",
           actions: "clearPortabilityFeedback",
@@ -663,6 +690,12 @@ export const rootMachine = setup({
     },
     Achievements: {
       on: {
+        "APP.BACKGROUND_CHECKPOINT_REQUESTED": {
+          target: "BackgroundCheckpointing",
+          actions: assign({
+            backgroundCheckpointReturnTarget: "achievements",
+          }),
+        },
         "ACHIEVEMENTS.CLOSE_REQUESTED": { target: "Hub" },
         "ACHIEVEMENT.PRESENTED": {
           guard: "canRecordAchievementPresentation",
@@ -680,6 +713,12 @@ export const rootMachine = setup({
       states: {
         Browsing: {
           on: {
+            "APP.BACKGROUND_CHECKPOINT_REQUESTED": {
+              target: "#root.BackgroundCheckpointing",
+              actions: assign({
+                backgroundCheckpointReturnTarget: "data-management",
+              }),
+            },
             "DATA_MANAGEMENT.CLOSE_REQUESTED": {
               target: "#root.Hub",
               actions: assign({
@@ -1064,6 +1103,12 @@ export const rootMachine = setup({
       states: {
         Browsing: {
           on: {
+            "APP.BACKGROUND_CHECKPOINT_REQUESTED": {
+              target: "#root.BackgroundCheckpointing",
+              actions: assign({
+                backgroundCheckpointReturnTarget: "all-values",
+              }),
+            },
             "ALL_VALUES.CLOSE_REQUESTED": { target: "#root.Hub" },
             "ALL_VALUES.ADD_REQUESTED": {
               target: "Persisting",
@@ -1155,6 +1200,12 @@ export const rootMachine = setup({
       states: {
         Ready: {
           on: {
+            "APP.BACKGROUND_CHECKPOINT_REQUESTED": {
+              target: "#root.BackgroundCheckpointing",
+              actions: assign({
+                backgroundCheckpointReturnTarget: "crucible",
+              }),
+            },
             "BATTLE.EXIT_REQUESTED": { target: "#root.Hub" },
             "ACHIEVEMENT.PRESENTED": {
               guard: "canRecordAchievementPresentation",
@@ -1262,6 +1313,52 @@ export const rootMachine = setup({
           },
         },
       },
+    },
+    BackgroundCheckpointing: {
+      invoke: {
+        src: "checkpointBattleProfile",
+        input: ({ context }) => ({
+          store: context.durableStore,
+          state: requireBattleProfileStoreState(context),
+          checkpointedAt: context.now(),
+        }),
+        onDone: {
+          target: "RestoringBackgroundCheckpointSurface",
+          actions: assign({
+            battleProfileStoreState: ({ event }) => event.output,
+          }),
+        },
+        onError: { target: "RestoringBackgroundCheckpointSurface" },
+      },
+    },
+    RestoringBackgroundCheckpointSurface: {
+      always: [
+        {
+          guard: "shouldReturnBackgroundCheckpointToHub",
+          target: "Hub",
+          actions: "clearBackgroundCheckpointReturnTarget",
+        },
+        {
+          guard: "shouldReturnBackgroundCheckpointToAchievements",
+          target: "Achievements",
+          actions: "clearBackgroundCheckpointReturnTarget",
+        },
+        {
+          guard: "shouldReturnBackgroundCheckpointToDataManagement",
+          target: "DataManagement.Browsing",
+          actions: "clearBackgroundCheckpointReturnTarget",
+        },
+        {
+          guard: "shouldReturnBackgroundCheckpointToAllValues",
+          target: "AllValues.Browsing",
+          actions: "clearBackgroundCheckpointReturnTarget",
+        },
+        {
+          guard: "shouldReturnBackgroundCheckpointToCrucible",
+          target: "Crucible.Ready",
+          actions: "clearBackgroundCheckpointReturnTarget",
+        },
+      ],
     },
     RecordingAchievementPresentation: {
       invoke: {

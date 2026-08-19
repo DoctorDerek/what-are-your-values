@@ -19,7 +19,7 @@ import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import * as ExpoCrypto from "expo-crypto"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { View } from "react-native"
+import { AppState, View } from "react-native"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeAchievements from "@/components/NativeAchievements"
 import NativeAllValues from "@/components/NativeAllValues"
@@ -35,6 +35,7 @@ import NativePersistenceFailure, {
 import NativePlayerDataLoading from "@/components/NativePlayerDataLoading"
 import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
+import { createNativeAppLifecycleEvent } from "@/lib/NativeAppLifecycleEvents"
 import packageMetadata from "@/package.json"
 
 const nativeRootMachineInput = Object.freeze({
@@ -191,6 +192,15 @@ export default function NativeGameClient() {
     send({ type: "APP.HYDRATED", schedulerSeed })
   }, [schedulerSeed, send])
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (appState) => {
+      const event = createNativeAppLifecycleEvent(appState)
+      if (event) send(event)
+    })
+
+    return () => subscription.remove()
+  }, [send])
+
   if (
     state.matches("Hydrating") ||
     state.matches("LoadingProfile") ||
@@ -303,20 +313,36 @@ export default function NativeGameClient() {
   const isRecordingAchievementPresentation = state.matches(
     "RecordingAchievementPresentation",
   )
+  const isBackgroundCheckpointing = state.matches("BackgroundCheckpointing")
   const achievementPresentationReturnTarget =
     state.context.achievementPresentationReturnTarget
+  const backgroundCheckpointReturnTarget =
+    state.context.backgroundCheckpointReturnTarget
   const isHubSurface =
     state.matches("Hub") ||
     (isRecordingAchievementPresentation &&
-      achievementPresentationReturnTarget === "hub")
+      achievementPresentationReturnTarget === "hub") ||
+    (isBackgroundCheckpointing && backgroundCheckpointReturnTarget === "hub")
   const isAchievementsSurface =
     state.matches("Achievements") ||
     (isRecordingAchievementPresentation &&
-      achievementPresentationReturnTarget === "achievements")
+      achievementPresentationReturnTarget === "achievements") ||
+    (isBackgroundCheckpointing &&
+      backgroundCheckpointReturnTarget === "achievements")
+  const isDataManagementSurface =
+    state.matches("DataManagement") ||
+    (isBackgroundCheckpointing &&
+      backgroundCheckpointReturnTarget === "data-management")
+  const isAllValuesSurface =
+    state.matches("AllValues") ||
+    (isBackgroundCheckpointing &&
+      backgroundCheckpointReturnTarget === "all-values")
   const isCrucibleSurface =
     state.matches("Crucible") ||
     (isRecordingAchievementPresentation &&
-      achievementPresentationReturnTarget === "crucible")
+      achievementPresentationReturnTarget === "crucible") ||
+    (isBackgroundCheckpointing &&
+      backgroundCheckpointReturnTarget === "crucible")
   const achievementBanner = (
     <NativeAchievementBanner
       achievement={pendingAchievementPresentation}
@@ -359,7 +385,7 @@ export default function NativeGameClient() {
       </View>
     )
 
-  if (state.matches("DataManagement")) {
+  if (isDataManagementSurface) {
     const activity: NativeDataManagementActivity | null =
       isReadingImportFile ||
       state.matches({ DataManagement: "PreparingImport" })
@@ -403,12 +429,15 @@ export default function NativeGameClient() {
     )
   }
 
-  if (state.matches("AllValues"))
+  if (isAllValuesSurface)
     return (
       <NativeAllValues
         key={battleProfile.scheduler.deckRevision}
         initialValueId={pendingAllValuesValueId}
-        isPersistencePending={state.matches({ AllValues: "Persisting" })}
+        isPersistencePending={
+          isBackgroundCheckpointing ||
+          state.matches({ AllValues: "Persisting" })
+        }
         openCustomValueBuilder={shouldOpenCustomValueBuilder}
         persistenceIssue={state.context.persistenceIssue}
         rankedValues={rankedValues}

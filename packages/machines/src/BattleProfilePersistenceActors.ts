@@ -2,6 +2,7 @@ import { fromPromise } from "xstate"
 import type { BattleProfileEvent } from "./BattleProfileEvent"
 import { hydrateBattleProfileStore } from "./BattleProfileHydration"
 import {
+  checkpointBattleProfileStoreHead,
   commitBattleProfileStoreEvent,
   initializeBattleProfileStore,
   type BattleProfileStoreState,
@@ -26,6 +27,12 @@ type CommitBattleProfileEventInput = {
   readonly committedAt: string
 }
 
+type CheckpointBattleProfileInput = {
+  readonly store: DurableStoreAdapter
+  readonly state: BattleProfileStoreState
+  readonly checkpointedAt: string
+}
+
 export const hydrateBattleProfileActor = fromPromise(
   async ({ input }: { input: HydrateBattleProfileInput }) =>
     hydrateBattleProfileStore(input),
@@ -44,4 +51,9 @@ export const initializeBattleProfileActor = fromPromise(
 export const commitBattleProfileEventActor = fromPromise(
   async ({ input }: { input: CommitBattleProfileEventInput }) =>
     commitBattleProfileStoreEvent(input),
+)
+
+export const checkpointBattleProfileActor = fromPromise(
+  async ({ input }: { input: CheckpointBattleProfileInput }) =>
+    checkpointBattleProfileStoreHead(input),
 )

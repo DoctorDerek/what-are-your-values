@@ -266,6 +266,68 @@ export async function commitBattleProfileStoreEvent({
   })
 }
 
+export async function checkpointBattleProfileStoreHead({
+  store,
+  state,
+  checkpointedAt,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly state: BattleProfileStoreState
+  readonly checkpointedAt: string
+}) {
+  if (state.head.generation === state.manifest.checkpointGeneration)
+    return state
+
+  const activeSlot = getInactiveCheckpointSlot(state.manifest.activeSlot)
+  const checkpointKey = getSnapshotKey(activeSlot)
+  const entries = await store.readAll()
+  const replacedCheckpointBytes = entries.get(checkpointKey) ?? null
+  const checkpoint = await createBattleProfileCheckpoint({
+    generation: state.head.generation,
+    revision: state.head.revision,
+    createdAt: state.playerDataCreatedAt,
+    updatedAt: checkpointedAt,
+    appVersion: state.appVersion,
+    playerData: state.head.playerData,
+  })
+  const manifest = createBattleProfileManifest({
+    activeSlot,
+    checkpointGeneration: state.head.generation,
+    checkpointRevision: state.head.revision,
+    headGeneration: state.head.generation,
+    headRevision: state.head.revision,
+  })
+  const manifestBytes = serializeBattleProfileManifest(manifest)
+  const retainedJournalKeys = state.journalKeys.filter(
+    (key) =>
+      readBattleProfileJournalKeyGeneration(key) >
+      state.manifest.checkpointGeneration,
+  )
+  const retainedJournalKeySet = new Set(retainedJournalKeys)
+  const deleteKeys = state.journalKeys.filter(
+    (key) => !retainedJournalKeySet.has(key),
+  )
+
+  await store.compareAndSwapVerified({
+    expectedEntries: [
+      [BATTLE_PROFILE_MANIFEST_KEY, state.manifestBytes],
+      [checkpointKey, replacedCheckpointBytes],
+    ],
+    putEntries: [
+      [checkpointKey, serializeBattleProfileCheckpoint(checkpoint)],
+      [BATTLE_PROFILE_MANIFEST_KEY, manifestBytes],
+    ],
+    deleteKeys,
+  })
+
+  return createBattleProfileStoreState({
+    ...state,
+    manifest,
+    manifestBytes,
+    journalKeys: retainedJournalKeys,
+  })
+}
+
 function incrementStoreIdentity(value: number, label: string) {
   if (
     !Number.isSafeInteger(value) ||

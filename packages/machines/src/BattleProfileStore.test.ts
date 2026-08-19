@@ -13,6 +13,7 @@ import {
   BATTLE_PROFILE_QUARANTINE_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
   BATTLE_PROFILE_SNAPSHOT_B_KEY,
+  checkpointBattleProfileStoreHead,
   commitBattleProfileStoreEvent,
   deleteAllBattleProfileStoreData,
   deleteUnrecoverableBattleProfileStoreData,
@@ -231,6 +232,148 @@ describe("Battle Profile Store", () => {
     expect(entries.has(`${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}33`)).toBe(true)
     expect(entries.has(`${BATTLE_PROFILE_JOURNAL_KEY_PREFIX}64`)).toBe(true)
     expect(state.journalKeys).toHaveLength(32)
+  })
+
+  it("checkpoints the current durable head without changing semantic state", async () => {
+    const store = createInMemoryDurableStore()
+    const initialState = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "background-checkpoint-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const committedState = await commitBattleProfileStoreEvent({
+      store,
+      state: initialState,
+      event: createChoiceEvent(initialState.head.playerData.profile),
+      committedAt: "2026-07-21T00:01:00.000Z",
+    })
+    const checkpointedState = await checkpointBattleProfileStoreHead({
+      store,
+      state: committedState,
+      checkpointedAt: "2026-07-21T00:02:00.000Z",
+    })
+    const entries = await store.readAll()
+    const checkpointBytes = entries.get(BATTLE_PROFILE_SNAPSHOT_B_KEY)
+    if (!checkpointBytes) {
+      throw new Error("The background checkpoint is missing")
+    }
+
+    expect(checkpointedState.head).toBe(committedState.head)
+    expect(checkpointedState.manifest).toMatchObject({
+      activeSlot: "b",
+      checkpointGeneration: 1,
+      checkpointRevision: 1,
+      headGeneration: 1,
+      headRevision: 1,
+    })
+    expect(checkpointedState.journalKeys).toEqual([
+      getBattleProfileJournalKey(1),
+    ])
+    expect(entries.has(getBattleProfileJournalKey(1))).toBe(true)
+    await expect(
+      decodeBattleProfileCheckpoint(checkpointBytes),
+    ).resolves.toMatchObject({
+      generation: 1,
+      revision: 1,
+      createdAt: "2026-07-21T00:00:00.000Z",
+      updatedAt: "2026-07-21T00:02:00.000Z",
+      playerData: committedState.head.playerData,
+    })
+  })
+
+  it("prunes journals superseded by the prior checkpoint and then becomes idempotent", async () => {
+    const store = createInMemoryDurableStore()
+    const initialState = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "repeated-background-checkpoint-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const firstCommittedState = await commitBattleProfileStoreEvent({
+      store,
+      state: initialState,
+      event: createChoiceEvent(initialState.head.playerData.profile),
+      committedAt: "2026-07-21T00:01:00.000Z",
+    })
+    const firstCheckpointedState = await checkpointBattleProfileStoreHead({
+      store,
+      state: firstCommittedState,
+      checkpointedAt: "2026-07-21T00:02:00.000Z",
+    })
+    const secondCommittedState = await commitBattleProfileStoreEvent({
+      store,
+      state: firstCheckpointedState,
+      event: createChoiceEvent(firstCheckpointedState.head.playerData.profile),
+      committedAt: "2026-07-21T00:03:00.000Z",
+    })
+    const secondCheckpointedState = await checkpointBattleProfileStoreHead({
+      store,
+      state: secondCommittedState,
+      checkpointedAt: "2026-07-21T00:04:00.000Z",
+    })
+    const entriesAfterCheckpoint = await store.readAll()
+    const repeatedCheckpointState = await checkpointBattleProfileStoreHead({
+      store,
+      state: secondCheckpointedState,
+      checkpointedAt: "2026-07-21T00:05:00.000Z",
+    })
+
+    expect(secondCheckpointedState.manifest).toMatchObject({
+      activeSlot: "a",
+      checkpointGeneration: 2,
+      headGeneration: 2,
+    })
+    expect(secondCheckpointedState.journalKeys).toEqual([
+      getBattleProfileJournalKey(2),
+    ])
+    expect(entriesAfterCheckpoint.has(getBattleProfileJournalKey(1))).toBe(
+      false,
+    )
+    expect(entriesAfterCheckpoint.has(getBattleProfileJournalKey(2))).toBe(true)
+    expect(repeatedCheckpointState).toBe(secondCheckpointedState)
+    await expect(store.readAll()).resolves.toEqual(entriesAfterCheckpoint)
+  })
+
+  it("rejects a stale background checkpoint without changing durable bytes", async () => {
+    const store = createInMemoryDurableStore()
+    const initialState = await initializeBattleProfileStore({
+      store,
+      playerData: createInitialPlayerData({
+        schedulerSeed: "stale-background-checkpoint-seed",
+        createdAt: "2026-07-21T00:00:00.000Z",
+      }),
+      createdAt: "2026-07-21T00:00:00.000Z",
+      appVersion: "0.1.0",
+    })
+    const staleState = await commitBattleProfileStoreEvent({
+      store,
+      state: initialState,
+      event: createChoiceEvent(initialState.head.playerData.profile),
+      committedAt: "2026-07-21T00:01:00.000Z",
+    })
+    await commitBattleProfileStoreEvent({
+      store,
+      state: staleState,
+      event: createChoiceEvent(staleState.head.playerData.profile),
+      committedAt: "2026-07-21T00:02:00.000Z",
+    })
+    const currentEntries = await store.readAll()
+
+    await expect(
+      checkpointBattleProfileStoreHead({
+        store,
+        state: staleState,
+        checkpointedAt: "2026-07-21T00:03:00.000Z",
+      }),
+    ).rejects.toBeInstanceOf(DurableStoreConflictError)
+    await expect(store.readAll()).resolves.toEqual(currentEntries)
   })
 
   it("atomically replaces PlayerData through the inactive checkpoint and preserves the prior slot", async () => {
