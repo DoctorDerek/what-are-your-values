@@ -5,7 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "android": "expo start --android",
-    "build": "expo export --platform android --output-dir dist",
+    "build": "expo export --platform all --output-dir dist",
     "doctor": "pnpm dlx expo-doctor",
     "go": "expo start --go",
     "ios": "expo start --ios",
