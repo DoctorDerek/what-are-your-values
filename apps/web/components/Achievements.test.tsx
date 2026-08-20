@@ -76,7 +76,14 @@ describe("Achievements", () => {
   it("renders all forty milestones once in canonical order and focuses the screen heading", async () => {
     const achievements = createInitialPresentations()
 
-    render(<Achievements achievements={achievements} onClose={vi.fn()} />)
+    render(
+      <Achievements
+        achievements={achievements}
+        canOpenMenu
+        onClose={vi.fn()}
+        onOpenMenu={vi.fn()}
+      />,
+    )
 
     await waitFor(() =>
       expect(
@@ -106,7 +113,9 @@ describe("Achievements", () => {
     render(
       <Achievements
         achievements={createPresentationsWithFirstBattleUnlocked()}
+        canOpenMenu
         onClose={vi.fn()}
+        onOpenMenu={vi.fn()}
       />,
     )
 
@@ -134,11 +143,15 @@ describe("Achievements", () => {
     render(
       <Achievements
         achievements={createInitialPresentations()}
+        canOpenMenu
         onClose={onClose}
+        onOpenMenu={vi.fn()}
       />,
     )
 
-    expect(screen.getAllByRole("button")).toHaveLength(1)
+    expect(
+      screen.getAllByRole("button").map((button) => button.textContent),
+    ).toEqual(["Menu", "Back to Your Values"])
     fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
     expect(onClose).toHaveBeenCalledOnce()
   })
@@ -147,7 +160,9 @@ describe("Achievements", () => {
     render(
       <Achievements
         achievements={createPresentationsAfterTopFiveReset()}
+        canOpenMenu
         onClose={vi.fn()}
+        onOpenMenu={vi.fn()}
       />,
     )
 

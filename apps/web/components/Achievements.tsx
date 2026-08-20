@@ -1,5 +1,6 @@
 "use client"
 
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
@@ -59,10 +60,14 @@ function AchievementCard({
 
 export default function Achievements({
   achievements,
+  canOpenMenu,
   onClose,
+  onOpenMenu,
 }: {
   readonly achievements: readonly AchievementPresentation[]
+  readonly canOpenMenu: boolean
   readonly onClose: () => void
+  readonly onOpenMenu: () => void
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const unlockedCount = achievements.filter(
@@ -83,15 +88,28 @@ export default function Achievements({
         >
           Achievements
         </h1>
-        <Button
-          type="button"
-          variant="secondary"
-          size="lg"
-          onClick={onClose}
-          className="w-full whitespace-normal sm:w-auto"
-        >
-          Back to Your Values
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            disabled={!canOpenMenu}
+            onClick={onOpenMenu}
+            className="flex-1 whitespace-normal"
+          >
+            {PRODUCT_MENU_COPY.openAction}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            disabled={!canOpenMenu}
+            onClick={onClose}
+            className="flex-1 whitespace-normal"
+          >
+            Back to Your Values
+          </Button>
+        </div>
       </header>
 
       <section

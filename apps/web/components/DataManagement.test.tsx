@@ -44,6 +44,7 @@ function renderDataManagement(
     onConfirmReset: vi.fn(),
     onExport: vi.fn(),
     onImportFile: vi.fn(),
+    onOpenMenu: vi.fn(),
     onRequestReset: vi.fn(),
     ...overrides,
   } satisfies Parameters<typeof DataManagement>[0]
@@ -118,6 +119,7 @@ describe("Data Management", () => {
           onConfirmReset={vi.fn()}
           onExport={vi.fn()}
           onImportFile={vi.fn()}
+          onOpenMenu={vi.fn()}
           onRequestReset={vi.fn()}
         />
       )
@@ -190,6 +192,7 @@ describe("Data Management", () => {
           }}
           onExport={vi.fn()}
           onImportFile={vi.fn()}
+          onOpenMenu={vi.fn()}
           onRequestReset={(resetKind) => {
             setNotice(null)
             setResetReview({

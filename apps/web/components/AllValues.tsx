@@ -7,6 +7,7 @@ import {
   CUSTOM_VALUE_NAME_MAX_GRAPHEMES,
   validateCustomValueDraft,
 } from "@game/data/src/CustomValueValidation"
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import {
   getValueDisplayDefinition,
   getValueDisplayName,
@@ -18,6 +19,7 @@ import { findRankedValueNameMatches } from "@game/data/src/ValueSearch"
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import CustomValueFieldFeedback from "@/components/CustomValueFieldFeedback"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
@@ -27,8 +29,10 @@ export default function AllValues({
   initialValueId,
   openCustomValueBuilder,
   isPersistencePending = false,
+  isMenuOpen,
   persistenceIssue = null,
   onClose,
+  onOpenMenu,
   onAddCustomValue,
   onUpdateCustomValue,
   onDeleteCustomValue,
@@ -37,8 +41,10 @@ export default function AllValues({
   initialValueId?: ValueId | null
   openCustomValueBuilder?: boolean
   isPersistencePending?: boolean
+  isMenuOpen: boolean
   persistenceIssue?: string | null
   onClose: () => void
+  onOpenMenu: () => void
   onAddCustomValue: (name: string, definition: string) => void
   onUpdateCustomValue: (
     valueId: CustomValueId,
@@ -109,6 +115,11 @@ export default function AllValues({
     editValidation.isValid &&
     (editValidation.name.value !== editableCustomValue.name ||
       editValidation.definition.value !== editableCustomValue.definition)
+  const isNavigationBlocked =
+    isPersistencePending ||
+    isAddingCustomValue ||
+    editingValueId !== null ||
+    deletingValueId !== null
 
   useEffect(() => {
     if (!isAddingCustomValue) {
@@ -134,14 +145,14 @@ export default function AllValues({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isMenuOpen && !isNavigationBlocked) {
         onClose()
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [onClose])
+  }, [isMenuOpen, isNavigationBlocked, onClose])
 
   const handleAddCustomValue = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -438,14 +449,25 @@ export default function AllValues({
               {rankedValues.length} Active Values
             </p>
           </div>
-          <button
-            type="button"
-            disabled={isPersistencePending}
-            onClick={onClose}
-            className="bg-mapache-vivid-secondary-red cursor-pointer border-4 border-black px-5 py-3 text-2xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[6px] active:translate-y-[6px] active:shadow-none"
-          >
-            Close
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              disabled={isNavigationBlocked}
+              onClick={onOpenMenu}
+            >
+              {PRODUCT_MENU_COPY.openAction}
+            </Button>
+            <button
+              type="button"
+              disabled={isNavigationBlocked}
+              onClick={onClose}
+              className="bg-mapache-vivid-secondary-red cursor-pointer border-4 border-black px-5 py-3 text-2xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white active:translate-x-[6px] active:translate-y-[6px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </header>
 

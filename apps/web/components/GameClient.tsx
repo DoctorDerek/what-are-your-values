@@ -242,6 +242,12 @@ function WritableGameClient({
     (destinationId: ProductMenuDestinationId) => {
       setIsProductMenuOpen(false)
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (state.matches("Achievements"))
+        send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
+      if (state.matches("DataManagement"))
+        send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })
+      if (state.matches("AllValues"))
+        send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
       const destinationActions = {
         "browse-all-values": () =>
           openAllValues({ focusTargetId: HUB_MENU_BUTTON_ID }),
@@ -580,7 +586,15 @@ function WritableGameClient({
       <>
         <Achievements
           achievements={achievementPresentations}
+          canOpenMenu={!isRecordingAchievementPresentation}
           onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </>
@@ -589,47 +603,66 @@ function WritableGameClient({
 
   if (state.matches("DataManagement")) {
     return (
-      <DataManagement
-        activity={dataManagementActivity}
-        customValueCount={battleProfile.activeDeck.customValues.length}
-        issue={state.context.portabilityIssue}
-        notice={state.context.portabilityNotice}
-        preview={state.context.pendingImport?.preview ?? null}
-        resetReview={state.context.pendingResetReview}
-        onCancelImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
-        }
-        onCancelReset={() =>
-          send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
-        }
-        onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
-        onConfirmImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
-        }
-        onConfirmReset={handleResetConfirmed}
-        onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
-        onImportFile={(file) => void handleImportFile(file)}
-        onRequestReset={handleResetRequested}
-      />
+      <>
+        <DataManagement
+          activity={dataManagementActivity}
+          customValueCount={battleProfile.activeDeck.customValues.length}
+          issue={state.context.portabilityIssue}
+          notice={state.context.portabilityNotice}
+          preview={state.context.pendingImport?.preview ?? null}
+          resetReview={state.context.pendingResetReview}
+          onCancelImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+          }
+          onCancelReset={() =>
+            send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+          }
+          onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
+          onConfirmImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+          }
+          onConfirmReset={handleResetConfirmed}
+          onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+          onImportFile={(file) => void handleImportFile(file)}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onRequestReset={handleResetRequested}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </>
     )
   }
 
   if (state.matches("AllValues")) {
     return (
-      <AllValues
-        key={battleProfile.scheduler.deckRevision}
-        rankedValues={rankedValues}
-        initialValueId={pendingAllValuesValueId}
-        openCustomValueBuilder={shouldOpenCustomValueBuilder}
-        isPersistencePending={state.matches({ AllValues: "Persisting" })}
-        persistenceIssue={state.context.persistenceIssue}
-        onClose={handleAllValuesClose}
-        onAddCustomValue={handleAddCustomValue}
-        onUpdateCustomValue={handleUpdateCustomValue}
-        onDeleteCustomValue={(valueId) =>
-          send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
-        }
-      />
+      <>
+        <AllValues
+          key={battleProfile.scheduler.deckRevision}
+          rankedValues={rankedValues}
+          initialValueId={pendingAllValuesValueId}
+          openCustomValueBuilder={shouldOpenCustomValueBuilder}
+          isMenuOpen={isProductMenuOpen}
+          isPersistencePending={state.matches({ AllValues: "Persisting" })}
+          persistenceIssue={state.context.persistenceIssue}
+          onClose={handleAllValuesClose}
+          onAddCustomValue={handleAddCustomValue}
+          onUpdateCustomValue={handleUpdateCustomValue}
+          onDeleteCustomValue={(valueId) =>
+            send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
+          }
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </>
     )
   }
 

@@ -38,7 +38,9 @@ function renderAllValues(
   return render(
     <AllValues
       rankedValues={rankedValues}
+      isMenuOpen={false}
       onClose={vi.fn()}
+      onOpenMenu={vi.fn()}
       onAddCustomValue={vi.fn()}
       onUpdateCustomValue={vi.fn()}
       onDeleteCustomValue={vi.fn()}
