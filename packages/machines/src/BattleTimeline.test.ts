@@ -7,6 +7,7 @@ import {
 import { encodeBattleDelta } from "./BattleDeltaCodec"
 import {
   appendBattleTimelineDelta,
+  BATTLE_TIMELINE_COMBINED_DELTA_LIMIT,
   createEmptyBattleTimeline,
   getBattleTimelineCapacity,
   getBattleTimelineSerializedByteLength,
@@ -52,19 +53,12 @@ function appendCandidate(
 }
 
 describe("Battle Timeline", () => {
-  it("derives capacity from pair count and the validated event limit", () => {
-    expect(
-      getBattleTimelineCapacity(2, {
-        deltaLimit: 512,
-        byteBudget: generousByteBudget,
-      }),
-    ).toBe(1)
-    expect(
-      getBattleTimelineCapacity(100, {
-        deltaLimit: 512,
-        byteBudget: generousByteBudget,
-      }),
-    ).toBe(512)
+  it("derives capacity from pair count and the canonical event limit", () => {
+    expect(BATTLE_TIMELINE_COMBINED_DELTA_LIMIT).toBe(32)
+    expect(getBattleTimelineCapacity(2)).toBe(1)
+    expect(getBattleTimelineCapacity(100)).toBe(
+      BATTLE_TIMELINE_COMBINED_DELTA_LIMIT,
+    )
   })
 
   it("moves retained deltas between History and Redo without duplication", () => {
@@ -160,7 +154,7 @@ describe("Battle Timeline", () => {
       delta: candidate.delta,
       activeValueCount: candidate.activeDeck.valueIds.length,
       limits: {
-        deltaLimit: 512,
+        deltaLimit: BATTLE_TIMELINE_COMBINED_DELTA_LIMIT,
         byteBudget: generousByteBudget,
       },
     })
@@ -172,7 +166,10 @@ describe("Battle Timeline", () => {
         timeline: createEmptyBattleTimeline(),
         delta: candidate.delta,
         activeValueCount: candidate.activeDeck.valueIds.length,
-        limits: { deltaLimit: 512, byteBudget: oneDeltaBytes - 1 },
+        limits: {
+          deltaLimit: BATTLE_TIMELINE_COMBINED_DELTA_LIMIT,
+          byteBudget: oneDeltaBytes - 1,
+        },
       }).history,
     ).toEqual([])
   })
@@ -187,7 +184,10 @@ describe("Battle Timeline", () => {
 
   it("rejects a byte budget that cannot represent an empty timeline", () => {
     expect(() =>
-      getBattleTimelineCapacity(100, { deltaLimit: 512, byteBudget: 6 }),
+      getBattleTimelineCapacity(100, {
+        deltaLimit: BATTLE_TIMELINE_COMBINED_DELTA_LIMIT,
+        byteBudget: 6,
+      }),
     ).toThrow("Invalid Battle Timeline byte budget: 6")
   })
 
@@ -220,7 +220,7 @@ describe("Battle Timeline", () => {
         timeline: undone.timeline,
         activeValueCount: second.battleCycle.activeDeck.valueIds.length,
         limits: {
-          deltaLimit: 512,
+          deltaLimit: BATTLE_TIMELINE_COMBINED_DELTA_LIMIT,
           byteBudget:
             getBattleTimelineSerializedByteLength(undone.timeline) - 1,
         },

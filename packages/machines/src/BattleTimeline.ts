@@ -2,7 +2,7 @@ import { getPairCount } from "@game/data/src/ActiveDeck"
 import type { BattleDelta } from "./BattleDelta"
 import { encodeBattleDelta } from "./BattleDeltaCodec"
 
-export const VALIDATED_TIMELINE_DELTA_LIMIT = 512 as const
+export const BATTLE_TIMELINE_COMBINED_DELTA_LIMIT = 32 as const
 export const TIMELINE_BYTE_BUDGET = 1_048_576 as const
 
 export type BattleTimeline = {
@@ -16,7 +16,7 @@ export type BattleTimelineLimits = {
 }
 
 export const DEFAULT_BATTLE_TIMELINE_LIMITS = Object.freeze({
-  deltaLimit: VALIDATED_TIMELINE_DELTA_LIMIT,
+  deltaLimit: BATTLE_TIMELINE_COMBINED_DELTA_LIMIT,
   byteBudget: TIMELINE_BYTE_BUDGET,
 }) satisfies BattleTimelineLimits
 

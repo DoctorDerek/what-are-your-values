@@ -5,14 +5,15 @@ import {
   type AchievementId,
 } from "./AchievementCatalog"
 import type { BattleId } from "./BattleIdentity"
-import { VALIDATED_TIMELINE_DELTA_LIMIT } from "./BattleTimeline"
+import { BATTLE_TIMELINE_COMBINED_DELTA_LIMIT } from "./BattleTimeline"
 import {
   readIsoTimestamp,
   readNonNegativeSafeInteger,
   readPositiveSafeInteger,
 } from "./PersistenceValidation"
 
-export const COUNTED_BATTLE_WINDOW_CAPACITY = VALIDATED_TIMELINE_DELTA_LIMIT + 1
+export const COUNTED_BATTLE_WINDOW_CAPACITY =
+  BATTLE_TIMELINE_COMBINED_DELTA_LIMIT + 1
 
 export type AchievementUnlock = {
   readonly id: AchievementId
