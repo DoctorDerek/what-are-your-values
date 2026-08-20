@@ -74,6 +74,17 @@ describe("Hub Component Integration", () => {
       screen.queryByRole("button", { name: "Import & Export" }),
     ).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Battle" })).toBeVisible()
+    const valueActions = screen.getByRole("navigation", {
+      name: "Value actions",
+    })
+    expect(
+      within(valueActions)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Battle", "Browse All Values", "Add Custom Value"])
+    expect(
+      within(valueActions).queryByRole("button", { name: "Menu" }),
+    ).not.toBeInTheDocument()
   })
 
   it("renders the earned Top Five and full ranked list after a comparison", () => {
