@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   acquireWebExclusiveWriterLease,
   WEB_EXCLUSIVE_WRITER_LOCK_NAME,
@@ -11,8 +11,19 @@ const exclusiveLock = Object.freeze({
 }) satisfies Lock
 
 describe("Web Exclusive Writer Lease", () => {
-  it("fails closed when the Web Locks API is unavailable", async () => {
-    await expect(acquireWebExclusiveWriterLease(null)).resolves.toEqual({
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("fails closed when browser lock discovery is unavailable", async () => {
+    vi.stubGlobal("navigator", undefined)
+    await expect(acquireWebExclusiveWriterLease()).resolves.toEqual({
+      status: "read-only",
+      reason: "lock-api-unavailable",
+    })
+
+    vi.stubGlobal("navigator", Object.freeze({}))
+    await expect(acquireWebExclusiveWriterLease()).resolves.toEqual({
       status: "read-only",
       reason: "lock-api-unavailable",
     })
@@ -70,6 +81,23 @@ describe("Web Exclusive Writer Lease", () => {
       status: "read-only",
       reason: "lock-request-failed",
       issue: "Web Lock request failed",
+    })
+  })
+
+  it("preserves the first result when a settled request later rejects", async () => {
+    const request = vi.fn<WebExclusiveWriterLockManager["request"]>(
+      async (_name, _options, callback) => {
+        await callback(null)
+        throw new Error("Late Web Lock request failure")
+      },
+    )
+
+    const result = await acquireWebExclusiveWriterLease({ request })
+    await Promise.resolve()
+
+    expect(result).toEqual({
+      status: "read-only",
+      reason: "lock-unavailable",
     })
   })
 
