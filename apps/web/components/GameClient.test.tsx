@@ -898,6 +898,37 @@ describe("GameClient Integration", () => {
     ).toEqual(initialChoiceNames)
   })
 
+  it("routes the flat Menu between every shipped utility surface", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000066",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    await openProductMenuDestination("Achievements")
+    expect(
+      await screen.findByRole("heading", { name: "Achievements", level: 1 }),
+    ).toBeVisible()
+
+    await openProductMenuDestination("Import & Export")
+    expect(
+      await screen.findByRole("heading", {
+        name: "Import & Export",
+        level: 1,
+      }),
+    ).toBeVisible()
+
+    await openProductMenuDestination("Browse All Values")
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+
+    await openProductMenuDestination("Custom Values")
+    expect(
+      await screen.findByRole("form", { name: "Add Custom Value" }),
+    ).toBeVisible()
+  })
+
   it("opens the complete live achievement catalog and restores focus to its Hub action", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000054",
