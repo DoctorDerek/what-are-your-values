@@ -557,8 +557,6 @@ function WritableGameClient({
           onAddCustomValue={(focusTargetId) =>
             openAllValues({ focusTargetId, openCustomValueBuilder: true })
           }
-          onOpenAchievements={openAchievements}
-          onOpenDataManagement={openDataManagement}
           onOpenMenu={() => setIsProductMenuOpen(true)}
           onOpenValue={(valueId, focusTargetId) =>
             openAllValues({ focusTargetId, valueId })
