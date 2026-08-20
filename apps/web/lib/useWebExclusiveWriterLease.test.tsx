@@ -4,7 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import useWebExclusiveWriterLease, {
   createWebExclusiveWriterCoordinator,
 } from "@/lib/useWebExclusiveWriterLease"
-import type { WebExclusiveWriterLeaseResult } from "@/lib/WebExclusiveWriterLease"
+import type {
+  WebExclusiveWriterLeaseResult,
+  WebExclusiveWriterLockManager,
+} from "@/lib/WebExclusiveWriterLease"
 
 function StrictModeWrapper({ children }: { readonly children: ReactNode }) {
   return <StrictMode>{children}</StrictMode>
