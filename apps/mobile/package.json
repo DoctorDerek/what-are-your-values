@@ -6,6 +6,7 @@
   "scripts": {
     "android": "expo start --android",
     "build": "expo export --platform all --output-dir dist",
+    "dev": "expo start --dev-client",
     "doctor": "pnpm dlx expo-doctor",
     "go": "expo start --go",
     "ios": "expo start --ios",

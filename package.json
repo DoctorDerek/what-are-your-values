@@ -8,6 +8,7 @@
   "packageManager": "pnpm@11.22.0",
   "scripts": {
     "dev": "turbo dev",
+    "mobile:dev": "pnpm --filter @game/mobile run dev",
     "mobile:doctor": "pnpm --filter @game/mobile run doctor",
     "mobile:export": "pnpm --filter @game/mobile build",
     "mobile:go": "pnpm --filter @game/mobile go",
