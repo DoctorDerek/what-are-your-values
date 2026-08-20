@@ -855,6 +855,49 @@ describe("GameClient Integration", () => {
     ).toHaveFocus()
   })
 
+  it("preserves the active pair while Menu resumes or routes through Browse All Values", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000065",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const initialChoiceNames = (
+      await screen.findAllByRole("button", {
+        name: /^Choose /,
+      })
+    ).map((button) => button.getAttribute("aria-label"))
+
+    fireEvent.keyDown(window, { key: "Escape" })
+    expect(await screen.findByRole("dialog", { name: "Menu" })).toBeVisible()
+    fireEvent.keyDown(window, { key: "1" })
+    fireEvent.click(screen.getByRole("button", { name: "Resume Battle" }))
+
+    expect(
+      screen
+        .getAllByRole("button", { name: /^Choose / })
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual(initialChoiceNames)
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Browse All Values" }),
+    )
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+
+    expect(
+      (await screen.findAllByRole("button", { name: /^Choose / })).map(
+        (button) => button.getAttribute("aria-label"),
+      ),
+    ).toEqual(initialChoiceNames)
+  })
+
   it("opens the complete live achievement catalog and restores focus to its Hub action", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000054",
