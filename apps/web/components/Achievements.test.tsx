@@ -156,6 +156,29 @@ describe("Achievements", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
+  it("keeps navigation unavailable while achievement acknowledgement is pending", () => {
+    const onClose = vi.fn()
+    const onOpenMenu = vi.fn()
+
+    render(
+      <Achievements
+        achievements={createInitialPresentations()}
+        canOpenMenu={false}
+        onClose={onClose}
+        onOpenMenu={onOpenMenu}
+      />,
+    )
+
+    const menu = screen.getByRole("button", { name: "Menu" })
+    const close = screen.getByRole("button", { name: "Back to Your Values" })
+    expect(menu).toBeDisabled()
+    expect(close).toBeDisabled()
+    fireEvent.click(menu)
+    fireEvent.click(close)
+    expect(onOpenMenu).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it("renders reset eligibility guidance without inventing numeric progress", () => {
     render(
       <Achievements
