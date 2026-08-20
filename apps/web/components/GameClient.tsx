@@ -241,6 +241,7 @@ function WritableGameClient({
   const handleProductMenuDestinationSelect = useCallback(
     (destinationId: ProductMenuDestinationId) => {
       setIsProductMenuOpen(false)
+      if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       const destinationActions = {
         "browse-all-values": () =>
           openAllValues({ focusTargetId: HUB_MENU_BUTTON_ID }),
@@ -255,7 +256,7 @@ function WritableGameClient({
 
       destinationActions[destinationId]()
     },
-    [openAchievements, openAllValues, openDataManagement],
+    [openAchievements, openAllValues, openDataManagement, send, state],
   )
   const handleAchievementPresented = useCallback(
     (achievementId: AchievementPresentation["id"]) => {
@@ -636,21 +637,33 @@ function WritableGameClient({
     const isBattleReady = state.matches({ Crucible: "Ready" })
 
     return (
-      <Crucible
-        activeDeck={battleProfile.activeDeck}
-        achievement={pendingAchievementPresentation}
-        battle={presentedBattle}
-        progressById={battleProfile.progressById}
-        canUndo={battleProfile.history.length > 0}
-        canRedo={battleProfile.redo.length > 0}
-        isAchievementAcknowledgementPending={isRecordingAchievementPresentation}
-        isPersistencePending={!isBattleReady}
-        onAchievementPresented={handleAchievementPresented}
-        onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
-        onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
-        onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
-        onWinnerSelected={handleWinnerSelected}
-      />
+      <>
+        <Crucible
+          activeDeck={battleProfile.activeDeck}
+          achievement={pendingAchievementPresentation}
+          battle={presentedBattle}
+          progressById={battleProfile.progressById}
+          canUndo={battleProfile.history.length > 0}
+          canRedo={battleProfile.redo.length > 0}
+          isAchievementAcknowledgementPending={
+            isRecordingAchievementPresentation
+          }
+          isMenuOpen={isProductMenuOpen}
+          isPersistencePending={!isBattleReady}
+          onAchievementPresented={handleAchievementPresented}
+          onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
+          onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
+          onWinnerSelected={handleWinnerSelected}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.resumeBattleAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </>
     )
   }
 

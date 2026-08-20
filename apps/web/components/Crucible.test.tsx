@@ -35,8 +35,10 @@ function createHistoryProps() {
     canUndo: false,
     canRedo: false,
     isAchievementAcknowledgementPending: false,
+    isMenuOpen: false,
     isPersistencePending: false,
     onAchievementPresented: vi.fn(),
+    onOpenMenu: vi.fn(),
     onUndo: vi.fn(),
     onRedo: vi.fn(),
   }
@@ -252,6 +254,7 @@ describe("Crucible Component Integration", () => {
 
   it("supports arrow focus, keyboard confirmation, and Escape", async () => {
     const onExit = vi.fn()
+    const onOpenMenu = vi.fn()
     const onWinnerSelected = vi.fn()
     const { battleCycle, battle } = createBattleProps("navigation-battle-seed")
     const [, winnerId] = battle.pair
@@ -263,6 +266,7 @@ describe("Crucible Component Integration", () => {
         battle={battle}
         progressById={battleCycle.progressById}
         onExit={onExit}
+        onOpenMenu={onOpenMenu}
         onWinnerSelected={onWinnerSelected}
       />,
     )
@@ -289,7 +293,8 @@ describe("Crucible Component Integration", () => {
     })
 
     expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
-    expect(onExit).toHaveBeenCalledTimes(1)
+    expect(onOpenMenu).toHaveBeenCalledTimes(1)
+    expect(onExit).not.toHaveBeenCalled()
   })
 
   it("keeps both value cards vertically readable without horizontal overflow", async () => {
@@ -438,6 +443,7 @@ describe("Crucible Component Integration", () => {
 
   it("disables every battle action while a durable write is pending", async () => {
     const onExit = vi.fn()
+    const onOpenMenu = vi.fn()
     const onUndo = vi.fn()
     const onRedo = vi.fn()
     const onWinnerSelected = vi.fn()
@@ -455,6 +461,7 @@ describe("Crucible Component Integration", () => {
         canRedo
         isPersistencePending
         onExit={onExit}
+        onOpenMenu={onOpenMenu}
         onUndo={onUndo}
         onRedo={onRedo}
         onWinnerSelected={onWinnerSelected}
@@ -476,6 +483,7 @@ describe("Crucible Component Integration", () => {
     fireEvent.keyDown(window, { key: "Escape" })
 
     expect(onExit).not.toHaveBeenCalled()
+    expect(onOpenMenu).not.toHaveBeenCalled()
     expect(onUndo).not.toHaveBeenCalled()
     expect(onRedo).not.toHaveBeenCalled()
     expect(onWinnerSelected).not.toHaveBeenCalled()
