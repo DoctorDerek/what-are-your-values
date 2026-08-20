@@ -1,3 +1,8 @@
+import { decodeWayvmExport } from "@game/machines/src/WayvmExport"
+import {
+  createWayvmExportV1TestVector,
+  WAYVM_EXPORT_V1_TEST_VECTOR,
+} from "@game/machines/src/WayvmExportV1TestVector"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { expoPlayerDataFileAdapter } from "./ExpoPlayerDataFiles"
 
@@ -114,6 +119,33 @@ describe("Expo Player Data Files", () => {
       UTI: "public.json",
       dialogTitle: "Save or share your private WAYVM backup",
     })
+    expect(temporaryFile.delete).toHaveBeenCalledOnce()
+  })
+
+  it("preserves frozen schema-one bytes through Expo share and picker boundaries", async () => {
+    const { serialized } = await createWayvmExportV1TestVector()
+    const temporaryFile = createVerifiedTemporaryFile()
+    expoMocks.isAvailableAsync.mockResolvedValue(true)
+    expoMocks.createFile.mockReturnValue(temporaryFile)
+    expoMocks.shareAsync.mockResolvedValue(undefined)
+
+    await expoPlayerDataFileAdapter.exportJson({
+      filename: BACKUP_FILENAME,
+      serialized,
+    })
+    expoMocks.getDocumentAsync.mockResolvedValue({
+      canceled: false,
+      assets: [{ uri: temporaryFile.uri }],
+    })
+
+    const importedBytes = await expoPlayerDataFileAdapter.selectJsonForImport()
+
+    expect(importedBytes).toBe(serialized)
+    if (!importedBytes) throw new Error("Expo did not return the backup bytes")
+    await expect(decodeWayvmExport(importedBytes)).resolves.toMatchObject({
+      contentHash: WAYVM_EXPORT_V1_TEST_VECTOR.expectedContentHash,
+    })
+    expect(expoMocks.shareAsync).toHaveBeenCalledOnce()
     expect(temporaryFile.delete).toHaveBeenCalledOnce()
   })
 })

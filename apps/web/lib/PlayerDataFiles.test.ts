@@ -1,5 +1,10 @@
 import { MAX_PERSISTED_JSON_BYTES } from "@game/machines/src/PersistedJson"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
+import { decodeWayvmExport } from "@game/machines/src/WayvmExport"
+import {
+  createWayvmExportV1TestVector,
+  WAYVM_EXPORT_V1_TEST_VECTOR,
+} from "@game/machines/src/WayvmExportV1TestVector"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   downloadPlayerDataFile,
@@ -37,6 +42,37 @@ describe("Player Data Files", () => {
     expect(click).toHaveBeenCalledOnce()
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:wayvm-backup")
     expect(document.querySelector('a[download="wayvm-backup.json"]')).toBeNull()
+  })
+
+  it("preserves frozen schema-one bytes across browser download and re-import", async () => {
+    const filename =
+      "what-are-your-values-mapache-backup-2026-08-01-100500Z.json"
+    const { serialized } = await createWayvmExportV1TestVector()
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      () => undefined,
+    )
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:schema-one-test-vector")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined)
+
+    downloadPlayerDataFile({ filename, serialized })
+
+    const deliveredBlob = createObjectURL.mock.calls[0]?.[0]
+    expect(deliveredBlob).toBeInstanceOf(Blob)
+    if (!(deliveredBlob instanceof Blob))
+      throw new Error("The browser did not receive the schema-one Blob")
+    const deliveredBytes = await deliveredBlob.text()
+    expect(deliveredBytes).toBe(serialized)
+
+    const selectedFile = new File([deliveredBytes], filename, {
+      type: "application/json",
+    })
+    const importedBytes = await readPlayerDataFile(selectedFile)
+    expect(importedBytes).toBe(serialized)
+    await expect(decodeWayvmExport(importedBytes)).resolves.toMatchObject({
+      contentHash: WAYVM_EXPORT_V1_TEST_VECTOR.expectedContentHash,
+    })
   })
 
   it("releases the object URL and temporary anchor when browser delivery fails", () => {
