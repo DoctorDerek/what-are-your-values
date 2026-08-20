@@ -95,3 +95,75 @@ test("a returning player keeps Undo and Redo across reloads", async ({
     page.getByRole("progressbar", { name: "XP toward Level 4" }),
   ).toHaveAttribute("aria-valuenow", "0")
 })
+
+test("a secondary tab stays read-only then inherits released writer ownership", async ({
+  context,
+  page,
+}) => {
+  await page.goto("/")
+  await page.getByRole("button", { name: "Start" }).click()
+  await page.getByRole("button", { name: "Battle" }).click()
+  await expect(page.getByRole("main", { name: "Value battle" })).toBeVisible()
+
+  const secondaryPage = await context.newPage()
+  await secondaryPage.goto("/")
+  await expect(
+    secondaryPage.getByRole("heading", { name: "Another Tab Is Active" }),
+  ).toBeVisible()
+  await expect(
+    secondaryPage.getByText(
+      "This game was updated in another tab. Reload the latest progress or export this tab’s current state before continuing.",
+    ),
+  ).toBeVisible()
+  await expect(
+    secondaryPage.getByRole("button", { name: "Export This Tab" }),
+  ).toBeEnabled()
+  await expect(
+    secondaryPage.getByRole("button", { name: "Start" }),
+  ).toHaveCount(0)
+  await expect(
+    secondaryPage.getByRole("button", { name: "Battle" }),
+  ).toHaveCount(0)
+  await expect(
+    secondaryPage.getByRole("button", { name: /^Choose / }),
+  ).toHaveCount(0)
+
+  const ownerChoice = page.getByRole("button", { name: /^Choose / }).first()
+  const ownerChoiceName = (
+    await ownerChoice.getAttribute("aria-label")
+  )?.replace(/^Choose /, "")
+  if (!ownerChoiceName)
+    throw new Error("The owner tab choice is missing its accessible name")
+
+  await ownerChoice.click()
+  await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
+  await page.close()
+
+  await secondaryPage.getByRole("button", { name: "Load Latest" }).click()
+  await expect(
+    secondaryPage.getByRole("heading", { level: 1, name: "Your Values" }),
+  ).toBeVisible()
+  const inheritedTopValue = secondaryPage
+    .getByRole("listitem")
+    .filter({ has: secondaryPage.getByLabel("Rank 1", { exact: true }) })
+  await expect(inheritedTopValue).toContainText(ownerChoiceName)
+  await expect(inheritedTopValue).toContainText("Level 3")
+
+  await secondaryPage.getByRole("button", { name: "Battle" }).click()
+  await expect(
+    secondaryPage.getByRole("main", { name: "Value battle" }),
+  ).toBeVisible()
+  const choiceButtons = secondaryPage.getByRole("button", { name: /^Choose / })
+  const inheritedPair = await choiceButtons.evaluateAll((buttons) =>
+    buttons.map((button) => button.getAttribute("aria-label")),
+  )
+
+  await choiceButtons.first().click()
+  await expect
+    .poll(() =>
+      choiceButtons.evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute("aria-label")),
+      ),
+    )
+    .not.toEqual(inheritedPair)
+})
