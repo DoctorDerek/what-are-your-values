@@ -16,27 +16,43 @@ The public web application currently includes:
 - A deterministic XState state machine and lazy pair scheduler.
 - First-run browsing, rank-preserving search, All Values, Top Five, and visible definitions.
 - Undo and Redo for battle history.
+- Schema-validated JSON backup import and export.
+- Local achievement progression and presentation.
 - Responsive keyboard- and touch-friendly web UI.
 
 ## Release status
 
-The current public release is web-only. iOS and Android releases, JSON import/export, and local achievements are planned next. The README will be updated when those features are shipped.
+The public release is web-only. The Expo workspace implements the same private core loop, durable local persistence, JSON import/export, and local achievements. Its canonical build gate exports both iOS and Android bundles. Physical-device QA, signed native builds, and store submissions remain pending.
 
-## Expo Go iteration
+## Native iteration
 
-The native workspace is under active development. Start its Expo Go development server with:
+Start an installed Expo development build with:
+
+```powershell
+pnpm mobile:dev
+```
+
+If a compatible Expo Go client is available, start its development server with:
 
 ```powershell
 pnpm mobile:go
 ```
 
-This is an iteration entry point, not a store-release or physical-device-validation claim.
+Validate Expo compatibility and export both native JavaScript bundles with:
+
+```powershell
+pnpm mobile:doctor
+pnpm mobile:export
+```
+
+Export proves that Metro can resolve the JavaScript and assets for both native platforms. It does not prove native compilation, signing, installation, physical-device behavior, or store acceptance.
 
 ## Technology
 
 - TypeScript 6, pnpm, and Turborepo.
 - Next.js 16 App Router and React 19.
-- Tailwind CSS 4.
+- Tailwind CSS 4 and source-owned shadcn/ui primitives.
+- Expo 57, React Native 0.86, Expo Router, Uniwind, React Native Reanimated, and source-owned React Native Reusables primitives.
 - XState 5 for application state and Motion for web animation.
 - Vitest, Testing Library, Playwright, Codecov, GitHub Actions, and Vercel.
 
