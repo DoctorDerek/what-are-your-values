@@ -46,17 +46,4 @@ function DialogTitle({
   )
 }
 
-function DialogDescription({
-  className,
-  ...props
-}: ComponentProps<typeof DialogPrimitive.Description>) {
-  return (
-    <DialogPrimitive.Description
-      data-slot="dialog-description"
-      className={cn("text-lg leading-relaxed font-bold", className)}
-      {...props}
-    />
-  )
-}
-
-export { Dialog, DialogContent, DialogDescription, DialogTitle }
+export { Dialog, DialogContent, DialogTitle }
