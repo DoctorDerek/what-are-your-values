@@ -12,6 +12,7 @@ import {
   markAchievementPresented,
 } from "./AchievementState"
 import { createBattleId } from "./BattleIdentity"
+import { BATTLE_TIMELINE_COMBINED_DELTA_LIMIT } from "./BattleTimeline"
 import { createSchedulerRestorePoint } from "./PairScheduler"
 
 function createCountedBattleId(cursor: number) {
@@ -29,6 +30,13 @@ function createCountedBattleId(cursor: number) {
 }
 
 describe("Achievement State", () => {
+  it("derives a 33-ID replay window from the combined timeline limit", () => {
+    expect(COUNTED_BATTLE_WINDOW_CAPACITY).toBe(
+      BATTLE_TIMELINE_COMBINED_DELTA_LIMIT + 1,
+    )
+    expect(COUNTED_BATTLE_WINDOW_CAPACITY).toBe(33)
+  })
+
   it("creates an empty generation with a Level-1 baseline for every value", () => {
     const activeDeck = createActiveDeck([])
     const state = createInitialAchievementState(activeDeck)
