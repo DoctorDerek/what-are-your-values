@@ -1,11 +1,14 @@
 "use client"
 
 import { projectHubValues } from "@game/data/src/HubValueProjection"
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import { getValueDisplayName, type ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import type { Ref } from "react"
 import { Button } from "@/components/ui/button"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
+
+export const HUB_MENU_BUTTON_ID = "hub-menu-button"
 
 function ValueRow({
   rankedValue,
@@ -124,6 +127,7 @@ export default function Hub({
   onAddCustomValue,
   onOpenAchievements,
   onOpenDataManagement,
+  onOpenMenu,
   onOpenValue,
   onStartBattle,
 }: {
@@ -134,6 +138,7 @@ export default function Hub({
   onAddCustomValue: (focusTargetId: string) => void
   onOpenAchievements: (focusTargetId: string) => void
   onOpenDataManagement: (focusTargetId: string) => void
+  onOpenMenu: () => void
   onOpenValue: (valueId: ValueId, focusTargetId: string) => void
   onStartBattle: () => void
 }) {
@@ -142,6 +147,18 @@ export default function Hub({
 
   return (
     <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 sm:p-8">
+      <div className="flex w-full max-w-7xl justify-end">
+        <Button
+          id={HUB_MENU_BUTTON_ID}
+          type="button"
+          variant="secondary"
+          size="lg"
+          onClick={onOpenMenu}
+        >
+          {PRODUCT_MENU_COPY.openAction}
+        </Button>
+      </div>
+
       <h1 className="text-mapache-vivid-primary-cyan mt-8 mb-8 text-center text-5xl font-black uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-7xl">
         Your Values
       </h1>

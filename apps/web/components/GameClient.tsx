@@ -1,5 +1,9 @@
 "use client"
 
+import {
+  PRODUCT_MENU_COPY,
+  type ProductMenuDestinationId,
+} from "@game/data/src/ProductMenu"
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
@@ -25,6 +29,7 @@ import { rootMachine } from "@game/machines/src/RootMachine"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import ProductMenu from "@/components/ProductMenu"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
 import {
   downloadPlayerDataFile,
@@ -37,7 +42,7 @@ import Achievements from "./Achievements"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import DataManagement, { type DataManagementActivity } from "./DataManagement"
-import Hub from "./Hub"
+import Hub, { HUB_MENU_BUTTON_ID } from "./Hub"
 import PlayerDataLoading from "./PlayerDataLoading"
 import PlayerDataRecovery, {
   type PlayerDataRecoveryActivity,
@@ -123,6 +128,7 @@ function WritableGameClient({
   const [isReadingImportFile, setIsReadingImportFile] = useState(false)
   const [isReadingRecoveryImportFile, setIsReadingRecoveryImportFile] =
     useState(false)
+  const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
   const playerData = state.context.playerData
   const battleProfile = playerData?.profile ?? null
   const rankedValues = useMemo(
@@ -231,6 +237,25 @@ function WritableGameClient({
       send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
     },
     [send],
+  )
+  const handleProductMenuDestinationSelect = useCallback(
+    (destinationId: ProductMenuDestinationId) => {
+      setIsProductMenuOpen(false)
+      const destinationActions = {
+        "browse-all-values": () =>
+          openAllValues({ focusTargetId: HUB_MENU_BUTTON_ID }),
+        "custom-values": () =>
+          openAllValues({
+            focusTargetId: HUB_MENU_BUTTON_ID,
+            openCustomValueBuilder: true,
+          }),
+        achievements: () => openAchievements(HUB_MENU_BUTTON_ID),
+        "import-export": () => openDataManagement(HUB_MENU_BUTTON_ID),
+      } satisfies Record<ProductMenuDestinationId, () => void>
+
+      destinationActions[destinationId]()
+    },
+    [openAchievements, openAllValues, openDataManagement],
   )
   const handleAchievementPresented = useCallback(
     (achievementId: AchievementPresentation["id"]) => {
@@ -534,10 +559,17 @@ function WritableGameClient({
           }
           onOpenAchievements={openAchievements}
           onOpenDataManagement={openDataManagement}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
           onOpenValue={(valueId, focusTargetId) =>
             openAllValues({ focusTargetId, valueId })
           }
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </>

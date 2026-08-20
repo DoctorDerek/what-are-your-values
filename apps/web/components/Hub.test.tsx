@@ -27,6 +27,7 @@ describe("Hub Component Integration", () => {
         onAddCustomValue={onAddCustomValue}
         onOpenAchievements={vi.fn()}
         onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -55,6 +56,7 @@ describe("Hub Component Integration", () => {
         onAddCustomValue={vi.fn()}
         onOpenAchievements={vi.fn()}
         onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={vi.fn()}
         onStartBattle={vi.fn()}
       />,
@@ -107,6 +109,7 @@ describe("Hub Component Integration", () => {
         onAddCustomValue={onAddCustomValue}
         onOpenAchievements={vi.fn()}
         onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -142,6 +145,7 @@ describe("Hub Component Integration", () => {
         onAddCustomValue={onAddCustomValue}
         onOpenAchievements={onOpenAchievements}
         onOpenDataManagement={onOpenDataManagement}
+        onOpenMenu={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -183,6 +187,7 @@ describe("Hub Component Integration", () => {
         onAddCustomValue={vi.fn()}
         onOpenAchievements={vi.fn()}
         onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={vi.fn()}
         onStartBattle={vi.fn()}
       />,
