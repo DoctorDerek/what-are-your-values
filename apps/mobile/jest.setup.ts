@@ -8,8 +8,12 @@ const { setUpTests } = jest.requireActual<
   typeof import("react-native-reanimated")
 >("react-native-reanimated")
 
-jest.mock("react-native-safe-area-context", () =>
-  jest.requireActual("react-native-safe-area-context/jest/mock"),
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<
+      typeof import("react-native-safe-area-context/jest/mock")
+    >("react-native-safe-area-context/jest/mock").default,
 )
 
 jest.mock("uniwind", () => ({
