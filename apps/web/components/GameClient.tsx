@@ -123,6 +123,8 @@ function WritableGameClient({
     useState<ValueId | null>(null)
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
     useState(false)
+  const [customValueBuilderRequestId, setCustomValueBuilderRequestId] =
+    useState(0)
   const shouldRestoreHubFocusRef = useRef(false)
   const deliveredDownloadsRef = useRef(new WeakSet<object>())
   const [isReadingImportFile, setIsReadingImportFile] = useState(false)
@@ -195,6 +197,8 @@ function WritableGameClient({
       returnFocusTargetIdRef.current = focusTargetId
       setPendingAllValuesValueId(valueId ?? null)
       setShouldOpenCustomValueBuilder(openCustomValueBuilder === true)
+      if (openCustomValueBuilder)
+        setCustomValueBuilderRequestId((requestId) => requestId + 1)
       shouldRestoreHubFocusRef.current = true
       send({ type: "ALL_VALUES.OPEN_REQUESTED" })
     },
@@ -641,7 +645,7 @@ function WritableGameClient({
     return (
       <>
         <AllValues
-          key={battleProfile.scheduler.deckRevision}
+          key={`${battleProfile.scheduler.deckRevision}:${customValueBuilderRequestId}`}
           rankedValues={rankedValues}
           initialValueId={pendingAllValuesValueId}
           openCustomValueBuilder={shouldOpenCustomValueBuilder}
