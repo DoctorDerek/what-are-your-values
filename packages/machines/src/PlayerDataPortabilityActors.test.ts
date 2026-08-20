@@ -8,8 +8,10 @@ import { createInMemoryDurableStore } from "./InMemoryDurableStore"
 import { createInitialPlayerData } from "./PlayerData"
 import {
   createWayvmExportActor,
+  prepareWayvmDownload,
   prepareWayvmImportActor,
   replacePlayerDataActor,
+  type PrepareWayvmDownloadInput,
 } from "./PlayerDataPortabilityActors"
 
 const EXPORTED_AT = "2026-07-29T12:34:56.000Z"
@@ -21,14 +23,18 @@ function createPlayerData(seed: string) {
   })
 }
 
-async function createPreparedDownload(seed: string) {
+function createPreparedDownloadInput(seed: string): PrepareWayvmDownloadInput {
+  return Object.freeze({
+    exportedAt: EXPORTED_AT,
+    sourceAppVersion: "0.1.0",
+    sourceBuild: "test-build",
+    playerData: createPlayerData(seed),
+  })
+}
+
+async function createPreparedDownload(input: PrepareWayvmDownloadInput) {
   const actor = createActor(createWayvmExportActor, {
-    input: {
-      exportedAt: EXPORTED_AT,
-      sourceAppVersion: "0.1.0",
-      sourceBuild: "test-build",
-      playerData: createPlayerData(seed),
-    },
+    input,
   })
   actor.start()
 
@@ -36,18 +42,24 @@ async function createPreparedDownload(seed: string) {
 }
 
 describe("Player Data Portability Actors", () => {
-  it("prepares a canonical named download without exposing mutable output", async () => {
-    const preparedDownload = await createPreparedDownload("download-seed")
+  it("prepares identical canonical frozen downloads inside and outside the actor boundary", async () => {
+    const input = createPreparedDownloadInput("download-seed")
+    const directDownload = await prepareWayvmDownload(input)
+    const actorDownload = await createPreparedDownload(input)
 
-    expect(preparedDownload.filename).toBe(
+    expect(directDownload.filename).toBe(
       "what-are-your-values-mapache-backup-2026-07-29-123456Z.json",
     )
-    expect(preparedDownload.serialized).toContain('"wayvm-export"')
-    expect(Object.isFrozen(preparedDownload)).toBe(true)
+    expect(directDownload.serialized).toContain('"wayvm-export"')
+    expect(actorDownload).toEqual(directDownload)
+    expect(Object.isFrozen(directDownload)).toBe(true)
+    expect(Object.isFrozen(actorDownload)).toBe(true)
   })
 
   it("validates complete import bytes and projects a non-destructive preview", async () => {
-    const preparedDownload = await createPreparedDownload("preview-seed")
+    const preparedDownload = await createPreparedDownload(
+      createPreparedDownloadInput("preview-seed"),
+    )
     const actor = createActor(prepareWayvmImportActor, {
       input: { serialized: preparedDownload.serialized },
     })
@@ -69,8 +81,9 @@ describe("Player Data Portability Actors", () => {
     const store = createInMemoryDurableStore()
     const initialPlayerData = createPlayerData("initial-seed")
     const importedPlayerData = createPlayerData("imported-seed")
-    const preImportBackupBytes = (await createPreparedDownload("initial-seed"))
-      .serialized
+    const preImportBackupBytes = (
+      await createPreparedDownload(createPreparedDownloadInput("initial-seed"))
+    ).serialized
     const state = await initializeBattleProfileStore({
       store,
       playerData: initialPlayerData,

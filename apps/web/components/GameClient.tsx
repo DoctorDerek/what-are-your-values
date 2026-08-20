@@ -7,11 +7,14 @@ import {
   projectAchievementCatalog,
   type AchievementPresentation,
 } from "@game/machines/src/AchievementPresentation"
+import { inspectBattleProfileStore } from "@game/machines/src/BattleProfileHydration"
 import { BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY } from "@game/machines/src/BattleProfileStore"
 import {
   projectBattlePair,
   type BattleSchedulerRestorePoint,
 } from "@game/machines/src/BattleScheduler"
+import type { DurableStoreAdapter } from "@game/machines/src/DurableStoreAdapter"
+import { prepareWayvmDownload } from "@game/machines/src/PlayerDataPortabilityActors"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import {
   DELETE_ALL_DATA_ACKNOWLEDGMENT,
@@ -27,6 +30,7 @@ import {
   downloadPlayerDataFile,
   readPlayerDataFile,
 } from "@/lib/PlayerDataFiles"
+import useWebExclusiveWriterLease from "@/lib/useWebExclusiveWriterLease"
 import packageMetadata from "@/package.json"
 import AchievementBanner from "./AchievementBanner"
 import Achievements from "./Achievements"
@@ -39,15 +43,71 @@ import PlayerDataRecovery, {
   type PlayerDataRecoveryActivity,
 } from "./PlayerDataRecovery"
 import Splash from "./Splash"
+import WebWriterConflict from "./WebWriterConflict"
 
-export default function GameClient() {
-  const durableStore = useMemo(() => createIndexedDbDurableStore(), [])
+const SOURCE_APP_VERSION = packageMetadata.version
+const SOURCE_BUILD =
+  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "development"
+
+function ReadOnlyGameClient({
+  durableStore,
+}: {
+  readonly durableStore: DurableStoreAdapter
+}) {
+  const [isExportPending, setIsExportPending] = useState(false)
+  const [issue, setIssue] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const handleExportThisTab = useCallback(async () => {
+    setIsExportPending(true)
+    setIssue(null)
+    setNotice(null)
+
+    try {
+      const inspection = await inspectBattleProfileStore({
+        store: durableStore,
+        appVersion: SOURCE_APP_VERSION,
+      })
+      if (inspection.status !== "ready") {
+        setIssue(playerDataPortabilityCopy.exportFailure)
+        return
+      }
+
+      const preparedDownload = await prepareWayvmDownload({
+        exportedAt: new Date().toISOString(),
+        sourceAppVersion: SOURCE_APP_VERSION,
+        sourceBuild: SOURCE_BUILD,
+        playerData: inspection.state.head.playerData,
+      })
+      downloadPlayerDataFile(preparedDownload)
+      setNotice(playerDataPortabilityCopy.exportSuccess)
+    } catch {
+      setIssue(playerDataPortabilityCopy.exportFailure)
+    } finally {
+      setIsExportPending(false)
+    }
+  }, [durableStore])
+
+  return (
+    <WebWriterConflict
+      isExportPending={isExportPending}
+      issue={issue}
+      notice={notice}
+      onExportThisTab={() => void handleExportThisTab()}
+      onLoadLatest={() => window.location.reload()}
+    />
+  )
+}
+
+function WritableGameClient({
+  durableStore,
+}: {
+  readonly durableStore: DurableStoreAdapter
+}) {
   const [state, send] = useMachine(rootMachine, {
     input: {
       durableStore,
-      appVersion: packageMetadata.version,
-      sourceBuild:
-        process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "development",
+      appVersion: SOURCE_APP_VERSION,
+      sourceBuild: SOURCE_BUILD,
       now: () => new Date().toISOString(),
       randomUuid: () => crypto.randomUUID(),
     },
@@ -565,4 +625,15 @@ export default function GameClient() {
   }
 
   return null
+}
+
+export default function GameClient() {
+  const durableStore = useMemo(() => createIndexedDbDurableStore(), [])
+  const writerLease = useWebExclusiveWriterLease()
+
+  if (writerLease.status === "checking") return <PlayerDataLoading />
+  if (writerLease.status === "read-only")
+    return <ReadOnlyGameClient durableStore={durableStore} />
+
+  return <WritableGameClient durableStore={durableStore} />
 }

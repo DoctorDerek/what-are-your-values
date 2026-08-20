@@ -4,9 +4,11 @@ import {
   BATTLE_PROFILE_MANIFEST_KEY,
   BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
+  initializeBattleProfileStore,
 } from "@game/machines/src/BattleProfileStore"
 import { createCustomValueAddCommit } from "@game/machines/src/CustomValueCommands"
 import type { DurableStoreTransaction } from "@game/machines/src/DurableStoreAdapter"
+import { createInMemoryDurableStore } from "@game/machines/src/InMemoryDurableStore"
 import {
   createInitialPlayerData,
   createPlayerData,
@@ -16,6 +18,7 @@ import { DELETE_ALL_DATA_ACKNOWLEDGMENT } from "@game/machines/src/PlayerDataRes
 import { playerDataResetCopy } from "@game/machines/src/PlayerDataResetCopy"
 import {
   createWayvmExport,
+  decodeWayvmExport,
   serializeWayvmExport,
 } from "@game/machines/src/WayvmExport"
 import {
@@ -32,8 +35,31 @@ import GameClient from "./GameClient"
 
 const durableStoreFailure = vi.hoisted(() => ({
   initialEntries: [] as [string, string][],
+  readCount: 0,
   readEnabled: false,
+  writeCount: 0,
   writeEnabled: false,
+}))
+
+const webExclusiveWriterLease = vi.hoisted(() => ({
+  status: "writer" as "checking" | "read-only" | "writer",
+}))
+
+vi.mock("@/lib/useWebExclusiveWriterLease", () => ({
+  default: () => {
+    if (webExclusiveWriterLease.status === "checking")
+      return Object.freeze({ status: "checking" as const })
+    if (webExclusiveWriterLease.status === "read-only")
+      return Object.freeze({
+        status: "read-only" as const,
+        reason: "lock-unavailable" as const,
+      })
+
+    return Object.freeze({
+      status: "writer" as const,
+      release: () => undefined,
+    })
+  },
 }))
 
 vi.mock("@/lib/IndexedDbDurableStore", async () => {
@@ -48,6 +74,7 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
 
       return {
         readAll: async () => {
+          durableStoreFailure.readCount += 1
           if (durableStoreFailure.readEnabled) {
             throw new Error("IndexedDB unavailable")
           }
@@ -57,6 +84,7 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
         compareAndSwapVerified: async (
           transaction: DurableStoreTransaction,
         ) => {
+          durableStoreFailure.writeCount += 1
           if (durableStoreFailure.writeEnabled) {
             throw new Error("IndexedDB write failed")
           }
@@ -105,13 +133,152 @@ async function createSerializedGameClientBackup({
   return serializeWayvmExport(wayvmExport)
 }
 
+async function createStoredGameClientProfile(schedulerSeed: string) {
+  const createdAt = "2026-08-20T12:00:00.000Z"
+  const playerData = createInitialPlayerData({ schedulerSeed, createdAt })
+  const store = createInMemoryDurableStore()
+  await initializeBattleProfileStore({
+    store,
+    playerData,
+    createdAt,
+    appVersion: "0.1.0",
+  })
+
+  return Object.freeze({
+    entries: Array.from(await store.readAll()),
+    playerData,
+  })
+}
+
 describe("GameClient Integration", () => {
   afterEach(() => {
     durableStoreFailure.initialEntries = []
+    durableStoreFailure.readCount = 0
     durableStoreFailure.readEnabled = false
+    durableStoreFailure.writeCount = 0
     durableStoreFailure.writeEnabled = false
+    webExclusiveWriterLease.status = "writer"
     localStorage.clear()
     vi.restoreAllMocks()
+  })
+
+  it("keeps storage and game input unavailable while writer ownership is unresolved", () => {
+    webExclusiveWriterLease.status = "checking"
+
+    render(<GameClient />)
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading your values…")
+    expect(
+      screen.queryByRole("button", { name: "Start" }),
+    ).not.toBeInTheDocument()
+    expect(durableStoreFailure.readCount).toBe(0)
+    expect(durableStoreFailure.writeCount).toBe(0)
+  })
+
+  it("keeps a secondary tab read-only and reloads only through Load Latest", async () => {
+    webExclusiveWriterLease.status = "read-only"
+    const reload = vi
+      .spyOn(window.location, "reload")
+      .mockImplementation(() => undefined)
+
+    render(<GameClient />)
+
+    expect(
+      await screen.findByRole("heading", { name: "Another Tab Is Active" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Start" }),
+    ).not.toBeInTheDocument()
+    expect(durableStoreFailure.readCount).toBe(0)
+    expect(durableStoreFailure.writeCount).toBe(0)
+
+    fireEvent.click(screen.getByRole("button", { name: "Load Latest" }))
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  it("exports validated durable Player Data without mounting the writable game", async () => {
+    webExclusiveWriterLease.status = "read-only"
+    const storedProfile = await createStoredGameClientProfile(
+      "read-only-export-seed",
+    )
+    durableStoreFailure.initialEntries = storedProfile.entries
+    const downloadedBlobs: Blob[] = []
+    vi.spyOn(URL, "createObjectURL").mockImplementation((source) => {
+      if (!(source instanceof Blob))
+        throw new Error("The read-only backup was not a Blob")
+      downloadedBlobs.push(source)
+      return "blob:read-only-game-client-backup"
+    })
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined)
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      () => undefined,
+    )
+
+    render(<GameClient />)
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Export This Tab" }),
+    )
+
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.exportSuccess),
+    ).toBeVisible()
+    const downloadedBlob = downloadedBlobs[0]
+    if (!downloadedBlob)
+      throw new Error("The read-only backup was not delivered")
+    const wayvmExport = await decodeWayvmExport(await downloadedBlob.text())
+    expect(wayvmExport.playerData).toEqual(storedProfile.playerData)
+    expect(durableStoreFailure.readCount).toBe(1)
+    expect(durableStoreFailure.writeCount).toBe(0)
+    expect(
+      screen.queryByRole("button", { name: "Start" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    {
+      condition: "has no saved profile",
+      entries: [] as [string, string][],
+    },
+    {
+      condition: "contains damaged profile records",
+      entries: [
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ] as [string, string][],
+    },
+  ])(
+    "reports export failure without mutation when durable storage $condition",
+    async ({ entries }) => {
+      webExclusiveWriterLease.status = "read-only"
+      durableStoreFailure.initialEntries = entries
+
+      render(<GameClient />)
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Export This Tab" }),
+      )
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        playerDataPortabilityCopy.exportFailure,
+      )
+      expect(durableStoreFailure.readCount).toBe(1)
+      expect(durableStoreFailure.writeCount).toBe(0)
+    },
+  )
+
+  it("reports a read-only storage outage without attempting recovery writes", async () => {
+    webExclusiveWriterLease.status = "read-only"
+    durableStoreFailure.readEnabled = true
+
+    render(<GameClient />)
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Export This Tab" }),
+    )
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      playerDataPortabilityCopy.exportFailure,
+    )
+    expect(durableStoreFailure.readCount).toBe(1)
+    expect(durableStoreFailure.writeCount).toBe(0)
   })
 
   it("limits a loading-origin storage failure to retry without inventing player data", async () => {
