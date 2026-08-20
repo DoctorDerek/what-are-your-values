@@ -15,7 +15,7 @@ export type PreparedWayvmDownload = {
   readonly serialized: string
 }
 
-type CreateWayvmExportInput = {
+export type PrepareWayvmDownloadInput = {
   readonly exportedAt: string
   readonly sourceAppVersion: string
   readonly sourceBuild: string
@@ -34,15 +34,18 @@ type ReplacePlayerDataInput = {
   readonly replacedAt: string
 }
 
-export const createWayvmExportActor = fromPromise(
-  async ({ input }: { input: CreateWayvmExportInput }) => {
-    const wayvmExport = await createWayvmExport(input)
+export async function prepareWayvmDownload(input: PrepareWayvmDownloadInput) {
+  const wayvmExport = await createWayvmExport(input)
 
-    return Object.freeze({
-      filename: createWayvmExportFilename(wayvmExport.exportedAt),
-      serialized: serializeWayvmExport(wayvmExport),
-    }) satisfies PreparedWayvmDownload
-  },
+  return Object.freeze({
+    filename: createWayvmExportFilename(wayvmExport.exportedAt),
+    serialized: serializeWayvmExport(wayvmExport),
+  }) satisfies PreparedWayvmDownload
+}
+
+export const createWayvmExportActor = fromPromise(
+  async ({ input }: { input: PrepareWayvmDownloadInput }) =>
+    prepareWayvmDownload(input),
 )
 
 export const prepareWayvmImportActor = fromPromise(
