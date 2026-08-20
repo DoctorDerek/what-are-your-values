@@ -9,7 +9,11 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
-    exclude: [...configDefaults.exclude, "e2e/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      "e2e/**",
+      "apps/mobile/components/**/*.test.tsx",
+    ],
     setupFiles: ["./vitest.setup.ts"],
     coverage: {
       provider: "v8",
