@@ -9,3 +9,25 @@ allowBuilds:
   "@expo/spawn-async": true
   esbuild: true
   expo: true
+
+minimumReleaseAgeExclude:
+  - "@expo/cli@57.0.17"
+  - "@expo/fingerprint@0.20.9"
+  - "@expo/local-build-cache-provider@57.0.7"
+  - "@expo/metro-config@57.0.9"
+  - "@expo/metro-runtime@57.0.12"
+  - "@expo/prebuild-config@57.0.13"
+  - "@expo/router-server@57.0.7"
+  - "@expo/ui@57.0.12"
+  - expo-asset@57.0.13
+  - expo-constants@57.0.13
+  - expo-dev-client@57.0.14
+  - expo-dev-launcher@57.0.14
+  - expo-dev-menu@57.0.14
+  - expo-file-system@57.0.5
+  - expo-linking@57.0.7
+  - expo-modules-core@57.0.12
+  - expo-modules-jsi@57.0.5
+  - expo-router@57.0.15
+  - expo-sharing@57.0.14
+  - expo@57.0.15

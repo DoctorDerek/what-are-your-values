@@ -4,6 +4,7 @@
     "slug": "what-are-your-values-mapache",
     "version": "0.1.0",
     "scheme": "wayvm",
+    "platforms": ["ios", "android"],
     "userInterfaceStyle": "automatic",
     "runtimeVersion": {
       "policy": "appVersion"

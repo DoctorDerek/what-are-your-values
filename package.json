@@ -5,10 +5,11 @@
   "engines": {
     "node": "^24"
   },
-  "packageManager": "pnpm@11.10.0",
+  "packageManager": "pnpm@11.22.0",
   "scripts": {
     "dev": "turbo dev",
-    "mobile:doctor": "pnpm --filter @game/mobile doctor",
+    "mobile:dev": "pnpm --filter @game/mobile run dev",
+    "mobile:doctor": "pnpm --filter @game/mobile run doctor",
     "mobile:export": "pnpm --filter @game/mobile build",
     "mobile:go": "pnpm --filter @game/mobile go",
     "prebuild": "node --import jiti/register scripts/decrypt-assets.ts",
