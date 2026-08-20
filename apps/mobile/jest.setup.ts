@@ -1,5 +1,12 @@
 import { jest } from "@jest/globals"
-import { setUpTests } from "react-native-reanimated"
+
+jest.mock("react-native-worklets", () =>
+  jest.requireActual("react-native-worklets/src/mock"),
+)
+
+const { setUpTests } = jest.requireActual<
+  typeof import("react-native-reanimated")
+>("react-native-reanimated")
 
 jest.mock("react-native-safe-area-context", () =>
   jest.requireActual("react-native-safe-area-context/jest/mock"),
