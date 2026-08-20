@@ -5,7 +5,7 @@
   "engines": {
     "node": "^24"
   },
-  "packageManager": "pnpm@11.10.0",
+  "packageManager": "pnpm@11.22.0",
   "scripts": {
     "dev": "turbo dev",
     "mobile:doctor": "pnpm --filter @game/mobile doctor",
