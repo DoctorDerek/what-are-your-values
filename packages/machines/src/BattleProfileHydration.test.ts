@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { applyBattleChoice, createInitialBattleProfile } from "./BattleProfile"
 import { createBattleChoiceEvent } from "./BattleProfileEvent"
-import { hydrateBattleProfileStore } from "./BattleProfileHydration"
+import {
+  hydrateBattleProfileStore,
+  inspectBattleProfileStore,
+} from "./BattleProfileHydration"
 import {
   createBattleProfileManifest,
   serializeBattleProfileManifest,
@@ -76,6 +79,19 @@ describe("Battle Profile Hydration", () => {
     ).resolves.toEqual({ status: "empty" })
   })
 
+  it("inspects a valid store without mutating durable bytes", async () => {
+    const { store, state } = await createCommittedStore("inspection-seed", 2)
+    const entriesBeforeInspection = await store.readAll()
+
+    await expect(
+      inspectBattleProfileStore({ store, appVersion: "0.2.0" }),
+    ).resolves.toEqual({
+      status: "ready",
+      state: { ...state, appVersion: "0.2.0" },
+    })
+    await expect(store.readAll()).resolves.toEqual(entriesBeforeInspection)
+  })
+
   it("repairs a missing manifest from a readable checkpoint", async () => {
     const store = createInMemoryDurableStore()
     await initializeBattleProfileStore({
@@ -94,6 +110,15 @@ describe("Battle Profile Hydration", () => {
       putEntries: [],
       deleteKeys: [BATTLE_PROFILE_MANIFEST_KEY],
     })
+    const entriesBeforeInspection = await store.readAll()
+
+    await expect(
+      inspectBattleProfileStore({ store, appVersion: "0.2.0" }),
+    ).resolves.toMatchObject({
+      status: "recovery-required",
+      issue: "Battle Profile manifest is missing",
+    })
+    await expect(store.readAll()).resolves.toEqual(entriesBeforeInspection)
 
     const result = await hydrateBattleProfileStore({
       store,

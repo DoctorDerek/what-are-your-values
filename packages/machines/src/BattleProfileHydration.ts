@@ -16,18 +16,28 @@ import {
 } from "./BattleProfileStore"
 import type { DurableStoreAdapter } from "./DurableStoreAdapter"
 
+type BattleProfileEmptyResult = { readonly status: "empty" }
+
+type BattleProfileReadyResult = {
+  readonly status: "ready"
+  readonly state: BattleProfileStoreState
+}
+
+type BattleProfileRecoveryRequiredResult = {
+  readonly status: "recovery-required"
+  readonly issue: string
+  readonly entries: ReadonlyMap<string, string>
+}
+
+export type BattleProfileInspectionResult =
+  | BattleProfileEmptyResult
+  | BattleProfileReadyResult
+  | BattleProfileRecoveryRequiredResult
+
 export type BattleProfileHydrationResult =
-  | { readonly status: "empty" }
-  | {
-      readonly status: "ready"
-      readonly state: BattleProfileStoreState
-      readonly recoveryNotice?: string
-    }
-  | {
-      readonly status: "recovery-required"
-      readonly issue: string
-      readonly entries: ReadonlyMap<string, string>
-    }
+  | BattleProfileEmptyResult
+  | (BattleProfileReadyResult & { readonly recoveryNotice?: string })
+  | BattleProfileRecoveryRequiredResult
 
 function hasBattleProfileRecords(entries: ReadonlyMap<string, string>) {
   return Array.from(entries.keys()).some(
@@ -41,13 +51,13 @@ function hasBattleProfileRecords(entries: ReadonlyMap<string, string>) {
   )
 }
 
-export async function hydrateBattleProfileStore({
+export async function inspectBattleProfileStore({
   store,
   appVersion,
 }: {
   readonly store: DurableStoreAdapter
   readonly appVersion: string
-}): Promise<BattleProfileHydrationResult> {
+}): Promise<BattleProfileInspectionResult> {
   const entries = await store.readAll()
   if (!hasBattleProfileRecords(entries)) {
     return Object.freeze({ status: "empty" })
@@ -104,21 +114,36 @@ export async function hydrateBattleProfileStore({
       }),
     })
   } catch (error: unknown) {
-    const cleanHydrationIssue = getErrorMessage(error)
+    return Object.freeze({
+      status: "recovery-required",
+      issue: getErrorMessage(error),
+      entries: new Map(entries),
+    })
+  }
+}
 
-    try {
-      return await recoverBattleProfileStore({
-        store,
-        entries,
-        appVersion,
-        cleanHydrationIssue,
-      })
-    } catch (recoveryError: unknown) {
-      return Object.freeze({
-        status: "recovery-required",
-        issue: `${cleanHydrationIssue}; ${getErrorMessage(recoveryError)}`,
-        entries: new Map(entries),
-      })
-    }
+export async function hydrateBattleProfileStore({
+  store,
+  appVersion,
+}: {
+  readonly store: DurableStoreAdapter
+  readonly appVersion: string
+}): Promise<BattleProfileHydrationResult> {
+  const inspection = await inspectBattleProfileStore({ store, appVersion })
+  if (inspection.status !== "recovery-required") return inspection
+
+  try {
+    return await recoverBattleProfileStore({
+      store,
+      entries: inspection.entries,
+      appVersion,
+      cleanHydrationIssue: inspection.issue,
+    })
+  } catch (recoveryError: unknown) {
+    return Object.freeze({
+      status: "recovery-required",
+      issue: `${inspection.issue}; ${getErrorMessage(recoveryError)}`,
+      entries: new Map(inspection.entries),
+    })
   }
 }
