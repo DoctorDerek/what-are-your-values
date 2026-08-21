@@ -51,7 +51,7 @@ export default function NativeProductMenu({
         </View>
 
         <ScrollView
-          accessibilityLabel={PRODUCT_MENU_COPY.title}
+          accessibilityLabel="Menu destinations"
           className="min-h-0 flex-1"
           contentContainerClassName="gap-4 p-5 pb-10 xl:p-8 xl:pb-12"
         >
