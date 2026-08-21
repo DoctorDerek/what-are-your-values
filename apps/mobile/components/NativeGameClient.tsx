@@ -1,3 +1,7 @@
+import {
+  PRODUCT_MENU_COPY,
+  type ProductMenuDestinationId,
+} from "@game/data/src/ProductMenu"
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
@@ -33,6 +37,7 @@ import NativePersistenceFailure, {
   type NativePlayerDataRecoveryActivity,
 } from "@/components/NativePersistenceFailure"
 import NativePlayerDataLoading from "@/components/NativePlayerDataLoading"
+import NativeProductMenu from "@/components/NativeProductMenu"
 import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
 import { createNativeAppLifecycleEvent } from "@/lib/NativeAppLifecycleEvents"
@@ -48,10 +53,13 @@ const nativeRootMachineInput = Object.freeze({
 
 export default function NativeGameClient() {
   const [schedulerSeed] = useState(() => ExpoCrypto.randomUUID())
+  const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
   const [pendingAllValuesValueId, setPendingAllValuesValueId] =
     useState<ValueId | null>(null)
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
     useState(false)
+  const [customValueBuilderRequestId, setCustomValueBuilderRequestId] =
+    useState(0)
   const [state, send] = useMachine(rootMachine, {
     input: nativeRootMachineInput,
   })
@@ -125,6 +133,8 @@ export default function NativeGameClient() {
     }) => {
       setPendingAllValuesValueId(valueId)
       setShouldOpenCustomValueBuilder(openCustomValueBuilder)
+      if (openCustomValueBuilder)
+        setCustomValueBuilderRequestId((requestId) => requestId + 1)
       send({ type: "ALL_VALUES.OPEN_REQUESTED" })
     },
     [send],
@@ -135,6 +145,27 @@ export default function NativeGameClient() {
       send({ type: "ALL_VALUES.ADD_REQUESTED", name, definition })
     },
     [send],
+  )
+  const handleProductMenuDestinationSelect = useCallback(
+    (destinationId: ProductMenuDestinationId) => {
+      setIsProductMenuOpen(false)
+      if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (state.matches("Achievements"))
+        send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
+      if (state.matches("AllValues"))
+        send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
+      if (state.matches("DataManagement"))
+        send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })
+      const destinationActions = {
+        "browse-all-values": () => openAllValues({}),
+        "custom-values": () => openAllValues({ openCustomValueBuilder: true }),
+        achievements: () => send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" }),
+        "import-export": () => send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" }),
+      } satisfies Record<ProductMenuDestinationId, () => void>
+
+      destinationActions[destinationId]()
+    },
+    [openAllValues, send, state],
   )
   const handleUpdateCustomValue = useCallback(
     (valueId: CustomValueId, name: string, definition: string) => {
@@ -195,7 +226,10 @@ export default function NativeGameClient() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (appState) => {
       const event = createNativeAppLifecycleEvent(appState)
-      if (event) send(event)
+      if (event) {
+        setIsProductMenuOpen(false)
+        send(event)
+      }
     })
 
     return () => subscription.remove()
@@ -367,8 +401,15 @@ export default function NativeGameClient() {
           onOpenDataManagement={() =>
             send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
           }
+          onOpenMenu={() => setIsProductMenuOpen(true)}
           onOpenValue={(valueId) => openAllValues({ valueId })}
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </View>
@@ -379,7 +420,15 @@ export default function NativeGameClient() {
       <View className="flex-1">
         <NativeAchievements
           achievements={achievementPresentations}
+          canOpenMenu={state.matches("Achievements")}
           onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </View>
@@ -404,71 +453,102 @@ export default function NativeGameClient() {
                   : null
 
     return (
-      <NativeDataManagement
-        activity={activity}
-        customValueCount={battleProfile.activeDeck.customValues.length}
-        issue={state.context.portabilityIssue}
-        notice={state.context.portabilityNotice}
-        preview={state.context.pendingImport?.preview ?? null}
-        resetReview={state.context.pendingResetReview}
-        onCancelImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
-        }
-        onCancelReset={() =>
-          send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
-        }
-        onChooseBackup={() => void chooseBackup("data-management")}
-        onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
-        onConfirmImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
-        }
-        onConfirmReset={handleResetConfirmed}
-        onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
-        onRequestReset={handleResetRequested}
-      />
+      <View className="flex-1">
+        <NativeDataManagement
+          activity={activity}
+          customValueCount={battleProfile.activeDeck.customValues.length}
+          isNavigationPending={isBackgroundCheckpointing}
+          issue={state.context.portabilityIssue}
+          notice={state.context.portabilityNotice}
+          preview={state.context.pendingImport?.preview ?? null}
+          resetReview={state.context.pendingResetReview}
+          onCancelImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+          }
+          onCancelReset={() =>
+            send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+          }
+          onChooseBackup={() => void chooseBackup("data-management")}
+          onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
+          onConfirmImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+          }
+          onConfirmReset={handleResetConfirmed}
+          onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onRequestReset={handleResetRequested}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </View>
     )
   }
 
   if (isAllValuesSurface)
     return (
-      <NativeAllValues
-        key={battleProfile.scheduler.deckRevision}
-        initialValueId={pendingAllValuesValueId}
-        isPersistencePending={
-          isBackgroundCheckpointing ||
-          state.matches({ AllValues: "Persisting" })
-        }
-        openCustomValueBuilder={shouldOpenCustomValueBuilder}
-        persistenceIssue={state.context.persistenceIssue}
-        rankedValues={rankedValues}
-        onAddCustomValue={handleAddCustomValue}
-        onClose={() => send({ type: "ALL_VALUES.CLOSE_REQUESTED" })}
-        onDeleteCustomValue={(valueId) =>
-          send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
-        }
-        onUpdateCustomValue={handleUpdateCustomValue}
-      />
+      <View className="flex-1">
+        <NativeAllValues
+          key={`${battleProfile.scheduler.deckRevision}:${customValueBuilderRequestId}`}
+          initialValueId={pendingAllValuesValueId}
+          isPersistencePending={
+            isBackgroundCheckpointing ||
+            state.matches({ AllValues: "Persisting" })
+          }
+          openCustomValueBuilder={shouldOpenCustomValueBuilder}
+          persistenceIssue={state.context.persistenceIssue}
+          rankedValues={rankedValues}
+          onAddCustomValue={handleAddCustomValue}
+          onClose={() => send({ type: "ALL_VALUES.CLOSE_REQUESTED" })}
+          onDeleteCustomValue={(valueId) =>
+            send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
+          }
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onUpdateCustomValue={handleUpdateCustomValue}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </View>
     )
 
   if (isCrucibleSurface) {
     const isBattleReady = state.matches({ Crucible: "Ready" })
 
     return (
-      <NativeCrucible
-        activeDeck={battleProfile.activeDeck}
-        achievement={pendingAchievementPresentation}
-        battle={presentedBattle}
-        progressById={battleProfile.progressById}
-        canUndo={battleProfile.history.length > 0}
-        canRedo={battleProfile.redo.length > 0}
-        isAchievementAcknowledgementPending={isRecordingAchievementPresentation}
-        isPersistencePending={!isBattleReady}
-        onAchievementPresented={handleAchievementPresented}
-        onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
-        onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
-        onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
-        onWinnerSelected={handleWinnerSelected}
-      />
+      <View className="flex-1">
+        <NativeCrucible
+          activeDeck={battleProfile.activeDeck}
+          achievement={pendingAchievementPresentation}
+          battle={presentedBattle}
+          progressById={battleProfile.progressById}
+          canUndo={battleProfile.history.length > 0}
+          canRedo={battleProfile.redo.length > 0}
+          isAchievementAcknowledgementPending={
+            isRecordingAchievementPresentation
+          }
+          isMenuOpen={isProductMenuOpen}
+          isPersistencePending={!isBattleReady}
+          onAchievementPresented={handleAchievementPresented}
+          onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
+          onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
+          onWinnerSelected={handleWinnerSelected}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.resumeBattleAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </View>
     )
   }
 

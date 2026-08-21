@@ -38,6 +38,7 @@ function createHubCallbacks() {
     onBrowseAllValues: jest.fn(),
     onOpenAchievements: jest.fn(),
     onOpenDataManagement: jest.fn(),
+    onOpenMenu: jest.fn(),
     onOpenValue: jest.fn(),
     onStartBattle: jest.fn(),
   }
@@ -81,10 +82,12 @@ describe("NativeHub", () => {
 
     await user.press(screen.getByRole("button", { name: "Browse All Values" }))
     await user.press(screen.getByRole("button", { name: "Add Custom Value" }))
+    await user.press(screen.getByRole("button", { name: "Menu" }))
     await user.press(visibleValueButtons[0])
 
     expect(callbacks.onBrowseAllValues).toHaveBeenCalledTimes(1)
     expect(callbacks.onAddCustomValue).toHaveBeenCalledTimes(1)
+    expect(callbacks.onOpenMenu).toHaveBeenCalledTimes(1)
     expect(callbacks.onOpenValue).toHaveBeenCalledWith(
       rankedValues.find(
         ({ definition }) => getValueDisplayName(definition) === "Acceptance",
