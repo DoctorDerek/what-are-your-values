@@ -25,9 +25,11 @@ export default function NativeCrucible({
   canUndo,
   canRedo,
   isAchievementAcknowledgementPending,
+  isMenuOpen,
   isPersistencePending,
   onAchievementPresented,
   onExit,
+  onOpenMenu,
   onUndo,
   onRedo,
   onWinnerSelected,
@@ -39,9 +41,11 @@ export default function NativeCrucible({
   canUndo: boolean
   canRedo: boolean
   isAchievementAcknowledgementPending: boolean
+  isMenuOpen: boolean
   isPersistencePending: boolean
   onAchievementPresented: (achievementId: AchievementPresentation["id"]) => void
   onExit: () => void
+  onOpenMenu: () => void
   onUndo: () => void
   onRedo: () => void
   onWinnerSelected: (
@@ -57,7 +61,8 @@ export default function NativeCrucible({
     send({ type: "BATTLE.PROJECTED", battle })
   }, [battle, send])
 
-  const isInteractive = state.matches("AwaitingInput") && !isPersistencePending
+  const isInteractive =
+    state.matches("AwaitingInput") && !isMenuOpen && !isPersistencePending
   const isAnimating = state.matches("AnimatingResult")
   const currentPair = state.context.currentBattle?.pair ?? null
   const handleSelect = useCallback(
@@ -100,9 +105,11 @@ export default function NativeCrucible({
       accessibilityState={{ busy: isPersistencePending }}
     >
       <NativeBattleActionBar
+        canOpenMenu={isInteractive}
         canUndo={isInteractive && canUndo}
         canRedo={isInteractive && canRedo}
         canStop={isInteractive}
+        onOpenMenu={onOpenMenu}
         onUndo={onUndo}
         onRedo={onRedo}
         onStop={onExit}

@@ -3,16 +3,20 @@ import { Button } from "@/components/ui/button"
 import { Text } from "@/components/ui/text"
 
 export default function NativeBattleActionBar({
+  canOpenMenu,
   canUndo,
   canRedo,
   canStop,
+  onOpenMenu,
   onUndo,
   onRedo,
   onStop,
 }: {
+  canOpenMenu: boolean
   canUndo: boolean
   canRedo: boolean
   canStop: boolean
+  onOpenMenu: () => void
   onUndo: () => void
   onRedo: () => void
   onStop: () => void
@@ -48,6 +52,16 @@ export default function NativeBattleActionBar({
         onPress={onStop}
       >
         <Text>Stop</Text>
+      </Button>
+      <Button
+        accessibilityLabel="Menu"
+        className="flex-1"
+        disabled={!canOpenMenu}
+        size="compact"
+        variant="secondary"
+        onPress={onOpenMenu}
+      >
+        <Text>Menu</Text>
       </Button>
     </View>
   )
