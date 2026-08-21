@@ -22,8 +22,9 @@ export default defineConfig({
         "apps/web/{app,components,lib}/**/*.{ts,tsx}",
         "apps/mobile/lib/**/*.ts",
         "packages/*/src/**/*.ts",
+        "scripts/**/*.ts",
       ],
-      exclude: ["**/*.test.{ts,tsx}"],
+      exclude: ["**/*.test.{ts,tsx}", "scripts/**/*.cli.ts"],
       thresholds: {
         statements: 79,
         branches: 79,
