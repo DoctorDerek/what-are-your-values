@@ -22,6 +22,7 @@ export default defineConfig({
         "apps/web/{app,components,lib}/**/*.{ts,tsx}",
         "apps/mobile/lib/**/*.ts",
         "packages/*/src/**/*.ts",
+        "scripts/lighthouse/prepareLighthouseReports.ts",
       ],
       exclude: ["**/*.test.{ts,tsx}"],
       thresholds: {
