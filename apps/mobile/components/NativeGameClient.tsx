@@ -58,6 +58,8 @@ export default function NativeGameClient() {
     useState<ValueId | null>(null)
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
     useState(false)
+  const [customValueBuilderRequestId, setCustomValueBuilderRequestId] =
+    useState(0)
   const [state, send] = useMachine(rootMachine, {
     input: nativeRootMachineInput,
   })
@@ -131,6 +133,8 @@ export default function NativeGameClient() {
     }) => {
       setPendingAllValuesValueId(valueId)
       setShouldOpenCustomValueBuilder(openCustomValueBuilder)
+      if (openCustomValueBuilder)
+        setCustomValueBuilderRequestId((requestId) => requestId + 1)
       send({ type: "ALL_VALUES.OPEN_REQUESTED" })
     },
     [send],
@@ -148,6 +152,8 @@ export default function NativeGameClient() {
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       if (state.matches("Achievements"))
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
+      if (state.matches("AllValues"))
+        send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
       const destinationActions = {
         "browse-all-values": () => openAllValues({}),
         "custom-values": () => openAllValues({ openCustomValueBuilder: true }),
@@ -469,23 +475,32 @@ export default function NativeGameClient() {
 
   if (isAllValuesSurface)
     return (
-      <NativeAllValues
-        key={battleProfile.scheduler.deckRevision}
-        initialValueId={pendingAllValuesValueId}
-        isPersistencePending={
-          isBackgroundCheckpointing ||
-          state.matches({ AllValues: "Persisting" })
-        }
-        openCustomValueBuilder={shouldOpenCustomValueBuilder}
-        persistenceIssue={state.context.persistenceIssue}
-        rankedValues={rankedValues}
-        onAddCustomValue={handleAddCustomValue}
-        onClose={() => send({ type: "ALL_VALUES.CLOSE_REQUESTED" })}
-        onDeleteCustomValue={(valueId) =>
-          send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
-        }
-        onUpdateCustomValue={handleUpdateCustomValue}
-      />
+      <View className="flex-1">
+        <NativeAllValues
+          key={`${battleProfile.scheduler.deckRevision}:${customValueBuilderRequestId}`}
+          initialValueId={pendingAllValuesValueId}
+          isPersistencePending={
+            isBackgroundCheckpointing ||
+            state.matches({ AllValues: "Persisting" })
+          }
+          openCustomValueBuilder={shouldOpenCustomValueBuilder}
+          persistenceIssue={state.context.persistenceIssue}
+          rankedValues={rankedValues}
+          onAddCustomValue={handleAddCustomValue}
+          onClose={() => send({ type: "ALL_VALUES.CLOSE_REQUESTED" })}
+          onDeleteCustomValue={(valueId) =>
+            send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
+          }
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onUpdateCustomValue={handleUpdateCustomValue}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </View>
     )
 
   if (isCrucibleSurface) {

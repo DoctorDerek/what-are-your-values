@@ -1,4 +1,5 @@
 import { projectAllValues } from "@game/data/src/AllValuesProjection"
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import {
   getValueDisplayName,
   type CustomValueId,
@@ -26,6 +27,7 @@ export default function NativeAllValues({
   onAddCustomValue,
   onClose,
   onDeleteCustomValue,
+  onOpenMenu,
   onUpdateCustomValue,
   openCustomValueBuilder = false,
   persistenceIssue = null,
@@ -36,6 +38,7 @@ export default function NativeAllValues({
   readonly onAddCustomValue: (name: string, definition: string) => void
   readonly onClose: () => void
   readonly onDeleteCustomValue: (valueId: CustomValueId) => void
+  readonly onOpenMenu: () => void
   readonly onUpdateCustomValue: (
     valueId: CustomValueId,
     name: string,
@@ -59,6 +62,11 @@ export default function NativeAllValues({
   const [highlightedValueId, setHighlightedValueId] = useState<ValueId | null>(
     initialValueId,
   )
+  const isNavigationBlocked =
+    isPersistencePending ||
+    isAddingCustomValue ||
+    editingValueId !== null ||
+    deletingValueId !== null
   const { existingCustomValues, hasComparisons, visibleValues } = useMemo(
     () => projectAllValues({ rankedValues, searchQuery }),
     [rankedValues, searchQuery],
@@ -92,7 +100,7 @@ export default function NativeAllValues({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1 px-4 pb-4"
       >
-        <View className="flex-row items-center gap-4 border-b-4 border-black py-4">
+        <View className="gap-4 border-b-4 border-black py-4">
           <View className="min-w-0 flex-1">
             <Text
               variant="h1"
@@ -104,13 +112,24 @@ export default function NativeAllValues({
               {rankedValues.length} Active Values
             </Text>
           </View>
-          <Button
-            disabled={isPersistencePending}
-            variant="destructive"
-            onPress={onClose}
-          >
-            <Text>Close</Text>
-          </Button>
+          <View className="flex-row gap-3">
+            <Button
+              className="flex-1"
+              disabled={isNavigationBlocked}
+              variant="outline"
+              onPress={onOpenMenu}
+            >
+              <Text>{PRODUCT_MENU_COPY.openAction}</Text>
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={isNavigationBlocked}
+              variant="destructive"
+              onPress={onClose}
+            >
+              <Text>Close</Text>
+            </Button>
+          </View>
         </View>
 
         <FlatList
