@@ -39,7 +39,10 @@ async function openMenuDestination(
   destinationLabel: string,
 ) {
   await user.press(await screen.findByRole("button", { name: "Menu" }))
-  const menu = await screen.findByLabelText("Menu")
+  const menu = (await screen.findAllByLabelText("Menu")).find(
+    ({ props }) => props.role === "dialog",
+  )
+  if (!menu) throw new Error("The native Product Menu dialog is unavailable")
   await user.press(within(menu).getByRole("button", { name: destinationLabel }))
 }
 
@@ -77,6 +80,15 @@ describe("NativeGameClient Menu navigation", () => {
     await user.press(screen.getByRole("button", { name: "Battle" }))
     const presentedChoiceNames = getPresentedChoiceNames()
     expect(presentedChoiceNames).toHaveLength(2)
+
+    await openMenuDestination(user, "How It Works")
+    expect(await screen.findByLabelText("How It Works")).toBeOnTheScreen()
+    expect(
+      screen.getByText("Start With 100 Values—or Add Your Own"),
+    ).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Close" }))
+
+    expect(getPresentedChoiceNames()).toEqual(presentedChoiceNames)
 
     await user.press(screen.getByRole("button", { name: "Menu" }))
     await user.press(
