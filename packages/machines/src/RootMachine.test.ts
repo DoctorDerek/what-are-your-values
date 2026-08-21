@@ -357,10 +357,19 @@ describe("Root Machine", () => {
     actor.send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
 
     actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ DataManagement: "Browsing" }) &&
+        candidate.context.preparedDownload !== null,
+    )
     actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
     expect(actor.getSnapshot().context.settingsReturnTarget).toBe(
       "data-management",
     )
+    expect(actor.getSnapshot().context.preparedDownload).toBeNull()
+    expect(actor.getSnapshot().context.portabilityNotice).toBeNull()
     actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
     expect(actor.getSnapshot().matches({ DataManagement: "Browsing" })).toBe(
       true,
@@ -581,6 +590,245 @@ describe("Root Machine", () => {
     expect(restoredSnapshot.context.settingsReturnTarget).toBe("hub")
     actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
     expect(actor.getSnapshot().matches("Hub")).toBe(true)
+  })
+
+  it("offers only the three approved Settings reset reviews and clears them on cancel or close", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "settings-reset-catalog-seed",
+    })
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+
+    actor.send({ type: "CUSTOM_VALUE.DELETE_ALL_REQUESTED" })
+    expect(actor.getSnapshot().matches({ Settings: "Browsing" })).toBe(true)
+    expect(actor.getSnapshot().context.pendingResetReview).toBeNull()
+
+    actor.send({ type: "RESET.LEVELS_AND_EXPERIENCE_REQUESTED" })
+    expect(actor.getSnapshot().matches({ Settings: "ReviewingReset" })).toBe(
+      true,
+    )
+    expect(actor.getSnapshot().context.pendingResetReview?.resetKind).toBe(
+      "reset-levels-and-experience",
+    )
+    actor.send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+    expect(actor.getSnapshot().matches({ Settings: "Browsing" })).toBe(true)
+    expect(actor.getSnapshot().context.pendingResetReview).toBeNull()
+
+    actor.send({ type: "RESET.ACHIEVEMENTS_REQUESTED" })
+    expect(actor.getSnapshot().context.pendingResetReview?.resetKind).toBe(
+      "reset-achievements",
+    )
+    actor.send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+
+    actor.send({ type: "DELETE_ALL_DATA.REQUESTED" })
+    expect(actor.getSnapshot().context.pendingResetReview?.resetKind).toBe(
+      "delete-all-data",
+    )
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+    expect(actor.getSnapshot().context.pendingResetReview).toBeNull()
+    expect(actor.getSnapshot().context.settingsReturnTarget).toBeNull()
+  })
+
+  it("applies both scoped Settings resets and preserves their invoking Crucible route", async () => {
+    const levelsRoot = await bootRootActor({
+      schedulerSeed: "settings-level-reset-seed",
+    })
+    const playedProfile = await commitOneBattle(levelsRoot.actor)
+    const settingsBeforeLevelReset =
+      levelsRoot.actor.getSnapshot().context.playerData?.settings
+    if (!settingsBeforeLevelReset)
+      throw new Error("Settings level-reset fixture is unavailable")
+
+    levelsRoot.actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    levelsRoot.actor.send({
+      type: "RESET.LEVELS_AND_EXPERIENCE_REQUESTED",
+    })
+    levelsRoot.actor.send({
+      type: "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED",
+      confirmationId: requirePendingResetConfirmationId(levelsRoot.actor),
+    })
+    const levelResetSnapshot = await waitFor(
+      levelsRoot.actor,
+      (candidate) =>
+        candidate.matches({ Settings: "Browsing" }) &&
+        candidate.context.portabilityNotice ===
+          "Levels and experience were reset. Custom Values, achievements, and settings were kept.",
+    )
+    const levelResetPlayerData = levelResetSnapshot.context.playerData
+    if (!levelResetPlayerData)
+      throw new Error("Settings level reset removed Player Data")
+
+    expect(levelResetPlayerData.settings).toEqual(settingsBeforeLevelReset)
+    expect(levelResetPlayerData.profile.scheduler.progressGeneration).toBe(
+      playedProfile.scheduler.progressGeneration + 1,
+    )
+    expect(
+      Array.from(levelResetPlayerData.profile.progressById.values()).every(
+        ({ totalXp }) => totalXp === 0,
+      ),
+    ).toBe(true)
+    expect(levelResetSnapshot.context.settingsReturnTarget).toBe("crucible")
+    levelsRoot.actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(levelsRoot.actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(
+      true,
+    )
+
+    const achievementsRoot = await bootRootActor({
+      schedulerSeed: "settings-achievement-reset-seed",
+    })
+    await commitOneBattle(achievementsRoot.actor)
+    const beforeAchievementReset =
+      achievementsRoot.actor.getSnapshot().context.playerData
+    if (!beforeAchievementReset)
+      throw new Error("Settings achievement-reset fixture is unavailable")
+    const activePair = projectBattlePair(
+      beforeAchievementReset.profile.activeDeck,
+      beforeAchievementReset.profile.scheduler,
+    )
+
+    achievementsRoot.actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    achievementsRoot.actor.send({ type: "RESET.ACHIEVEMENTS_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(
+      achievementsRoot.actor,
+    )
+    achievementsRoot.actor.send({
+      type: "RESET.ACHIEVEMENTS_CONFIRMED",
+      confirmationId: "stale-settings-achievement-reset",
+    })
+    expect(
+      achievementsRoot.actor
+        .getSnapshot()
+        .matches({ Settings: "ReviewingReset" }),
+    ).toBe(true)
+    expect(achievementsRoot.actor.getSnapshot().context.playerData).toBe(
+      beforeAchievementReset,
+    )
+
+    achievementsRoot.actor.send({
+      type: "RESET.ACHIEVEMENTS_CONFIRMED",
+      confirmationId,
+    })
+    const achievementResetSnapshot = await waitFor(
+      achievementsRoot.actor,
+      (candidate) =>
+        candidate.matches({ Settings: "Browsing" }) &&
+        candidate.context.portabilityNotice ===
+          "Achievements and achievement progress were reset. Your values, ranking, and settings were kept.",
+    )
+    const achievementResetPlayerData =
+      achievementResetSnapshot.context.playerData
+    if (!achievementResetPlayerData)
+      throw new Error("Settings achievement reset removed Player Data")
+
+    expect(achievementResetPlayerData.profile).toEqual(
+      beforeAchievementReset.profile,
+    )
+    expect(
+      achievementResetPlayerData.achievements.progress
+        .achievementProgressGeneration,
+    ).toBe(
+      beforeAchievementReset.achievements.progress
+        .achievementProgressGeneration + 1,
+    )
+    achievementsRoot.actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(
+      projectBattlePair(
+        achievementResetPlayerData.profile.activeDeck,
+        achievementResetPlayerData.profile.scheduler,
+      ),
+    ).toEqual(activePair)
+    expect(
+      achievementsRoot.actor.getSnapshot().matches({ Crucible: "Ready" }),
+    ).toBe(true)
+  })
+
+  it("exports from Settings reset review before exact-phrase complete erasure", async () => {
+    const { actor, durableStore } = await bootRootActor({
+      schedulerSeed: "settings-complete-erasure-seed",
+    })
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    actor.send({ type: "DELETE_ALL_DATA.REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })
+    const exportedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Settings: "ReviewingReset" }) &&
+        candidate.context.preparedDownload !== null,
+    )
+    expect(exportedSnapshot.context.pendingResetReview).toMatchObject({
+      resetKind: "delete-all-data",
+      confirmationId,
+    })
+    expect(exportedSnapshot.context.portabilityNotice).toBe(
+      "Your private backup is ready. Review the reset when you are ready.",
+    )
+
+    actor.send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
+    actor.send({
+      type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
+      phrase: "I understand this cannot be undone.",
+    })
+    expect(actor.getSnapshot().matches({ Settings: "ReviewingReset" })).toBe(
+      true,
+    )
+
+    actor.send({
+      type: "DELETE_ALL_DATA.CONFIRMED",
+      confirmationId,
+      phrase: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+    })
+    const erasedSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("Splash"),
+    )
+
+    await expect(durableStore.readAll()).resolves.toEqual(new Map())
+    expect(erasedSnapshot.context.battleProfileStoreState).toBeNull()
+    expect(erasedSnapshot.context.pendingResetReview).toBeNull()
+    expect(erasedSnapshot.context.pendingPlayerSettings).toBeNull()
+    expect(erasedSnapshot.context.settingsReturnTarget).toBeNull()
+    expect(erasedSnapshot.context.portabilityNotice).toBe(
+      "All local WAYVM player data was deleted.",
+    )
+  })
+
+  it("retains Settings reset review and current data after a reset actor failure", async () => {
+    const failingScopedResetActor = fromPromise(async () => {
+      throw new Error("Settings scoped reset failed")
+    }) as typeof applyScopedPlayerDataResetActor
+    const rootLogic = rootMachine.provide({
+      actors: { applyScopedPlayerDataReset: failingScopedResetActor },
+    })
+    const { actor, durableStore } = await bootRootActor({
+      schedulerSeed: "settings-reset-failure-seed",
+      rootLogic,
+    })
+    const playerDataBeforeReset = actor.getSnapshot().context.playerData
+    const entriesBeforeReset = await durableStore.readAll()
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    actor.send({ type: "RESET.ACHIEVEMENTS_REQUESTED" })
+    const confirmationId = requirePendingResetConfirmationId(actor)
+    actor.send({
+      type: "RESET.ACHIEVEMENTS_CONFIRMED",
+      confirmationId,
+    })
+    const failureSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Settings: "ReviewingReset" }) &&
+        candidate.context.portabilityIssue === "Settings scoped reset failed",
+    )
+
+    expect(failureSnapshot.context.playerData).toBe(playerDataBeforeReset)
+    expect(failureSnapshot.context.pendingResetReview).toMatchObject({
+      resetKind: "reset-achievements",
+      confirmationId,
+    })
+    expect(failureSnapshot.context.settingsReturnTarget).toBe("hub")
+    await expect(durableStore.readAll()).resolves.toEqual(entriesBeforeReset)
   })
 
   it("records only the first pending milestone and returns to the Hub without changing battle progress", async () => {
