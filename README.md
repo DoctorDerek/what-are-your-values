@@ -6,6 +6,12 @@ Play the live game: [whatareyourvaluesmapache.com](https://www.whatareyourvalues
 
 What Are Your Values, Mapache? is a private, offline values-clarification autobattler. Pick the value that matters more in each pair; repeated choices produce a Top Five and a complete ranking across 100 included values plus any Custom Values you add.
 
+## Mobile Web Lighthouse Measurements
+
+Latest successful automated Lighthouse scores for the canonical production website, measured with Lighthouse’s standard mobile emulation. The badges and linked HTML report come from the audit with the median performance score among five production runs.
+
+[![Mobile Web Lighthouse Performance](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdoctorderek.github.io%2Fwhat-are-your-values-mapache%2Flighthouse-results.json&query=%24.performance&label=performance&suffix=%2F100&logo=lighthouse&logoColor=white&color=informational)](https://doctorderek.github.io/what-are-your-values-mapache/) [![Mobile Web Lighthouse Accessibility](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdoctorderek.github.io%2Fwhat-are-your-values-mapache%2Flighthouse-results.json&query=%24.accessibility&label=accessibility&suffix=%2F100&logo=lighthouse&logoColor=white&color=informational)](https://doctorderek.github.io/what-are-your-values-mapache/) [![Mobile Web Lighthouse Best Practices](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdoctorderek.github.io%2Fwhat-are-your-values-mapache%2Flighthouse-results.json&query=%24.bestPractices&label=best%20practices&suffix=%2F100&logo=lighthouse&logoColor=white&color=informational)](https://doctorderek.github.io/what-are-your-values-mapache/) [![Mobile Web Lighthouse SEO](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdoctorderek.github.io%2Fwhat-are-your-values-mapache%2Flighthouse-results.json&query=%24.seo&label=SEO&suffix=%2F100&logo=lighthouse&logoColor=white&color=informational)](https://doctorderek.github.io/what-are-your-values-mapache/)
+
 ## Current build
 
 The public web application currently includes:
