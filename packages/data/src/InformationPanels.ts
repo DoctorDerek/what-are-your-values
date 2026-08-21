@@ -1,3 +1,5 @@
+import { introductionCopy } from "./IntroductionCopy"
+
 export const INFORMATION_PANEL_IDS = Object.freeze([
   "introduction",
   "how-it-works",
@@ -40,6 +42,22 @@ export type InformationPanelDefinition = Readonly<{
   primaryActionLabel: string
   blocks: readonly InformationPanelBlock[]
 }>
+
+export const INTRODUCTION_INFORMATION_PANEL = Object.freeze({
+  id: "introduction",
+  title: introductionCopy.title,
+  accessibleCloseLabel: introductionCopy.accessibleCloseLabel,
+  primaryActionLabel: introductionCopy.closeAction,
+  blocks: Object.freeze([
+    Object.freeze({
+      kind: "lead",
+      text: introductionCopy.tagline,
+    }),
+    ...introductionCopy.body.map((text) =>
+      Object.freeze({ kind: "paragraph", text } as const),
+    ),
+  ]),
+} as const satisfies InformationPanelDefinition)
 
 export const HOW_IT_WORKS_INFORMATION_PANEL = Object.freeze({
   id: "how-it-works",
@@ -370,3 +388,14 @@ export const CREDITS_PRIVACY_INFORMATION_PANEL = Object.freeze({
     }),
   ]),
 } as const satisfies InformationPanelDefinition)
+
+export const INFORMATION_PANELS = Object.freeze({
+  introduction: INTRODUCTION_INFORMATION_PANEL,
+  "how-it-works": HOW_IT_WORKS_INFORMATION_PANEL,
+  "why-values-matter": WHY_VALUES_MATTER_INFORMATION_PANEL,
+  "why-i-made-this-game": WHY_I_MADE_THIS_GAME_INFORMATION_PANEL,
+  "free-resources": FREE_RESOURCES_INFORMATION_PANEL,
+  "credits-privacy": CREDITS_PRIVACY_INFORMATION_PANEL,
+} as const satisfies Readonly<
+  Record<InformationPanelId, InformationPanelDefinition>
+>)
