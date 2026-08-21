@@ -34,6 +34,7 @@ import { rootMachine } from "@game/machines/src/RootMachine"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Controls from "@/components/Controls"
 import { ReopenedInformationPanel } from "@/components/InformationPanel"
 import InformationPanelContent from "@/components/InformationPanelContent"
 import ProductMenu from "@/components/ProductMenu"
@@ -138,6 +139,7 @@ function WritableGameClient({
   const [isReadingRecoveryImportFile, setIsReadingRecoveryImportFile] =
     useState(false)
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
+  const [isControlsOpen, setIsControlsOpen] = useState(false)
   const [activeInformationPanelId, setActiveInformationPanelId] =
     useState<InformationPanelId | null>(null)
   const productMenuReturnFocusTargetRef = useRef<HTMLElement | null>(null)
@@ -273,6 +275,10 @@ function WritableGameClient({
         setActiveInformationPanelId(destination.id)
         return
       }
+      if (destination.id === "controls") {
+        setIsControlsOpen(true)
+        return
+      }
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       if (state.matches("Achievements"))
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
@@ -290,7 +296,10 @@ function WritableGameClient({
           }),
         achievements: () => openAchievements(HUB_MENU_BUTTON_ID),
         "import-export": () => openDataManagement(HUB_MENU_BUTTON_ID),
-      } satisfies Record<ProductMenuRouteDestination["id"], () => void>
+      } satisfies Record<
+        Exclude<ProductMenuRouteDestination["id"], "controls">,
+        () => void
+      >
 
       destinationActions[destination.id]()
     },
@@ -588,6 +597,15 @@ function WritableGameClient({
       <InformationPanelContent informationPanel={activeInformationPanel} />
     </ReopenedInformationPanel>
   ) : null
+  const controls = isControlsOpen ? (
+    <Controls
+      open
+      onCloseAutoFocus={handleInformationPanelCloseAutoFocus}
+      onOpenChange={setIsControlsOpen}
+    />
+  ) : null
+  const isProductOverlayOpen =
+    isProductMenuOpen || activeInformationPanelId !== null || isControlsOpen
   const isHubSurface =
     state.matches("Hub") ||
     (isRecordingAchievementPresentation &&
@@ -627,6 +645,7 @@ function WritableGameClient({
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
         {achievementBanner}
       </>
     )
@@ -648,6 +667,7 @@ function WritableGameClient({
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
         {achievementBanner}
       </>
     )
@@ -686,6 +706,7 @@ function WritableGameClient({
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
       </>
     )
   }
@@ -698,7 +719,7 @@ function WritableGameClient({
           rankedValues={rankedValues}
           initialValueId={pendingAllValuesValueId}
           openCustomValueBuilder={shouldOpenCustomValueBuilder}
-          isMenuOpen={isProductMenuOpen || activeInformationPanelId !== null}
+          isMenuOpen={isProductOverlayOpen}
           isPersistencePending={state.matches({ AllValues: "Persisting" })}
           persistenceIssue={state.context.persistenceIssue}
           onClose={handleAllValuesClose}
@@ -716,6 +737,7 @@ function WritableGameClient({
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
       </>
     )
   }
@@ -735,7 +757,7 @@ function WritableGameClient({
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }
-          isMenuOpen={isProductMenuOpen || activeInformationPanelId !== null}
+          isMenuOpen={isProductOverlayOpen}
           isPersistencePending={!isBattleReady}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
@@ -751,6 +773,7 @@ function WritableGameClient({
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
       </>
     )
   }

@@ -21,6 +21,7 @@ describe("Product Menu", () => {
       },
       { kind: "route", id: "custom-values", label: "Custom Values" },
       { kind: "route", id: "achievements", label: "Achievements" },
+      { kind: "route", id: "controls", label: "Controls" },
       { kind: "route", id: "import-export", label: "Import & Export" },
       {
         kind: "information-panel",
@@ -67,7 +68,6 @@ describe("Product Menu", () => {
   it("excludes unfinished product surfaces", () => {
     const unavailableDestinationIds = [
       "settings",
-      "controls",
       "customize-avatar",
       "share-top-five",
       "platform-achievements",

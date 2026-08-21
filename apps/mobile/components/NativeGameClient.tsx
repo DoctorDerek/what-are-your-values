@@ -32,6 +32,7 @@ import { AppState, View } from "react-native"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeAchievements from "@/components/NativeAchievements"
 import NativeAllValues from "@/components/NativeAllValues"
+import NativeControls from "@/components/NativeControls"
 import NativeCrucible from "@/components/NativeCrucible"
 import NativeDataManagement, {
   type NativeDataManagementActivity,
@@ -61,6 +62,7 @@ const nativeRootMachineInput = Object.freeze({
 export default function NativeGameClient() {
   const [schedulerSeed] = useState(() => ExpoCrypto.randomUUID())
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
+  const [isControlsOpen, setIsControlsOpen] = useState(false)
   const [activeInformationPanelId, setActiveInformationPanelId] =
     useState<InformationPanelId | null>(null)
   const [pendingAllValuesValueId, setPendingAllValuesValueId] =
@@ -162,6 +164,10 @@ export default function NativeGameClient() {
         setActiveInformationPanelId(destination.id)
         return
       }
+      if (destination.id === "controls") {
+        setIsControlsOpen(true)
+        return
+      }
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       if (state.matches("Achievements"))
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
@@ -174,7 +180,10 @@ export default function NativeGameClient() {
         "custom-values": () => openAllValues({ openCustomValueBuilder: true }),
         achievements: () => send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" }),
         "import-export": () => send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" }),
-      } satisfies Record<ProductMenuRouteDestination["id"], () => void>
+      } satisfies Record<
+        Exclude<ProductMenuRouteDestination["id"], "controls">,
+        () => void
+      >
 
       destinationActions[destination.id]()
     },
@@ -420,6 +429,11 @@ export default function NativeGameClient() {
       />
     </ReopenedNativeInformationPanel>
   ) : null
+  const controls = isControlsOpen ? (
+    <NativeControls open onOpenChange={setIsControlsOpen} />
+  ) : null
+  const isProductOverlayOpen =
+    isProductMenuOpen || activeInformationPanelId !== null || isControlsOpen
 
   if (isHubSurface)
     return (
@@ -448,6 +462,7 @@ export default function NativeGameClient() {
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
         {achievementBanner}
       </View>
     )
@@ -468,6 +483,7 @@ export default function NativeGameClient() {
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
         {achievementBanner}
       </View>
     )
@@ -523,6 +539,7 @@ export default function NativeGameClient() {
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
       </View>
     )
   }
@@ -555,6 +572,7 @@ export default function NativeGameClient() {
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
       </View>
     )
 
@@ -573,7 +591,7 @@ export default function NativeGameClient() {
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }
-          isMenuOpen={isProductMenuOpen || activeInformationPanelId !== null}
+          isMenuOpen={isProductOverlayOpen}
           isPersistencePending={!isBattleReady}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
@@ -589,6 +607,7 @@ export default function NativeGameClient() {
           onOpenChange={setIsProductMenuOpen}
         />
         {reopenedInformationPanel}
+        {controls}
       </View>
     )
   }
