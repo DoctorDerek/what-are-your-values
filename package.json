@@ -16,6 +16,8 @@
     "build": "turbo build",
     "start": "turbo start",
     "lint": "eslint .",
+    "lighthouse": "lhci autorun",
+    "lighthouse:prepare": "node scripts/runTypeScript.mjs scripts/lighthouse/prepareLighthouseReports.cli.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",

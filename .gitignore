@@ -11,6 +11,8 @@
 !.yarn/versions
 # testing
 /coverage
+/lighthouse-results
+/lighthouse-pages
 /playwright-report
 /test-results
 /blob-report
