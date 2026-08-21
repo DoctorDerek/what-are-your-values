@@ -29,6 +29,11 @@ const PRODUCT_MENU_ROUTE_DESTINATIONS = Object.freeze([
   }),
   Object.freeze({
     kind: "route",
+    id: "controls",
+    label: "Controls",
+  }),
+  Object.freeze({
+    kind: "route",
     id: "import-export",
     label: "Import & Export",
   }),
