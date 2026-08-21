@@ -33,9 +33,11 @@ function createCrucibleProps(isPersistencePending: boolean) {
     canUndo: true,
     canRedo: true,
     isAchievementAcknowledgementPending: false,
+    isMenuOpen: false,
     isPersistencePending,
     onAchievementPresented: jest.fn(),
     onExit: jest.fn(),
+    onOpenMenu: jest.fn(),
     onUndo: jest.fn(),
     onRedo: jest.fn(),
     onWinnerSelected: jest.fn(),
@@ -101,5 +103,50 @@ describe("NativeCrucible", () => {
 
     expect(props.onWinnerSelected).not.toHaveBeenCalled()
     expect(props.onExit).not.toHaveBeenCalled()
+  })
+
+  it("preserves the exact pair and blocks every battle action while Menu is open", async () => {
+    const props = createCrucibleProps(false)
+    const user = userEvent.setup()
+    const { rerender } = await render(<NativeCrucible {...props} />)
+    const firstValueName = getValueDisplayName(firstValue)
+    const secondValueName = getValueDisplayName(secondValue)
+
+    expect(
+      await screen.findByRole("button", { name: `Choose ${firstValueName}` }),
+    ).toBeEnabled()
+
+    await rerender(<NativeCrucible {...props} isMenuOpen />)
+
+    const firstChoice = screen.getByRole("button", {
+      name: `Choose ${firstValueName}`,
+    })
+    const secondChoice = screen.getByRole("button", {
+      name: `Choose ${secondValueName}`,
+    })
+    expect(firstChoice).toBeDisabled()
+    expect(secondChoice).toBeDisabled()
+    expect(
+      screen.getByText(`“${getValueDisplayDefinition(firstValue)}”`),
+    ).toBeOnTheScreen()
+    expect(
+      screen.getByText(`“${getValueDisplayDefinition(secondValue)}”`),
+    ).toBeOnTheScreen()
+
+    for (const actionName of ["Undo", "Redo", "Stop", "Menu"])
+      expect(screen.getByRole("button", { name: actionName })).toBeDisabled()
+
+    await user.press(firstChoice)
+    await user.press(secondChoice)
+    await user.press(screen.getByRole("button", { name: "Undo" }))
+    await user.press(screen.getByRole("button", { name: "Redo" }))
+    await user.press(screen.getByRole("button", { name: "Stop" }))
+    await user.press(screen.getByRole("button", { name: "Menu" }))
+
+    expect(props.onWinnerSelected).not.toHaveBeenCalled()
+    expect(props.onUndo).not.toHaveBeenCalled()
+    expect(props.onRedo).not.toHaveBeenCalled()
+    expect(props.onExit).not.toHaveBeenCalled()
+    expect(props.onOpenMenu).not.toHaveBeenCalled()
   })
 })
