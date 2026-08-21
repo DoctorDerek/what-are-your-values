@@ -2,7 +2,8 @@
 
 import {
   PRODUCT_MENU_COPY,
-  type ProductMenuDestinationId,
+  type ProductMenuDestination,
+  type ProductMenuRouteDestination,
 } from "@game/data/src/ProductMenu"
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
@@ -243,7 +244,7 @@ function WritableGameClient({
     [send],
   )
   const handleProductMenuDestinationSelect = useCallback(
-    (destinationId: ProductMenuDestinationId) => {
+    (destination: ProductMenuDestination) => {
       setIsProductMenuOpen(false)
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       if (state.matches("Achievements"))
@@ -262,9 +263,9 @@ function WritableGameClient({
           }),
         achievements: () => openAchievements(HUB_MENU_BUTTON_ID),
         "import-export": () => openDataManagement(HUB_MENU_BUTTON_ID),
-      } satisfies Record<ProductMenuDestinationId, () => void>
+      } satisfies Record<ProductMenuRouteDestination["id"], () => void>
 
-      destinationActions[destinationId]()
+      destinationActions[destination.id]()
     },
     [openAchievements, openAllValues, openDataManagement, send, state],
   )

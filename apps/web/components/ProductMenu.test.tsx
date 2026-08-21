@@ -1,4 +1,4 @@
-import type { ProductMenuDestinationId } from "@game/data/src/ProductMenu"
+import type { ProductMenuDestination } from "@game/data/src/ProductMenu"
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
@@ -9,7 +9,7 @@ function ProductMenuHarness({
   onDestinationSelect = () => undefined,
 }: {
   contextActionLabel: "Close Menu" | "Resume Battle"
-  onDestinationSelect?: (destinationId: ProductMenuDestinationId) => void
+  onDestinationSelect?: (destination: ProductMenuDestination) => void
 }) {
   const [open, setOpen] = useState(true)
 
@@ -58,7 +58,11 @@ describe("Product Menu", () => {
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Custom Values" }),
     )
-    expect(onDestinationSelect).toHaveBeenCalledExactlyOnceWith("custom-values")
+    expect(onDestinationSelect).toHaveBeenCalledExactlyOnceWith({
+      kind: "route",
+      id: "custom-values",
+      label: "Custom Values",
+    })
   })
 
   it("dismisses through the platform-standard Escape interaction", () => {

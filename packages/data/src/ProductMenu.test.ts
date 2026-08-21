@@ -14,10 +14,14 @@ describe("Product Menu", () => {
 
   it("lists each currently shipped destination once in canonical order", () => {
     expect(PRODUCT_MENU_DESTINATIONS).toEqual([
-      { id: "browse-all-values", label: "Browse All Values" },
-      { id: "custom-values", label: "Custom Values" },
-      { id: "achievements", label: "Achievements" },
-      { id: "import-export", label: "Import & Export" },
+      {
+        kind: "route",
+        id: "browse-all-values",
+        label: "Browse All Values",
+      },
+      { kind: "route", id: "custom-values", label: "Custom Values" },
+      { kind: "route", id: "achievements", label: "Achievements" },
+      { kind: "route", id: "import-export", label: "Import & Export" },
     ])
     expect(new Set(PRODUCT_MENU_DESTINATIONS.map(({ id }) => id)).size).toBe(
       PRODUCT_MENU_DESTINATIONS.length,

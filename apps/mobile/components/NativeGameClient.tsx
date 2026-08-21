@@ -1,6 +1,7 @@
 import {
   PRODUCT_MENU_COPY,
-  type ProductMenuDestinationId,
+  type ProductMenuDestination,
+  type ProductMenuRouteDestination,
 } from "@game/data/src/ProductMenu"
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
@@ -147,7 +148,7 @@ export default function NativeGameClient() {
     [send],
   )
   const handleProductMenuDestinationSelect = useCallback(
-    (destinationId: ProductMenuDestinationId) => {
+    (destination: ProductMenuDestination) => {
       setIsProductMenuOpen(false)
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       if (state.matches("Achievements"))
@@ -161,9 +162,9 @@ export default function NativeGameClient() {
         "custom-values": () => openAllValues({ openCustomValueBuilder: true }),
         achievements: () => send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" }),
         "import-export": () => send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" }),
-      } satisfies Record<ProductMenuDestinationId, () => void>
+      } satisfies Record<ProductMenuRouteDestination["id"], () => void>
 
-      destinationActions[destinationId]()
+      destinationActions[destination.id]()
     },
     [openAllValues, send, state],
   )

@@ -1,4 +1,4 @@
-import type { ProductMenuDestinationId } from "@game/data/src/ProductMenu"
+import type { ProductMenuDestination } from "@game/data/src/ProductMenu"
 import { describe, expect, it, jest } from "@jest/globals"
 import {
   fireEvent,
@@ -15,9 +15,7 @@ function NativeProductMenuHarness({
   onDestinationSelect = () => undefined,
 }: {
   readonly contextActionLabel: "Close Menu" | "Resume Battle"
-  readonly onDestinationSelect?: (
-    destinationId: ProductMenuDestinationId,
-  ) => void
+  readonly onDestinationSelect?: (destination: ProductMenuDestination) => void
 }) {
   const [open, setOpen] = useState(true)
 
@@ -73,7 +71,11 @@ describe("NativeProductMenu", () => {
     )
 
     expect(onDestinationSelect).toHaveBeenCalledTimes(1)
-    expect(onDestinationSelect).toHaveBeenCalledWith("custom-values")
+    expect(onDestinationSelect).toHaveBeenCalledWith({
+      kind: "route",
+      id: "custom-values",
+      label: "Custom Values",
+    })
   })
 
   it("dismisses through context and platform-standard close actions", async () => {

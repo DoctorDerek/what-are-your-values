@@ -5,25 +5,32 @@ export const PRODUCT_MENU_COPY = Object.freeze({
   resumeBattleAction: "Resume Battle",
 })
 
-export const PRODUCT_MENU_DESTINATIONS = Object.freeze([
+const PRODUCT_MENU_ROUTE_DESTINATIONS = Object.freeze([
   Object.freeze({
+    kind: "route",
     id: "browse-all-values",
     label: "Browse All Values",
   }),
   Object.freeze({
+    kind: "route",
     id: "custom-values",
     label: "Custom Values",
   }),
   Object.freeze({
+    kind: "route",
     id: "achievements",
     label: "Achievements",
   }),
   Object.freeze({
+    kind: "route",
     id: "import-export",
     label: "Import & Export",
   }),
 ] as const)
 
-export type ProductMenuDestination = (typeof PRODUCT_MENU_DESTINATIONS)[number]
+export type ProductMenuRouteDestination =
+  (typeof PRODUCT_MENU_ROUTE_DESTINATIONS)[number]
 
-export type ProductMenuDestinationId = ProductMenuDestination["id"]
+export const PRODUCT_MENU_DESTINATIONS = PRODUCT_MENU_ROUTE_DESTINATIONS
+
+export type ProductMenuDestination = (typeof PRODUCT_MENU_DESTINATIONS)[number]
