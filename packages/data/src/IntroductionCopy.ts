@@ -11,4 +11,6 @@ export const introductionCopy = Object.freeze({
     "Plus, it’s fun!",
   ] as const),
   startAction: "Start",
+  closeAction: "Close",
+  accessibleCloseLabel: "Close Introduction",
 } as const)
