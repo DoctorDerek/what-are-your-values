@@ -1,3 +1,7 @@
+import {
+  PRODUCT_MENU_COPY,
+  type ProductMenuDestinationId,
+} from "@game/data/src/ProductMenu"
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
@@ -33,6 +37,7 @@ import NativePersistenceFailure, {
   type NativePlayerDataRecoveryActivity,
 } from "@/components/NativePersistenceFailure"
 import NativePlayerDataLoading from "@/components/NativePlayerDataLoading"
+import NativeProductMenu from "@/components/NativeProductMenu"
 import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
 import { createNativeAppLifecycleEvent } from "@/lib/NativeAppLifecycleEvents"
@@ -48,6 +53,7 @@ const nativeRootMachineInput = Object.freeze({
 
 export default function NativeGameClient() {
   const [schedulerSeed] = useState(() => ExpoCrypto.randomUUID())
+  const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
   const [pendingAllValuesValueId, setPendingAllValuesValueId] =
     useState<ValueId | null>(null)
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
@@ -135,6 +141,20 @@ export default function NativeGameClient() {
       send({ type: "ALL_VALUES.ADD_REQUESTED", name, definition })
     },
     [send],
+  )
+  const handleProductMenuDestinationSelect = useCallback(
+    (destinationId: ProductMenuDestinationId) => {
+      setIsProductMenuOpen(false)
+      const destinationActions = {
+        "browse-all-values": () => openAllValues({}),
+        "custom-values": () => openAllValues({ openCustomValueBuilder: true }),
+        achievements: () => send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" }),
+        "import-export": () => send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" }),
+      } satisfies Record<ProductMenuDestinationId, () => void>
+
+      destinationActions[destinationId]()
+    },
+    [openAllValues, send],
   )
   const handleUpdateCustomValue = useCallback(
     (valueId: CustomValueId, name: string, definition: string) => {
@@ -367,8 +387,15 @@ export default function NativeGameClient() {
           onOpenDataManagement={() =>
             send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
           }
+          onOpenMenu={() => setIsProductMenuOpen(true)}
           onOpenValue={(valueId) => openAllValues({ valueId })}
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </View>

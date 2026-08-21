@@ -1,4 +1,5 @@
 import { projectHubValues } from "@game/data/src/HubValueProjection"
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import type { ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import { Fragment } from "react"
@@ -15,6 +16,7 @@ export default function NativeHub({
   onBrowseAllValues,
   onOpenAchievements,
   onOpenDataManagement,
+  onOpenMenu,
   onOpenValue,
   onStartBattle,
 }: {
@@ -24,6 +26,7 @@ export default function NativeHub({
   onBrowseAllValues: () => void
   onOpenAchievements: () => void
   onOpenDataManagement: () => void
+  onOpenMenu: () => void
   onOpenValue: (valueId: ValueId) => void
   onStartBattle: () => void
 }) {
@@ -55,19 +58,24 @@ export default function NativeHub({
 
   return (
     <MapacheScreen>
+      <View className="flex-row items-center gap-4 border-b-4 border-black p-4">
+        <Text
+          variant="h1"
+          className="text-mapache-vivid-primary-cyan min-w-0 flex-1 text-left text-4xl uppercase xl:text-5xl"
+        >
+          Your Values
+        </Text>
+        <Button size="compact" variant="secondary" onPress={onOpenMenu}>
+          <Text>{PRODUCT_MENU_COPY.openAction}</Text>
+        </Button>
+      </View>
       <FlatList
         data={visibleValues}
         keyExtractor={({ definition }) => definition.id}
         contentContainerClassName="p-5 pb-10"
         ListHeaderComponent={
           <View>
-            <Text
-              variant="h1"
-              className="text-mapache-vivid-primary-cyan mt-3 text-5xl uppercase"
-            >
-              Your Values
-            </Text>
-            <View className="mt-6 border-4 border-black bg-white p-4 shadow-[7px_7px_0px_0px_#000000]">
+            <View className="border-4 border-black bg-white p-4 shadow-[7px_7px_0px_0px_#000000]">
               <Text
                 accessibilityLiveRegion="polite"
                 className="text-xl font-black text-black uppercase"
