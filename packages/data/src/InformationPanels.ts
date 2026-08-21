@@ -129,3 +129,97 @@ export const HOW_IT_WORKS_INFORMATION_PANEL = Object.freeze({
     }),
   ]),
 } as const satisfies InformationPanelDefinition)
+
+export const WHY_VALUES_MATTER_INFORMATION_PANEL = Object.freeze({
+  id: "why-values-matter",
+  title: "Why Values Matter",
+  accessibleCloseLabel: "Close Why Values Matter",
+  primaryActionLabel: "Close",
+  blocks: Object.freeze([
+    Object.freeze({
+      kind: "paragraph",
+      text: "Values are qualities and directions you want to express in how you live. They are not rules you have to obey, virtues you have to perform for other people, or goals you finish and cross off a list.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Many values can sound important in isolation. Family, Health, Creativity, Achievement, Adventure, Service, Autonomy, and Inner Peace can all belong in a broad Very Important or Most Important group.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Broad groups can be a useful starting point. The 2011 Personal Values Card Sort goes further by asking a person to select five to ten central values and rank them. WAYVM goes in a different direction: it repeatedly compares pairs across the entire active deck so trade-offs among all included and player-authored values remain visible.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Direct comparisons make opportunity cost visible. Choosing one value over another does not make the other value bad. It simply forces a distinction that broad categories can hide.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "No published list can include every value that matters to every person. That is why WAYVM includes private Custom Values without a fixed numeric count limit. A value such as Ingenuity can be central to someone even when it is absent from the source list.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Privacy also makes it easier to separate “values I approve of” from “what are my own core values actually.” There is no coach, employer, advertiser, global audience, or morally approved answer waiting to judge the result.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Repeating those comparisons creates discrimination: many small choices reveal patterns. The Top Five then creates compression: it turns 100 or more possibilities into a short set you can remember while keeping the complete ranking available.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Knowing what matters most can help you notice trade-offs, make priorities easier to remember, and choose actions that feel more like your own. It does not make every decision easy, tell you what you should value, or guarantee that you will always act consistently.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "WAYVM is inspired by values-sorting exercises used in Acceptance and Commitment Therapy, or ACT. In ACT, values can be understood as chosen directions for ongoing action rather than tasks that are completed once. WAYVM is a self-reflection game, not ACT, therapy, diagnosis, or medical care.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Your result can evolve as you make more comparisons or as your life changes. A changing ranking is not failure. It is another opportunity to notice what matters now.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "There is no correct ranking. Start over any time by resetting your game progress.",
+    }),
+  ]),
+} as const satisfies InformationPanelDefinition)
+
+export const WHY_I_MADE_THIS_GAME_INFORMATION_PANEL = Object.freeze({
+  id: "why-i-made-this-game",
+  title: "Why I Made This Game",
+  accessibleCloseLabel: "Close Why I Made This Game",
+  primaryActionLabel: "Close",
+  blocks: Object.freeze([
+    Object.freeze({
+      kind: "paragraph",
+      text: "A productivity coach I worked with for about two years asked me a simple question: What are your values? I realized I did not know.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "The values exercise I had at the time asked me to sort words into broad importance piles. That was a useful starting point, but it did not force the direct comparisons I needed. It was still easy to place a socially admirable value near the top because it seemed like something I was supposed to value.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "So I built the first version of What Are Your Values, Mapache? in one day. Instead of stopping with broad categories, I compared values directly. Those repeated choices helped me identify Fun, Health, Curiosity, Ingenuity, and Creativity as my core values.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Those five values have remained remarkably stable. They have helped me make decisions, understand myself, and build a life that feels more like my own.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "The current game uses the expanded, public-domain 2011 Personal Values Card Sort. It includes Fun, Health, Curiosity, and Creativity, but it still does not include Ingenuity. That is a useful reminder that no values list can be complete for every person. WAYVM therefore lets you add as many private Custom Values as are useful to you.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "I rebuilt this game so other people could have the same opportunity—privately, freely, and without being told what they should value.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "The game cannot tell you what your values ought to be, and there is no morally correct result. It only gives you a clearer way to notice what matters most to you.",
+    }),
+    Object.freeze({
+      kind: "signature",
+      text: "—Dr. Derek Austin",
+    }),
+  ]),
+} as const satisfies InformationPanelDefinition)
