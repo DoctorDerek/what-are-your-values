@@ -146,6 +146,8 @@ export default function NativeGameClient() {
     (destinationId: ProductMenuDestinationId) => {
       setIsProductMenuOpen(false)
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (state.matches("Achievements"))
+        send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
       const destinationActions = {
         "browse-all-values": () => openAllValues({}),
         "custom-values": () => openAllValues({ openCustomValueBuilder: true }),
@@ -407,7 +409,15 @@ export default function NativeGameClient() {
       <View className="flex-1">
         <NativeAchievements
           achievements={achievementPresentations}
+          canOpenMenu={state.matches("Achievements")}
           onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </View>

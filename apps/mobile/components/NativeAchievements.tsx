@@ -1,3 +1,4 @@
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import { FlatList, View } from "react-native"
 import MapacheScreen from "@/components/MapacheScreen"
@@ -7,10 +8,14 @@ import { Text } from "@/components/ui/text"
 
 export default function NativeAchievements({
   achievements,
+  canOpenMenu,
   onClose,
+  onOpenMenu,
 }: {
   readonly achievements: readonly AchievementPresentation[]
+  readonly canOpenMenu: boolean
   readonly onClose: () => void
+  readonly onOpenMenu: () => void
 }) {
   const unlockedCount = achievements.filter(
     ({ status }) => status === "unlocked",
@@ -25,9 +30,24 @@ export default function NativeAchievements({
         >
           Achievements
         </Text>
-        <Button variant="secondary" onPress={onClose}>
-          <Text>Back to Your Values</Text>
-        </Button>
+        <View className="flex-row gap-3">
+          <Button
+            className="flex-1"
+            disabled={!canOpenMenu}
+            variant="outline"
+            onPress={onOpenMenu}
+          >
+            <Text>{PRODUCT_MENU_COPY.openAction}</Text>
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={!canOpenMenu}
+            variant="secondary"
+            onPress={onClose}
+          >
+            <Text>Back to Your Values</Text>
+          </Button>
+        </View>
       </View>
       <FlatList
         className="flex-1 px-4"
