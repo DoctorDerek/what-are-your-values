@@ -11,10 +11,25 @@ export const INFORMATION_PANEL_IDS = Object.freeze([
 
 export type InformationPanelId = (typeof INFORMATION_PANEL_IDS)[number]
 
-export type InformationPanelTextBlock = Readonly<{
-  kind: "lead" | "paragraph" | "signature"
+export type InformationPanelLeadBlock = Readonly<{
+  kind: "lead"
   text: string
 }>
+
+export type InformationPanelParagraphBlock = Readonly<{
+  kind: "paragraph"
+  text: string
+}>
+
+export type InformationPanelSignatureBlock = Readonly<{
+  kind: "signature"
+  text: string
+}>
+
+export type InformationPanelTextBlock =
+  | InformationPanelLeadBlock
+  | InformationPanelParagraphBlock
+  | InformationPanelSignatureBlock
 
 export type InformationPanelSectionBlock = Readonly<{
   kind: "section"
