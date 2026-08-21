@@ -304,3 +304,69 @@ export const FREE_RESOURCES_INFORMATION_PANEL = Object.freeze({
     }),
   ]),
 } as const satisfies InformationPanelDefinition)
+
+export const CREDITS_PRIVACY_INFORMATION_PANEL = Object.freeze({
+  id: "credits-privacy",
+  title: "Credits & Privacy",
+  accessibleCloseLabel: "Close Credits & Privacy",
+  primaryActionLabel: "Close",
+  blocks: Object.freeze([
+    Object.freeze({
+      kind: "section",
+      heading: "Private. Offline. Account-free.",
+      paragraphs: Object.freeze([
+        "This app uses storage on your device to save your progress, Custom Values, achievements, language, and settings and to work offline. It does not use this storage for analytics, advertising, or tracking.",
+        "WAYVM has no account, cloud sync, global leaderboard, advertising, or behavioral analytics. The app does not send your comparisons, canonical or Custom Values, definitions, ranking, Top Five, achievements, reflection prompts, or settings to us.",
+        "WAYVM does not set tracking or advertising cookies.",
+        "Export happens only when you choose it. JSON export creates a backup you control. If you send a file to another app or service, that destination handles it under its own privacy policy.",
+        "External resource links open websites outside WAYVM. Those sites can receive ordinary web request information and follow their own privacy practices.",
+        "Local data is not encrypted by WAYVM at launch. Someone with access to your unlocked device or browser profile may be able to access it. Use your device’s security features if that matters for your situation.",
+        "Clearing browser or site data, using private-browsing storage, uninstalling the app, or resetting the device may remove local progress. Export a JSON backup if you want a portable copy.",
+        "Reset Levels & Experience returns every active value to Level 1 with 0 XP while keeping Custom Value definitions, achievements, language, and settings. Delete All Data removes all WAYVM player data from this device or browser profile.",
+      ]),
+    }),
+    Object.freeze({
+      kind: "section",
+      heading: "A Reflection Game, Not Therapy",
+      paragraphs: Object.freeze([
+        "WAYVM is not a medical device, diagnostic test, psychotherapy service, crisis service, or substitute for professional care. It does not determine whether a value is good, healthy, moral, or correct.",
+      ]),
+    }),
+    Object.freeze({
+      kind: "section",
+      heading: "Created by Dr. Derek Austin",
+      paragraphs: Object.freeze([
+        "What Are Your Values, Mapache? is a Mapachito Enterprise intellectual property.",
+      ]),
+    }),
+    Object.freeze({
+      kind: "section",
+      heading: "Values Source",
+      paragraphs: Object.freeze([
+        "The 100 included values and definitions are adapted from the 2011 update of the Personal Values Card Sort by William R. Miller, Janet C’de Baca, Daniel B. Matthews, and Paula L. Wilbourne, University of New Mexico. The source instrument states that it is in the public domain and may be copied or adapted without further permission.",
+        "The source also includes three blank “Other Value” cards, demonstrating that its printed vocabulary is intentionally open-ended. WAYVM adapts that openness through optional private values written by the player without treating the paper template’s three blanks as a product ceiling. Player-authored names and definitions are not part of the source instrument and are not endorsed by its authors.",
+      ]),
+    }),
+    Object.freeze({
+      kind: "section",
+      heading: "Intellectual Influences",
+      paragraphs: Object.freeze([
+        "WAYVM is inspired by values-sorting exercises used in Acceptance and Commitment Therapy and informed by ideas about meaning, freedom, practice, and honest self-expression. Reference to ACT, the World Health Organization, Viktor Frankl, Erich Fromm, Bruce Lee, Buddhism, or any linked organization does not imply endorsement, partnership, or sponsorship.",
+      ]),
+    }),
+    Object.freeze({
+      kind: "section",
+      heading: "Art and Audio",
+      paragraphs: Object.freeze([
+        "Phase 1 uses original typography, interface design, and silent game presentation. Complete open-source software notices are available in the project’s license records.",
+      ]),
+    }),
+    Object.freeze({
+      kind: "section",
+      heading: "Source Code",
+      paragraphs: Object.freeze([
+        "The application code may be available under its stated open-source license. Commercial art, fonts, music, and other third-party assets remain under their own licenses and are not granted by the code license.",
+      ]),
+    }),
+  ]),
+} as const satisfies InformationPanelDefinition)
