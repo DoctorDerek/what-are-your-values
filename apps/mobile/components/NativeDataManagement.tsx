@@ -1,3 +1,4 @@
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import type {
   PlayerDataResetKind,
@@ -24,6 +25,7 @@ export type NativeDataManagementActivity =
 export default function NativeDataManagement({
   activity,
   customValueCount,
+  isNavigationPending,
   issue,
   notice,
   preview,
@@ -35,10 +37,12 @@ export default function NativeDataManagement({
   onConfirmImport,
   onConfirmReset,
   onExport,
+  onOpenMenu,
   onRequestReset,
 }: {
   readonly activity: NativeDataManagementActivity | null
   readonly customValueCount: number
+  readonly isNavigationPending: boolean
   readonly issue: string | null
   readonly notice: string | null
   readonly preview: WayvmImportPreview | null
@@ -50,9 +54,12 @@ export default function NativeDataManagement({
   readonly onConfirmImport: () => void
   readonly onConfirmReset: (review: PlayerDataResetReview) => void
   readonly onExport: () => void
+  readonly onOpenMenu: () => void
   readonly onRequestReset: (resetKind: PlayerDataResetKind) => void
 }) {
   const isBusy = activity !== null
+  const isNavigationBlocked =
+    isNavigationPending || isBusy || preview !== null || resetReview !== null
 
   return (
     <MapacheScreen>
@@ -63,9 +70,24 @@ export default function NativeDataManagement({
         >
           {playerDataPortabilityCopy.screenTitle}
         </Text>
-        <Button disabled={isBusy} variant="secondary" onPress={onClose}>
-          <Text>Back to Your Values</Text>
-        </Button>
+        <View className="flex-row gap-3">
+          <Button
+            className="flex-1"
+            disabled={isNavigationBlocked}
+            variant="outline"
+            onPress={onOpenMenu}
+          >
+            <Text>{PRODUCT_MENU_COPY.openAction}</Text>
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={isNavigationBlocked}
+            variant="secondary"
+            onPress={onClose}
+          >
+            <Text>Back to Your Values</Text>
+          </Button>
+        </View>
       </View>
 
       <ScrollView

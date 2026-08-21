@@ -154,6 +154,8 @@ export default function NativeGameClient() {
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
       if (state.matches("AllValues"))
         send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
+      if (state.matches("DataManagement"))
+        send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })
       const destinationActions = {
         "browse-all-values": () => openAllValues({}),
         "custom-values": () => openAllValues({ openCustomValueBuilder: true }),
@@ -448,28 +450,38 @@ export default function NativeGameClient() {
                   : null
 
     return (
-      <NativeDataManagement
-        activity={activity}
-        customValueCount={battleProfile.activeDeck.customValues.length}
-        issue={state.context.portabilityIssue}
-        notice={state.context.portabilityNotice}
-        preview={state.context.pendingImport?.preview ?? null}
-        resetReview={state.context.pendingResetReview}
-        onCancelImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
-        }
-        onCancelReset={() =>
-          send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
-        }
-        onChooseBackup={() => void chooseBackup("data-management")}
-        onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
-        onConfirmImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
-        }
-        onConfirmReset={handleResetConfirmed}
-        onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
-        onRequestReset={handleResetRequested}
-      />
+      <View className="flex-1">
+        <NativeDataManagement
+          activity={activity}
+          customValueCount={battleProfile.activeDeck.customValues.length}
+          isNavigationPending={isBackgroundCheckpointing}
+          issue={state.context.portabilityIssue}
+          notice={state.context.portabilityNotice}
+          preview={state.context.pendingImport?.preview ?? null}
+          resetReview={state.context.pendingResetReview}
+          onCancelImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+          }
+          onCancelReset={() =>
+            send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+          }
+          onChooseBackup={() => void chooseBackup("data-management")}
+          onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
+          onConfirmImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+          }
+          onConfirmReset={handleResetConfirmed}
+          onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onRequestReset={handleResetRequested}
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </View>
     )
   }
 
