@@ -1,5 +1,6 @@
 "use client"
 
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import type {
   PlayerDataResetKind,
@@ -35,6 +36,7 @@ export default function DataManagement({
   onConfirmReset,
   onExport,
   onImportFile,
+  onOpenMenu,
   onRequestReset,
 }: {
   activity: DataManagementActivity | null
@@ -50,6 +52,7 @@ export default function DataManagement({
   onConfirmReset: (review: PlayerDataResetReviewState) => void
   onExport: () => void
   onImportFile: (file: File) => void
+  onOpenMenu: () => void
   onRequestReset: (resetKind: PlayerDataResetKind) => void
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -60,6 +63,7 @@ export default function DataManagement({
   const resetActionFocusTargetIdRef = useRef<string | null>(null)
   const previousResetReviewRef = useRef(resetReview)
   const isBusy = activity !== null
+  const isNavigationBlocked = isBusy || preview !== null || resetReview !== null
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -111,14 +115,24 @@ export default function DataManagement({
         >
           {playerDataPortabilityCopy.screenTitle}
         </h1>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isBusy}
-          onClick={onClose}
-        >
-          Back to Your Values
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isNavigationBlocked}
+            onClick={onOpenMenu}
+          >
+            {PRODUCT_MENU_COPY.openAction}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isNavigationBlocked}
+            onClick={onClose}
+          >
+            Back to Your Values
+          </Button>
+        </div>
       </div>
 
       <div

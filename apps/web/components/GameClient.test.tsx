@@ -1,3 +1,4 @@
+import type { ProductMenuDestination } from "@game/data/src/ProductMenu"
 import * as AchievementPresentation from "@game/machines/src/AchievementPresentation"
 import { createInitialAchievementState } from "@game/machines/src/AchievementState"
 import {
@@ -148,6 +149,13 @@ async function createStoredGameClientProfile(schedulerSeed: string) {
     entries: Array.from(await store.readAll()),
     playerData,
   })
+}
+
+async function openProductMenuDestination(
+  destinationLabel: ProductMenuDestination["label"],
+) {
+  fireEvent.click(await screen.findByRole("button", { name: "Menu" }))
+  fireEvent.click(await screen.findByRole("button", { name: destinationLabel }))
 }
 
 describe("GameClient Integration", () => {
@@ -847,6 +855,80 @@ describe("GameClient Integration", () => {
     ).toHaveFocus()
   })
 
+  it("preserves the active pair while Menu resumes or routes through Browse All Values", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000065",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const initialChoiceNames = (
+      await screen.findAllByRole("button", {
+        name: /^Choose /,
+      })
+    ).map((button) => button.getAttribute("aria-label"))
+
+    fireEvent.keyDown(window, { key: "Escape" })
+    expect(await screen.findByRole("dialog", { name: "Menu" })).toBeVisible()
+    fireEvent.keyDown(window, { key: "1" })
+    fireEvent.click(screen.getByRole("button", { name: "Resume Battle" }))
+
+    expect(
+      screen
+        .getAllByRole("button", { name: /^Choose / })
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual(initialChoiceNames)
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }))
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Browse All Values" }),
+    )
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+
+    expect(
+      (await screen.findAllByRole("button", { name: /^Choose / })).map(
+        (button) => button.getAttribute("aria-label"),
+      ),
+    ).toEqual(initialChoiceNames)
+  })
+
+  it("routes the flat Menu between every shipped utility surface", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000066",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    await openProductMenuDestination("Achievements")
+    expect(
+      await screen.findByRole("heading", { name: "Achievements", level: 1 }),
+    ).toBeVisible()
+
+    await openProductMenuDestination("Import & Export")
+    expect(
+      await screen.findByRole("heading", {
+        name: "Import & Export",
+        level: 1,
+      }),
+    ).toBeVisible()
+
+    await openProductMenuDestination("Browse All Values")
+    expect(
+      await screen.findByRole("heading", { name: "All Values", level: 1 }),
+    ).toBeVisible()
+
+    await openProductMenuDestination("Custom Values")
+    expect(
+      await screen.findByRole("form", { name: "Add Custom Value" }),
+    ).toBeVisible()
+  })
+
   it("opens the complete live achievement catalog and restores focus to its Hub action", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000054",
@@ -854,7 +936,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(await screen.findByRole("button", { name: "Achievements" }))
+    await openProductMenuDestination("Achievements")
 
     expect(
       await screen.findByRole("heading", { name: "Achievements", level: 1 }),
@@ -865,9 +947,7 @@ describe("GameClient Integration", () => {
     expect(screen.getByText("Reach Level 100")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "Back to Your Values" }))
-    expect(
-      await screen.findByRole("button", { name: "Achievements" }),
-    ).toHaveFocus()
+    expect(await screen.findByRole("button", { name: "Menu" })).toHaveFocus()
 
     fireEvent.click(screen.getByRole("button", { name: "Battle" }))
     const winnerCard = (await screen.findByText("[1 / A]")).closest("button")
@@ -877,7 +957,7 @@ describe("GameClient Integration", () => {
       expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
     )
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
-    fireEvent.click(await screen.findByRole("button", { name: "Achievements" }))
+    await openProductMenuDestination("Achievements")
 
     expect(await screen.findByText("1 of 40 unlocked")).toBeVisible()
     const firstBattle = screen.getAllByRole("listitem")[0]!
@@ -1129,9 +1209,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
 
     expect(
@@ -1145,9 +1223,7 @@ describe("GameClient Integration", () => {
     expect(
       await screen.findByRole("heading", { name: "Your Values", level: 1 }),
     ).toBeVisible()
-    expect(
-      screen.getByRole("button", { name: "Import & Export" }),
-    ).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Menu" })).toHaveFocus()
   })
 
   it("previews and restores a complete local backup before returning to Hub", async () => {
@@ -1187,9 +1263,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
       target: { files: [backupFile] },
     })
@@ -1226,9 +1300,7 @@ describe("GameClient Integration", () => {
       }),
     ).toBeVisible()
     expect(screen.getAllByRole("listitem")).toHaveLength(101)
-    expect(
-      screen.getByRole("button", { name: "Import & Export" }),
-    ).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Menu" })).toHaveFocus()
   })
 
   it("reports browser backup delivery failure without leaving private bytes pending", async () => {
@@ -1241,9 +1313,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -1262,9 +1332,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
       target: { files: [invalidBackup] },
     })
@@ -1293,9 +1361,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.change(screen.getByLabelText("Choose WAYVM JSON backup"), {
       target: { files: [unreadableBackup] },
     })
@@ -1325,9 +1391,7 @@ describe("GameClient Integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save Value" }))
     expect(await screen.findByText("101 Active Values")).toBeVisible()
     fireEvent.click(screen.getByRole("button", { name: "Close" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
 
     fireEvent.click(
       screen.getByRole("button", { name: "Delete All Custom Values" }),
@@ -1389,7 +1453,7 @@ describe("GameClient Integration", () => {
     )
     fireEvent.click(screen.getByRole("button", { name: /Stop/ }))
     expect(await screen.findByText("Level 3")).toBeVisible()
-    fireEvent.click(screen.getByRole("button", { name: "Import & Export" }))
+    await openProductMenuDestination("Import & Export")
 
     fireEvent.click(
       screen.getByRole("button", { name: "Reset Levels & Experience" }),
@@ -1428,9 +1492,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
     expect(
       await screen.findByRole("heading", { name: "Reset Achievements?" }),
@@ -1462,9 +1524,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
     expect(
       await screen.findByRole("heading", { name: "Reset Achievements?" }),
@@ -1490,9 +1550,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
     expect(
       await screen.findByRole("heading", { name: "Reset Achievements?" }),
@@ -1527,9 +1585,7 @@ describe("GameClient Integration", () => {
 
     render(<GameClient />)
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Import & Export" }),
-    )
+    await openProductMenuDestination("Import & Export")
     fireEvent.click(screen.getByRole("button", { name: "Delete All Data" }))
 
     expect(

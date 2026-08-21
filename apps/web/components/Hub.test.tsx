@@ -25,8 +25,7 @@ describe("Hub Component Integration", () => {
         dataNotice={null}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
-        onOpenAchievements={vi.fn()}
-        onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -53,8 +52,7 @@ describe("Hub Component Integration", () => {
         dataNotice={null}
         onBrowseAllValues={vi.fn()}
         onAddCustomValue={vi.fn()}
-        onOpenAchievements={vi.fn()}
-        onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={vi.fn()}
         onStartBattle={vi.fn()}
       />,
@@ -68,11 +66,25 @@ describe("Hub Component Integration", () => {
     expect(
       screen.getByRole("button", { name: "Add Custom Value" }),
     ).toBeVisible()
-    expect(screen.getByRole("button", { name: "Achievements" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Menu" })).toBeVisible()
     expect(
-      screen.getByRole("button", { name: "Import & Export" }),
-    ).toBeVisible()
+      screen.queryByRole("button", { name: "Achievements" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Import & Export" }),
+    ).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Battle" })).toBeVisible()
+    const valueActions = screen.getByRole("navigation", {
+      name: "Value actions",
+    })
+    expect(
+      within(valueActions)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Battle", "Browse All Values", "Add Custom Value"])
+    expect(
+      within(valueActions).queryByRole("button", { name: "Menu" }),
+    ).not.toBeInTheDocument()
   })
 
   it("renders the earned Top Five and full ranked list after a comparison", () => {
@@ -105,8 +117,7 @@ describe("Hub Component Integration", () => {
         dataNotice={null}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
-        onOpenAchievements={vi.fn()}
-        onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -126,8 +137,7 @@ describe("Hub Component Integration", () => {
   it("routes action and row presses with stable focus target identifiers", () => {
     const onBrowseAllValues = vi.fn()
     const onAddCustomValue = vi.fn()
-    const onOpenAchievements = vi.fn()
-    const onOpenDataManagement = vi.fn()
+    const onOpenMenu = vi.fn()
     const onOpenValue = vi.fn()
     const battleCycle = createInitialBattleCycle("action-hub-seed")
 
@@ -140,8 +150,7 @@ describe("Hub Component Integration", () => {
         dataNotice={null}
         onBrowseAllValues={onBrowseAllValues}
         onAddCustomValue={onAddCustomValue}
-        onOpenAchievements={onOpenAchievements}
-        onOpenDataManagement={onOpenDataManagement}
+        onOpenMenu={onOpenMenu}
         onOpenValue={onOpenValue}
         onStartBattle={vi.fn()}
       />,
@@ -149,8 +158,7 @@ describe("Hub Component Integration", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Browse All Values" }))
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
-    fireEvent.click(screen.getByRole("button", { name: "Achievements" }))
-    fireEvent.click(screen.getByRole("button", { name: "Import & Export" }))
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }))
     fireEvent.click(
       screen.getByRole("button", { name: "Open Acceptance in All Values" }),
     )
@@ -159,10 +167,7 @@ describe("Hub Component Integration", () => {
       "hub-browse-all-values-button",
     )
     expect(onAddCustomValue).toHaveBeenCalledWith("hub-add-custom-value-button")
-    expect(onOpenAchievements).toHaveBeenCalledWith("hub-achievements-button")
-    expect(onOpenDataManagement).toHaveBeenCalledWith(
-      "hub-import-export-button",
-    )
+    expect(onOpenMenu).toHaveBeenCalledOnce()
     expect(onOpenValue).toHaveBeenCalledWith(
       "pvcs-2011:acceptance",
       "hub-value-pvcs-2011:acceptance-button",
@@ -181,8 +186,7 @@ describe("Hub Component Integration", () => {
         dataNotice="Backup restored. Your imported progress is ready."
         onBrowseAllValues={vi.fn()}
         onAddCustomValue={vi.fn()}
-        onOpenAchievements={vi.fn()}
-        onOpenDataManagement={vi.fn()}
+        onOpenMenu={vi.fn()}
         onOpenValue={vi.fn()}
         onStartBattle={vi.fn()}
       />,

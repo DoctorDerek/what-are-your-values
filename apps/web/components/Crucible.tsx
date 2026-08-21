@@ -25,9 +25,11 @@ export default function Crucible({
   canUndo,
   canRedo,
   isAchievementAcknowledgementPending,
+  isMenuOpen,
   isPersistencePending,
   onAchievementPresented,
   onExit,
+  onOpenMenu,
   onUndo,
   onRedo,
   onWinnerSelected,
@@ -39,9 +41,11 @@ export default function Crucible({
   canUndo: boolean
   canRedo: boolean
   isAchievementAcknowledgementPending: boolean
+  isMenuOpen: boolean
   isPersistencePending: boolean
   onAchievementPresented: (achievementId: AchievementPresentation["id"]) => void
   onExit: () => void
+  onOpenMenu: () => void
   onUndo: () => void
   onRedo: () => void
   onWinnerSelected: (
@@ -80,7 +84,7 @@ export default function Crucible({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isInteractive || !currentPair) return
+      if (!isInteractive || !currentPair || isMenuOpen) return
 
       const normalizedKey = e.key.toLowerCase()
       const isUndoCommand = normalizedKey === "z" && !e.shiftKey
@@ -101,7 +105,8 @@ export default function Crucible({
         e.preventDefault()
         handleSelect(currentPair[1])
       } else if (e.key === "Escape") {
-        onExit()
+        e.preventDefault()
+        onOpenMenu()
       } else if (e.key === "Enter" || e.key === " ") {
         if (focusedId) {
           e.preventDefault()
@@ -122,12 +127,13 @@ export default function Crucible({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [
     isInteractive,
+    isMenuOpen,
     currentPair,
     focusedId,
     canUndo,
     canRedo,
     send,
-    onExit,
+    onOpenMenu,
     onUndo,
     onRedo,
     handleSelect,
@@ -170,9 +176,11 @@ export default function Crucible({
     >
       <div className="pointer-events-none relative z-50 flex shrink-0 flex-col items-center">
         <BattleActionBar
+          canOpenMenu={isInteractive}
           canUndo={isInteractive && canUndo}
           canRedo={isInteractive && canRedo}
           canStop={isInteractive}
+          onOpenMenu={onOpenMenu}
           onUndo={onUndo}
           onRedo={onRedo}
           onStop={onExit}

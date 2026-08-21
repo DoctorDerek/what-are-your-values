@@ -1,5 +1,9 @@
 "use client"
 
+import {
+  PRODUCT_MENU_COPY,
+  type ProductMenuDestinationId,
+} from "@game/data/src/ProductMenu"
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
@@ -25,6 +29,7 @@ import { rootMachine } from "@game/machines/src/RootMachine"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import ProductMenu from "@/components/ProductMenu"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
 import {
   downloadPlayerDataFile,
@@ -37,7 +42,7 @@ import Achievements from "./Achievements"
 import AllValues from "./AllValues"
 import Crucible from "./Crucible"
 import DataManagement, { type DataManagementActivity } from "./DataManagement"
-import Hub from "./Hub"
+import Hub, { HUB_MENU_BUTTON_ID } from "./Hub"
 import PlayerDataLoading from "./PlayerDataLoading"
 import PlayerDataRecovery, {
   type PlayerDataRecoveryActivity,
@@ -118,11 +123,14 @@ function WritableGameClient({
     useState<ValueId | null>(null)
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
     useState(false)
+  const [customValueBuilderRequestId, setCustomValueBuilderRequestId] =
+    useState(0)
   const shouldRestoreHubFocusRef = useRef(false)
   const deliveredDownloadsRef = useRef(new WeakSet<object>())
   const [isReadingImportFile, setIsReadingImportFile] = useState(false)
   const [isReadingRecoveryImportFile, setIsReadingRecoveryImportFile] =
     useState(false)
+  const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
   const playerData = state.context.playerData
   const battleProfile = playerData?.profile ?? null
   const rankedValues = useMemo(
@@ -189,6 +197,8 @@ function WritableGameClient({
       returnFocusTargetIdRef.current = focusTargetId
       setPendingAllValuesValueId(valueId ?? null)
       setShouldOpenCustomValueBuilder(openCustomValueBuilder === true)
+      if (openCustomValueBuilder)
+        setCustomValueBuilderRequestId((requestId) => requestId + 1)
       shouldRestoreHubFocusRef.current = true
       send({ type: "ALL_VALUES.OPEN_REQUESTED" })
     },
@@ -231,6 +241,32 @@ function WritableGameClient({
       send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
     },
     [send],
+  )
+  const handleProductMenuDestinationSelect = useCallback(
+    (destinationId: ProductMenuDestinationId) => {
+      setIsProductMenuOpen(false)
+      if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (state.matches("Achievements"))
+        send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
+      if (state.matches("DataManagement"))
+        send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })
+      if (state.matches("AllValues"))
+        send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
+      const destinationActions = {
+        "browse-all-values": () =>
+          openAllValues({ focusTargetId: HUB_MENU_BUTTON_ID }),
+        "custom-values": () =>
+          openAllValues({
+            focusTargetId: HUB_MENU_BUTTON_ID,
+            openCustomValueBuilder: true,
+          }),
+        achievements: () => openAchievements(HUB_MENU_BUTTON_ID),
+        "import-export": () => openDataManagement(HUB_MENU_BUTTON_ID),
+      } satisfies Record<ProductMenuDestinationId, () => void>
+
+      destinationActions[destinationId]()
+    },
+    [openAchievements, openAllValues, openDataManagement, send, state],
   )
   const handleAchievementPresented = useCallback(
     (achievementId: AchievementPresentation["id"]) => {
@@ -532,12 +568,17 @@ function WritableGameClient({
           onAddCustomValue={(focusTargetId) =>
             openAllValues({ focusTargetId, openCustomValueBuilder: true })
           }
-          onOpenAchievements={openAchievements}
-          onOpenDataManagement={openDataManagement}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
           onOpenValue={(valueId, focusTargetId) =>
             openAllValues({ focusTargetId, valueId })
           }
           onStartBattle={() => send({ type: "BATTLE.START_REQUESTED" })}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </>
@@ -549,7 +590,15 @@ function WritableGameClient({
       <>
         <Achievements
           achievements={achievementPresentations}
+          canOpenMenu={!isRecordingAchievementPresentation}
           onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
         />
         {achievementBanner}
       </>
@@ -558,47 +607,66 @@ function WritableGameClient({
 
   if (state.matches("DataManagement")) {
     return (
-      <DataManagement
-        activity={dataManagementActivity}
-        customValueCount={battleProfile.activeDeck.customValues.length}
-        issue={state.context.portabilityIssue}
-        notice={state.context.portabilityNotice}
-        preview={state.context.pendingImport?.preview ?? null}
-        resetReview={state.context.pendingResetReview}
-        onCancelImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
-        }
-        onCancelReset={() =>
-          send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
-        }
-        onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
-        onConfirmImport={() =>
-          send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
-        }
-        onConfirmReset={handleResetConfirmed}
-        onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
-        onImportFile={(file) => void handleImportFile(file)}
-        onRequestReset={handleResetRequested}
-      />
+      <>
+        <DataManagement
+          activity={dataManagementActivity}
+          customValueCount={battleProfile.activeDeck.customValues.length}
+          issue={state.context.portabilityIssue}
+          notice={state.context.portabilityNotice}
+          preview={state.context.pendingImport?.preview ?? null}
+          resetReview={state.context.pendingResetReview}
+          onCancelImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CANCEL_REQUESTED" })
+          }
+          onCancelReset={() =>
+            send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+          }
+          onClose={() => send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })}
+          onConfirmImport={() =>
+            send({ type: "DATA_MANAGEMENT.IMPORT_CONFIRM_REQUESTED" })
+          }
+          onConfirmReset={handleResetConfirmed}
+          onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+          onImportFile={(file) => void handleImportFile(file)}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onRequestReset={handleResetRequested}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </>
     )
   }
 
   if (state.matches("AllValues")) {
     return (
-      <AllValues
-        key={battleProfile.scheduler.deckRevision}
-        rankedValues={rankedValues}
-        initialValueId={pendingAllValuesValueId}
-        openCustomValueBuilder={shouldOpenCustomValueBuilder}
-        isPersistencePending={state.matches({ AllValues: "Persisting" })}
-        persistenceIssue={state.context.persistenceIssue}
-        onClose={handleAllValuesClose}
-        onAddCustomValue={handleAddCustomValue}
-        onUpdateCustomValue={handleUpdateCustomValue}
-        onDeleteCustomValue={(valueId) =>
-          send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
-        }
-      />
+      <>
+        <AllValues
+          key={`${battleProfile.scheduler.deckRevision}:${customValueBuilderRequestId}`}
+          rankedValues={rankedValues}
+          initialValueId={pendingAllValuesValueId}
+          openCustomValueBuilder={shouldOpenCustomValueBuilder}
+          isMenuOpen={isProductMenuOpen}
+          isPersistencePending={state.matches({ AllValues: "Persisting" })}
+          persistenceIssue={state.context.persistenceIssue}
+          onClose={handleAllValuesClose}
+          onAddCustomValue={handleAddCustomValue}
+          onUpdateCustomValue={handleUpdateCustomValue}
+          onDeleteCustomValue={(valueId) =>
+            send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
+          }
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </>
     )
   }
 
@@ -606,21 +674,33 @@ function WritableGameClient({
     const isBattleReady = state.matches({ Crucible: "Ready" })
 
     return (
-      <Crucible
-        activeDeck={battleProfile.activeDeck}
-        achievement={pendingAchievementPresentation}
-        battle={presentedBattle}
-        progressById={battleProfile.progressById}
-        canUndo={battleProfile.history.length > 0}
-        canRedo={battleProfile.redo.length > 0}
-        isAchievementAcknowledgementPending={isRecordingAchievementPresentation}
-        isPersistencePending={!isBattleReady}
-        onAchievementPresented={handleAchievementPresented}
-        onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
-        onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
-        onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
-        onWinnerSelected={handleWinnerSelected}
-      />
+      <>
+        <Crucible
+          activeDeck={battleProfile.activeDeck}
+          achievement={pendingAchievementPresentation}
+          battle={presentedBattle}
+          progressById={battleProfile.progressById}
+          canUndo={battleProfile.history.length > 0}
+          canRedo={battleProfile.redo.length > 0}
+          isAchievementAcknowledgementPending={
+            isRecordingAchievementPresentation
+          }
+          isMenuOpen={isProductMenuOpen}
+          isPersistencePending={!isBattleReady}
+          onAchievementPresented={handleAchievementPresented}
+          onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
+          onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
+          onWinnerSelected={handleWinnerSelected}
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.resumeBattleAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+      </>
     )
   }
 

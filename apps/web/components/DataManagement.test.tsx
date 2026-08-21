@@ -44,6 +44,7 @@ function renderDataManagement(
     onConfirmReset: vi.fn(),
     onExport: vi.fn(),
     onImportFile: vi.fn(),
+    onOpenMenu: vi.fn(),
     onRequestReset: vi.fn(),
     ...overrides,
   } satisfies Parameters<typeof DataManagement>[0]
@@ -118,6 +119,7 @@ describe("Data Management", () => {
           onConfirmReset={vi.fn()}
           onExport={vi.fn()}
           onImportFile={vi.fn()}
+          onOpenMenu={vi.fn()}
           onRequestReset={vi.fn()}
         />
       )
@@ -151,12 +153,17 @@ describe("Data Management", () => {
     expect(
       screen.getByRole("button", { name: "Back to Your Values" }),
     ).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled()
   })
 
   it("shows the reviewed backup without leaving import and export scope", () => {
     const props = renderDataManagement({ preview })
 
     expect(screen.getByRole("heading", { name: "Review Import" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Back to Your Values" }),
+    ).toBeDisabled()
     fireEvent.click(screen.getByRole("button", { name: "Import & Replace" }))
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
     expect(props.onConfirmImport).toHaveBeenCalledOnce()
@@ -190,6 +197,7 @@ describe("Data Management", () => {
           }}
           onExport={vi.fn()}
           onImportFile={vi.fn()}
+          onOpenMenu={vi.fn()}
           onRequestReset={(resetKind) => {
             setNotice(null)
             setResetReview({
@@ -211,6 +219,10 @@ describe("Data Management", () => {
         screen.getByRole("heading", { name: "Reset Achievements?" }),
       ).toHaveFocus(),
     )
+    expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Back to Your Values" }),
+    ).toBeDisabled()
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
     await waitFor(() =>
       expect(

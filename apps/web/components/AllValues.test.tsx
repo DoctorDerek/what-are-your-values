@@ -38,7 +38,9 @@ function renderAllValues(
   return render(
     <AllValues
       rankedValues={rankedValues}
+      isMenuOpen={false}
       onClose={vi.fn()}
+      onOpenMenu={vi.fn()}
       onAddCustomValue={vi.fn()}
       onUpdateCustomValue={vi.fn()}
       onDeleteCustomValue={vi.fn()}
@@ -145,6 +147,7 @@ describe("All Values Component Integration", () => {
     })
 
     expect(screen.getByRole("button", { name: "Close" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled()
     expect(
       screen.getByRole("button", { name: "Close Custom Value Form" }),
     ).toBeDisabled()
@@ -158,13 +161,18 @@ describe("All Values Component Integration", () => {
 
   it("keeps an incomplete add draft open without submitting it", () => {
     const onAddCustomValue = vi.fn()
+    const onClose = vi.fn()
 
-    renderAllValues(undefined, { onAddCustomValue })
+    renderAllValues(undefined, { onAddCustomValue, onClose })
 
     fireEvent.click(screen.getByRole("button", { name: "Add Custom Value" }))
     fireEvent.submit(screen.getByRole("form", { name: "Add Custom Value" }))
+    fireEvent.keyDown(window, { key: "Escape" })
 
     expect(onAddCustomValue).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled()
     expect(screen.getByRole("form", { name: "Add Custom Value" })).toBeVisible()
   })
 

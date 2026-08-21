@@ -1,11 +1,14 @@
 "use client"
 
 import { projectHubValues } from "@game/data/src/HubValueProjection"
+import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import { getValueDisplayName, type ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import type { Ref } from "react"
 import { Button } from "@/components/ui/button"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
+
+export const HUB_MENU_BUTTON_ID = "hub-menu-button"
 
 function ValueRow({
   rankedValue,
@@ -54,21 +57,17 @@ function ValueActionRail({
   browseAllValuesButtonRef,
   onBrowseAllValues,
   onAddCustomValue,
-  onOpenAchievements,
-  onOpenDataManagement,
   onStartBattle,
 }: {
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
-  onOpenAchievements: (focusTargetId: string) => void
-  onOpenDataManagement: (focusTargetId: string) => void
   onStartBattle: () => void
 }) {
   return (
     <nav
       aria-label="Value actions"
-      className="mt-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5"
+      className="mt-6 grid w-full grid-cols-1 gap-4 xl:grid-cols-3"
     >
       <button
         type="button"
@@ -94,24 +93,6 @@ function ValueActionRail({
       >
         Add Custom Value
       </button>
-      <button
-        id="hub-achievements-button"
-        type="button"
-        onClick={(event) => onOpenAchievements(event.currentTarget.id)}
-        className="bg-mapache-vivid-secondary-gold text-mapache-vivid-black min-h-16 flex-1 cursor-pointer border-4 border-black px-5 py-5 text-2xl font-black uppercase shadow-[8px_8px_0px_0px_#000000] transition-transform hover:-translate-y-1 hover:shadow-[10px_10px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black active:translate-x-[8px] active:translate-y-[8px] active:shadow-none"
-      >
-        Achievements
-      </button>
-      <Button
-        id="hub-import-export-button"
-        type="button"
-        variant="outline"
-        size="lg"
-        onClick={(event) => onOpenDataManagement(event.currentTarget.id)}
-        className="h-full min-h-16 w-full whitespace-normal"
-      >
-        Import &amp; Export
-      </Button>
     </nav>
   )
 }
@@ -122,8 +103,7 @@ export default function Hub({
   dataNotice,
   onBrowseAllValues,
   onAddCustomValue,
-  onOpenAchievements,
-  onOpenDataManagement,
+  onOpenMenu,
   onOpenValue,
   onStartBattle,
 }: {
@@ -132,8 +112,7 @@ export default function Hub({
   dataNotice: string | null
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
-  onOpenAchievements: (focusTargetId: string) => void
-  onOpenDataManagement: (focusTargetId: string) => void
+  onOpenMenu: () => void
   onOpenValue: (valueId: ValueId, focusTargetId: string) => void
   onStartBattle: () => void
 }) {
@@ -142,6 +121,18 @@ export default function Hub({
 
   return (
     <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 sm:p-8">
+      <div className="flex w-full max-w-7xl justify-end">
+        <Button
+          id={HUB_MENU_BUTTON_ID}
+          type="button"
+          variant="secondary"
+          size="lg"
+          onClick={onOpenMenu}
+        >
+          {PRODUCT_MENU_COPY.openAction}
+        </Button>
+      </div>
+
       <h1 className="text-mapache-vivid-primary-cyan mt-8 mb-8 text-center text-5xl font-black uppercase drop-shadow-[6px_6px_0px_#000000] lg:text-7xl">
         Your Values
       </h1>
@@ -197,8 +188,6 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
-              onOpenAchievements={onOpenAchievements}
-              onOpenDataManagement={onOpenDataManagement}
               onStartBattle={onStartBattle}
             />
             <div className="bg-mapache-vivid-primary-cyan border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
@@ -226,8 +215,6 @@ export default function Hub({
               browseAllValuesButtonRef={browseAllValuesButtonRef}
               onBrowseAllValues={onBrowseAllValues}
               onAddCustomValue={onAddCustomValue}
-              onOpenAchievements={onOpenAchievements}
-              onOpenDataManagement={onOpenDataManagement}
               onStartBattle={onStartBattle}
             />
             <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2">
