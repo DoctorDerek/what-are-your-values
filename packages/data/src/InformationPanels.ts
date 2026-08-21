@@ -223,3 +223,84 @@ export const WHY_I_MADE_THIS_GAME_INFORMATION_PANEL = Object.freeze({
     }),
   ]),
 } as const satisfies InformationPanelDefinition)
+
+export const FREE_RESOURCES_INFORMATION_PANEL = Object.freeze({
+  id: "free-resources",
+  title: "Free Resources",
+  accessibleCloseLabel: "Close Free Resources",
+  primaryActionLabel: "Close",
+  blocks: Object.freeze([
+    Object.freeze({
+      kind: "lead",
+      text: "Want to explore values, meaning, freedom, action, or practice more deeply? These independent resources are free to access.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "WAYVM is a self-reflection game, not therapy or medical advice. The organizations and authors below do not endorse or sponsor this game. These perspectives are not interchangeable, and inclusion does not imply that one tradition agrees with another.",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "External links require internet access and are governed by each destination’s privacy and accessibility practices.",
+    }),
+    Object.freeze({
+      kind: "resource",
+      title: "Doing What Matters in Times of Stress",
+      description:
+        "A free illustrated World Health Organization guide for coping with adversity through practical stress-management skills, including acting on values.",
+      actionLabel: "Open WHO Resource",
+      url: "https://www.who.int/europe/publications/i/item/9789240003910",
+    }),
+    Object.freeze({
+      kind: "resource",
+      title: "Acceptance and Commitment Therapy Values Resources",
+      description:
+        "Explore independent values-clarification tools and information from the Association for Contextual Behavioral Science.",
+      actionLabel: "Open ACT Resource",
+      url: "https://contextualscience.org/values_list_interactive_tool",
+    }),
+    Object.freeze({
+      kind: "resource",
+      title: "Personal Values Card Sort — 2011 Update",
+      description:
+        "Read the public-domain source for the 100 included values and definitions, the three-to-five-pile procedure, the final five-to-ten ranking, and the three blank “Other Value” cards adapted by WAYVM.",
+      actionLabel: "Open the Personal Values Card Sort",
+      url: "https://www.guilford.com/add/miller11_old/pers_val.pdf?t=1",
+    }),
+    Object.freeze({
+      kind: "resource",
+      title: "Viktor Frankl Institute Vienna",
+      description:
+        "Find authentic information about Viktor Frankl, logotherapy, existential analysis, and meaning-oriented work.",
+      actionLabel: "Visit the Viktor Frankl Institute",
+      url: "https://www.viktorfrankl.org/institute_agendaE.html",
+    }),
+    Object.freeze({
+      kind: "resource",
+      title: "Erich Fromm Online",
+      description:
+        "Explore the official website for Erich Fromm’s life and work, including material about freedom, humanism, authenticity, and conformity.",
+      actionLabel: "Visit Erich Fromm Online",
+      url: "https://fromm-online.org/en/",
+    }),
+    Object.freeze({
+      kind: "resource",
+      title: "Bruce Lee Foundation: Jeet Kune Do",
+      description:
+        "Explore Bruce Lee’s emphasis on simplicity, directness, freedom, honest self-expression, and learning from experience.",
+      actionLabel: "Visit the Bruce Lee Foundation",
+      url: "https://bruceleefoundation.org/jeetkunedo/",
+    }),
+    Object.freeze({
+      kind: "resource",
+      title: "The Noble Eightfold Path",
+      description:
+        "Read Bhikkhu Bodhi’s free introduction to the Buddhist path of understanding, intention, speech, action, livelihood, effort, mindfulness, and concentration.",
+      actionLabel: "Read the Free Guide",
+      url: "https://www.accesstoinsight.org/lib/authors/bodhi/waytoend.html",
+    }),
+    Object.freeze({
+      kind: "paragraph",
+      text: "Take what is useful, examine it carefully, and choose your own next step.",
+    }),
+  ]),
+} as const satisfies InformationPanelDefinition)
