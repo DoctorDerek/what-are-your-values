@@ -31,14 +31,13 @@ function InformationPanelFrame({
 
   return (
     <section
-      aria-labelledby={titleId}
+      aria-label={dialogTitle ? title : undefined}
+      aria-labelledby={dialogTitle ? undefined : titleId}
       className="grid min-h-0 w-full max-w-4xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-4 border-black bg-white shadow-[12px_12px_0px_0px_#000000]"
     >
       <header className="relative border-b-4 border-black px-5 py-5 sm:px-10 sm:py-7">
         {dialogTitle ? (
-          <DialogTitle id={titleId} className={titleClassName}>
-            {title}
-          </DialogTitle>
+          <DialogTitle className={titleClassName}>{title}</DialogTitle>
         ) : (
           <h1 id={titleId} className={titleClassName}>
             {title}
