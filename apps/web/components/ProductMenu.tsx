@@ -3,7 +3,7 @@
 import {
   PRODUCT_MENU_COPY,
   PRODUCT_MENU_DESTINATIONS,
-  type ProductMenuDestinationId,
+  type ProductMenuDestination,
 } from "@game/data/src/ProductMenu"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -18,7 +18,7 @@ export default function ProductMenu({
     | typeof PRODUCT_MENU_COPY.closeAction
     | typeof PRODUCT_MENU_COPY.resumeBattleAction
   open: boolean
-  onDestinationSelect: (destinationId: ProductMenuDestinationId) => void
+  onDestinationSelect: (destination: ProductMenuDestination) => void
   onOpenChange: (open: boolean) => void
 }) {
   return (
@@ -54,7 +54,7 @@ export default function ProductMenu({
                   variant="outline"
                   size="lg"
                   className="w-full justify-start text-left text-xl whitespace-normal xl:text-2xl"
-                  onClick={() => onDestinationSelect(destination.id)}
+                  onClick={() => onDestinationSelect(destination)}
                 >
                   {destination.label}
                 </Button>

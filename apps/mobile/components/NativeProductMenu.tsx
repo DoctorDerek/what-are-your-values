@@ -1,7 +1,7 @@
 import {
   PRODUCT_MENU_COPY,
   PRODUCT_MENU_DESTINATIONS,
-  type ProductMenuDestinationId,
+  type ProductMenuDestination,
 } from "@game/data/src/ProductMenu"
 import { Modal, ScrollView, View } from "react-native"
 import MapacheScreen from "@/components/MapacheScreen"
@@ -18,9 +18,7 @@ export default function NativeProductMenu({
     | typeof PRODUCT_MENU_COPY.closeAction
     | typeof PRODUCT_MENU_COPY.resumeBattleAction
   readonly open: boolean
-  readonly onDestinationSelect: (
-    destinationId: ProductMenuDestinationId,
-  ) => void
+  readonly onDestinationSelect: (destination: ProductMenuDestination) => void
   readonly onOpenChange: (open: boolean) => void
 }) {
   return (
@@ -60,7 +58,7 @@ export default function NativeProductMenu({
               key={destination.id}
               size="large"
               variant="outline"
-              onPress={() => onDestinationSelect(destination.id)}
+              onPress={() => onDestinationSelect(destination)}
             >
               <Text className="text-left">{destination.label}</Text>
             </Button>

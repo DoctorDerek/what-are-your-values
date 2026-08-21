@@ -1,8 +1,13 @@
 "use client"
 
 import {
+  INFORMATION_PANELS,
+  type InformationPanelId,
+} from "@game/data/src/InformationPanels"
+import {
   PRODUCT_MENU_COPY,
-  type ProductMenuDestinationId,
+  type ProductMenuDestination,
+  type ProductMenuRouteDestination,
 } from "@game/data/src/ProductMenu"
 import type { CustomValueId, ValueId } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
@@ -29,6 +34,8 @@ import { rootMachine } from "@game/machines/src/RootMachine"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ReopenedInformationPanel } from "@/components/InformationPanel"
+import InformationPanelContent from "@/components/InformationPanelContent"
 import ProductMenu from "@/components/ProductMenu"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
 import {
@@ -131,6 +138,9 @@ function WritableGameClient({
   const [isReadingRecoveryImportFile, setIsReadingRecoveryImportFile] =
     useState(false)
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
+  const [activeInformationPanelId, setActiveInformationPanelId] =
+    useState<InformationPanelId | null>(null)
+  const productMenuReturnFocusTargetRef = useRef<HTMLElement | null>(null)
   const playerData = state.context.playerData
   const battleProfile = playerData?.profile ?? null
   const rankedValues = useMemo(
@@ -242,9 +252,27 @@ function WritableGameClient({
     },
     [send],
   )
+  const handleProductMenuOpen = useCallback(() => {
+    const activeElement = document.activeElement
+    productMenuReturnFocusTargetRef.current =
+      activeElement instanceof HTMLElement ? activeElement : null
+    setIsProductMenuOpen(true)
+  }, [])
+  const closeInformationPanel = useCallback(
+    () => setActiveInformationPanelId(null),
+    [],
+  )
+  const handleInformationPanelCloseAutoFocus = useCallback((event: Event) => {
+    event.preventDefault()
+    productMenuReturnFocusTargetRef.current?.focus()
+  }, [])
   const handleProductMenuDestinationSelect = useCallback(
-    (destinationId: ProductMenuDestinationId) => {
+    (destination: ProductMenuDestination) => {
       setIsProductMenuOpen(false)
+      if (destination.kind === "information-panel") {
+        setActiveInformationPanelId(destination.id)
+        return
+      }
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       if (state.matches("Achievements"))
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
@@ -262,9 +290,9 @@ function WritableGameClient({
           }),
         achievements: () => openAchievements(HUB_MENU_BUTTON_ID),
         "import-export": () => openDataManagement(HUB_MENU_BUTTON_ID),
-      } satisfies Record<ProductMenuDestinationId, () => void>
+      } satisfies Record<ProductMenuRouteDestination["id"], () => void>
 
-      destinationActions[destinationId]()
+      destinationActions[destination.id]()
     },
     [openAchievements, openAllValues, openDataManagement, send, state],
   )
@@ -542,6 +570,24 @@ function WritableGameClient({
       onPresented={handleAchievementPresented}
     />
   )
+  const activeInformationPanel = activeInformationPanelId
+    ? INFORMATION_PANELS[activeInformationPanelId]
+    : null
+  const reopenedInformationPanel = activeInformationPanel ? (
+    <ReopenedInformationPanel
+      accessibleCloseLabel={activeInformationPanel.accessibleCloseLabel}
+      open
+      primaryActionLabel={activeInformationPanel.primaryActionLabel}
+      title={activeInformationPanel.title}
+      onCloseAutoFocus={handleInformationPanelCloseAutoFocus}
+      onOpenChange={(open) => {
+        if (!open) closeInformationPanel()
+      }}
+      onPrimaryAction={closeInformationPanel}
+    >
+      <InformationPanelContent informationPanel={activeInformationPanel} />
+    </ReopenedInformationPanel>
+  ) : null
   const isHubSurface =
     state.matches("Hub") ||
     (isRecordingAchievementPresentation &&
@@ -568,7 +614,7 @@ function WritableGameClient({
           onAddCustomValue={(focusTargetId) =>
             openAllValues({ focusTargetId, openCustomValueBuilder: true })
           }
-          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onOpenMenu={handleProductMenuOpen}
           onOpenValue={(valueId, focusTargetId) =>
             openAllValues({ focusTargetId, valueId })
           }
@@ -580,6 +626,7 @@ function WritableGameClient({
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
         {achievementBanner}
       </>
     )
@@ -592,7 +639,7 @@ function WritableGameClient({
           achievements={achievementPresentations}
           canOpenMenu={!isRecordingAchievementPresentation}
           onClose={() => send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })}
-          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onOpenMenu={handleProductMenuOpen}
         />
         <ProductMenu
           contextActionLabel={PRODUCT_MENU_COPY.closeAction}
@@ -600,6 +647,7 @@ function WritableGameClient({
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
         {achievementBanner}
       </>
     )
@@ -628,7 +676,7 @@ function WritableGameClient({
           onConfirmReset={handleResetConfirmed}
           onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
           onImportFile={(file) => void handleImportFile(file)}
-          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onOpenMenu={handleProductMenuOpen}
           onRequestReset={handleResetRequested}
         />
         <ProductMenu
@@ -637,6 +685,7 @@ function WritableGameClient({
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
       </>
     )
   }
@@ -649,7 +698,7 @@ function WritableGameClient({
           rankedValues={rankedValues}
           initialValueId={pendingAllValuesValueId}
           openCustomValueBuilder={shouldOpenCustomValueBuilder}
-          isMenuOpen={isProductMenuOpen}
+          isMenuOpen={isProductMenuOpen || activeInformationPanelId !== null}
           isPersistencePending={state.matches({ AllValues: "Persisting" })}
           persistenceIssue={state.context.persistenceIssue}
           onClose={handleAllValuesClose}
@@ -658,7 +707,7 @@ function WritableGameClient({
           onDeleteCustomValue={(valueId) =>
             send({ type: "ALL_VALUES.DELETE_REQUESTED", valueId })
           }
-          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onOpenMenu={handleProductMenuOpen}
         />
         <ProductMenu
           contextActionLabel={PRODUCT_MENU_COPY.closeAction}
@@ -666,6 +715,7 @@ function WritableGameClient({
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
       </>
     )
   }
@@ -685,11 +735,11 @@ function WritableGameClient({
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }
-          isMenuOpen={isProductMenuOpen}
+          isMenuOpen={isProductMenuOpen || activeInformationPanelId !== null}
           isPersistencePending={!isBattleReady}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
-          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onOpenMenu={handleProductMenuOpen}
           onUndo={() => send({ type: "BATTLE.UNDO_REQUESTED" })}
           onRedo={() => send({ type: "BATTLE.REDO_REQUESTED" })}
           onWinnerSelected={handleWinnerSelected}
@@ -700,6 +750,7 @@ function WritableGameClient({
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
       </>
     )
   }
