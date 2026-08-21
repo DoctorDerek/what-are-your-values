@@ -22,6 +22,36 @@ describe("Product Menu", () => {
       { kind: "route", id: "custom-values", label: "Custom Values" },
       { kind: "route", id: "achievements", label: "Achievements" },
       { kind: "route", id: "import-export", label: "Import & Export" },
+      {
+        kind: "information-panel",
+        id: "introduction",
+        label: "Introduction",
+      },
+      {
+        kind: "information-panel",
+        id: "how-it-works",
+        label: "How It Works",
+      },
+      {
+        kind: "information-panel",
+        id: "why-values-matter",
+        label: "Why Values Matter",
+      },
+      {
+        kind: "information-panel",
+        id: "why-i-made-this-game",
+        label: "Why I Made This Game",
+      },
+      {
+        kind: "information-panel",
+        id: "free-resources",
+        label: "Free Resources",
+      },
+      {
+        kind: "information-panel",
+        id: "credits-privacy",
+        label: "Credits & Privacy",
+      },
     ])
     expect(new Set(PRODUCT_MENU_DESTINATIONS.map(({ id }) => id)).size).toBe(
       PRODUCT_MENU_DESTINATIONS.length,
@@ -38,12 +68,6 @@ describe("Product Menu", () => {
     const unavailableDestinationIds = [
       "settings",
       "controls",
-      "introduction",
-      "how-it-works",
-      "why-values-matter",
-      "why-i-made-this-game",
-      "free-resources",
-      "credits-privacy",
       "customize-avatar",
       "share-top-five",
       "platform-achievements",

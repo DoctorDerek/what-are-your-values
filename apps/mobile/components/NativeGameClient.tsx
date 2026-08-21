@@ -1,4 +1,8 @@
 import {
+  INFORMATION_PANELS,
+  type InformationPanelId,
+} from "@game/data/src/InformationPanels"
+import {
   PRODUCT_MENU_COPY,
   type ProductMenuDestination,
   type ProductMenuRouteDestination,
@@ -33,6 +37,8 @@ import NativeDataManagement, {
   type NativeDataManagementActivity,
 } from "@/components/NativeDataManagement"
 import NativeHub from "@/components/NativeHub"
+import { ReopenedNativeInformationPanel } from "@/components/NativeInformationPanel"
+import NativeInformationPanelContent from "@/components/NativeInformationPanelContent"
 import NativeIntroduction from "@/components/NativeIntroduction"
 import NativePersistenceFailure, {
   type NativePlayerDataRecoveryActivity,
@@ -55,6 +61,8 @@ const nativeRootMachineInput = Object.freeze({
 export default function NativeGameClient() {
   const [schedulerSeed] = useState(() => ExpoCrypto.randomUUID())
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
+  const [activeInformationPanelId, setActiveInformationPanelId] =
+    useState<InformationPanelId | null>(null)
   const [pendingAllValuesValueId, setPendingAllValuesValueId] =
     useState<ValueId | null>(null)
   const [shouldOpenCustomValueBuilder, setShouldOpenCustomValueBuilder] =
@@ -150,6 +158,10 @@ export default function NativeGameClient() {
   const handleProductMenuDestinationSelect = useCallback(
     (destination: ProductMenuDestination) => {
       setIsProductMenuOpen(false)
+      if (destination.kind === "information-panel") {
+        setActiveInformationPanelId(destination.id)
+        return
+      }
       if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
       if (state.matches("Achievements"))
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
@@ -167,6 +179,10 @@ export default function NativeGameClient() {
       destinationActions[destination.id]()
     },
     [openAllValues, send, state],
+  )
+  const closeInformationPanel = useCallback(
+    () => setActiveInformationPanelId(null),
+    [],
   )
   const handleUpdateCustomValue = useCallback(
     (valueId: CustomValueId, name: string, definition: string) => {
@@ -385,6 +401,25 @@ export default function NativeGameClient() {
       onPresented={handleAchievementPresented}
     />
   )
+  const activeInformationPanel = activeInformationPanelId
+    ? INFORMATION_PANELS[activeInformationPanelId]
+    : null
+  const reopenedInformationPanel = activeInformationPanel ? (
+    <ReopenedNativeInformationPanel
+      accessibleCloseLabel={activeInformationPanel.accessibleCloseLabel}
+      open
+      primaryActionLabel={activeInformationPanel.primaryActionLabel}
+      title={activeInformationPanel.title}
+      onOpenChange={(open) => {
+        if (!open) closeInformationPanel()
+      }}
+      onPrimaryAction={closeInformationPanel}
+    >
+      <NativeInformationPanelContent
+        informationPanel={activeInformationPanel}
+      />
+    </ReopenedNativeInformationPanel>
+  ) : null
 
   if (isHubSurface)
     return (
@@ -412,6 +447,7 @@ export default function NativeGameClient() {
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
         {achievementBanner}
       </View>
     )
@@ -431,6 +467,7 @@ export default function NativeGameClient() {
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
         {achievementBanner}
       </View>
     )
@@ -485,6 +522,7 @@ export default function NativeGameClient() {
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
       </View>
     )
   }
@@ -516,6 +554,7 @@ export default function NativeGameClient() {
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
       </View>
     )
 
@@ -534,7 +573,7 @@ export default function NativeGameClient() {
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }
-          isMenuOpen={isProductMenuOpen}
+          isMenuOpen={isProductMenuOpen || activeInformationPanelId !== null}
           isPersistencePending={!isBattleReady}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
@@ -549,6 +588,7 @@ export default function NativeGameClient() {
           onDestinationSelect={handleProductMenuDestinationSelect}
           onOpenChange={setIsProductMenuOpen}
         />
+        {reopenedInformationPanel}
       </View>
     )
   }

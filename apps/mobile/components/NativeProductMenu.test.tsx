@@ -40,6 +40,12 @@ describe("NativeProductMenu", () => {
       "Custom Values",
       "Achievements",
       "Import & Export",
+      "Introduction",
+      "How It Works",
+      "Why Values Matter",
+      "Why I Made This Game",
+      "Free Resources",
+      "Credits & Privacy",
     ]
     const actions = within(dialog).getAllByRole("button")
 
