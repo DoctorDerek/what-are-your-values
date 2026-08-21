@@ -226,7 +226,10 @@ export default function NativeGameClient() {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (appState) => {
       const event = createNativeAppLifecycleEvent(appState)
-      if (event) send(event)
+      if (event) {
+        setIsProductMenuOpen(false)
+        send(event)
+      }
     })
 
     return () => subscription.remove()
