@@ -81,6 +81,24 @@ describe("NativeGameClient Menu navigation", () => {
     const presentedChoiceNames = getPresentedChoiceNames()
     expect(presentedChoiceNames).toHaveLength(2)
 
+    await openMenuDestination(user, "Controls")
+    const controls = (await screen.findAllByLabelText("Controls")).find(
+      ({ props }) => props.role === "dialog",
+    )
+    if (!controls) throw new Error("The native Controls dialog is unavailable")
+    expect(
+      within(controls).getByText("Tap the first value card"),
+    ).toBeOnTheScreen()
+    getPresentedChoiceNames().forEach((choiceName) =>
+      expect(
+        screen.getByRole("button", { name: String(choiceName) }),
+      ).toBeDisabled(),
+    )
+    await user.press(
+      within(controls).getAllByRole("button", { name: "Close" })[1],
+    )
+    expect(getPresentedChoiceNames()).toEqual(presentedChoiceNames)
+
     await openMenuDestination(user, "How It Works")
     expect(await screen.findByLabelText("How It Works")).toBeOnTheScreen()
     expect(
@@ -96,5 +114,5 @@ describe("NativeGameClient Menu navigation", () => {
     )
 
     expect(getPresentedChoiceNames()).toEqual(presentedChoiceNames)
-  })
+  }, 10_000)
 })

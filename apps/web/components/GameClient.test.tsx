@@ -932,6 +932,39 @@ describe("GameClient Integration", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()
   })
 
+  it("opens Controls above the exact active pair and restores focus without accepting battle input", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000068",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const initialChoiceNames = (
+      await screen.findAllByRole("button", { name: /^Choose / })
+    ).map((button) => button.getAttribute("aria-label"))
+    const menuAction = screen.getByRole("button", { name: "Menu" })
+    menuAction.focus()
+
+    fireEvent.click(menuAction)
+    fireEvent.click(await screen.findByRole("button", { name: "Controls" }))
+
+    const controls = await screen.findByRole("dialog", { name: "Controls" })
+    expect(within(controls).getByText("1 or A")).toBeVisible()
+    fireEvent.keyDown(window, { key: "1" })
+    fireEvent.click(
+      within(controls).getAllByRole("button", { name: "Close" })[1],
+    )
+
+    await waitFor(() => expect(menuAction).toHaveFocus())
+    expect(
+      screen
+        .getAllByRole("button", { name: /^Choose / })
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual(initialChoiceNames)
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()
+  })
+
   it("routes the flat Menu between every shipped utility surface", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000066",
