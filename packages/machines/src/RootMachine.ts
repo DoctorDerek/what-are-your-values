@@ -64,6 +64,8 @@ import {
   playerDataResetBackupReadyNotice,
   playerDataResetCopy,
 } from "./PlayerDataResetCopy"
+import type { PlayerSettings } from "./PlayerSettings"
+import { updatePlayerSettingsActor } from "./PlayerSettingsActors"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
 
@@ -71,8 +73,10 @@ type PendingRecoveryImportSource = "last-known-good" | "selected-backup"
 
 type AchievementPresentationReturnTarget = "hub" | "achievements" | "crucible"
 
-type BackgroundCheckpointReturnTarget =
+type SettingsReturnTarget =
   "hub" | "achievements" | "data-management" | "all-values" | "crucible"
+
+type BackgroundCheckpointReturnTarget = SettingsReturnTarget | "settings"
 
 type PersistenceFailureOrigin =
   "loading" | "initialization" | "crucible" | "achievement-presentation"
@@ -89,6 +93,8 @@ type RootMachineContext = {
   pendingAchievementPresentationId: AchievementId | null
   achievementPresentationReturnTarget: AchievementPresentationReturnTarget | null
   backgroundCheckpointReturnTarget: BackgroundCheckpointReturnTarget | null
+  pendingPlayerSettings: PlayerSettings | null
+  settingsReturnTarget: SettingsReturnTarget | null
   pendingImportBytes: string | null
   pendingImport: PreparedWayvmImport | null
   preImportBackupBytes: string | null
@@ -113,6 +119,9 @@ type RootMachineEvent =
   | { type: "ACHIEVEMENTS.OPEN_REQUESTED" }
   | { type: "ACHIEVEMENTS.CLOSE_REQUESTED" }
   | { type: "ACHIEVEMENT.PRESENTED"; achievementId: AchievementId }
+  | { type: "SETTINGS.OPEN_REQUESTED" }
+  | { type: "SETTINGS.CLOSE_REQUESTED" }
+  | { type: "SETTINGS.UPDATE_REQUESTED"; settings: PlayerSettings }
   | { type: "ALL_VALUES.OPEN_REQUESTED" }
   | { type: "ALL_VALUES.CLOSE_REQUESTED" }
   | {
@@ -238,6 +247,14 @@ function requirePendingAchievementPresentationId(context: RootMachineContext) {
   return context.pendingAchievementPresentationId
 }
 
+function requirePendingPlayerSettings(context: RootMachineContext) {
+  if (!context.pendingPlayerSettings) {
+    throw new Error("Player Settings update is not prepared")
+  }
+
+  return context.pendingPlayerSettings
+}
+
 function requirePendingImportBytes(context: RootMachineContext) {
   if (context.pendingImportBytes === null) {
     throw new Error("Import bytes are not prepared")
@@ -356,6 +373,7 @@ export const rootMachine = setup({
     createWayvmExport: createWayvmExportActor,
     prepareWayvmImport: prepareWayvmImportActor,
     replacePlayerData: replacePlayerDataActor,
+    updatePlayerSettings: updatePlayerSettingsActor,
     applyScopedPlayerDataReset: applyScopedPlayerDataResetActor,
     deleteAllPlayerData: deleteAllPlayerDataActor,
     createRecoveryBundle: createRecoveryBundleActor,
@@ -385,6 +403,11 @@ export const rootMachine = setup({
     }),
     clearBackgroundCheckpointReturnTarget: assign({
       backgroundCheckpointReturnTarget: null,
+    }),
+    clearSettingsContext: assign({
+      pendingPlayerSettings: null,
+      settingsReturnTarget: null,
+      persistenceIssue: null,
     }),
   },
   guards: {
@@ -497,6 +520,16 @@ export const rootMachine = setup({
       context.backgroundCheckpointReturnTarget === "all-values",
     shouldReturnBackgroundCheckpointToCrucible: ({ context }) =>
       context.backgroundCheckpointReturnTarget === "crucible",
+    shouldReturnBackgroundCheckpointToSettings: ({ context }) =>
+      context.backgroundCheckpointReturnTarget === "settings",
+    shouldReturnSettingsToAchievements: ({ context }) =>
+      context.settingsReturnTarget === "achievements",
+    shouldReturnSettingsToDataManagement: ({ context }) =>
+      context.settingsReturnTarget === "data-management",
+    shouldReturnSettingsToAllValues: ({ context }) =>
+      context.settingsReturnTarget === "all-values",
+    shouldReturnSettingsToCrucible: ({ context }) =>
+      context.settingsReturnTarget === "crucible",
   },
 }).createMachine({
   id: "root",
@@ -508,6 +541,8 @@ export const rootMachine = setup({
     pendingAchievementPresentationId: null,
     achievementPresentationReturnTarget: null,
     backgroundCheckpointReturnTarget: null,
+    pendingPlayerSettings: null,
+    settingsReturnTarget: null,
     pendingImportBytes: null,
     pendingImport: null,
     preImportBackupBytes: null,
@@ -686,6 +721,14 @@ export const rootMachine = setup({
           target: "DataManagement",
           actions: "clearPortabilityFeedback",
         },
+        "SETTINGS.OPEN_REQUESTED": {
+          target: "Settings",
+          actions: assign({
+            pendingPlayerSettings: null,
+            settingsReturnTarget: "hub",
+            persistenceIssue: null,
+          }),
+        },
       },
     },
     Achievements: {
@@ -697,6 +740,14 @@ export const rootMachine = setup({
           }),
         },
         "ACHIEVEMENTS.CLOSE_REQUESTED": { target: "Hub" },
+        "SETTINGS.OPEN_REQUESTED": {
+          target: "Settings",
+          actions: assign({
+            pendingPlayerSettings: null,
+            settingsReturnTarget: "achievements",
+            persistenceIssue: null,
+          }),
+        },
         "ACHIEVEMENT.PRESENTED": {
           guard: "canRecordAchievementPresentation",
           target: "RecordingAchievementPresentation",
@@ -705,6 +756,95 @@ export const rootMachine = setup({
               event.achievementId,
             achievementPresentationReturnTarget: "achievements",
           }),
+        },
+      },
+    },
+    Settings: {
+      initial: "Browsing",
+      states: {
+        Browsing: {
+          on: {
+            "APP.BACKGROUND_CHECKPOINT_REQUESTED": {
+              target: "#root.BackgroundCheckpointing",
+              actions: assign({
+                backgroundCheckpointReturnTarget: "settings",
+              }),
+            },
+            "SETTINGS.CLOSE_REQUESTED": [
+              {
+                guard: "shouldReturnSettingsToAchievements",
+                target: "#root.Achievements",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToDataManagement",
+                target: "#root.DataManagement.Browsing",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToAllValues",
+                target: "#root.AllValues.Browsing",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToCrucible",
+                target: "#root.Crucible.Ready",
+                actions: "clearSettingsContext",
+              },
+              {
+                target: "#root.Hub",
+                actions: "clearSettingsContext",
+              },
+            ],
+            "SETTINGS.UPDATE_REQUESTED": {
+              target: "Persisting",
+              actions: assign({
+                pendingPlayerSettings: ({ event }) => {
+                  if (event.type !== "SETTINGS.UPDATE_REQUESTED") {
+                    throw new Error("Invalid Player Settings update event type")
+                  }
+
+                  return event.settings
+                },
+                persistenceIssue: null,
+              }),
+            },
+          },
+        },
+        Persisting: {
+          invoke: {
+            src: "updatePlayerSettings",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+              settings: requirePendingPlayerSettings(context),
+              updatedAt: context.now(),
+            }),
+            onDone: {
+              target: "Browsing",
+              actions: assign({
+                playerData: ({ event }) => event.output.head.playerData,
+                battleProfileStoreState: ({ event }) => event.output,
+                pendingPlayerSettings: null,
+                persistenceIssue: null,
+              }),
+            },
+            onError: [
+              {
+                guard: ({ event }) =>
+                  event.error instanceof DurableStoreConflictError,
+                target: "#root.LoadingProfile",
+                actions: "clearSettingsContext",
+              },
+              {
+                target: "Browsing",
+                actions: assign({
+                  pendingPlayerSettings: null,
+                  persistenceIssue: ({ event }) => getErrorMessage(event.error),
+                }),
+              },
+            ],
+          },
         },
       },
     },
@@ -728,6 +868,14 @@ export const rootMachine = setup({
                 pendingResetReview: null,
                 portabilityIssue: null,
                 portabilityNotice: null,
+              }),
+            },
+            "SETTINGS.OPEN_REQUESTED": {
+              target: "#root.Settings",
+              actions: assign({
+                pendingPlayerSettings: null,
+                settingsReturnTarget: "data-management",
+                persistenceIssue: null,
               }),
             },
             "DATA_MANAGEMENT.EXPORT_REQUESTED": {
@@ -1110,6 +1258,14 @@ export const rootMachine = setup({
               }),
             },
             "ALL_VALUES.CLOSE_REQUESTED": { target: "#root.Hub" },
+            "SETTINGS.OPEN_REQUESTED": {
+              target: "#root.Settings",
+              actions: assign({
+                pendingPlayerSettings: null,
+                settingsReturnTarget: "all-values",
+                persistenceIssue: null,
+              }),
+            },
             "ALL_VALUES.ADD_REQUESTED": {
               target: "Persisting",
               actions: assign({
@@ -1207,6 +1363,14 @@ export const rootMachine = setup({
               }),
             },
             "BATTLE.EXIT_REQUESTED": { target: "#root.Hub" },
+            "SETTINGS.OPEN_REQUESTED": {
+              target: "#root.Settings",
+              actions: assign({
+                pendingPlayerSettings: null,
+                settingsReturnTarget: "crucible",
+                persistenceIssue: null,
+              }),
+            },
             "ACHIEVEMENT.PRESENTED": {
               guard: "canRecordAchievementPresentation",
               target: "#root.RecordingAchievementPresentation",
@@ -1356,6 +1520,11 @@ export const rootMachine = setup({
         {
           guard: "shouldReturnBackgroundCheckpointToCrucible",
           target: "Crucible.Ready",
+          actions: "clearBackgroundCheckpointReturnTarget",
+        },
+        {
+          guard: "shouldReturnBackgroundCheckpointToSettings",
+          target: "Settings.Browsing",
           actions: "clearBackgroundCheckpointReturnTarget",
         },
       ],

@@ -31,6 +31,7 @@ import {
   applyScopedPlayerDataResetActor,
   deleteAllPlayerDataActor,
 } from "./PlayerDataResetActors"
+import { createPlayerSettings } from "./PlayerSettings"
 import { rootMachine } from "./RootMachine"
 import {
   createWayvmExport,
@@ -330,6 +331,256 @@ describe("Root Machine", () => {
       battleProfileStoreState,
     )
     await expect(durableStore.readAll()).resolves.toEqual(durableEntries)
+  })
+
+  it("returns Settings to each eligible invoking product surface without replacing Player Data", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "settings-return-target-seed",
+    })
+    const playerData = actor.getSnapshot().context.playerData
+    const battleProfileStoreState =
+      actor.getSnapshot().context.battleProfileStoreState
+
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    expect(actor.getSnapshot().matches({ Settings: "Browsing" })).toBe(true)
+    expect(actor.getSnapshot().context.settingsReturnTarget).toBe("hub")
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
+
+    actor.send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" })
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    expect(actor.getSnapshot().context.settingsReturnTarget).toBe(
+      "achievements",
+    )
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(actor.getSnapshot().matches("Achievements")).toBe(true)
+    actor.send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
+
+    actor.send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" })
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    expect(actor.getSnapshot().context.settingsReturnTarget).toBe(
+      "data-management",
+    )
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(actor.getSnapshot().matches({ DataManagement: "Browsing" })).toBe(
+      true,
+    )
+    actor.send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })
+
+    actor.send({ type: "ALL_VALUES.OPEN_REQUESTED" })
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    expect(actor.getSnapshot().context.settingsReturnTarget).toBe("all-values")
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(actor.getSnapshot().matches({ AllValues: "Browsing" })).toBe(true)
+    actor.send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
+
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    expect(actor.getSnapshot().context.settingsReturnTarget).toBe("crucible")
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(true)
+
+    expect(actor.getSnapshot().context.playerData).toBe(playerData)
+    expect(actor.getSnapshot().context.battleProfileStoreState).toBe(
+      battleProfileStoreState,
+    )
+    expect(actor.getSnapshot().context.pendingPlayerSettings).toBeNull()
+    expect(actor.getSnapshot().context.settingsReturnTarget).toBeNull()
+  })
+
+  it("persists Settings while preserving and rehydrating the exact active battle pair", async () => {
+    const { actor, durableStore } = await bootRootActor({
+      schedulerSeed: "settings-persistence-seed",
+    })
+    actor.send({ type: "BATTLE.START_REQUESTED" })
+    const beforeUpdate = actor.getSnapshot()
+    const beforePlayerData = beforeUpdate.context.playerData
+    const beforeStoreState = beforeUpdate.context.battleProfileStoreState
+    if (!beforePlayerData || !beforeStoreState)
+      throw new Error("Settings persistence fixture is unavailable")
+
+    const activePair = projectBattlePair(
+      beforePlayerData.profile.activeDeck,
+      beforePlayerData.profile.scheduler,
+    )
+    const settings = createPlayerSettings({
+      ...beforePlayerData.settings,
+      reducedMotion: "on",
+      controlHints: "off",
+    })
+
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    actor.send({ type: "SETTINGS.UPDATE_REQUESTED", settings })
+    const persistedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Settings: "Browsing" }) &&
+        candidate.context.playerData?.settings.reducedMotion === "on" &&
+        candidate.context.playerData.settings.controlHints === "off",
+    )
+
+    expect(persistedSnapshot.context.playerData?.profile).toEqual(
+      beforePlayerData.profile,
+    )
+    expect(
+      persistedSnapshot.context.battleProfileStoreState?.head.generation,
+    ).toBe(beforeStoreState.head.generation + 1)
+    expect(persistedSnapshot.context.pendingPlayerSettings).toBeNull()
+    expect(persistedSnapshot.context.persistenceIssue).toBeNull()
+
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    const returnedPlayerData = actor.getSnapshot().context.playerData
+    if (!returnedPlayerData) throw new Error("Settings return lost Player Data")
+    expect(actor.getSnapshot().matches({ Crucible: "Ready" })).toBe(true)
+    expect(
+      projectBattlePair(
+        returnedPlayerData.profile.activeDeck,
+        returnedPlayerData.profile.scheduler,
+      ),
+    ).toEqual(activePair)
+
+    actor.stop()
+    const returningRoot = await bootRootActor({
+      durableStore,
+      schedulerSeed: "ignored-returning-settings-seed",
+    })
+    const rehydratedPlayerData =
+      returningRoot.actor.getSnapshot().context.playerData
+    if (!rehydratedPlayerData)
+      throw new Error("Rehydrated Settings Player Data is unavailable")
+    expect(rehydratedPlayerData.settings).toEqual(settings)
+    expect(
+      projectBattlePair(
+        rehydratedPlayerData.profile.activeDeck,
+        rehydratedPlayerData.profile.scheduler,
+      ),
+    ).toEqual(activePair)
+  })
+
+  it("returns a rejected Settings write to the last committed preferences for retry", async () => {
+    const { durableStore, setWriteIssue } = createToggleableWriteFailureStore()
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "settings-write-failure-seed",
+    })
+    const committedSettings = actor.getSnapshot().context.playerData?.settings
+    if (!committedSettings)
+      throw new Error("Settings failure fixture is unavailable")
+
+    const settings = createPlayerSettings({
+      ...committedSettings,
+      reducedMotion: "on",
+    })
+    setWriteIssue("Settings commit failed")
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    actor.send({ type: "SETTINGS.UPDATE_REQUESTED", settings })
+    const rejectedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Settings: "Browsing" }) &&
+        candidate.context.persistenceIssue === "Settings commit failed",
+    )
+
+    expect(rejectedSnapshot.context.playerData?.settings).toBe(
+      committedSettings,
+    )
+    expect(rejectedSnapshot.context.pendingPlayerSettings).toBeNull()
+    expect(rejectedSnapshot.context.settingsReturnTarget).toBe("hub")
+
+    setWriteIssue(null)
+    actor.send({ type: "SETTINGS.UPDATE_REQUESTED", settings })
+    const retriedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Settings: "Browsing" }) &&
+        candidate.context.playerData?.settings.reducedMotion === "on",
+    )
+    expect(retriedSnapshot.context.persistenceIssue).toBeNull()
+  })
+
+  it("reloads canonical durable Settings after a compare-and-swap conflict", async () => {
+    const memoryStore = createInMemoryDurableStore()
+    let shouldConflict = false
+    const durableStore = Object.freeze({
+      readAll: memoryStore.readAll,
+      compareAndSwapVerified: async (transaction) => {
+        if (shouldConflict) {
+          shouldConflict = false
+          throw new DurableStoreConflictError("wayvm.snapshot.manifest")
+        }
+
+        return memoryStore.compareAndSwapVerified(transaction)
+      },
+    }) satisfies DurableStoreAdapter
+    const { actor } = await bootRootActor({
+      durableStore,
+      schedulerSeed: "settings-conflict-seed",
+    })
+    const committedSettings = actor.getSnapshot().context.playerData?.settings
+    if (!committedSettings)
+      throw new Error("Settings conflict fixture is unavailable")
+
+    shouldConflict = true
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    actor.send({
+      type: "SETTINGS.UPDATE_REQUESTED",
+      settings: createPlayerSettings({
+        ...committedSettings,
+        controlHints: "off",
+      }),
+    })
+    const reloadedSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches("Hub"),
+    )
+
+    expect(reloadedSnapshot.context.playerData?.settings).toEqual(
+      committedSettings,
+    )
+    expect(reloadedSnapshot.context.pendingPlayerSettings).toBeNull()
+    expect(reloadedSnapshot.context.settingsReturnTarget).toBeNull()
+    expect(reloadedSnapshot.context.persistenceIssue).toBeNull()
+  })
+
+  it("rejects invalid runtime Settings input without replacing committed preferences", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "settings-invalid-input-seed",
+    })
+    const committedSettings = actor.getSnapshot().context.playerData?.settings
+    if (!committedSettings)
+      throw new Error("Invalid Settings fixture is unavailable")
+
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    actor.send({
+      type: "SETTINGS.UPDATE_REQUESTED",
+      settings: { ...committedSettings, locale: "fr" },
+    } as unknown as Parameters<typeof actor.send>[0])
+    const rejectedSnapshot = await waitFor(
+      actor,
+      (candidate) =>
+        candidate.matches({ Settings: "Browsing" }) &&
+        candidate.context.persistenceIssue === "Unsupported locale: fr",
+    )
+
+    expect(rejectedSnapshot.context.playerData?.settings).toBe(
+      committedSettings,
+    )
+    expect(rejectedSnapshot.context.pendingPlayerSettings).toBeNull()
+  })
+
+  it("returns a completed background checkpoint to the open Settings surface", async () => {
+    const { actor } = await bootRootActor({
+      schedulerSeed: "settings-background-checkpoint-seed",
+    })
+    actor.send({ type: "SETTINGS.OPEN_REQUESTED" })
+    actor.send({ type: "APP.BACKGROUND_CHECKPOINT_REQUESTED" })
+    const restoredSnapshot = await waitFor(actor, (candidate) =>
+      candidate.matches({ Settings: "Browsing" }),
+    )
+
+    expect(restoredSnapshot.context.backgroundCheckpointReturnTarget).toBeNull()
+    expect(restoredSnapshot.context.settingsReturnTarget).toBe("hub")
+    actor.send({ type: "SETTINGS.CLOSE_REQUESTED" })
+    expect(actor.getSnapshot().matches("Hub")).toBe(true)
   })
 
   it("records only the first pending milestone and returns to the Hub without changing battle progress", async () => {
