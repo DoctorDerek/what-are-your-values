@@ -5,7 +5,6 @@ import Animated, {
   cancelAnimation,
   interpolate,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated"
@@ -21,14 +20,15 @@ export default function NativeAchievementBanner({
   achievement,
   isAcknowledgementPending,
   placement = "screen",
+  shouldReduceMotion,
   onPresented,
 }: {
   achievement: AchievementPresentation | null
   isAcknowledgementPending: boolean
   placement?: "battle" | "screen"
+  shouldReduceMotion: boolean
   onPresented: (achievementId: AchievementPresentation["id"]) => void
 }) {
-  const shouldReduceMotion = useReducedMotion()
   const safeAreaInsets = useSafeAreaInsets()
   const isBattlePlacement = placement === "battle"
   const presentationProgress = useSharedValue(0)

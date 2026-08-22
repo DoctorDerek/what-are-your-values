@@ -27,6 +27,7 @@ export default function NativeCrucible({
   isAchievementAcknowledgementPending,
   isMenuOpen,
   isPersistencePending,
+  shouldReduceMotion,
   onAchievementPresented,
   onExit,
   onOpenMenu,
@@ -43,6 +44,7 @@ export default function NativeCrucible({
   isAchievementAcknowledgementPending: boolean
   isMenuOpen: boolean
   isPersistencePending: boolean
+  shouldReduceMotion: boolean
   onAchievementPresented: (achievementId: AchievementPresentation["id"]) => void
   onExit: () => void
   onOpenMenu: () => void
@@ -118,6 +120,7 @@ export default function NativeCrucible({
         achievement={achievement}
         isAcknowledgementPending={isAchievementAcknowledgementPending}
         placement="battle"
+        shouldReduceMotion={shouldReduceMotion}
         onPresented={onAchievementPresented}
       />
       <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-row">
@@ -130,6 +133,7 @@ export default function NativeCrucible({
           isEnabled={isInteractive}
           isAnimating={isAnimating}
           reportsAnimationCompletion
+          shouldReduceMotion={shouldReduceMotion}
           onActivate={handleSelect}
           onAnimationComplete={handleAnimationComplete}
         />
@@ -142,6 +146,7 @@ export default function NativeCrucible({
           isEnabled={isInteractive}
           isAnimating={isAnimating}
           reportsAnimationCompletion={false}
+          shouldReduceMotion={shouldReduceMotion}
           onActivate={handleSelect}
           onAnimationComplete={handleAnimationComplete}
         />

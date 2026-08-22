@@ -24,11 +24,13 @@ import {
   type PlayerDataResetKind,
   type PlayerDataResetReview,
 } from "@game/machines/src/PlayerDataReset"
+import { resolveShouldReduceMotion } from "@game/machines/src/PlayerSettingsPresentation"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import * as ExpoCrypto from "expo-crypto"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AppState, View } from "react-native"
+import { useReducedMotion } from "react-native-reanimated"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeAchievements from "@/components/NativeAchievements"
 import NativeAllValues from "@/components/NativeAllValues"
@@ -61,6 +63,7 @@ const nativeRootMachineInput = Object.freeze({
 
 export default function NativeGameClient() {
   const [schedulerSeed] = useState(() => ExpoCrypto.randomUUID())
+  const systemShouldReduceMotion = useReducedMotion()
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
   const [isControlsOpen, setIsControlsOpen] = useState(false)
   const [activeInformationPanelId, setActiveInformationPanelId] =
@@ -367,8 +370,13 @@ export default function NativeGameClient() {
       />
     )
 
-  if (!battleProfile || !presentedBattle)
+  if (!playerData || !battleProfile || !presentedBattle)
     throw new Error("Battle profile is unavailable after hydration")
+
+  const shouldReduceMotion = resolveShouldReduceMotion(
+    playerData.settings.reducedMotion,
+    systemShouldReduceMotion,
+  )
 
   const isRecordingAchievementPresentation = state.matches(
     "RecordingAchievementPresentation",
@@ -407,6 +415,7 @@ export default function NativeGameClient() {
     <NativeAchievementBanner
       achievement={pendingAchievementPresentation}
       isAcknowledgementPending={isRecordingAchievementPresentation}
+      shouldReduceMotion={shouldReduceMotion}
       onPresented={handleAchievementPresented}
     />
   )
@@ -593,6 +602,7 @@ export default function NativeGameClient() {
           }
           isMenuOpen={isProductOverlayOpen}
           isPersistencePending={!isBattleReady}
+          shouldReduceMotion={shouldReduceMotion}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
           onOpenMenu={() => setIsProductMenuOpen(true)}

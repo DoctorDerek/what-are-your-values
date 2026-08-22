@@ -9,7 +9,6 @@ import { Pressable, ScrollView, View } from "react-native"
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated"
@@ -29,6 +28,7 @@ export default function NativeValueChoiceCard({
   isEnabled,
   isAnimating,
   reportsAnimationCompletion,
+  shouldReduceMotion,
   onActivate,
   onAnimationComplete,
 }: {
@@ -39,10 +39,10 @@ export default function NativeValueChoiceCard({
   isEnabled: boolean
   isAnimating: boolean
   reportsAnimationCompletion: boolean
+  shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
   onAnimationComplete: () => void
 }) {
-  const shouldReduceMotion = useReducedMotion()
   const isWinner = isAnimating && winnerId === value.id
   const isDefeated = isAnimating && winnerId !== null && winnerId !== value.id
   const opacity = useSharedValue(1)

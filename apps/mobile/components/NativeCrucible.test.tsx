@@ -35,6 +35,7 @@ function createCrucibleProps(isPersistencePending: boolean) {
     isAchievementAcknowledgementPending: false,
     isMenuOpen: false,
     isPersistencePending,
+    shouldReduceMotion: false,
     onAchievementPresented: jest.fn(),
     onExit: jest.fn(),
     onOpenMenu: jest.fn(),
