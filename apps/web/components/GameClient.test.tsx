@@ -898,6 +898,68 @@ describe("GameClient Integration", () => {
     ).toEqual(initialChoiceNames)
   })
 
+  it("persists Settings from an active battle and returns through the shared reset review to the exact pair", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000069",
+    )
+
+    render(<GameClient />)
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
+    const initialChoiceNames = (
+      await screen.findAllByRole("button", { name: /^Choose / })
+    ).map((button) => button.getAttribute("aria-label"))
+
+    await openProductMenuDestination("Settings")
+    expect(
+      await screen.findByRole("heading", { name: "Settings", level: 1 }),
+    ).toBeVisible()
+    const controlHintsGroup = screen.getByRole("group", {
+      name: "Control Hints",
+    })
+    expect(
+      within(controlHintsGroup).getByRole("radio", { name: /^Auto/ }),
+    ).toBeChecked()
+
+    fireEvent.click(
+      within(controlHintsGroup).getByRole("radio", { name: /^Off/ }),
+    )
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("group", { name: "Control Hints" })).getByRole(
+          "radio",
+          { name: /^Off/ },
+        ),
+      ).toBeChecked()
+      expect(screen.getByRole("button", { name: "Back" })).toBeEnabled()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset Achievements?" }),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(
+      screen.getByRole("heading", { name: "Settings", level: 1 }),
+    ).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }))
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("button", { name: /^Choose / })
+          .map((button) => button.getAttribute("aria-label")),
+      ).toEqual(initialChoiceNames),
+    )
+
+    await openProductMenuDestination("Settings")
+    expect(
+      within(
+        await screen.findByRole("group", { name: "Control Hints" }),
+      ).getByRole("radio", { name: /^Off/ }),
+    ).toBeChecked()
+  })
+
   it("reopens guidance above the exact active pair and restores focus to its Menu action", async () => {
     vi.spyOn(crypto, "randomUUID").mockReturnValue(
       "00000000-0000-4000-8000-000000000067",
