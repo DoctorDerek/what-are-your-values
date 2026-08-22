@@ -572,7 +572,7 @@ function WritableGameClient({
     )
   }
 
-  if (!battleProfile || !presentedBattle) {
+  if (!playerData || !battleProfile || !presentedBattle) {
     throw new Error("Battle profile is unavailable after hydration")
   }
 
@@ -764,6 +764,7 @@ function WritableGameClient({
           progressById={battleProfile.progressById}
           canUndo={battleProfile.history.length > 0}
           canRedo={battleProfile.redo.length > 0}
+          controlHintPreference={playerData.settings.controlHints}
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }

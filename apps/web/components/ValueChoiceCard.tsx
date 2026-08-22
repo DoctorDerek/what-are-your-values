@@ -20,6 +20,7 @@ type ValueChoiceCardProps = {
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
+  controlHint: string | null
   shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
@@ -38,6 +39,7 @@ export const ValueChoiceCard = forwardRef<
     winnerId,
     isEnabled,
     isAnimating,
+    controlHint,
     shouldReduceMotion,
     onActivate,
     onFocus,
@@ -52,7 +54,7 @@ export const ValueChoiceCard = forwardRef<
   const positionClasses = isFirst
     ? "bg-mapache-vivid-primary-cyan border-b-8 border-black xl:border-r-8 xl:border-b-0"
     : "bg-mapache-vivid-primary-raspberry"
-  const indicator = isFirst ? "[1 / A]" : "[2 / D]"
+  const reservedControlHint = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
   const valueChoiceMotion = createValueChoiceMotion({
     isFirst,
@@ -84,8 +86,11 @@ export const ValueChoiceCard = forwardRef<
       >
         <div className="my-auto w-full max-w-full min-w-0 text-center">
           <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-5">
-            <span className="text-sm font-black whitespace-nowrap text-black/50 uppercase drop-shadow-[1px_1px_0px_rgba(255,255,255,0.25)] xl:text-2xl">
-              {indicator}
+            <span
+              aria-hidden="true"
+              className={`w-16 justify-self-start text-center text-sm font-black whitespace-nowrap text-black/50 uppercase drop-shadow-[1px_1px_0px_rgba(255,255,255,0.25)] xl:w-28 xl:text-2xl ${controlHint ? "" : "invisible"}`}
+            >
+              {controlHint ?? reservedControlHint}
             </span>
             <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(1.25rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:text-[clamp(2.5rem,4vw,4.75rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
               {displayName}

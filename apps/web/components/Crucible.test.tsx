@@ -15,7 +15,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
 function createBattleProps(seed: string) {
@@ -34,6 +34,7 @@ function createHistoryProps() {
     achievement: null,
     canUndo: false,
     canRedo: false,
+    controlHintPreference: "auto" as const,
     isAchievementAcknowledgementPending: false,
     isMenuOpen: false,
     isPersistencePending: false,
@@ -57,6 +58,8 @@ const firstAchievementPresentation = Object.freeze({
 }) satisfies AchievementPresentation
 
 describe("Crucible Component Integration", () => {
+  afterEach(() => vi.restoreAllMocks())
+
   it("keeps battle feedback in flow between controls and playable value cards", () => {
     const { battleCycle, battle } = createBattleProps(
       "achievement-banner-space-seed",
@@ -139,6 +142,74 @@ describe("Crucible Component Integration", () => {
     expect(within(identityRail).getByText("[1 / A]")).toBeVisible()
     expect(within(identityRail).getByText(/^LVL \d+$/)).toBeVisible()
     expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
+  })
+
+  it("changes Auto hints only after intentional keyboard or pointer input without moving the identity rail", async () => {
+    vi.spyOn(navigator, "maxTouchPoints", "get").mockReturnValue(1)
+    const { battleCycle, battle } = createBattleProps("auto-hint-modality-seed")
+    const firstDefinition = battleCycle.activeDeck.values.find(
+      ({ id }) => id === battle.pair[0],
+    )
+    if (!firstDefinition)
+      throw new Error("Projected value definition is missing")
+
+    render(
+      <Crucible
+        {...createHistoryProps()}
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onWinnerSelected={vi.fn()}
+      />,
+    )
+
+    const choice = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+    })
+    const hint = within(choice).getByText("[1 / A]")
+    await waitFor(() => expect(hint).toHaveClass("invisible"))
+    fireEvent.mouseMove(window)
+    fireEvent.keyDown(window, { key: "Shift" })
+    expect(hint).toHaveClass("invisible")
+
+    fireEvent.keyDown(window, { key: "ArrowRight" })
+    await waitFor(() => expect(hint).not.toHaveClass("invisible"))
+    expect(hint).toHaveClass("w-16", "xl:w-28")
+    act(() => window.dispatchEvent(new Event("pointerdown")))
+    await waitFor(() => expect(hint).toHaveClass("invisible"))
+  })
+
+  it("shows the applicable fixed-width Tap hint for Always and reserves that rail for Off", async () => {
+    vi.spyOn(navigator, "maxTouchPoints", "get").mockReturnValue(1)
+    const { battleCycle, battle } = createBattleProps("explicit-hint-seed")
+    const firstDefinition = battleCycle.activeDeck.values.find(
+      ({ id }) => id === battle.pair[0],
+    )
+    if (!firstDefinition)
+      throw new Error("Projected value definition is missing")
+    const baseProps = {
+      ...createHistoryProps(),
+      activeDeck: battleCycle.activeDeck,
+      battle,
+      progressById: battleCycle.progressById,
+      onExit: vi.fn(),
+      onWinnerSelected: vi.fn(),
+    }
+    const { rerender } = render(
+      <Crucible {...baseProps} controlHintPreference="always" />,
+    )
+
+    const choice = await screen.findByRole("button", {
+      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+    })
+    const tapHint = within(choice).getByText("Tap")
+    expect(tapHint).not.toHaveClass("invisible")
+    expect(tapHint).toHaveClass("w-16", "xl:w-28")
+
+    rerender(<Crucible {...baseProps} controlHintPreference="off" />)
+    const reservedHint = within(choice).getByText("[1 / A]")
+    expect(reservedHint).toHaveClass("invisible", "w-16", "xl:w-28")
   })
 
   it("renders semantic canonical values and commits a keyboard selection once", async () => {
