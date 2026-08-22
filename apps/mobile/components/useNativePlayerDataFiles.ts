@@ -30,10 +30,11 @@ export default function useNativePlayerDataFiles({
 
   useEffect(() => {
     const preparedDownload = state.context.preparedDownload
-    const isDataManagementDownload = state.matches("DataManagement")
+    const isDataControlDownload =
+      state.matches("DataManagement") || state.matches("Settings")
     const isRecoveryDownload = state.matches("PersistenceFailure")
     if (
-      (!isDataManagementDownload && !isRecoveryDownload) ||
+      (!isDataControlDownload && !isRecoveryDownload) ||
       !preparedDownload ||
       deliveredDownloadsRef.current.has(preparedDownload)
     )
