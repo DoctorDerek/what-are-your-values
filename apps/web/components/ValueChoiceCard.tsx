@@ -6,7 +6,7 @@ import {
   type ActiveValueDefinition,
   type ValueId,
 } from "@game/data/src/Value"
-import { motion, useReducedMotion } from "motion/react"
+import { motion } from "motion/react"
 import { forwardRef, useId } from "react"
 import { createValueChoiceMotion } from "@/components/ValueChoiceMotion"
 
@@ -20,6 +20,7 @@ type ValueChoiceCardProps = {
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
+  shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
   onAnimationComplete: () => void
@@ -37,6 +38,7 @@ export const ValueChoiceCard = forwardRef<
     winnerId,
     isEnabled,
     isAnimating,
+    shouldReduceMotion,
     onActivate,
     onFocus,
     onAnimationComplete,
@@ -52,7 +54,6 @@ export const ValueChoiceCard = forwardRef<
     : "bg-mapache-vivid-primary-raspberry"
   const indicator = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
-  const shouldReduceMotion = useReducedMotion() === true
   const valueChoiceMotion = createValueChoiceMotion({
     isFirst,
     isWinner,

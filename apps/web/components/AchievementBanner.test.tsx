@@ -2,12 +2,8 @@ import { ACHIEVEMENT_CATALOG } from "@game/machines/src/AchievementCatalog"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import { fireEvent, render, screen } from "@testing-library/react"
 import type { HTMLAttributes, PropsWithChildren } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import AchievementBanner from "./AchievementBanner"
-
-const { useReducedMotionMock } = vi.hoisted(() => ({
-  useReducedMotionMock: vi.fn(() => false),
-}))
 
 type MotionAsideProps = PropsWithChildren<
   Omit<HTMLAttributes<HTMLElement>, "onAnimationComplete"> & {
@@ -39,7 +35,6 @@ vi.mock("motion/react", () => ({
       </aside>
     ),
   },
-  useReducedMotion: useReducedMotionMock,
 }))
 
 const firstAchievement = ACHIEVEMENT_CATALOG[0]
@@ -54,8 +49,6 @@ const firstAchievementPresentation = Object.freeze({
 }) satisfies AchievementPresentation
 
 describe("AchievementBanner Integration", () => {
-  beforeEach(() => useReducedMotionMock.mockReturnValue(false))
-
   it("presents exact milestone copy accessibly and dismisses only its canonical ID", () => {
     const onPresented = vi.fn()
 
@@ -63,6 +56,7 @@ describe("AchievementBanner Integration", () => {
       <AchievementBanner
         achievement={firstAchievementPresentation}
         isAcknowledgementPending={false}
+        shouldReduceMotion={false}
         onPresented={onPresented}
       />,
     )
@@ -98,6 +92,7 @@ describe("AchievementBanner Integration", () => {
         achievement={firstAchievementPresentation}
         isAcknowledgementPending={false}
         placement="battle"
+        shouldReduceMotion={false}
         onPresented={vi.fn()}
       />,
     )
@@ -119,6 +114,7 @@ describe("AchievementBanner Integration", () => {
         achievement={firstAchievementPresentation}
         isAcknowledgementPending={false}
         placement="battle"
+        shouldReduceMotion={false}
         onPresented={vi.fn()}
       />,
     )
@@ -151,6 +147,7 @@ describe("AchievementBanner Integration", () => {
         achievement={firstAchievementPresentation}
         isAcknowledgementPending={false}
         placement="battle"
+        shouldReduceMotion={false}
         onPresented={vi.fn()}
       />,
     )
@@ -172,6 +169,7 @@ describe("AchievementBanner Integration", () => {
       <AchievementBanner
         achievement={firstAchievementPresentation}
         isAcknowledgementPending={false}
+        shouldReduceMotion={false}
         onPresented={onPresented}
       />,
     )
@@ -184,12 +182,11 @@ describe("AchievementBanner Integration", () => {
   })
 
   it("removes movement under Reduced Motion while preserving readable dwell time", () => {
-    useReducedMotionMock.mockReturnValue(true)
-
     render(
       <AchievementBanner
         achievement={firstAchievementPresentation}
         isAcknowledgementPending={false}
+        shouldReduceMotion
         onPresented={vi.fn()}
       />,
     )
@@ -216,6 +213,7 @@ describe("AchievementBanner Integration", () => {
       <AchievementBanner
         achievement={firstAchievementPresentation}
         isAcknowledgementPending
+        shouldReduceMotion={false}
         onPresented={vi.fn()}
       />,
     )
@@ -230,6 +228,7 @@ describe("AchievementBanner Integration", () => {
       <AchievementBanner
         achievement={null}
         isAcknowledgementPending={false}
+        shouldReduceMotion={false}
         onPresented={vi.fn()}
       />,
     )

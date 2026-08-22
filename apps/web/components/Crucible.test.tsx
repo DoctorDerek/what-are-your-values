@@ -37,6 +37,7 @@ function createHistoryProps() {
     isAchievementAcknowledgementPending: false,
     isMenuOpen: false,
     isPersistencePending: false,
+    shouldReduceMotion: false,
     onAchievementPresented: vi.fn(),
     onOpenMenu: vi.fn(),
     onUndo: vi.fn(),

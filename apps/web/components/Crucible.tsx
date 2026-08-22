@@ -27,6 +27,7 @@ export default function Crucible({
   isAchievementAcknowledgementPending,
   isMenuOpen,
   isPersistencePending,
+  shouldReduceMotion,
   onAchievementPresented,
   onExit,
   onOpenMenu,
@@ -43,6 +44,7 @@ export default function Crucible({
   isAchievementAcknowledgementPending: boolean
   isMenuOpen: boolean
   isPersistencePending: boolean
+  shouldReduceMotion: boolean
   onAchievementPresented: (achievementId: AchievementPresentation["id"]) => void
   onExit: () => void
   onOpenMenu: () => void
@@ -190,6 +192,7 @@ export default function Crucible({
           achievement={achievement}
           isAcknowledgementPending={isAchievementAcknowledgementPending}
           placement="battle"
+          shouldReduceMotion={shouldReduceMotion}
           onPresented={onAchievementPresented}
         />
       </div>
@@ -206,6 +209,7 @@ export default function Crucible({
             winnerId={winnerId}
             isEnabled={isInteractive}
             isAnimating={isAnimating}
+            shouldReduceMotion={shouldReduceMotion}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
             onAnimationComplete={handleAnimationComplete}
@@ -223,6 +227,7 @@ export default function Crucible({
             winnerId={winnerId}
             isEnabled={isInteractive}
             isAnimating={isAnimating}
+            shouldReduceMotion={shouldReduceMotion}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
             onAnimationComplete={handleAnimationComplete}

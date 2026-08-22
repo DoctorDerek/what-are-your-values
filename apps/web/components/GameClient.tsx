@@ -30,9 +30,11 @@ import {
   type PlayerDataResetKind,
   type PlayerDataResetReview,
 } from "@game/machines/src/PlayerDataReset"
+import { resolveShouldReduceMotion } from "@game/machines/src/PlayerSettingsPresentation"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
+import { useReducedMotion } from "motion/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Controls from "@/components/Controls"
 import { ReopenedInformationPanel } from "@/components/InformationPanel"
@@ -125,6 +127,7 @@ function WritableGameClient({
       randomUuid: () => crypto.randomUUID(),
     },
   })
+  const systemShouldReduceMotion = useReducedMotion() === true
   const browseAllValuesButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusTargetIdRef = useRef("hub-browse-all-values-button")
   const [pendingAllValuesValueId, setPendingAllValuesValueId] =
@@ -144,6 +147,12 @@ function WritableGameClient({
     useState<InformationPanelId | null>(null)
   const productMenuReturnFocusTargetRef = useRef<HTMLElement | null>(null)
   const playerData = state.context.playerData
+  const shouldReduceMotion = playerData
+    ? resolveShouldReduceMotion(
+        playerData.settings.reducedMotion,
+        systemShouldReduceMotion,
+      )
+    : systemShouldReduceMotion
   const battleProfile = playerData?.profile ?? null
   const rankedValues = useMemo(
     () =>
@@ -576,6 +585,7 @@ function WritableGameClient({
     <AchievementBanner
       achievement={pendingAchievementPresentation}
       isAcknowledgementPending={isRecordingAchievementPresentation}
+      shouldReduceMotion={shouldReduceMotion}
       onPresented={handleAchievementPresented}
     />
   )
@@ -759,6 +769,7 @@ function WritableGameClient({
           }
           isMenuOpen={isProductOverlayOpen}
           isPersistencePending={!isBattleReady}
+          shouldReduceMotion={shouldReduceMotion}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
           onOpenMenu={handleProductMenuOpen}

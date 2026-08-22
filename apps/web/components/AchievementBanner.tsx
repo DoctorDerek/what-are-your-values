@@ -1,7 +1,7 @@
 "use client"
 
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
-import { motion, useReducedMotion } from "motion/react"
+import { motion } from "motion/react"
 
 const ACHIEVEMENT_BANNER_DURATION_SECONDS = 8
 
@@ -27,14 +27,15 @@ export default function AchievementBanner({
   achievement,
   isAcknowledgementPending,
   placement = "screen",
+  shouldReduceMotion,
   onPresented,
 }: {
   achievement: AchievementPresentation | null
   isAcknowledgementPending: boolean
   placement?: "battle" | "screen"
+  shouldReduceMotion: boolean
   onPresented: (achievementId: AchievementPresentation["id"]) => void
 }) {
-  const shouldReduceMotion = useReducedMotion() === true
   const achievementBannerMotion =
     createAchievementBannerMotion(shouldReduceMotion)
   const isBattlePlacement = placement === "battle"
