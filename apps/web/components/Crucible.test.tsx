@@ -168,16 +168,20 @@ describe("Crucible Component Integration", () => {
       name: `Choose ${getValueDisplayName(firstDefinition)}`,
     })
     const hint = within(choice).getByText("[1 / A]")
+    const menuHint = screen.getByText("[ESC]")
     await waitFor(() => expect(hint).toHaveClass("invisible"))
+    expect(menuHint).toHaveClass("xl:invisible")
     fireEvent.mouseMove(window)
     fireEvent.keyDown(window, { key: "Shift" })
     expect(hint).toHaveClass("invisible")
 
     fireEvent.keyDown(window, { key: "ArrowRight" })
     await waitFor(() => expect(hint).not.toHaveClass("invisible"))
+    expect(menuHint).not.toHaveClass("xl:invisible")
     expect(hint).toHaveClass("w-16", "xl:w-28")
     act(() => window.dispatchEvent(new Event("pointerdown")))
     await waitFor(() => expect(hint).toHaveClass("invisible"))
+    expect(menuHint).toHaveClass("xl:invisible")
   })
 
   it("shows the applicable fixed-width Tap hint for Always and reserves that rail for Off", async () => {

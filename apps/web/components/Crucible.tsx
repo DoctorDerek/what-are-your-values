@@ -184,6 +184,8 @@ export default function Crucible({
     inputModality: controlHintInputModality,
     position: "second",
   })
+  const showKeyboardControlHints =
+    controlHintInputModality === "keyboard" && firstControlHint !== null
   const winnerId = state.context.winnerId
 
   return (
@@ -198,6 +200,7 @@ export default function Crucible({
           canUndo={isInteractive && canUndo}
           canRedo={isInteractive && canRedo}
           canStop={isInteractive}
+          showKeyboardControlHints={showKeyboardControlHints}
           onOpenMenu={onOpenMenu}
           onUndo={onUndo}
           onRedo={onRedo}
