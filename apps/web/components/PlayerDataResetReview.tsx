@@ -67,7 +67,7 @@ export default function PlayerDataResetReview({
         </label>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Button
           type="button"
           variant="secondary"

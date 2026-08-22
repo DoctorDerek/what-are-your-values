@@ -32,7 +32,7 @@ export default function PlayerDataResetActions({
       >
         Reset or Delete
       </h2>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         {playerDataResetKinds.map((resetKind) => {
           const copy = playerDataResetCopy[resetKind]
           const buttonId = `player-data-${resetKind}-button`
