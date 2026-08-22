@@ -597,6 +597,7 @@ export default function NativeGameClient() {
           progressById={battleProfile.progressById}
           canUndo={battleProfile.history.length > 0}
           canRedo={battleProfile.redo.length > 0}
+          controlHintPreference={playerData.settings.controlHints}
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }

@@ -7,6 +7,8 @@ import {
   combatMachine,
   type PresentedBattle,
 } from "@game/machines/src/CombatMachine"
+import type { ControlHintPreference } from "@game/machines/src/PlayerSettings"
+import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPresentation"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { useCallback, useEffect } from "react"
@@ -17,6 +19,8 @@ import NativeBattleActionBar from "@/components/NativeBattleActionBar"
 import NativeValueChoiceCard from "@/components/NativeValueChoiceCard"
 import { Text } from "@/components/ui/text"
 
+const NATIVE_CONTROL_HINT_INPUT_MODALITY = "touch-pointer" as const
+
 export default function NativeCrucible({
   activeDeck,
   achievement,
@@ -24,6 +28,7 @@ export default function NativeCrucible({
   progressById,
   canUndo,
   canRedo,
+  controlHintPreference,
   isAchievementAcknowledgementPending,
   isMenuOpen,
   isPersistencePending,
@@ -41,6 +46,7 @@ export default function NativeCrucible({
   progressById: ValueProgressById
   canUndo: boolean
   canRedo: boolean
+  controlHintPreference: ControlHintPreference
   isAchievementAcknowledgementPending: boolean
   isMenuOpen: boolean
   isPersistencePending: boolean
@@ -101,6 +107,17 @@ export default function NativeCrucible({
   if (!firstValue || !secondValue || !firstProgress || !secondProgress)
     throw new Error("Projected battle is missing Active Deck data")
 
+  const firstControlHint = getValueChoiceControlHint({
+    preference: controlHintPreference,
+    inputModality: NATIVE_CONTROL_HINT_INPUT_MODALITY,
+    position: "first",
+  })
+  const secondControlHint = getValueChoiceControlHint({
+    preference: controlHintPreference,
+    inputModality: NATIVE_CONTROL_HINT_INPUT_MODALITY,
+    position: "second",
+  })
+
   return (
     <MapacheScreen
       accessibilityLabel="Value battle"
@@ -129,6 +146,7 @@ export default function NativeCrucible({
           position="first"
           value={firstValue}
           level={getLevelFromXP(firstProgress.totalXp)}
+          controlHint={firstControlHint}
           winnerId={state.context.winnerId}
           isEnabled={isInteractive}
           isAnimating={isAnimating}
@@ -142,6 +160,7 @@ export default function NativeCrucible({
           position="second"
           value={secondValue}
           level={getLevelFromXP(secondProgress.totalXp)}
+          controlHint={secondControlHint}
           winnerId={state.context.winnerId}
           isEnabled={isInteractive}
           isAnimating={isAnimating}

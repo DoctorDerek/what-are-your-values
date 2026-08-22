@@ -32,6 +32,7 @@ function createCrucibleProps(isPersistencePending: boolean) {
     progressById: battleCycle.progressById,
     canUndo: true,
     canRedo: true,
+    controlHintPreference: "auto" as const,
     isAchievementAcknowledgementPending: false,
     isMenuOpen: false,
     isPersistencePending,
@@ -69,6 +70,7 @@ describe("NativeCrucible", () => {
       screen.getByText(`“${getValueDisplayDefinition(secondValue)}”`),
     ).toBeOnTheScreen()
     expect(screen.getAllByText("LVL 1")).toHaveLength(2)
+    expect(screen.queryByText("Tap")).toBeNull()
 
     await user.press(firstChoice)
     await user.press(secondChoice)
@@ -78,6 +80,32 @@ describe("NativeCrucible", () => {
       firstValueId,
       battleCycle.scheduler,
     )
+  })
+
+  it("shows touch hints only when Always is selected without changing card semantics", async () => {
+    const props = createCrucibleProps(false)
+    const { rerender } = await render(
+      <NativeCrucible {...props} controlHintPreference="always" />,
+    )
+    const choices = await screen.findAllByRole("button", { name: /^Choose / })
+    const tapHints = screen.getAllByText("Tap", {
+      includeHiddenElements: true,
+    })
+
+    expect(tapHints).toHaveLength(2)
+    for (const tapHint of tapHints) {
+      expect(tapHint).toHaveProp("aria-hidden", true)
+      expect(tapHint.props.className).toContain("w-14")
+      expect(tapHint.props.className).toContain("xl:w-24")
+      expect(tapHint.props.className).not.toContain("opacity-0")
+    }
+
+    await rerender(<NativeCrucible {...props} controlHintPreference="off" />)
+
+    expect(
+      screen.queryByText("Tap", { includeHiddenElements: true }),
+    ).toBeNull()
+    expect(screen.getAllByRole("button", { name: /^Choose / })).toHaveLength(2)
   })
 
   it("blocks value choice and battle actions while persistence is pending", async () => {

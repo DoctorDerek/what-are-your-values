@@ -24,6 +24,7 @@ export default function NativeValueChoiceCard({
   position,
   value,
   level,
+  controlHint,
   winnerId,
   isEnabled,
   isAnimating,
@@ -35,6 +36,7 @@ export default function NativeValueChoiceCard({
   position: NativeValueChoicePosition
   value: ActiveValueDefinition
   level: number
+  controlHint: string | null
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
@@ -124,6 +126,15 @@ export default function NativeValueChoiceCard({
         >
           <View className="w-full items-center">
             <View className="w-full min-w-0 flex-row items-center gap-3 xl:gap-5">
+              <Text
+                aria-hidden
+                className={cn(
+                  "w-14 shrink-0 text-center text-sm font-black text-black/50 uppercase xl:w-24 xl:text-xl",
+                  !controlHint && "opacity-0",
+                )}
+              >
+                {controlHint}
+              </Text>
               <Text
                 variant="h2"
                 className="min-w-0 flex-1 border-0 pb-0 text-center text-3xl leading-9 text-white uppercase xl:text-5xl xl:leading-[56px]"
