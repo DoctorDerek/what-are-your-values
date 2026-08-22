@@ -11,6 +11,7 @@ export default function PlayerDataResetActions({
   customValueCount,
   isBusy,
   onRequestReset,
+  playerDataResetKinds = PLAYER_DATA_RESET_KINDS,
 }: {
   customValueCount: number
   isBusy: boolean
@@ -18,6 +19,7 @@ export default function PlayerDataResetActions({
     resetKind: PlayerDataResetKind,
     focusTargetId: string,
   ) => void
+  playerDataResetKinds?: readonly PlayerDataResetKind[]
 }) {
   return (
     <section
@@ -30,8 +32,8 @@ export default function PlayerDataResetActions({
       >
         Reset or Delete
       </h2>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {PLAYER_DATA_RESET_KINDS.map((resetKind) => {
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        {playerDataResetKinds.map((resetKind) => {
           const copy = playerDataResetCopy[resetKind]
           const buttonId = `player-data-${resetKind}-button`
           const descriptionId = `${buttonId}-description`

@@ -39,6 +39,7 @@ describe("NativeProductMenu", () => {
       "Browse All Values",
       "Custom Values",
       "Achievements",
+      "Settings",
       "Controls",
       "Import & Export",
       "Introduction",

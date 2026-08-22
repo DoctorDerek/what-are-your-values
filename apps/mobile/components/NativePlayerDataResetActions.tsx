@@ -12,10 +12,12 @@ export default function NativePlayerDataResetActions({
   customValueCount,
   isBusy,
   onRequestReset,
+  playerDataResetKinds = PLAYER_DATA_RESET_KINDS,
 }: {
   readonly customValueCount: number
   readonly isBusy: boolean
   readonly onRequestReset: (resetKind: PlayerDataResetKind) => void
+  readonly playerDataResetKinds?: readonly PlayerDataResetKind[]
 }) {
   return (
     <View className="gap-5">
@@ -26,7 +28,7 @@ export default function NativePlayerDataResetActions({
         Reset or Delete
       </Text>
 
-      {PLAYER_DATA_RESET_KINDS.map((resetKind) => {
+      {playerDataResetKinds.map((resetKind) => {
         const copy = playerDataResetCopy[resetKind]
         const hasNothingToDelete =
           resetKind === "delete-all-custom-values" && customValueCount === 0

@@ -15,6 +15,7 @@ describe("Battle Action Bar", () => {
         canUndo={false}
         canRedo={false}
         canStop
+        showKeyboardControlHints
         onOpenMenu={onOpenMenu}
         onUndo={onUndo}
         onRedo={onRedo}
@@ -29,6 +30,7 @@ describe("Battle Action Bar", () => {
     expect(redo).toBeDisabled()
     for (const shortcut of ["[Z]", "[Y]", "[ESC]"]) {
       expect(screen.getByText(shortcut)).toHaveClass("hidden", "xl:inline")
+      expect(screen.getByText(shortcut)).not.toHaveClass("xl:invisible")
     }
     fireEvent.click(undo)
     fireEvent.click(redo)
@@ -48,6 +50,7 @@ describe("Battle Action Bar", () => {
         canUndo
         canRedo
         canStop={false}
+        showKeyboardControlHints={false}
         onOpenMenu={onOpenMenu}
         onUndo={onUndo}
         onRedo={onRedo}
@@ -64,5 +67,11 @@ describe("Battle Action Bar", () => {
     expect(onStop).toHaveBeenCalledTimes(1)
     expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled()
     expect(screen.getByRole("button", { name: "Stop" })).toBeDisabled()
+    for (const shortcut of ["[Z]", "[Y]", "[ESC]"])
+      expect(screen.getByText(shortcut)).toHaveClass(
+        "hidden",
+        "xl:inline",
+        "xl:invisible",
+      )
   })
 })

@@ -3,6 +3,7 @@ import {
   render,
   screen,
   userEvent,
+  waitFor,
   within,
 } from "@testing-library/react-native"
 import NativeGameClient from "@/components/NativeGameClient"
@@ -80,6 +81,43 @@ describe("NativeGameClient Menu navigation", () => {
     await user.press(screen.getByRole("button", { name: "Battle" }))
     const presentedChoiceNames = getPresentedChoiceNames()
     expect(presentedChoiceNames).toHaveLength(2)
+
+    await openMenuDestination(user, "Settings")
+    expect(await screen.findByText("Settings")).toBeOnTheScreen()
+    const controlHintsGroup = screen.getByLabelText("Control Hints")
+    expect(
+      within(controlHintsGroup).getByRole("radio", { name: "Auto" }),
+    ).toBeChecked()
+    await user.press(
+      within(controlHintsGroup).getByRole("radio", { name: "Off" }),
+    )
+    await waitFor(() => {
+      expect(
+        within(screen.getByLabelText("Control Hints")).getByRole("radio", {
+          name: "Off",
+        }),
+      ).toBeChecked()
+      expect(screen.getByRole("button", { name: "Back" })).toBeEnabled()
+    })
+
+    await user.press(screen.getByRole("button", { name: "Reset Achievements" }))
+    expect(await screen.findByText("Reset Achievements?")).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Cancel" }))
+    expect(screen.getByText("Settings")).toBeOnTheScreen()
+
+    await user.press(screen.getByRole("button", { name: "Back" }))
+    await waitFor(() =>
+      expect(getPresentedChoiceNames()).toEqual(presentedChoiceNames),
+    )
+
+    await openMenuDestination(user, "Settings")
+    expect(
+      within(await screen.findByLabelText("Control Hints")).getByRole("radio", {
+        name: "Off",
+      }),
+    ).toBeChecked()
+    await user.press(screen.getByRole("button", { name: "Back" }))
+    expect(getPresentedChoiceNames()).toEqual(presentedChoiceNames)
 
     await openMenuDestination(user, "Controls")
     const controls = (await screen.findAllByLabelText("Controls")).find(

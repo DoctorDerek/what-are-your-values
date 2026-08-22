@@ -30,9 +30,14 @@ import {
   type PlayerDataResetKind,
   type PlayerDataResetReview,
 } from "@game/machines/src/PlayerDataReset"
+import {
+  PLAYER_SETTINGS_COPY,
+  resolveShouldReduceMotion,
+} from "@game/machines/src/PlayerSettingsPresentation"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { getErrorMessage } from "@game/utils/src/Errors"
 import { useMachine } from "@xstate/react"
+import { useReducedMotion } from "motion/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Controls from "@/components/Controls"
 import { ReopenedInformationPanel } from "@/components/InformationPanel"
@@ -55,6 +60,7 @@ import PlayerDataLoading from "./PlayerDataLoading"
 import PlayerDataRecovery, {
   type PlayerDataRecoveryActivity,
 } from "./PlayerDataRecovery"
+import Settings from "./Settings"
 import Splash from "./Splash"
 import WebWriterConflict from "./WebWriterConflict"
 
@@ -125,6 +131,7 @@ function WritableGameClient({
       randomUuid: () => crypto.randomUUID(),
     },
   })
+  const systemShouldReduceMotion = useReducedMotion() === true
   const browseAllValuesButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusTargetIdRef = useRef("hub-browse-all-values-button")
   const [pendingAllValuesValueId, setPendingAllValuesValueId] =
@@ -144,6 +151,12 @@ function WritableGameClient({
     useState<InformationPanelId | null>(null)
   const productMenuReturnFocusTargetRef = useRef<HTMLElement | null>(null)
   const playerData = state.context.playerData
+  const shouldReduceMotion = playerData
+    ? resolveShouldReduceMotion(
+        playerData.settings.reducedMotion,
+        systemShouldReduceMotion,
+      )
+    : systemShouldReduceMotion
   const battleProfile = playerData?.profile ?? null
   const rankedValues = useMemo(
     () =>
@@ -279,12 +292,27 @@ function WritableGameClient({
         setIsControlsOpen(true)
         return
       }
-      if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
-      if (state.matches("Achievements"))
+      if (destination.id === "settings") {
+        send({ type: "SETTINGS.OPEN_REQUESTED" })
+        return
+      }
+      const settingsReturnTarget = state.matches("Settings")
+        ? state.context.settingsReturnTarget
+        : null
+      if (state.matches("Settings")) send({ type: "SETTINGS.CLOSE_REQUESTED" })
+      if (state.matches("Crucible") || settingsReturnTarget === "crucible")
+        send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (
+        state.matches("Achievements") ||
+        settingsReturnTarget === "achievements"
+      )
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
-      if (state.matches("DataManagement"))
+      if (
+        state.matches("DataManagement") ||
+        settingsReturnTarget === "data-management"
+      )
         send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })
-      if (state.matches("AllValues"))
+      if (state.matches("AllValues") || settingsReturnTarget === "all-values")
         send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
       const destinationActions = {
         "browse-all-values": () =>
@@ -297,7 +325,7 @@ function WritableGameClient({
         achievements: () => openAchievements(HUB_MENU_BUTTON_ID),
         "import-export": () => openDataManagement(HUB_MENU_BUTTON_ID),
       } satisfies Record<
-        Exclude<ProductMenuRouteDestination["id"], "controls">,
+        Exclude<ProductMenuRouteDestination["id"], "controls" | "settings">,
         () => void
       >
 
@@ -409,10 +437,11 @@ function WritableGameClient({
 
   useEffect(() => {
     const preparedDownload = state.context.preparedDownload
-    const isDataManagementDownload = state.matches("DataManagement")
+    const isDataControlDownload =
+      state.matches("DataManagement") || state.matches("Settings")
     const isRecoveryDownload = state.matches("PersistenceFailure")
     if (
-      (!isDataManagementDownload && !isRecoveryDownload) ||
+      (!isDataControlDownload && !isRecoveryDownload) ||
       !preparedDownload ||
       deliveredDownloadsRef.current.has(preparedDownload)
     )
@@ -421,11 +450,11 @@ function WritableGameClient({
     deliveredDownloadsRef.current.add(preparedDownload)
     try {
       downloadPlayerDataFile(preparedDownload)
-      if (isDataManagementDownload)
+      if (isDataControlDownload)
         send({ type: "DATA_MANAGEMENT.EXPORT_CONSUMED" })
       if (isRecoveryDownload) send({ type: "RECOVERY.EXPORT_CONSUMED" })
     } catch {
-      if (isDataManagementDownload)
+      if (isDataControlDownload)
         send({
           type: "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED",
           issue: playerDataPortabilityCopy.exportFailure,
@@ -467,6 +496,21 @@ function WritableGameClient({
             : state.matches({ PersistenceFailure: "DeletingAllData" })
               ? "Deleting data…"
               : null
+  const isBackgroundCheckpointing = state.matches("BackgroundCheckpointing")
+  const isSettingsSurface =
+    state.matches("Settings") ||
+    (isBackgroundCheckpointing &&
+      state.context.backgroundCheckpointReturnTarget === "settings")
+  const settingsActivity =
+    state.matches({ Settings: "Persisting" }) || isBackgroundCheckpointing
+      ? PLAYER_SETTINGS_COPY.savingStatus
+      : state.matches({ Settings: "ExportingResetBackup" })
+        ? "Creating backup…"
+        : state.matches({ Settings: "ApplyingScopedReset" })
+          ? "Applying reset…"
+          : state.matches({ Settings: "DeletingAllData" })
+            ? "Deleting data…"
+            : null
 
   if (
     state.matches("Hydrating") ||
@@ -563,7 +607,7 @@ function WritableGameClient({
     )
   }
 
-  if (!battleProfile || !presentedBattle) {
+  if (!playerData || !battleProfile || !presentedBattle) {
     throw new Error("Battle profile is unavailable after hydration")
   }
 
@@ -576,6 +620,7 @@ function WritableGameClient({
     <AchievementBanner
       achievement={pendingAchievementPresentation}
       isAcknowledgementPending={isRecordingAchievementPresentation}
+      shouldReduceMotion={shouldReduceMotion}
       onPresented={handleAchievementPresented}
     />
   )
@@ -673,6 +718,42 @@ function WritableGameClient({
     )
   }
 
+  if (isSettingsSurface) {
+    return (
+      <>
+        <Settings
+          activity={settingsActivity}
+          customValueCount={battleProfile.activeDeck.customValues.length}
+          issue={
+            state.context.portabilityIssue ?? state.context.persistenceIssue
+          }
+          notice={state.context.portabilityNotice}
+          resetReview={state.context.pendingResetReview}
+          settings={playerData.settings}
+          onCancelReset={() =>
+            send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+          }
+          onClose={() => send({ type: "SETTINGS.CLOSE_REQUESTED" })}
+          onConfirmReset={handleResetConfirmed}
+          onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+          onOpenMenu={handleProductMenuOpen}
+          onRequestReset={handleResetRequested}
+          onUpdateSettings={(settings) =>
+            send({ type: "SETTINGS.UPDATE_REQUESTED", settings })
+          }
+        />
+        <ProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+        {reopenedInformationPanel}
+        {controls}
+      </>
+    )
+  }
+
   if (state.matches("DataManagement")) {
     return (
       <>
@@ -754,11 +835,13 @@ function WritableGameClient({
           progressById={battleProfile.progressById}
           canUndo={battleProfile.history.length > 0}
           canRedo={battleProfile.redo.length > 0}
+          controlHintPreference={playerData.settings.controlHints}
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }
           isMenuOpen={isProductOverlayOpen}
           isPersistencePending={!isBattleReady}
+          shouldReduceMotion={shouldReduceMotion}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
           onOpenMenu={handleProductMenuOpen}

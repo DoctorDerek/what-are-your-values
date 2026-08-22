@@ -64,6 +64,8 @@ import {
   playerDataResetBackupReadyNotice,
   playerDataResetCopy,
 } from "./PlayerDataResetCopy"
+import type { PlayerSettings } from "./PlayerSettings"
+import { updatePlayerSettingsActor } from "./PlayerSettingsActors"
 import { areSchedulerIdentitiesEqual } from "./SchedulerIdentity"
 import type { PreparedWayvmImport } from "./WayvmImportPreview"
 
@@ -71,8 +73,10 @@ type PendingRecoveryImportSource = "last-known-good" | "selected-backup"
 
 type AchievementPresentationReturnTarget = "hub" | "achievements" | "crucible"
 
-type BackgroundCheckpointReturnTarget =
+type SettingsReturnTarget =
   "hub" | "achievements" | "data-management" | "all-values" | "crucible"
+
+type BackgroundCheckpointReturnTarget = SettingsReturnTarget | "settings"
 
 type PersistenceFailureOrigin =
   "loading" | "initialization" | "crucible" | "achievement-presentation"
@@ -89,6 +93,8 @@ type RootMachineContext = {
   pendingAchievementPresentationId: AchievementId | null
   achievementPresentationReturnTarget: AchievementPresentationReturnTarget | null
   backgroundCheckpointReturnTarget: BackgroundCheckpointReturnTarget | null
+  pendingPlayerSettings: PlayerSettings | null
+  settingsReturnTarget: SettingsReturnTarget | null
   pendingImportBytes: string | null
   pendingImport: PreparedWayvmImport | null
   preImportBackupBytes: string | null
@@ -113,6 +119,9 @@ type RootMachineEvent =
   | { type: "ACHIEVEMENTS.OPEN_REQUESTED" }
   | { type: "ACHIEVEMENTS.CLOSE_REQUESTED" }
   | { type: "ACHIEVEMENT.PRESENTED"; achievementId: AchievementId }
+  | { type: "SETTINGS.OPEN_REQUESTED" }
+  | { type: "SETTINGS.CLOSE_REQUESTED" }
+  | { type: "SETTINGS.UPDATE_REQUESTED"; settings: PlayerSettings }
   | { type: "ALL_VALUES.OPEN_REQUESTED" }
   | { type: "ALL_VALUES.CLOSE_REQUESTED" }
   | {
@@ -202,6 +211,16 @@ const CLEARED_ACHIEVEMENT_PRESENTATION_CONTEXT = Object.freeze({
   persistenceIssue: null,
 } as const)
 
+const CLEARED_SETTINGS_TRANSIENT_CONTEXT = Object.freeze({
+  pendingPlayerSettings: null,
+  settingsReturnTarget: null,
+  pendingResetReview: null,
+  preparedDownload: null,
+  persistenceIssue: null,
+  portabilityIssue: null,
+  portabilityNotice: null,
+} as const)
+
 function requirePlayerData(context: RootMachineContext) {
   if (!context.playerData) {
     throw new Error("Player data is not initialized")
@@ -236,6 +255,14 @@ function requirePendingAchievementPresentationId(context: RootMachineContext) {
   }
 
   return context.pendingAchievementPresentationId
+}
+
+function requirePendingPlayerSettings(context: RootMachineContext) {
+  if (!context.pendingPlayerSettings) {
+    throw new Error("Player Settings update is not prepared")
+  }
+
+  return context.pendingPlayerSettings
 }
 
 function requirePendingImportBytes(context: RootMachineContext) {
@@ -356,6 +383,7 @@ export const rootMachine = setup({
     createWayvmExport: createWayvmExportActor,
     prepareWayvmImport: prepareWayvmImportActor,
     replacePlayerData: replacePlayerDataActor,
+    updatePlayerSettings: updatePlayerSettingsActor,
     applyScopedPlayerDataReset: applyScopedPlayerDataResetActor,
     deleteAllPlayerData: deleteAllPlayerDataActor,
     createRecoveryBundle: createRecoveryBundleActor,
@@ -386,6 +414,7 @@ export const rootMachine = setup({
     clearBackgroundCheckpointReturnTarget: assign({
       backgroundCheckpointReturnTarget: null,
     }),
+    clearSettingsContext: assign(CLEARED_SETTINGS_TRANSIENT_CONTEXT),
   },
   guards: {
     isCurrentBattleSelection: ({ context, event }) => {
@@ -497,6 +526,16 @@ export const rootMachine = setup({
       context.backgroundCheckpointReturnTarget === "all-values",
     shouldReturnBackgroundCheckpointToCrucible: ({ context }) =>
       context.backgroundCheckpointReturnTarget === "crucible",
+    shouldReturnBackgroundCheckpointToSettings: ({ context }) =>
+      context.backgroundCheckpointReturnTarget === "settings",
+    shouldReturnSettingsToAchievements: ({ context }) =>
+      context.settingsReturnTarget === "achievements",
+    shouldReturnSettingsToDataManagement: ({ context }) =>
+      context.settingsReturnTarget === "data-management",
+    shouldReturnSettingsToAllValues: ({ context }) =>
+      context.settingsReturnTarget === "all-values",
+    shouldReturnSettingsToCrucible: ({ context }) =>
+      context.settingsReturnTarget === "crucible",
   },
 }).createMachine({
   id: "root",
@@ -508,6 +547,8 @@ export const rootMachine = setup({
     pendingAchievementPresentationId: null,
     achievementPresentationReturnTarget: null,
     backgroundCheckpointReturnTarget: null,
+    pendingPlayerSettings: null,
+    settingsReturnTarget: null,
     pendingImportBytes: null,
     pendingImport: null,
     preImportBackupBytes: null,
@@ -686,6 +727,13 @@ export const rootMachine = setup({
           target: "DataManagement",
           actions: "clearPortabilityFeedback",
         },
+        "SETTINGS.OPEN_REQUESTED": {
+          target: "Settings",
+          actions: assign({
+            ...CLEARED_SETTINGS_TRANSIENT_CONTEXT,
+            settingsReturnTarget: "hub",
+          }),
+        },
       },
     },
     Achievements: {
@@ -697,6 +745,13 @@ export const rootMachine = setup({
           }),
         },
         "ACHIEVEMENTS.CLOSE_REQUESTED": { target: "Hub" },
+        "SETTINGS.OPEN_REQUESTED": {
+          target: "Settings",
+          actions: assign({
+            ...CLEARED_SETTINGS_TRANSIENT_CONTEXT,
+            settingsReturnTarget: "achievements",
+          }),
+        },
         "ACHIEVEMENT.PRESENTED": {
           guard: "canRecordAchievementPresentation",
           target: "RecordingAchievementPresentation",
@@ -705,6 +760,292 @@ export const rootMachine = setup({
               event.achievementId,
             achievementPresentationReturnTarget: "achievements",
           }),
+        },
+      },
+    },
+    Settings: {
+      initial: "Browsing",
+      states: {
+        Browsing: {
+          on: {
+            "APP.BACKGROUND_CHECKPOINT_REQUESTED": {
+              target: "#root.BackgroundCheckpointing",
+              actions: assign({
+                backgroundCheckpointReturnTarget: "settings",
+              }),
+            },
+            "SETTINGS.CLOSE_REQUESTED": [
+              {
+                guard: "shouldReturnSettingsToAchievements",
+                target: "#root.Achievements",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToDataManagement",
+                target: "#root.DataManagement.Browsing",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToAllValues",
+                target: "#root.AllValues.Browsing",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToCrucible",
+                target: "#root.Crucible.Ready",
+                actions: "clearSettingsContext",
+              },
+              {
+                target: "#root.Hub",
+                actions: "clearSettingsContext",
+              },
+            ],
+            "SETTINGS.UPDATE_REQUESTED": {
+              target: "Persisting",
+              actions: assign({
+                pendingPlayerSettings: ({ event }) => {
+                  if (event.type !== "SETTINGS.UPDATE_REQUESTED") {
+                    throw new Error("Invalid Player Settings update event type")
+                  }
+
+                  return event.settings
+                },
+                persistenceIssue: null,
+              }),
+            },
+            "RESET.LEVELS_AND_EXPERIENCE_REQUESTED": {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(
+                    context,
+                    "reset-levels-and-experience",
+                  ),
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RESET.ACHIEVEMENTS_REQUESTED": {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(context, "reset-achievements"),
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DELETE_ALL_DATA.REQUESTED": {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                pendingResetReview: ({ context }) =>
+                  createPendingResetReview(context, "delete-all-data"),
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        Persisting: {
+          invoke: {
+            src: "updatePlayerSettings",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+              settings: requirePendingPlayerSettings(context),
+              updatedAt: context.now(),
+            }),
+            onDone: {
+              target: "Browsing",
+              actions: assign({
+                playerData: ({ event }) => event.output.head.playerData,
+                battleProfileStoreState: ({ event }) => event.output,
+                pendingPlayerSettings: null,
+                persistenceIssue: null,
+              }),
+            },
+            onError: [
+              {
+                guard: ({ event }) =>
+                  event.error instanceof DurableStoreConflictError,
+                target: "#root.LoadingProfile",
+                actions: "clearSettingsContext",
+              },
+              {
+                target: "Browsing",
+                actions: assign({
+                  pendingPlayerSettings: null,
+                  persistenceIssue: ({ event }) => getErrorMessage(event.error),
+                }),
+              },
+            ],
+          },
+        },
+        ReviewingReset: {
+          on: {
+            "SETTINGS.CLOSE_REQUESTED": [
+              {
+                guard: "shouldReturnSettingsToAchievements",
+                target: "#root.Achievements",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToDataManagement",
+                target: "#root.DataManagement.Browsing",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToAllValues",
+                target: "#root.AllValues.Browsing",
+                actions: "clearSettingsContext",
+              },
+              {
+                guard: "shouldReturnSettingsToCrucible",
+                target: "#root.Crucible.Ready",
+                actions: "clearSettingsContext",
+              },
+              {
+                target: "#root.Hub",
+                actions: "clearSettingsContext",
+              },
+            ],
+            "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED": {
+              target: "Browsing",
+              actions: assign({
+                pendingResetReview: null,
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.EXPORT_REQUESTED": {
+              target: "ExportingResetBackup",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DATA_MANAGEMENT.EXPORT_CONSUMED": {
+              actions: assign({ preparedDownload: null }),
+            },
+            "DATA_MANAGEMENT.PLATFORM_FAILURE_REPORTED": {
+              actions: "reportDataManagementPlatformFailure",
+            },
+            "RESET.LEVELS_AND_EXPERIENCE_CONFIRMED": {
+              guard: "canConfirmLevelsAndExperienceReset",
+              target: "ApplyingScopedReset",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "RESET.ACHIEVEMENTS_CONFIRMED": {
+              guard: "canConfirmAchievementsReset",
+              target: "ApplyingScopedReset",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+            "DELETE_ALL_DATA.CONFIRMED": {
+              guard: "canConfirmDeleteAllData",
+              target: "DeletingAllData",
+              actions: assign({
+                portabilityIssue: null,
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        ExportingResetBackup: {
+          invoke: {
+            src: "createWayvmExport",
+            input: ({ context }) => ({
+              exportedAt: context.now(),
+              sourceAppVersion: context.appVersion,
+              sourceBuild: context.sourceBuild,
+              playerData: requirePlayerData(context),
+            }),
+            onDone: {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: ({ event }) => event.output,
+                portabilityIssue: null,
+                portabilityNotice: playerDataResetBackupReadyNotice,
+              }),
+            },
+            onError: {
+              target: "ReviewingReset",
+              actions: assign({
+                preparedDownload: null,
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+                portabilityNotice: null,
+              }),
+            },
+          },
+        },
+        ApplyingScopedReset: {
+          invoke: {
+            src: "applyScopedPlayerDataReset",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+              resetKind: requirePendingScopedResetKind(context),
+              resetAt: context.now(),
+            }),
+            onDone: {
+              target: "Browsing",
+              actions: assign({
+                playerData: ({ event }) => event.output.head.playerData,
+                battleProfileStoreState: ({ event }) => event.output,
+                portabilityNotice: ({ context }) =>
+                  playerDataResetCopy[requirePendingScopedResetKind(context)]
+                    .successAnnouncement,
+                pendingResetReview: null,
+                preparedDownload: null,
+                portabilityIssue: null,
+              }),
+            },
+            onError: {
+              target: "ReviewingReset",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
+        },
+        DeletingAllData: {
+          invoke: {
+            src: "deleteAllPlayerData",
+            input: ({ context }) => ({
+              store: context.durableStore,
+              state: requireBattleProfileStoreState(context),
+            }),
+            onDone: {
+              target: "#root.Splash",
+              actions: assign({
+                ...CLEARED_SETTINGS_TRANSIENT_CONTEXT,
+                playerData: ({ context }) =>
+                  createFreshPlayerDataAfterDeletion(context),
+                battleProfileStoreState: null,
+                pendingBattleProfileCommit: null,
+                pendingImport: null,
+                pendingImportBytes: null,
+                preImportBackupBytes: null,
+                portabilityNotice:
+                  playerDataResetCopy["delete-all-data"].successAnnouncement,
+              }),
+            },
+            onError: {
+              target: "ReviewingReset",
+              actions: assign({
+                portabilityIssue: ({ event }) => getErrorMessage(event.error),
+              }),
+            },
+          },
         },
       },
     },
@@ -728,6 +1069,13 @@ export const rootMachine = setup({
                 pendingResetReview: null,
                 portabilityIssue: null,
                 portabilityNotice: null,
+              }),
+            },
+            "SETTINGS.OPEN_REQUESTED": {
+              target: "#root.Settings",
+              actions: assign({
+                ...CLEARED_SETTINGS_TRANSIENT_CONTEXT,
+                settingsReturnTarget: "data-management",
               }),
             },
             "DATA_MANAGEMENT.EXPORT_REQUESTED": {
@@ -1110,6 +1458,13 @@ export const rootMachine = setup({
               }),
             },
             "ALL_VALUES.CLOSE_REQUESTED": { target: "#root.Hub" },
+            "SETTINGS.OPEN_REQUESTED": {
+              target: "#root.Settings",
+              actions: assign({
+                ...CLEARED_SETTINGS_TRANSIENT_CONTEXT,
+                settingsReturnTarget: "all-values",
+              }),
+            },
             "ALL_VALUES.ADD_REQUESTED": {
               target: "Persisting",
               actions: assign({
@@ -1207,6 +1562,13 @@ export const rootMachine = setup({
               }),
             },
             "BATTLE.EXIT_REQUESTED": { target: "#root.Hub" },
+            "SETTINGS.OPEN_REQUESTED": {
+              target: "#root.Settings",
+              actions: assign({
+                ...CLEARED_SETTINGS_TRANSIENT_CONTEXT,
+                settingsReturnTarget: "crucible",
+              }),
+            },
             "ACHIEVEMENT.PRESENTED": {
               guard: "canRecordAchievementPresentation",
               target: "#root.RecordingAchievementPresentation",
@@ -1356,6 +1718,11 @@ export const rootMachine = setup({
         {
           guard: "shouldReturnBackgroundCheckpointToCrucible",
           target: "Crucible.Ready",
+          actions: "clearBackgroundCheckpointReturnTarget",
+        },
+        {
+          guard: "shouldReturnBackgroundCheckpointToSettings",
+          target: "Settings.Browsing",
           actions: "clearBackgroundCheckpointReturnTarget",
         },
       ],

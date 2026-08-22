@@ -1,4 +1,5 @@
 import type { PlayerDataResetKind } from "@game/machines/src/PlayerDataReset"
+import { SETTINGS_PLAYER_DATA_RESET_KINDS } from "@game/machines/src/PlayerSettingsPresentation"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import PlayerDataResetActions from "./PlayerDataResetActions"
@@ -72,5 +73,27 @@ describe("Player Data Reset Actions", () => {
     for (const [actionLabel] of actionCases) {
       expect(screen.getByRole("button", { name: actionLabel })).toBeDisabled()
     }
+  })
+
+  it("renders the exact caller-declared Settings subset without changing action payloads", () => {
+    const onRequestReset = vi.fn()
+    render(
+      <PlayerDataResetActions
+        customValueCount={2}
+        isBusy={false}
+        onRequestReset={onRequestReset}
+        playerDataResetKinds={SETTINGS_PLAYER_DATA_RESET_KINDS}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Delete All Custom Values" }),
+    ).toBeNull()
+    for (const [actionLabel, resetKind] of actionCases.slice(1)) {
+      const action = screen.getByRole("button", { name: actionLabel })
+      fireEvent.click(action)
+      expect(onRequestReset).toHaveBeenLastCalledWith(resetKind, action.id)
+    }
+    expect(onRequestReset).toHaveBeenCalledTimes(3)
   })
 })

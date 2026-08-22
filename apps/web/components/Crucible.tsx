@@ -9,10 +9,13 @@ import {
   combatMachine,
   type PresentedBattle,
 } from "@game/machines/src/CombatMachine"
+import type { ControlHintPreference } from "@game/machines/src/PlayerSettings"
+import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPresentation"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
 import { useCallback, useEffect, useRef } from "react"
+import useWebControlHintInputModality from "@/lib/useWebControlHintInputModality"
 import AchievementBanner from "./AchievementBanner"
 import BattleActionBar from "./BattleActionBar"
 import { ValueChoiceCard } from "./ValueChoiceCard"
@@ -24,9 +27,11 @@ export default function Crucible({
   progressById,
   canUndo,
   canRedo,
+  controlHintPreference,
   isAchievementAcknowledgementPending,
   isMenuOpen,
   isPersistencePending,
+  shouldReduceMotion,
   onAchievementPresented,
   onExit,
   onOpenMenu,
@@ -40,9 +45,11 @@ export default function Crucible({
   progressById: ValueProgressById
   canUndo: boolean
   canRedo: boolean
+  controlHintPreference: ControlHintPreference
   isAchievementAcknowledgementPending: boolean
   isMenuOpen: boolean
   isPersistencePending: boolean
+  shouldReduceMotion: boolean
   onAchievementPresented: (achievementId: AchievementPresentation["id"]) => void
   onExit: () => void
   onOpenMenu: () => void
@@ -56,6 +63,7 @@ export default function Crucible({
   const [state, send] = useMachine(combatMachine, {
     input: { onWinnerSelected },
   })
+  const controlHintInputModality = useWebControlHintInputModality()
   const firstChoiceRef = useRef<HTMLButtonElement>(null)
   const secondChoiceRef = useRef<HTMLButtonElement>(null)
 
@@ -166,6 +174,18 @@ export default function Crucible({
   }
   const levelA = getLevelFromXP(progressA.totalXp)
   const levelB = getLevelFromXP(progressB.totalXp)
+  const firstControlHint = getValueChoiceControlHint({
+    preference: controlHintPreference,
+    inputModality: controlHintInputModality,
+    position: "first",
+  })
+  const secondControlHint = getValueChoiceControlHint({
+    preference: controlHintPreference,
+    inputModality: controlHintInputModality,
+    position: "second",
+  })
+  const showKeyboardControlHints =
+    controlHintInputModality === "keyboard" && firstControlHint !== null
   const winnerId = state.context.winnerId
 
   return (
@@ -180,6 +200,7 @@ export default function Crucible({
           canUndo={isInteractive && canUndo}
           canRedo={isInteractive && canRedo}
           canStop={isInteractive}
+          showKeyboardControlHints={showKeyboardControlHints}
           onOpenMenu={onOpenMenu}
           onUndo={onUndo}
           onRedo={onRedo}
@@ -190,6 +211,7 @@ export default function Crucible({
           achievement={achievement}
           isAcknowledgementPending={isAchievementAcknowledgementPending}
           placement="battle"
+          shouldReduceMotion={shouldReduceMotion}
           onPresented={onAchievementPresented}
         />
       </div>
@@ -206,6 +228,8 @@ export default function Crucible({
             winnerId={winnerId}
             isEnabled={isInteractive}
             isAnimating={isAnimating}
+            controlHint={firstControlHint}
+            shouldReduceMotion={shouldReduceMotion}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
             onAnimationComplete={handleAnimationComplete}
@@ -223,6 +247,8 @@ export default function Crucible({
             winnerId={winnerId}
             isEnabled={isInteractive}
             isAnimating={isAnimating}
+            controlHint={secondControlHint}
+            shouldReduceMotion={shouldReduceMotion}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
             onAnimationComplete={handleAnimationComplete}

@@ -24,11 +24,16 @@ import {
   type PlayerDataResetKind,
   type PlayerDataResetReview,
 } from "@game/machines/src/PlayerDataReset"
+import {
+  PLAYER_SETTINGS_COPY,
+  resolveShouldReduceMotion,
+} from "@game/machines/src/PlayerSettingsPresentation"
 import { rootMachine } from "@game/machines/src/RootMachine"
 import { useMachine } from "@xstate/react"
 import * as ExpoCrypto from "expo-crypto"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AppState, View } from "react-native"
+import { useReducedMotion } from "react-native-reanimated"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeAchievements from "@/components/NativeAchievements"
 import NativeAllValues from "@/components/NativeAllValues"
@@ -46,6 +51,7 @@ import NativePersistenceFailure, {
 } from "@/components/NativePersistenceFailure"
 import NativePlayerDataLoading from "@/components/NativePlayerDataLoading"
 import NativeProductMenu from "@/components/NativeProductMenu"
+import NativeSettings from "@/components/NativeSettings"
 import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
 import { createNativeAppLifecycleEvent } from "@/lib/NativeAppLifecycleEvents"
@@ -61,6 +67,7 @@ const nativeRootMachineInput = Object.freeze({
 
 export default function NativeGameClient() {
   const [schedulerSeed] = useState(() => ExpoCrypto.randomUUID())
+  const systemShouldReduceMotion = useReducedMotion()
   const [isProductMenuOpen, setIsProductMenuOpen] = useState(false)
   const [isControlsOpen, setIsControlsOpen] = useState(false)
   const [activeInformationPanelId, setActiveInformationPanelId] =
@@ -168,12 +175,27 @@ export default function NativeGameClient() {
         setIsControlsOpen(true)
         return
       }
-      if (state.matches("Crucible")) send({ type: "BATTLE.EXIT_REQUESTED" })
-      if (state.matches("Achievements"))
+      if (destination.id === "settings") {
+        send({ type: "SETTINGS.OPEN_REQUESTED" })
+        return
+      }
+      const settingsReturnTarget = state.matches("Settings")
+        ? state.context.settingsReturnTarget
+        : null
+      if (state.matches("Settings")) send({ type: "SETTINGS.CLOSE_REQUESTED" })
+      if (state.matches("Crucible") || settingsReturnTarget === "crucible")
+        send({ type: "BATTLE.EXIT_REQUESTED" })
+      if (
+        state.matches("Achievements") ||
+        settingsReturnTarget === "achievements"
+      )
         send({ type: "ACHIEVEMENTS.CLOSE_REQUESTED" })
-      if (state.matches("AllValues"))
+      if (state.matches("AllValues") || settingsReturnTarget === "all-values")
         send({ type: "ALL_VALUES.CLOSE_REQUESTED" })
-      if (state.matches("DataManagement"))
+      if (
+        state.matches("DataManagement") ||
+        settingsReturnTarget === "data-management"
+      )
         send({ type: "DATA_MANAGEMENT.CLOSE_REQUESTED" })
       const destinationActions = {
         "browse-all-values": () => openAllValues({}),
@@ -181,7 +203,7 @@ export default function NativeGameClient() {
         achievements: () => send({ type: "ACHIEVEMENTS.OPEN_REQUESTED" }),
         "import-export": () => send({ type: "DATA_MANAGEMENT.OPEN_REQUESTED" }),
       } satisfies Record<
-        Exclude<ProductMenuRouteDestination["id"], "controls">,
+        Exclude<ProductMenuRouteDestination["id"], "controls" | "settings">,
         () => void
       >
 
@@ -367,8 +389,13 @@ export default function NativeGameClient() {
       />
     )
 
-  if (!battleProfile || !presentedBattle)
+  if (!playerData || !battleProfile || !presentedBattle)
     throw new Error("Battle profile is unavailable after hydration")
+
+  const shouldReduceMotion = resolveShouldReduceMotion(
+    playerData.settings.reducedMotion,
+    systemShouldReduceMotion,
+  )
 
   const isRecordingAchievementPresentation = state.matches(
     "RecordingAchievementPresentation",
@@ -403,10 +430,15 @@ export default function NativeGameClient() {
       achievementPresentationReturnTarget === "crucible") ||
     (isBackgroundCheckpointing &&
       backgroundCheckpointReturnTarget === "crucible")
+  const isSettingsSurface =
+    state.matches("Settings") ||
+    (isBackgroundCheckpointing &&
+      backgroundCheckpointReturnTarget === "settings")
   const achievementBanner = (
     <NativeAchievementBanner
       achievement={pendingAchievementPresentation}
       isAcknowledgementPending={isRecordingAchievementPresentation}
+      shouldReduceMotion={shouldReduceMotion}
       onPresented={handleAchievementPresented}
     />
   )
@@ -487,6 +519,54 @@ export default function NativeGameClient() {
         {achievementBanner}
       </View>
     )
+
+  if (isSettingsSurface) {
+    const activity =
+      state.matches({ Settings: "Persisting" }) || isBackgroundCheckpointing
+        ? PLAYER_SETTINGS_COPY.savingStatus
+        : state.matches({ Settings: "ExportingResetBackup" })
+          ? "Creating backup…"
+          : state.matches({ Settings: "ApplyingScopedReset" })
+            ? "Applying reset…"
+            : state.matches({ Settings: "DeletingAllData" })
+              ? "Deleting data…"
+              : null
+
+    return (
+      <View className="flex-1">
+        <NativeSettings
+          activity={activity}
+          customValueCount={battleProfile.activeDeck.customValues.length}
+          isNavigationPending={isBackgroundCheckpointing}
+          issue={
+            state.context.portabilityIssue ?? state.context.persistenceIssue
+          }
+          notice={state.context.portabilityNotice}
+          resetReview={state.context.pendingResetReview}
+          settings={playerData.settings}
+          onCancelReset={() =>
+            send({ type: "DATA_MANAGEMENT.RESET_CANCEL_REQUESTED" })
+          }
+          onClose={() => send({ type: "SETTINGS.CLOSE_REQUESTED" })}
+          onConfirmReset={handleResetConfirmed}
+          onExport={() => send({ type: "DATA_MANAGEMENT.EXPORT_REQUESTED" })}
+          onOpenMenu={() => setIsProductMenuOpen(true)}
+          onRequestReset={handleResetRequested}
+          onUpdateSettings={(settings) =>
+            send({ type: "SETTINGS.UPDATE_REQUESTED", settings })
+          }
+        />
+        <NativeProductMenu
+          contextActionLabel={PRODUCT_MENU_COPY.closeAction}
+          open={isProductMenuOpen}
+          onDestinationSelect={handleProductMenuDestinationSelect}
+          onOpenChange={setIsProductMenuOpen}
+        />
+        {reopenedInformationPanel}
+        {controls}
+      </View>
+    )
+  }
 
   if (isDataManagementSurface) {
     const activity: NativeDataManagementActivity | null =
@@ -588,11 +668,13 @@ export default function NativeGameClient() {
           progressById={battleProfile.progressById}
           canUndo={battleProfile.history.length > 0}
           canRedo={battleProfile.redo.length > 0}
+          controlHintPreference={playerData.settings.controlHints}
           isAchievementAcknowledgementPending={
             isRecordingAchievementPresentation
           }
           isMenuOpen={isProductOverlayOpen}
           isPersistencePending={!isBattleReady}
+          shouldReduceMotion={shouldReduceMotion}
           onAchievementPresented={handleAchievementPresented}
           onExit={() => send({ type: "BATTLE.EXIT_REQUESTED" })}
           onOpenMenu={() => setIsProductMenuOpen(true)}

@@ -9,7 +9,6 @@ import { Pressable, ScrollView, View } from "react-native"
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated"
@@ -25,24 +24,27 @@ export default function NativeValueChoiceCard({
   position,
   value,
   level,
+  controlHint,
   winnerId,
   isEnabled,
   isAnimating,
   reportsAnimationCompletion,
+  shouldReduceMotion,
   onActivate,
   onAnimationComplete,
 }: {
   position: NativeValueChoicePosition
   value: ActiveValueDefinition
   level: number
+  controlHint: string | null
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
   reportsAnimationCompletion: boolean
+  shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
   onAnimationComplete: () => void
 }) {
-  const shouldReduceMotion = useReducedMotion()
   const isWinner = isAnimating && winnerId === value.id
   const isDefeated = isAnimating && winnerId !== null && winnerId !== value.id
   const opacity = useSharedValue(1)
@@ -124,6 +126,15 @@ export default function NativeValueChoiceCard({
         >
           <View className="w-full items-center">
             <View className="w-full min-w-0 flex-row items-center gap-3 xl:gap-5">
+              <Text
+                aria-hidden
+                className={cn(
+                  "w-14 shrink-0 text-center text-sm font-black text-black/50 uppercase xl:w-24 xl:text-xl",
+                  !controlHint && "opacity-0",
+                )}
+              >
+                {controlHint}
+              </Text>
               <Text
                 variant="h2"
                 className="min-w-0 flex-1 border-0 pb-0 text-center text-3xl leading-9 text-white uppercase xl:text-5xl xl:leading-[56px]"

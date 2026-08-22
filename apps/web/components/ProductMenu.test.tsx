@@ -37,6 +37,7 @@ describe("Product Menu", () => {
       "Browse All Values",
       "Custom Values",
       "Achievements",
+      "Settings",
       "Controls",
       "Import & Export",
       "Introduction",
