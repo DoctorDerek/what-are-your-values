@@ -23,7 +23,6 @@ export const combatMachine = setup({
       | { type: "BATTLE.PROJECTED"; battle: PresentedBattle }
       | { type: "VALUE.FOCUS_REQUESTED"; valueId: ValueId }
       | { type: "VALUE.WINNER_SELECTED"; valueId: ValueId }
-      | { type: "CALIBRATION.XSTATE_DIFF_REQUESTED" }
       | { type: "ANIMATION.RESULT_FINISHED" },
     input: {} as {
       onWinnerSelected: (
@@ -68,9 +67,6 @@ export const combatMachine = setup({
   states: {
     Preparing: {
       on: {
-        "CALIBRATION.XSTATE_DIFF_REQUESTED": {
-          target: "CalibrationProbe",
-        },
         "BATTLE.PROJECTED": {
           target: "AwaitingInput",
           actions: assign({
@@ -80,11 +76,6 @@ export const combatMachine = setup({
             focusedId: null,
           }),
         },
-      },
-    },
-    CalibrationProbe: {
-      always: {
-        target: "Preparing",
       },
     },
     AwaitingInput: {
