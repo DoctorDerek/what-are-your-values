@@ -28,6 +28,11 @@ describe("ValueLevelProgress Component Integration", () => {
       "w-full",
       "min-w-0",
       "basis-full",
+      "xl:w-auto",
+      "xl:min-w-44",
+      "xl:basis-auto",
+    )
+    expect(progress).not.toHaveClass(
       "sm:w-auto",
       "sm:min-w-44",
       "sm:basis-auto",

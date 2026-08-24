@@ -188,7 +188,7 @@ export default function DataManagement({
           />
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
               <section
                 aria-labelledby="export-data-heading"
                 className="flex flex-col border-4 border-black bg-white p-5 shadow-[8px_8px_0px_0px_#000000] sm:p-8"

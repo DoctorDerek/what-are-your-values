@@ -74,6 +74,11 @@ describe("Data Management", () => {
     expect(
       screen.getByText(/show you a preview before replacing data/),
     ).toBeVisible()
+    const portabilityPanels = screen
+      .getByRole("heading", { name: "Export Data", level: 2 })
+      .closest("section")?.parentElement
+    expect(portabilityPanels).toHaveClass("grid-cols-1", "xl:grid-cols-2")
+    expect(portabilityPanels).not.toHaveClass("lg:grid-cols-2")
 
     fireEvent.click(screen.getByRole("button", { name: "Export Data" }))
     const importInput = screen.getByLabelText("Choose WAYVM JSON backup")

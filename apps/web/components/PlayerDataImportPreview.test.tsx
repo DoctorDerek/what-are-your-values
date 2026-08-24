@@ -52,6 +52,11 @@ describe("Player Data Import Preview", () => {
         screen.getByRole("heading", { name: "Review Import" }),
       ).toHaveFocus(),
     )
+    const previewFacts = screen
+      .getByText("Backup Created")
+      .closest("div")?.parentElement
+    expect(previewFacts).toHaveClass("grid-cols-1", "xl:grid-cols-2")
+    expect(previewFacts).not.toHaveClass("sm:grid-cols-2")
     expect(screen.getByRole("time")).toHaveAttribute(
       "datetime",
       preview.exportedAt,
@@ -99,6 +104,11 @@ describe("Player Data Import Preview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
     fireEvent.click(screen.getByRole("button", { name: "Import & Replace" }))
+    const actionLayout = screen.getByRole("button", {
+      name: "Cancel",
+    }).parentElement
+    expect(actionLayout).toHaveClass("flex-col", "xl:flex-row")
+    expect(actionLayout).not.toHaveClass("sm:flex-row")
     expect(onCancel).toHaveBeenCalledOnce()
     expect(onConfirm).toHaveBeenCalledOnce()
 

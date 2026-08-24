@@ -80,7 +80,7 @@ export default function Achievements({
 
   return (
     <main className="noise-bg bg-mapache-vivid-dark min-h-[100dvh] w-full p-4 sm:p-8">
-      <header className="mx-auto flex w-full max-w-5xl flex-col items-stretch gap-5 sm:flex-row sm:items-center sm:justify-between">
+      <header className="mx-auto flex w-full max-w-5xl flex-col items-stretch gap-5 xl:flex-row xl:items-center xl:justify-between">
         <h1
           ref={headingRef}
           tabIndex={-1}

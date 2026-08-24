@@ -42,7 +42,7 @@ export default function PlayerDataRecoveryActions(
 
   if (props.mode === "unreadable-data") {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {props.hasLastKnownGoodSave ? (
           <Button
             id={playerDataRecoveryActionIds.restoreLastKnownGoodSave}
@@ -93,7 +93,7 @@ export default function PlayerDataRecoveryActions(
           size="lg"
           disabled={props.isBusy}
           onClick={props.onDeleteAllData}
-          className="w-full whitespace-normal sm:col-span-2"
+          className="w-full whitespace-normal xl:col-span-2"
         >
           {actions.deleteAllData}
         </Button>
@@ -102,7 +102,7 @@ export default function PlayerDataRecoveryActions(
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       {props.canExportCurrentData ? (
         <Button
           type="button"
@@ -131,7 +131,7 @@ export default function PlayerDataRecoveryActions(
           size="lg"
           disabled={props.isBusy}
           onClick={props.onReturnWithoutNewChanges}
-          className="w-full whitespace-normal sm:col-span-2"
+          className="w-full whitespace-normal xl:col-span-2"
         >
           {actions.returnWithoutNewChanges}
         </Button>
