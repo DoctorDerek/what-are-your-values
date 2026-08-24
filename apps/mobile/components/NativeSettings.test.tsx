@@ -83,7 +83,6 @@ describe("NativeSettings", () => {
     await user.press(screen.getByRole("button", { name: "Back" }))
     expect(props.onOpenMenu).toHaveBeenCalledTimes(1)
     expect(props.onClose).toHaveBeenCalledTimes(1)
-    expect(screen.queryByText("Reflection Cards")).not.toBeOnTheScreen()
   })
 
   it("announces durable activity and disables every competing action", async () => {

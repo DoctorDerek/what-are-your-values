@@ -15,7 +15,7 @@ describe("InformationPanelContent", () => {
       />,
     )
 
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(10)
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(9)
     expect(
       screen.getByRole("heading", {
         level: 2,

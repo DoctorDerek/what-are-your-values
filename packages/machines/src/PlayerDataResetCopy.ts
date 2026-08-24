@@ -29,7 +29,7 @@ export const playerDataResetCopy = Object.freeze({
       "Return every active value to Level 1 with 0 XP while keeping Custom Values, achievements, and settings.",
     confirmationTitle: "Reset Levels & Experience?",
     confirmationBody: Object.freeze([
-      "This returns every active value to Level 1 with 0 XP, clears value win/loss counters, restarts the current pair cycle and reflection rotation, and clears Undo and Redo history.",
+      "This returns every active value to Level 1 with 0 XP, clears value win/loss counters, restarts the current pair cycle, and clears Undo and Redo history.",
       "It advances the internal progress generation so restored scheduler state cannot cross the reset boundary. Your current value ranking restarts from an all-tied baseline.",
       "It keeps your Custom Value definitions, achievements and lifetime achievement progress, language, accessibility settings, controls, avatar customization, and other preferences.",
       "This cannot be undone after you confirm. Export your data first if you may want it later.",

@@ -12,7 +12,6 @@ describe("Player Settings", () => {
       locale: "en",
       reducedMotion: "system",
       controlHints: "auto",
-      reflectionCards: "act-inspired",
     })
   })
 
@@ -21,7 +20,6 @@ describe("Player Settings", () => {
       locale: "en",
       reducedMotion: "off",
       controlHints: "always",
-      reflectionCards: "none",
     })
 
     expect(decodePlayerSettings(encodePlayerSettings(settings))).toEqual(
@@ -46,11 +44,6 @@ describe("Player Settings", () => {
       value: "keyboard",
       issue: "Unsupported control-hint preference",
     },
-    {
-      index: 4,
-      value: "logotherapy-inspired",
-      issue: "Unsupported reflection-card preference",
-    },
   ])(
     "rejects unsupported persisted settings at tuple index $index",
     ({ index, value, issue }) => {
@@ -63,7 +56,7 @@ describe("Player Settings", () => {
 
   it("rejects noncanonical tuple representations", () => {
     expect(() =>
-      decodePlayerSettings([1, "en", "system", "auto", "act-inspired", null]),
+      decodePlayerSettings([1, "en", "system", "auto", null]),
     ).toThrow("Invalid Player Settings")
   })
 })

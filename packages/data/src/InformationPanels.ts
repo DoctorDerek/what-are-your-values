@@ -136,13 +136,6 @@ export const HOW_IT_WORKS_INFORMATION_PANEL = Object.freeze({
     }),
     Object.freeze({
       kind: "section",
-      heading: "Turn a Value Into an Action",
-      paragraphs: Object.freeze([
-        "Optional reflection cards can connect one of your Top Five values with one small action today. You can dismiss them or turn them off. WAYVM does not ask you to record or prove what you do.",
-      ]),
-    }),
-    Object.freeze({
-      kind: "section",
       heading: "How This Differs From the Source Card Sort",
       paragraphs: Object.freeze([
         "The 2011 Personal Values Card Sort asks a person to sort values into three to five importance groups, identify five to ten central values, and rank those selected values. It often continues through an interview with open questions and reflective listening.",
@@ -349,7 +342,7 @@ export const CREDITS_PRIVACY_INFORMATION_PANEL = Object.freeze({
       heading: "Private. Offline. Account-free.",
       paragraphs: Object.freeze([
         "This app uses storage on your device to save your progress, Custom Values, achievements, language, and settings and to work offline. It does not use this storage for analytics, advertising, or tracking.",
-        "WAYVM has no account, cloud sync, global leaderboard, advertising, or behavioral analytics. The app does not send your comparisons, canonical or Custom Values, definitions, ranking, Top Five, achievements, reflection prompts, or settings to us.",
+        "WAYVM has no account, cloud sync, global leaderboard, advertising, or behavioral analytics. The app does not send your comparisons, canonical or Custom Values, definitions, ranking, Top Five, achievements, or settings to us.",
         "WAYVM does not set tracking or advertising cookies.",
         "Export happens only when you choose it. JSON export creates a backup you control. If you send a file to another app or service, that destination handles it under its own privacy policy.",
         "External resource links open websites outside WAYVM. Those sites can receive ordinary web request information and follow their own privacy practices.",

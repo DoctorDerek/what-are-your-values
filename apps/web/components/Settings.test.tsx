@@ -95,7 +95,6 @@ describe("Settings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }))
     expect(props.onOpenMenu).toHaveBeenCalledOnce()
     expect(props.onClose).toHaveBeenCalledOnce()
-    expect(screen.queryByText("Reflection Cards")).toBeNull()
   })
 
   it("announces durable activity and errors while locking every competing action", async () => {
