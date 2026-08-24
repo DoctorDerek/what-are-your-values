@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3037",
     "build": "next build",
-    "start": "next start --port 3037"
+    "start": "vite preview --outDir out --port 3037 --strictPort"
   },
   "dependencies": {
     "@game/data": "workspace:*",
@@ -22,13 +22,18 @@
     "xstate": "^5"
   },
   "devDependencies": {
+    "@serwist/cli": "^9",
+    "@serwist/next": "^9",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.28.2",
     "postcss": "^8",
+    "serwist": "^9",
     "tailwindcss": "^4",
-    "typescript": "^6"
+    "typescript": "^6",
+    "vite": "^8"
   },
   "engines": {
     "node": "^24"
