@@ -24,6 +24,7 @@ The public web application currently includes:
 - Undo and Redo for battle history.
 - Schema-validated JSON backup import and export.
 - Local achievement progression and presentation.
+- An installable static PWA with a precached application shell for offline reloads.
 - Responsive keyboard- and touch-friendly web UI.
 
 ## Release status
@@ -71,6 +72,13 @@ fnm use
 corepack enable pnpm
 pnpm install
 pnpm dev
+```
+
+Build and preview the static production PWA locally with:
+
+```powershell
+pnpm --filter @game/web build
+pnpm --filter @game/web start
 ```
 
 ## Verification
