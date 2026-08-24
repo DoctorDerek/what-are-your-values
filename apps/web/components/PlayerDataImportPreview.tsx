@@ -65,7 +65,7 @@ export default function PlayerDataImportPreview({
         {title}
       </h2>
 
-      <dl className="text-mapache-vivid-dark my-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <dl className="text-mapache-vivid-dark my-6 grid grid-cols-1 gap-3 xl:grid-cols-2">
         <PreviewFact label="Backup Created">
           <time dateTime={preview.exportedAt}>{formattedExportTimestamp}</time>
         </PreviewFact>
@@ -115,7 +115,7 @@ export default function PlayerDataImportPreview({
         {warning}
       </p>
 
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row">
+      <div className="mt-6 flex flex-col gap-4 xl:flex-row">
         <Button
           type="button"
           variant="outline"
