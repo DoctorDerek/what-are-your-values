@@ -52,7 +52,7 @@ describe("Root layout", () => {
     })
   })
 
-  it("enables offline registration only in production", () => {
+  it("enables offline registration for production releases", () => {
     vi.stubEnv("NODE_ENV", "production")
 
     render(
@@ -65,6 +65,25 @@ describe("Root layout", () => {
     expect(serwistProviderSpy).toHaveBeenCalledWith({
       swUrl: "/sw.js",
       disable: false,
+      cacheOnNavigation: false,
+      reloadOnOnline: false,
+    })
+  })
+
+  it("disables offline registration on protected Vercel Previews", () => {
+    vi.stubEnv("NODE_ENV", "production")
+    vi.stubEnv("VERCEL_ENV", "preview")
+
+    render(
+      <RootLayout>
+        <p>Preview values client</p>
+      </RootLayout>,
+    )
+
+    expect(screen.getByText("Preview values client")).toBeVisible()
+    expect(serwistProviderSpy).toHaveBeenCalledWith({
+      swUrl: "/sw.js",
+      disable: true,
       cacheOnNavigation: false,
       reloadOnOnline: false,
     })

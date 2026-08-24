@@ -14,12 +14,16 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const serviceWorkerIsDisabled =
+    process.env.NODE_ENV !== "production" ||
+    process.env.VERCEL_ENV === "preview"
+
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
         <SerwistProvider
           swUrl="/sw.js"
-          disable={process.env.NODE_ENV !== "production"}
+          disable={serviceWorkerIsDisabled}
           cacheOnNavigation={false}
           reloadOnOnline={false}
         >
