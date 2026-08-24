@@ -16,6 +16,16 @@ body {
   box-sizing: border-box;
 }
 
+html[data-wayvm-reduced-motion] *,
+html[data-wayvm-reduced-motion] *::before,
+html[data-wayvm-reduced-motion] *::after {
+  animation-delay: 0s !important;
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-delay: 0s !important;
+  transition-duration: 0s !important;
+}
+
 a {
   color: inherit;
   text-decoration: none;
