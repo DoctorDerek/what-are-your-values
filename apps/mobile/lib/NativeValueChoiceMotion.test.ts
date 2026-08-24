@@ -46,14 +46,35 @@ describe("Native Value Choice Motion", () => {
     },
   )
 
-  it("turns reduced motion into an immediate semantic transition", () => {
-    expect(
-      createNativeValueChoiceMotion({
-        position: "first",
-        isWinner: true,
-        isDefeated: false,
-        shouldReduceMotion: true,
-      }).durationMilliseconds,
-    ).toBe(0)
-  })
+  it.each([
+    {
+      position: "first" as const,
+      isWinner: false,
+      isDefeated: true,
+      expectedOpacity: 0.35,
+    },
+    {
+      position: "second" as const,
+      isWinner: true,
+      isDefeated: false,
+      expectedOpacity: 1,
+    },
+  ])(
+    "turns reduced $position-card motion into immediate semantic feedback",
+    ({ position, isWinner, isDefeated, expectedOpacity }) => {
+      expect(
+        createNativeValueChoiceMotion({
+          position,
+          isWinner,
+          isDefeated,
+          shouldReduceMotion: true,
+        }),
+      ).toEqual({
+        durationMilliseconds: 0,
+        opacity: expectedOpacity,
+        scale: 1,
+        translateY: 0,
+      })
+    },
+  )
 })
