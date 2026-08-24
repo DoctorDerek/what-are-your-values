@@ -23,8 +23,9 @@ export default defineConfig({
         "apps/mobile/lib/**/*.ts",
         "packages/*/src/**/*.ts",
         "scripts/lighthouse/prepareLighthouseReports.ts",
+        "scripts/xstate-diff/**/*.ts",
       ],
-      exclude: ["**/*.test.{ts,tsx}"],
+      exclude: ["**/*.test.{ts,tsx}", "scripts/xstate-diff/xstateDiff.cli.ts"],
       thresholds: {
         statements: 79,
         branches: 79,
