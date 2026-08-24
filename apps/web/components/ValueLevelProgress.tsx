@@ -7,7 +7,7 @@ export default function ValueLevelProgress({ totalXp }: { totalXp: number }) {
   return (
     <div
       aria-label={`Level ${level}: ${earnedXpTowardNextLevel} of ${requiredXpForNextLevel} XP toward Level ${level + 1}`}
-      className="text-mapache-vivid-primary-raspberry w-full min-w-0 basis-full border-4 border-black bg-white px-3 py-2 font-black uppercase sm:w-auto sm:min-w-44 sm:basis-auto"
+      className="text-mapache-vivid-primary-raspberry w-full min-w-0 basis-full border-4 border-black bg-white px-3 py-2 font-black uppercase xl:w-auto xl:min-w-44 xl:basis-auto"
     >
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-xl">Level {level}</span>
