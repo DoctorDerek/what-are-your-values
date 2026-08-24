@@ -90,6 +90,21 @@ describe("Achievements", () => {
         screen.getByRole("heading", { name: "Achievements", level: 1 }),
       ).toHaveFocus(),
     )
+    const pageHeader = screen
+      .getByRole("heading", { name: "Achievements", level: 1 })
+      .closest("header")
+    expect(pageHeader).toHaveClass(
+      "flex-col",
+      "items-stretch",
+      "xl:flex-row",
+      "xl:items-center",
+      "xl:justify-between",
+    )
+    expect(pageHeader).not.toHaveClass(
+      "sm:flex-row",
+      "sm:items-center",
+      "sm:justify-between",
+    )
     expect(screen.getByText("0 of 40 unlocked")).toBeVisible()
     expect(
       screen.getByText(
