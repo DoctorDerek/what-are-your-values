@@ -78,7 +78,6 @@ describe("WAYVM Export", () => {
       locale: "en",
       reducedMotion: "on",
       controlHints: "always",
-      reflectionCards: "none",
     })
   })
 

@@ -23,9 +23,9 @@ const SECOND_BATTLE_AT = "2026-08-01T10:03:00.000Z"
 const UNDO_AT = "2026-08-01T10:04:00.000Z"
 
 export const WAYVM_EXPORT_V1_TEST_VECTOR = Object.freeze({
-  expectedByteLength: 23_756,
+  expectedByteLength: 23_749,
   expectedContentHash:
-    "d34e251f68eb7ef030775ba39d895e23f95804f68944d6836b918eda463aa84f",
+    "b7e8b2f995fb9183738f2c5d4c8ad8c929d8125c8e443f957d41244bf55f3ad8",
   exportedAt: "2026-08-01T10:05:00.000Z",
   sourceAppVersion: "5.2.0",
   sourceBuild: "schema-one-cross-platform-compatibility-vector",
@@ -119,7 +119,6 @@ export async function createWayvmExportV1TestVector() {
       locale: "en",
       reducedMotion: "on",
       controlHints: "always",
-      reflectionCards: "none",
     }),
   })
 
