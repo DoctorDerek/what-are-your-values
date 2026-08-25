@@ -46,9 +46,9 @@ export function getValueChoiceAccessibilityLabel({
   readonly value: ActiveValueDefinition
   readonly level: number
 }) {
-  const positionLabel = position === "first" ? "First" : "Second"
+  const choiceNumber = position === "first" ? 1 : 2
 
-  return `Choose ${getValueDisplayName(value)}. Level ${level}. ${positionLabel} choice.`
+  return `Choose ${getValueDisplayName(value)}. Level ${level}. Choice ${choiceNumber}.`
 }
 
 export function createPendingBattleAccessibilityAction({
