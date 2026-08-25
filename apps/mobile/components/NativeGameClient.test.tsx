@@ -49,7 +49,7 @@ async function openMenuDestination(
 
 function getPresentedChoiceNames() {
   return screen
-    .getAllByRole("button", { name: /^Choose / })
+    .getAllByRole("button", { name: /^(First|Second) choice: Choose / })
     .map(({ props }) => props.accessibilityLabel as unknown)
 }
 

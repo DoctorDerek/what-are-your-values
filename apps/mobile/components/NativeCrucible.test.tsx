@@ -1,7 +1,5 @@
-import {
-  getValueDisplayDefinition,
-  getValueDisplayName,
-} from "@game/data/src/Value"
+import { getValueDisplayDefinition } from "@game/data/src/Value"
+import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import { projectBattlePair } from "@game/machines/src/BattleScheduler"
 import { describe, expect, it, jest } from "@jest/globals"
@@ -52,13 +50,19 @@ describe("NativeCrucible", () => {
     const user = userEvent.setup()
     await render(<NativeCrucible {...props} />)
 
-    const firstValueName = getValueDisplayName(firstValue)
-    const secondValueName = getValueDisplayName(secondValue)
     const firstChoice = await screen.findByRole("button", {
-      name: `Choose ${firstValueName}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstValue,
+        level: 1,
+      }),
     })
     const secondChoice = screen.getByRole("button", {
-      name: `Choose ${secondValueName}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "second",
+        value: secondValue,
+        level: 1,
+      }),
     })
 
     expect(firstChoice).toBeEnabled()
@@ -87,7 +91,9 @@ describe("NativeCrucible", () => {
     const { rerender } = await render(
       <NativeCrucible {...props} controlHintPreference="always" />,
     )
-    const choices = await screen.findAllByRole("button", { name: /^Choose / })
+    const choices = await screen.findAllByRole("button", {
+      name: /^(First|Second) choice: Choose /,
+    })
     const tapHints = screen.getAllByText("Tap", {
       includeHiddenElements: true,
     })
@@ -105,7 +111,11 @@ describe("NativeCrucible", () => {
     expect(
       screen.queryByText("Tap", { includeHiddenElements: true }),
     ).toBeNull()
-    expect(screen.getAllByRole("button", { name: /^Choose / })).toHaveLength(2)
+    expect(
+      screen.getAllByRole("button", {
+        name: /^(First|Second) choice: Choose /,
+      }),
+    ).toHaveLength(2)
   })
 
   it("blocks value choice and battle actions while persistence is pending", async () => {
@@ -114,10 +124,18 @@ describe("NativeCrucible", () => {
     await render(<NativeCrucible {...props} />)
 
     const firstChoice = await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(firstValue)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstValue,
+        level: 1,
+      }),
     })
     const secondChoice = screen.getByRole("button", {
-      name: `Choose ${getValueDisplayName(secondValue)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "second",
+        value: secondValue,
+        level: 1,
+      }),
     })
 
     expect(screen.getByLabelText("Value battle")).toBeBusy()
@@ -138,20 +156,31 @@ describe("NativeCrucible", () => {
     const props = createCrucibleProps(false)
     const user = userEvent.setup()
     const { rerender } = await render(<NativeCrucible {...props} />)
-    const firstValueName = getValueDisplayName(firstValue)
-    const secondValueName = getValueDisplayName(secondValue)
-
     expect(
-      await screen.findByRole("button", { name: `Choose ${firstValueName}` }),
+      await screen.findByRole("button", {
+        name: getValueChoiceAccessibilityLabel({
+          position: "first",
+          value: firstValue,
+          level: 1,
+        }),
+      }),
     ).toBeEnabled()
 
     await rerender(<NativeCrucible {...props} isMenuOpen />)
 
     const firstChoice = screen.getByRole("button", {
-      name: `Choose ${firstValueName}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstValue,
+        level: 1,
+      }),
     })
     const secondChoice = screen.getByRole("button", {
-      name: `Choose ${secondValueName}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "second",
+        value: secondValue,
+        level: 1,
+      }),
     })
     expect(firstChoice).toBeDisabled()
     expect(secondChoice).toBeDisabled()

@@ -2,6 +2,11 @@ import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
+import {
+  createPendingBattleAccessibilityAction,
+  getBattleAccessibilityAnnouncement,
+  type PendingBattleAccessibilityAction,
+} from "@game/machines/src/BattleAccessibilityPresentation"
 import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
@@ -11,8 +16,8 @@ import type { ControlHintPreference } from "@game/machines/src/PlayerSettings"
 import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPresentation"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { useCallback, useEffect } from "react"
-import { View } from "react-native"
+import { useCallback, useEffect, useRef } from "react"
+import { AccessibilityInfo, View } from "react-native"
 import MapacheScreen from "@/components/MapacheScreen"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeBattleActionBar from "@/components/NativeBattleActionBar"
@@ -64,6 +69,9 @@ export default function NativeCrucible({
   const [state, send] = useMachine(combatMachine, {
     input: { onWinnerSelected },
   })
+  const firstChoiceRef = useRef<View>(null)
+  const pendingAccessibilityActionRef =
+    useRef<PendingBattleAccessibilityAction | null>(null)
 
   useEffect(() => {
     send({ type: "BATTLE.PROJECTED", battle })
@@ -72,17 +80,82 @@ export default function NativeCrucible({
   const isInteractive =
     state.matches("AwaitingInput") && !isMenuOpen && !isPersistencePending
   const isAnimating = state.matches("AnimatingResult")
-  const currentPair = state.context.currentBattle?.pair ?? null
+  const currentBattle = state.context.currentBattle
+  const currentPair = currentBattle?.pair ?? null
   const handleSelect = useCallback(
     (winnerId: ValueId) => {
-      if (!isInteractive) return
+      if (!isInteractive || pendingAccessibilityActionRef.current) return
+
+      pendingAccessibilityActionRef.current =
+        createPendingBattleAccessibilityAction({
+          action: { kind: "selection", selectedValueId: winnerId },
+          progressById,
+        })
       send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
     },
-    [isInteractive, send],
+    [isInteractive, progressById, send],
   )
+  const handleUndo = useCallback(() => {
+    if (!isInteractive || !canUndo || pendingAccessibilityActionRef.current)
+      return
+
+    pendingAccessibilityActionRef.current =
+      createPendingBattleAccessibilityAction({
+        action: { kind: "undo" },
+        progressById,
+      })
+    onUndo()
+  }, [canUndo, isInteractive, onUndo, progressById])
+  const handleRedo = useCallback(() => {
+    if (!isInteractive || !canRedo || pendingAccessibilityActionRef.current)
+      return
+
+    pendingAccessibilityActionRef.current =
+      createPendingBattleAccessibilityAction({
+        action: { kind: "redo" },
+        progressById,
+      })
+    onRedo()
+  }, [canRedo, isInteractive, onRedo, progressById])
   const handleAnimationComplete = useCallback(() => {
     if (isAnimating) send({ type: "ANIMATION.RESULT_FINISHED" })
   }, [isAnimating, send])
+
+  useEffect(() => {
+    const pendingAction = pendingAccessibilityActionRef.current
+    if (
+      !pendingAction ||
+      !currentPair ||
+      currentBattle !== battle ||
+      !isInteractive
+    )
+      return
+
+    const message = getBattleAccessibilityAnnouncement({
+      pendingAction,
+      activeDeck,
+      progressById,
+      pair: currentPair,
+    })
+    if (!message) return
+
+    const firstChoice = firstChoiceRef.current
+    if (!firstChoice)
+      throw new Error("First native value choice is unavailable")
+
+    pendingAccessibilityActionRef.current = null
+    AccessibilityInfo.sendAccessibilityEvent(firstChoice, "focus")
+    AccessibilityInfo.announceForAccessibilityWithOptions(message, {
+      queue: true,
+    })
+  }, [
+    activeDeck,
+    battle,
+    currentBattle,
+    currentPair,
+    isInteractive,
+    progressById,
+  ])
 
   if (!currentPair) {
     return (
@@ -129,8 +202,8 @@ export default function NativeCrucible({
         canRedo={isInteractive && canRedo}
         canStop={isInteractive}
         onOpenMenu={onOpenMenu}
-        onUndo={onUndo}
-        onRedo={onRedo}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
         onStop={onExit}
       />
       <NativeAchievementBanner
@@ -142,6 +215,7 @@ export default function NativeCrucible({
       />
       <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-row">
         <NativeValueChoiceCard
+          ref={firstChoiceRef}
           key={`first:${firstValueId}:${secondValueId}`}
           position="first"
           value={firstValue}
