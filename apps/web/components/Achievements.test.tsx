@@ -85,6 +85,15 @@ describe("Achievements", () => {
       />,
     )
 
+    expect(screen.getByRole("main")).toHaveAttribute(
+      "data-slot",
+      "mapache-screen",
+    )
+    expect(screen.getByRole("main")).toHaveClass(
+      "min-h-[100dvh]",
+      "[--mapache-screen-spacing:1rem]",
+      "sm:[--mapache-screen-spacing:2rem]",
+    )
     await waitFor(() =>
       expect(
         screen.getByRole("heading", { name: "Achievements", level: 1 }),
