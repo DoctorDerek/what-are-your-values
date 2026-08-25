@@ -6,6 +6,7 @@ import {
   type ActiveValueDefinition,
   type ValueId,
 } from "@game/data/src/Value"
+import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
 import { motion } from "motion/react"
 import { forwardRef, useId } from "react"
 import { createValueChoiceMotion } from "@/components/ValueChoiceMotion"
@@ -77,7 +78,11 @@ export const ValueChoiceCard = forwardRef<
       <button
         ref={ref}
         type="button"
-        aria-label={`Choose ${displayName}`}
+        aria-label={getValueChoiceAccessibilityLabel({
+          position,
+          value,
+          level,
+        })}
         aria-describedby={accessibleDefinitionId}
         disabled={!isEnabled}
         onClick={() => onActivate(value.id)}

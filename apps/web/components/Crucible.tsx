@@ -4,6 +4,11 @@ import type { ActiveDeck } from "@game/data/src/ActiveDeck"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
+import {
+  createPendingBattleAccessibilityAction,
+  getBattleAccessibilityAnnouncement,
+  type PendingBattleAccessibilityAction,
+} from "@game/machines/src/BattleAccessibilityPresentation"
 import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
@@ -14,11 +19,16 @@ import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPres
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import useWebControlHintInputModality from "@/lib/useWebControlHintInputModality"
 import AchievementBanner from "./AchievementBanner"
 import BattleActionBar from "./BattleActionBar"
 import { ValueChoiceCard } from "./ValueChoiceCard"
+
+type BattleAccessibilityAnnouncement = Readonly<{
+  sequence: number
+  message: string
+}>
 
 export default function Crucible({
   activeDeck,
@@ -66,6 +76,11 @@ export default function Crucible({
   const controlHintInputModality = useWebControlHintInputModality()
   const firstChoiceRef = useRef<HTMLButtonElement>(null)
   const secondChoiceRef = useRef<HTMLButtonElement>(null)
+  const pendingAccessibilityActionRef =
+    useRef<PendingBattleAccessibilityAction | null>(null)
+  const nextAccessibilityAnnouncementSequenceRef = useRef(0)
+  const [accessibilityAnnouncement, setAccessibilityAnnouncement] =
+    useState<BattleAccessibilityAnnouncement | null>(null)
 
   useEffect(() => {
     send({ type: "BATTLE.PROJECTED", battle })
@@ -75,14 +90,56 @@ export default function Crucible({
 
   const handleSelect = useCallback(
     (winnerId: ValueId) => {
-      if (!isInteractive) return
+      if (!isInteractive || isMenuOpen || pendingAccessibilityActionRef.current)
+        return
+
+      pendingAccessibilityActionRef.current =
+        createPendingBattleAccessibilityAction({
+          action: { kind: "selection", selectedValueId: winnerId },
+          progressById,
+        })
       send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
     },
-    [isInteractive, send],
+    [isInteractive, isMenuOpen, progressById, send],
   )
 
+  const handleUndo = useCallback(() => {
+    if (
+      !isInteractive ||
+      isMenuOpen ||
+      !canUndo ||
+      pendingAccessibilityActionRef.current
+    )
+      return
+
+    pendingAccessibilityActionRef.current =
+      createPendingBattleAccessibilityAction({
+        action: { kind: "undo" },
+        progressById,
+      })
+    onUndo()
+  }, [canUndo, isInteractive, isMenuOpen, onUndo, progressById])
+
+  const handleRedo = useCallback(() => {
+    if (
+      !isInteractive ||
+      isMenuOpen ||
+      !canRedo ||
+      pendingAccessibilityActionRef.current
+    )
+      return
+
+    pendingAccessibilityActionRef.current =
+      createPendingBattleAccessibilityAction({
+        action: { kind: "redo" },
+        progressById,
+      })
+    onRedo()
+  }, [canRedo, isInteractive, isMenuOpen, onRedo, progressById])
+
   const focusedId = state.context.focusedId
-  const currentPair = state.context.currentBattle?.pair ?? null
+  const currentBattle = state.context.currentBattle
+  const currentPair = currentBattle?.pair ?? null
   const isAnimating = state.matches("AnimatingResult")
   const handleAnimationComplete = useCallback(() => {
     if (isAnimating) {
@@ -102,10 +159,10 @@ export default function Crucible({
 
       if (isUndoCommand && canUndo && !e.repeat) {
         e.preventDefault()
-        onUndo()
+        handleUndo()
       } else if (isRedoCommand && canRedo && !e.repeat) {
         e.preventDefault()
-        onRedo()
+        handleRedo()
       } else if (e.key === "1" || normalizedKey === "a") {
         e.preventDefault()
         handleSelect(currentPair[0])
@@ -142,8 +199,8 @@ export default function Crucible({
     canRedo,
     send,
     onOpenMenu,
-    onUndo,
-    onRedo,
+    handleUndo,
+    handleRedo,
     handleSelect,
   ])
 
@@ -155,6 +212,44 @@ export default function Crucible({
     },
     [isInteractive, send],
   )
+
+  useEffect(() => {
+    const pendingAction = pendingAccessibilityActionRef.current
+    if (
+      !pendingAction ||
+      !currentPair ||
+      currentBattle !== battle ||
+      !isInteractive ||
+      isMenuOpen
+    )
+      return
+
+    const message = getBattleAccessibilityAnnouncement({
+      pendingAction,
+      activeDeck,
+      progressById,
+      pair: currentPair,
+    })
+    if (!message) return
+
+    pendingAccessibilityActionRef.current = null
+    nextAccessibilityAnnouncementSequenceRef.current += 1
+    setAccessibilityAnnouncement(
+      Object.freeze({
+        sequence: nextAccessibilityAnnouncementSequenceRef.current,
+        message,
+      }),
+    )
+    firstChoiceRef.current?.focus({ preventScroll: true })
+  }, [
+    activeDeck,
+    battle,
+    currentBattle,
+    currentPair,
+    isInteractive,
+    isMenuOpen,
+    progressById,
+  ])
 
   if (!currentPair) {
     return (
@@ -194,6 +289,19 @@ export default function Crucible({
       aria-busy={isPersistencePending}
       className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none"
     >
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {accessibilityAnnouncement ? (
+          <span key={accessibilityAnnouncement.sequence}>
+            {accessibilityAnnouncement.message}
+          </span>
+        ) : null}
+      </p>
+
       <div className="pointer-events-none relative z-50 flex shrink-0 flex-col items-center">
         <BattleActionBar
           canOpenMenu={isInteractive}
@@ -202,8 +310,8 @@ export default function Crucible({
           canStop={isInteractive}
           showKeyboardControlHints={showKeyboardControlHints}
           onOpenMenu={onOpenMenu}
-          onUndo={onUndo}
-          onRedo={onRedo}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
           onStop={onExit}
         />
 
