@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import RootLayout, { metadata } from "./layout"
+import RootLayout, { metadata, viewport } from "./layout"
 
 const { serwistProviderSpy } = vi.hoisted(() => ({
   serwistProviderSpy: vi.fn(),
@@ -29,6 +29,10 @@ afterEach(() => {
 })
 
 describe("Root layout", () => {
+  it("exposes safe-area insets without restricting user zoom", () => {
+    expect(viewport).toEqual({ viewportFit: "cover" })
+  })
+
   it("exposes the product metadata and accessible document language", () => {
     render(
       <RootLayout>
