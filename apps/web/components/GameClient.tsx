@@ -67,6 +67,7 @@ import WebWriterConflict from "./WebWriterConflict"
 const SOURCE_APP_VERSION = packageMetadata.version
 const SOURCE_BUILD =
   process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? "development"
+const WEB_REDUCED_MOTION_ATTRIBUTE = "data-wayvm-reduced-motion"
 
 function ReadOnlyGameClient({
   durableStore,
@@ -427,6 +428,16 @@ function WritableGameClient({
       schedulerSeed: crypto.randomUUID(),
     })
   }, [send])
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute(
+      WEB_REDUCED_MOTION_ATTRIBUTE,
+      shouldReduceMotion,
+    )
+
+    return () =>
+      document.documentElement.removeAttribute(WEB_REDUCED_MOTION_ATTRIBUTE)
+  }, [shouldReduceMotion])
 
   useEffect(() => {
     if (state.matches("Hub") && shouldRestoreHubFocusRef.current) {

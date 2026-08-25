@@ -167,6 +167,7 @@ describe("GameClient Integration", () => {
     durableStoreFailure.writeEnabled = false
     webExclusiveWriterLease.status = "writer"
     localStorage.clear()
+    document.documentElement.removeAttribute("data-wayvm-reduced-motion")
     vi.restoreAllMocks()
   })
 
@@ -958,6 +959,50 @@ describe("GameClient Integration", () => {
         await screen.findByRole("group", { name: "Control Hints" }),
       ).getByRole("radio", { name: /^Off/ }),
     ).toBeChecked()
+  })
+
+  it("makes the persisted Reduced Motion setting authoritative for CSS presentation", async () => {
+    vi.spyOn(crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000070",
+    )
+
+    render(<GameClient />)
+    expect(document.documentElement).not.toHaveAttribute(
+      "data-wayvm-reduced-motion",
+    )
+    fireEvent.click(await screen.findByRole("button", { name: "Start" }))
+    await openProductMenuDestination("Settings")
+
+    const getReducedMotionOption = (name: RegExp) =>
+      within(screen.getByRole("group", { name: "Reduced Motion" })).getByRole(
+        "radio",
+        { name },
+      )
+
+    expect(getReducedMotionOption(/^Follow System/)).toBeChecked()
+    fireEvent.click(getReducedMotionOption(/^On/))
+    await waitFor(() => {
+      expect(getReducedMotionOption(/^On/)).toBeChecked()
+      expect(document.documentElement).toHaveAttribute(
+        "data-wayvm-reduced-motion",
+      )
+    })
+
+    fireEvent.click(getReducedMotionOption(/^Off/))
+    await waitFor(() => {
+      expect(getReducedMotionOption(/^Off/)).toBeChecked()
+      expect(document.documentElement).not.toHaveAttribute(
+        "data-wayvm-reduced-motion",
+      )
+    })
+
+    fireEvent.click(getReducedMotionOption(/^Follow System/))
+    await waitFor(() => {
+      expect(getReducedMotionOption(/^Follow System/)).toBeChecked()
+      expect(document.documentElement).not.toHaveAttribute(
+        "data-wayvm-reduced-motion",
+      )
+    })
   })
 
   it("reopens guidance above the exact active pair and restores focus to its Menu action", async () => {

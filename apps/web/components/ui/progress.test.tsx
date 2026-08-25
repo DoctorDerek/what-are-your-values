@@ -15,6 +15,12 @@ describe("Progress Primitive Integration", () => {
     expect(
       container.querySelector('[data-slot="progress-indicator"]'),
     ).toHaveStyle({ transform: "translateX(-25%)" })
+    expect(
+      container.querySelector('[data-slot="progress-indicator"]'),
+    ).toHaveClass("transition-transform")
+    expect(
+      container.querySelector('[data-slot="progress-indicator"]'),
+    ).not.toHaveClass("motion-reduce:transition-none")
   })
 
   it("renders an empty bar when no value has been earned", () => {
