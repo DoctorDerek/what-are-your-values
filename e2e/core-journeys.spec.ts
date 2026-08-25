@@ -1,4 +1,14 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Locator } from "@playwright/test"
+
+const getChoiceValueName = async (choice: Locator) => {
+  const valueName = await choice
+    .getByRole("heading", { level: 2 })
+    .textContent()
+
+  if (!valueName) throw new Error("The projected choice is missing its name")
+
+  return valueName
+}
 
 test("a new player starts immediately and reviews the complete ranking", async ({
   page,
@@ -62,12 +72,7 @@ test("a returning player keeps Undo and Redo across reloads", async ({
   await expect(page.getByRole("main", { name: "Value battle" })).toBeVisible()
 
   const firstChoice = page.getByRole("button", { name: /^Choose / }).first()
-  const firstChoiceName = (
-    await firstChoice.getAttribute("aria-label")
-  )?.replace(/^Choose /, "")
-  if (!firstChoiceName) {
-    throw new Error("The first projected value is missing its accessible name")
-  }
+  const firstChoiceName = await getChoiceValueName(firstChoice)
 
   await expect(firstChoice).toHaveAccessibleDescription(/^“.+”$/)
   await expect(firstChoice.locator("p")).toBeVisible()
@@ -129,11 +134,7 @@ test("a secondary tab stays read-only then inherits released writer ownership", 
   ).toHaveCount(0)
 
   const ownerChoice = page.getByRole("button", { name: /^Choose / }).first()
-  const ownerChoiceName = (
-    await ownerChoice.getAttribute("aria-label")
-  )?.replace(/^Choose /, "")
-  if (!ownerChoiceName)
-    throw new Error("The owner tab choice is missing its accessible name")
+  const ownerChoiceName = await getChoiceValueName(ownerChoice)
 
   await ownerChoice.click()
   await expect(page.getByRole("button", { name: "Undo" })).toBeEnabled()
