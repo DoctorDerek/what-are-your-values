@@ -17,8 +17,8 @@
     "motion": "^12",
     "next": "^16",
     "radix-ui": "^1",
-    "react": "^19",
-    "react-dom": "^19",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "xstate": "^5"
   },
   "devDependencies": {
