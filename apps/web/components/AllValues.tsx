@@ -19,6 +19,7 @@ import { findRankedValueNameMatches } from "@game/data/src/ValueSearch"
 import type { FormEvent } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import CustomValueFieldFeedback from "@/components/CustomValueFieldFeedback"
+import MapacheScreen from "@/components/MapacheScreen"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -438,8 +439,12 @@ export default function AllValues({
     })
 
   return (
-    <main className="noise-bg bg-mapache-vivid-dark min-h-[100dvh] w-full text-white">
-      <header className="bg-mapache-vivid-dark sticky top-0 z-20 border-b-8 border-black px-4 py-4 shadow-[0_8px_0px_0px_#000000] sm:px-8">
+    <MapacheScreen
+      spacing="safe-area-only"
+      viewport="scrollable"
+      className="text-white"
+    >
+      <header className="bg-mapache-vivid-dark sticky top-[env(safe-area-inset-top,0px)] z-20 border-b-8 border-black px-4 py-4 shadow-[0_8px_0px_0px_#000000] sm:px-8">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-mapache-vivid-primary-cyan text-4xl font-black [overflow-wrap:anywhere] break-words uppercase drop-shadow-[4px_4px_0px_#000000] sm:text-6xl">
@@ -726,6 +731,6 @@ export default function AllValues({
           </p>
         ) : null}
       </section>
-    </main>
+    </MapacheScreen>
   )
 }
