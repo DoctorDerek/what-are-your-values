@@ -61,7 +61,9 @@ function SettingsRadioGroup<TValue extends string>({
               key={option.value}
               className={cn(
                 "flex min-w-0 cursor-pointer items-start gap-4 border-4 border-black p-4 shadow-[5px_5px_0px_0px_#000000]",
-                isSelected ? "bg-mapache-vivid-primary-cyan" : "bg-white",
+                isSelected
+                  ? "bg-mapache-vivid-primary-cyan text-black"
+                  : "bg-white",
                 disabled && "cursor-not-allowed opacity-50",
               )}
             >
