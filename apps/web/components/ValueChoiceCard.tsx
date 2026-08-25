@@ -55,6 +55,9 @@ export const ValueChoiceCard = forwardRef<
   const positionClasses = isFirst
     ? "bg-mapache-vivid-primary-cyan border-b-8 border-black xl:border-r-8 xl:border-b-0"
     : "bg-mapache-vivid-primary-raspberry"
+  const controlHintContrastClasses = isFirst
+    ? "text-black drop-shadow-[1px_1px_0px_#ffffff]"
+    : "text-white drop-shadow-[1px_1px_0px_#000000]"
   const reservedControlHint = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
   const valueChoiceMotion = createValueChoiceMotion({
@@ -93,7 +96,7 @@ export const ValueChoiceCard = forwardRef<
           <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-5">
             <span
               aria-hidden="true"
-              className={`w-16 justify-self-start text-center text-sm font-black whitespace-nowrap text-black/50 uppercase drop-shadow-[1px_1px_0px_rgba(255,255,255,0.25)] xl:w-28 xl:text-2xl ${controlHint ? "" : "invisible"}`}
+              className={`w-16 justify-self-start text-center text-sm font-black whitespace-nowrap uppercase xl:w-28 xl:text-2xl ${controlHintContrastClasses} ${controlHint ? "" : "invisible"}`}
             >
               {controlHint ?? reservedControlHint}
             </span>

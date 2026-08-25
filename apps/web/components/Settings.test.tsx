@@ -71,10 +71,23 @@ describe("Settings", () => {
       ),
     ).toBeVisible()
     expect(followSystem).toBeChecked()
+    expect(followSystem.closest("label")).toHaveClass(
+      "bg-mapache-vivid-primary-cyan",
+      "text-black",
+    )
+    expect(reduceMotion.closest("label")).not.toHaveClass(
+      "bg-mapache-vivid-primary-cyan",
+      "text-black",
+    )
     expect(within(reducedMotionGroup).getByText("Selected")).toBeVisible()
-    expect(
-      within(controlHintsGroup).getByRole("radio", { name: /^Auto/ }),
-    ).toBeChecked()
+    const automaticHints = within(controlHintsGroup).getByRole("radio", {
+      name: /^Auto/,
+    })
+    expect(automaticHints).toBeChecked()
+    expect(automaticHints.closest("label")).toHaveClass(
+      "bg-mapache-vivid-primary-cyan",
+      "text-black",
+    )
     expect(within(controlHintsGroup).getByText("Selected")).toBeVisible()
 
     fireEvent.focus(reduceMotion)
