@@ -4,6 +4,7 @@ import {
 } from "@game/data/src/Value"
 import { ACHIEVEMENT_CATALOG } from "@game/machines/src/AchievementCatalog"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
+import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
@@ -17,6 +18,9 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
+
+const VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN =
+  /^Choose .+\. Level \d+\. Choice [12]\.$/
 
 function createBattleProps(seed: string) {
   const battleCycle = createInitialBattleCycle(seed)
@@ -125,7 +129,11 @@ describe("Crucible Component Integration", () => {
     )
 
     const choice = await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstDefinition,
+        level: 1,
+      }),
     })
     const heading = within(choice).getByRole("heading", {
       name: getValueDisplayName(firstDefinition),
@@ -165,7 +173,11 @@ describe("Crucible Component Integration", () => {
     )
 
     const choice = await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstDefinition,
+        level: 1,
+      }),
     })
     const hint = within(choice).getByText("[1 / A]")
     const menuHint = screen.getByText("[ESC]")
@@ -205,7 +217,11 @@ describe("Crucible Component Integration", () => {
     )
 
     const choice = await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstDefinition,
+        level: 1,
+      }),
     })
     const tapHint = within(choice).getByText("Tap")
     expect(tapHint).not.toHaveClass("invisible")
@@ -279,7 +295,11 @@ describe("Crucible Component Integration", () => {
     )
 
     const cardA = await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(winner)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: winner,
+        level: 1,
+      }),
     })
 
     act(() => cardA.click())
@@ -312,7 +332,11 @@ describe("Crucible Component Integration", () => {
     )
 
     const choice = await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(definition)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: definition,
+        level: 1,
+      }),
     })
     const definitionCopy = screen.getByText(
       `“${getValueDisplayDefinition(definition)}”`,
@@ -354,7 +378,11 @@ describe("Crucible Component Integration", () => {
       throw new Error("Projected winner definition is missing")
     }
     const cardB = await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(winner)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "second",
+        value: winner,
+        level: 1,
+      }),
     })
 
     act(() => {
@@ -404,9 +432,13 @@ describe("Crucible Component Integration", () => {
       "touch-manipulation",
     )
 
-    for (const definition of definitions) {
+    for (const [index, definition] of definitions.entries()) {
       const choice = await screen.findByRole("button", {
-        name: `Choose ${getValueDisplayName(definition)}`,
+        name: getValueChoiceAccessibilityLabel({
+          position: index === 0 ? "first" : "second",
+          value: definition,
+          level: 1,
+        }),
       })
       const heading = screen.getByRole("heading", {
         name: getValueDisplayName(definition),
@@ -430,7 +462,7 @@ describe("Crucible Component Integration", () => {
     }
   })
 
-  it("routes available Undo and Redo controls without selecting a value", async () => {
+  it("routes one Undo and blocks competing actions until completion", async () => {
     const onUndo = vi.fn()
     const onRedo = vi.fn()
     const onWinnerSelected = vi.fn()
@@ -458,7 +490,11 @@ describe("Crucible Component Integration", () => {
     )
 
     await screen.findByRole("button", {
-      name: `Choose ${getValueDisplayName(firstDefinition)}`,
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstDefinition,
+        level: 1,
+      }),
     })
 
     fireEvent.click(screen.getByRole("button", { name: "Undo" }))
@@ -466,19 +502,17 @@ describe("Crucible Component Integration", () => {
     fireEvent.keyDown(window, { key: "z", repeat: true })
 
     expect(onUndo).toHaveBeenCalledTimes(1)
-    expect(onRedo).toHaveBeenCalledTimes(1)
+    expect(onRedo).not.toHaveBeenCalled()
     expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 
-  it("routes keyboard history shortcuts and second-card selection", async () => {
+  it("routes one keyboard Redo and blocks competing shortcuts until completion", async () => {
     const onUndo = vi.fn()
     const onRedo = vi.fn()
     const onWinnerSelected = vi.fn()
     const { battleCycle, battle } = createBattleProps(
       "keyboard-history-shortcuts-seed",
     )
-    const [, secondValueId] = battle.pair
-
     render(
       <Crucible
         {...createHistoryProps()}
@@ -494,10 +528,11 @@ describe("Crucible Component Integration", () => {
       />,
     )
 
-    await screen.findAllByRole("button", { name: /^Choose / })
+    await screen.findAllByRole("button", {
+      name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+    })
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z" }))
       window.dispatchEvent(
         new KeyboardEvent("keydown", {
           key: "z",
@@ -505,16 +540,14 @@ describe("Crucible Component Integration", () => {
           ctrlKey: true,
         }),
       )
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "z" }))
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "2" }))
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }))
     })
 
-    expect(onUndo).toHaveBeenCalledTimes(1)
+    expect(onUndo).not.toHaveBeenCalled()
     expect(onRedo).toHaveBeenCalledTimes(1)
-    expect(onWinnerSelected).toHaveBeenCalledWith(
-      secondValueId,
-      battle.scheduler,
-    )
+    expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 
   it("disables every battle action while a durable write is pending", async () => {
@@ -544,7 +577,9 @@ describe("Crucible Component Integration", () => {
       />,
     )
 
-    await screen.findAllByRole("button", { name: /^Choose / })
+    await screen.findAllByRole("button", {
+      name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+    })
     expect(screen.getByRole("main", { name: "Value battle" })).toHaveAttribute(
       "aria-busy",
       "true",

@@ -4,7 +4,8 @@ import {
   type ActiveValueDefinition,
   type ValueId,
 } from "@game/data/src/Value"
-import { useEffect } from "react"
+import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
+import { forwardRef, useEffect, type ForwardedRef } from "react"
 import { Pressable, ScrollView, View } from "react-native"
 import Animated, {
   cancelAnimation,
@@ -20,19 +21,7 @@ import {
 } from "@/lib/NativeValueChoiceMotion"
 import { cn } from "@/lib/utils"
 
-export default function NativeValueChoiceCard({
-  position,
-  value,
-  level,
-  controlHint,
-  winnerId,
-  isEnabled,
-  isAnimating,
-  reportsAnimationCompletion,
-  shouldReduceMotion,
-  onActivate,
-  onAnimationComplete,
-}: {
+type NativeValueChoiceCardProps = {
   position: NativeValueChoicePosition
   value: ActiveValueDefinition
   level: number
@@ -44,7 +33,24 @@ export default function NativeValueChoiceCard({
   shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
   onAnimationComplete: () => void
-}) {
+}
+
+function NativeValueChoiceCard(
+  {
+    position,
+    value,
+    level,
+    controlHint,
+    winnerId,
+    isEnabled,
+    isAnimating,
+    reportsAnimationCompletion,
+    shouldReduceMotion,
+    onActivate,
+    onAnimationComplete,
+  }: NativeValueChoiceCardProps,
+  ref: ForwardedRef<View>,
+) {
   const isWinner = isAnimating && winnerId === value.id
   const isDefeated = isAnimating && winnerId !== null && winnerId !== value.id
   const opacity = useSharedValue(1)
@@ -116,8 +122,13 @@ export default function NativeValueChoiceCard({
         nestedScrollEnabled
       >
         <Pressable
+          ref={ref}
           accessibilityHint={displayDefinition}
-          accessibilityLabel={`Choose ${displayName}`}
+          accessibilityLabel={getValueChoiceAccessibilityLabel({
+            position,
+            value,
+            level,
+          })}
           accessibilityRole="button"
           accessibilityState={{ disabled: !isEnabled, selected: isWinner }}
           className="min-h-full flex-1 items-center justify-center px-3 py-4 xl:px-6 xl:py-8"
@@ -154,3 +165,5 @@ export default function NativeValueChoiceCard({
     </Animated.View>
   )
 }
+
+export default forwardRef(NativeValueChoiceCard)
