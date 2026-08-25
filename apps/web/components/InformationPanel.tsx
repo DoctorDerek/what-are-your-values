@@ -59,6 +59,7 @@ function InformationPanelFrame({
 
       <div
         data-testid="information-panel-body"
+        tabIndex={0}
         className="min-h-0 overflow-y-auto overscroll-contain px-5 py-6 sm:px-10 sm:py-8"
       >
         {children}
