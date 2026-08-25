@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3037",
-    "build": "next build && serwist build serwist.config.mjs",
+    "build": "next build && serwist build serwist.config.mjs && node ../../scripts/runTypeScript.mjs scripts/copyServiceWorkerToStaticExport.cli.ts",
     "start": "vite preview --outDir out --port 3037 --strictPort"
   },
   "dependencies": {
