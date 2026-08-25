@@ -95,9 +95,9 @@ function getExpectedChoiceLabel({
   readonly value: ActiveValueDefinition
   readonly totalXp: number
 }) {
-  const positionLabel = position === "first" ? "First" : "Second"
+  const choiceNumber = position === "first" ? 1 : 2
 
-  return `Choose ${getValueDisplayName(value)}. Level ${getLevelFromXP(totalXp)}. ${positionLabel} choice.`
+  return `Choose ${getValueDisplayName(value)}. Level ${getLevelFromXP(totalXp)}. Choice ${choiceNumber}.`
 }
 
 function createBattleAccessibilityFixture(seed: string) {
