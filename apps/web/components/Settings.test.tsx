@@ -44,6 +44,7 @@ function renderSettings(
 describe("Settings", () => {
   it("shows truthful language status and changes preferences only through native radio activation", async () => {
     const props = renderSettings()
+    const settingsScreen = screen.getByRole("main")
     const reducedMotionGroup = screen.getByRole("group", {
       name: "Reduced Motion",
     })
@@ -64,6 +65,13 @@ describe("Settings", () => {
       expect(
         screen.getByRole("heading", { name: "Settings", level: 1 }),
       ).toHaveFocus(),
+    )
+    expect(settingsScreen).toHaveAttribute("data-slot", "mapache-screen")
+    expect(settingsScreen).toHaveClass(
+      "h-[100dvh]",
+      "overflow-hidden",
+      "[--mapache-screen-spacing:1rem]",
+      "xl:[--mapache-screen-spacing:2rem]",
     )
     expect(
       within(screen.getByRole("region", { name: "Language" })).getByText(
