@@ -6,6 +6,9 @@ import { describe, expect, it, jest } from "@jest/globals"
 import { render, screen, userEvent } from "@testing-library/react-native"
 import NativeCrucible from "@/components/NativeCrucible"
 
+const VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN =
+  /^Choose .+\. Level \d+\. Choice [12]\.$/
+
 const battleCycle = createInitialBattleCycle("native-crucible-evidence")
 const battle = Object.freeze({
   pair: projectBattlePair(battleCycle.activeDeck, battleCycle.scheduler),
@@ -92,7 +95,7 @@ describe("NativeCrucible", () => {
       <NativeCrucible {...props} controlHintPreference="always" />,
     )
     const choices = await screen.findAllByRole("button", {
-      name: /^(First|Second) choice: Choose /,
+      name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
     })
     const tapHints = screen.getAllByText("Tap", {
       includeHiddenElements: true,
@@ -113,7 +116,7 @@ describe("NativeCrucible", () => {
     ).toBeNull()
     expect(
       screen.getAllByRole("button", {
-        name: /^(First|Second) choice: Choose /,
+        name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
       }),
     ).toHaveLength(2)
   })

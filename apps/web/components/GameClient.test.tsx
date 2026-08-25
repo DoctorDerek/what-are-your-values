@@ -34,6 +34,9 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { webStorage } from "@/lib/WebStorage"
 import GameClient from "./GameClient"
 
+const VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN =
+  /^Choose .+\. Level \d+\. Choice [12]\.$/
+
 const durableStoreFailure = vi.hoisted(() => ({
   initialEntries: [] as [string, string][],
   readCount: 0,
@@ -866,7 +869,7 @@ describe("GameClient Integration", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
     const initialChoiceNames = (
       await screen.findAllByRole("button", {
-        name: /choice: Choose /,
+        name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
       })
     ).map((button) => button.getAttribute("aria-label"))
 
@@ -877,7 +880,9 @@ describe("GameClient Integration", () => {
 
     expect(
       screen
-        .getAllByRole("button", { name: /choice: Choose / })
+        .getAllByRole("button", {
+          name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+        })
         .map((button) => button.getAttribute("aria-label")),
     ).toEqual(initialChoiceNames)
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()
@@ -893,9 +898,11 @@ describe("GameClient Integration", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
 
     expect(
-      (await screen.findAllByRole("button", { name: /choice: Choose / })).map(
-        (button) => button.getAttribute("aria-label"),
-      ),
+      (
+        await screen.findAllByRole("button", {
+          name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+        })
+      ).map((button) => button.getAttribute("aria-label")),
     ).toEqual(initialChoiceNames)
   })
 
@@ -908,7 +915,9 @@ describe("GameClient Integration", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
     fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
     const initialChoiceNames = (
-      await screen.findAllByRole("button", { name: /choice: Choose / })
+      await screen.findAllByRole("button", {
+        name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+      })
     ).map((button) => button.getAttribute("aria-label"))
 
     await openProductMenuDestination("Settings")
@@ -948,7 +957,9 @@ describe("GameClient Integration", () => {
     await waitFor(() =>
       expect(
         screen
-          .getAllByRole("button", { name: /choice: Choose / })
+          .getAllByRole("button", {
+            name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+          })
           .map((button) => button.getAttribute("aria-label")),
       ).toEqual(initialChoiceNames),
     )
@@ -1014,7 +1025,9 @@ describe("GameClient Integration", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
     fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
     const initialChoiceNames = (
-      await screen.findAllByRole("button", { name: /choice: Choose / })
+      await screen.findAllByRole("button", {
+        name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+      })
     ).map((button) => button.getAttribute("aria-label"))
     const menuAction = screen.getByRole("button", { name: "Menu" })
     menuAction.focus()
@@ -1033,7 +1046,9 @@ describe("GameClient Integration", () => {
     await waitFor(() => expect(menuAction).toHaveFocus())
     expect(
       screen
-        .getAllByRole("button", { name: /choice: Choose / })
+        .getAllByRole("button", {
+          name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+        })
         .map((button) => button.getAttribute("aria-label")),
     ).toEqual(initialChoiceNames)
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()
@@ -1048,7 +1063,9 @@ describe("GameClient Integration", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Start" }))
     fireEvent.click(await screen.findByRole("button", { name: "Battle" }))
     const initialChoiceNames = (
-      await screen.findAllByRole("button", { name: /choice: Choose / })
+      await screen.findAllByRole("button", {
+        name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+      })
     ).map((button) => button.getAttribute("aria-label"))
     const menuAction = screen.getByRole("button", { name: "Menu" })
     menuAction.focus()
@@ -1066,7 +1083,9 @@ describe("GameClient Integration", () => {
     await waitFor(() => expect(menuAction).toHaveFocus())
     expect(
       screen
-        .getAllByRole("button", { name: /choice: Choose / })
+        .getAllByRole("button", {
+          name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+        })
         .map((button) => button.getAttribute("aria-label")),
     ).toEqual(initialChoiceNames)
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled()

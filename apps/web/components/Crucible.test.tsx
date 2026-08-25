@@ -19,6 +19,9 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 import Crucible from "./Crucible"
 
+const VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN =
+  /^Choose .+\. Level \d+\. Choice [12]\.$/
+
 function createBattleProps(seed: string) {
   const battleCycle = createInitialBattleCycle(seed)
   const battle = Object.freeze({
@@ -526,7 +529,7 @@ describe("Crucible Component Integration", () => {
     )
 
     await screen.findAllByRole("button", {
-      name: /^(First|Second) choice: Choose .+\. Level \d+\.$/,
+      name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
     })
 
     act(() => {
@@ -575,7 +578,7 @@ describe("Crucible Component Integration", () => {
     )
 
     await screen.findAllByRole("button", {
-      name: /^(First|Second) choice: Choose .+\. Level \d+\.$/,
+      name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
     })
     expect(screen.getByRole("main", { name: "Value battle" })).toHaveAttribute(
       "aria-busy",

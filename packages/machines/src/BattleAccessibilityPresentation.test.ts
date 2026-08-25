@@ -106,23 +106,21 @@ describe("Battle accessibility presentation", () => {
         value: firstValue,
         level: 4,
       }),
-    ).toBe(`Choose ${getValueDisplayName(firstValue)}. Level 4. First choice.`)
+    ).toBe(`Choose ${getValueDisplayName(firstValue)}. Level 4. Choice 1.`)
     expect(
       getValueChoiceAccessibilityLabel({
         position: "second",
         value: secondValue,
         level: 1,
       }),
-    ).toBe(
-      `Choose ${getValueDisplayName(secondValue)}. Level 1. Second choice.`,
-    )
+    ).toBe(`Choose ${getValueDisplayName(secondValue)}. Level 1. Choice 2.`)
     expect(
       getValueChoiceAccessibilityLabel({
         position: "second",
         value: customValue,
         level: 7,
       }),
-    ).toBe("Choose Ingenuity. Level 7. Second choice.")
+    ).toBe("Choose Ingenuity. Level 7. Choice 2.")
   })
 
   it("preserves one selection scalar and a complete history XP snapshot", () => {
