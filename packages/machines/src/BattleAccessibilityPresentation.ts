@@ -48,7 +48,7 @@ export function getValueChoiceAccessibilityLabel({
 }) {
   const positionLabel = position === "first" ? "First" : "Second"
 
-  return `${positionLabel} choice: Choose ${getValueDisplayName(value)}. Level ${level}.`
+  return `Choose ${getValueDisplayName(value)}. Level ${level}. ${positionLabel} choice.`
 }
 
 export function createPendingBattleAccessibilityAction({
@@ -183,11 +183,11 @@ export function getBattleAccessibilityAnnouncement({
   const absoluteXpChange = Math.abs(xpChange)
 
   if (pendingAction.kind === "selection") {
-    return `${changedValueName} selected. ${absoluteXpChange} XP earned. Next comparison: ${comparison}.`
+    return `${changedValueName} chosen. ${absoluteXpChange} XP earned. Next: ${comparison}.`
   }
   if (pendingAction.kind === "undo") {
-    return `Undo complete. ${absoluteXpChange} XP reversed for ${changedValueName}. Restored comparison: ${comparison}.`
+    return `Undo complete. ${absoluteXpChange} XP removed from ${changedValueName}. Restored: ${comparison}.`
   }
 
-  return `Redo complete. ${absoluteXpChange} XP restored to ${changedValueName}. Next comparison: ${comparison}.`
+  return `Redo complete. ${absoluteXpChange} XP restored to ${changedValueName}. Next: ${comparison}.`
 }

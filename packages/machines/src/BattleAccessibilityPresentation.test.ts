@@ -106,7 +106,7 @@ describe("Battle accessibility presentation", () => {
         value: firstValue,
         level: 4,
       }),
-    ).toBe(`First choice: Choose ${getValueDisplayName(firstValue)}. Level 4.`)
+    ).toBe(`Choose ${getValueDisplayName(firstValue)}. Level 4. First choice.`)
     expect(
       getValueChoiceAccessibilityLabel({
         position: "second",
@@ -114,7 +114,7 @@ describe("Battle accessibility presentation", () => {
         level: 1,
       }),
     ).toBe(
-      `Second choice: Choose ${getValueDisplayName(secondValue)}. Level 1.`,
+      `Choose ${getValueDisplayName(secondValue)}. Level 1. Second choice.`,
     )
     expect(
       getValueChoiceAccessibilityLabel({
@@ -122,7 +122,7 @@ describe("Battle accessibility presentation", () => {
         value: customValue,
         level: 7,
       }),
-    ).toBe("Second choice: Choose Ingenuity. Level 7.")
+    ).toBe("Choose Ingenuity. Level 7. Second choice.")
   })
 
   it("preserves one selection scalar and a complete history XP snapshot", () => {
@@ -177,7 +177,7 @@ describe("Battle accessibility presentation", () => {
         pair: resultingPair,
       }),
     ).toBe(
-      `${getActiveValueName(resultingBattleCycle.activeDeck, winnerId)} selected. ${resultingBattleCycle.delta.xpGained} XP earned. Next comparison: ${nextComparison}.`,
+      `${getActiveValueName(resultingBattleCycle.activeDeck, winnerId)} chosen. ${resultingBattleCycle.delta.xpGained} XP earned. Next: ${nextComparison}.`,
     )
   })
 
@@ -212,7 +212,7 @@ describe("Battle accessibility presentation", () => {
         pair: initialPair,
       }),
     ).toBe(
-      `Undo complete. ${resultingBattleCycle.delta.xpGained} XP reversed for ${winnerName}. Restored comparison: ${restoredComparison}.`,
+      `Undo complete. ${resultingBattleCycle.delta.xpGained} XP removed from ${winnerName}. Restored: ${restoredComparison}.`,
     )
     expect(
       getBattleAccessibilityAnnouncement({
@@ -222,7 +222,7 @@ describe("Battle accessibility presentation", () => {
         pair: resultingPair,
       }),
     ).toBe(
-      `Redo complete. ${resultingBattleCycle.delta.xpGained} XP restored to ${winnerName}. Next comparison: ${nextComparison}.`,
+      `Redo complete. ${resultingBattleCycle.delta.xpGained} XP restored to ${winnerName}. Next: ${nextComparison}.`,
     )
   })
 

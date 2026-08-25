@@ -110,7 +110,7 @@ function getExpectedChoiceLabel({
 }) {
   const positionLabel = position === "first" ? "First" : "Second"
 
-  return `${positionLabel} choice: Choose ${getValueDisplayName(value)}. Level ${getLevelFromXP(totalXp)}.`
+  return `Choose ${getValueDisplayName(value)}. Level ${getLevelFromXP(totalXp)}. ${positionLabel} choice.`
 }
 
 async function findChoice({
@@ -278,7 +278,7 @@ describe("NativeCrucible accessibility integration", () => {
         canUndo
       />,
     )
-    const expectedSelectionMessage = `${getValueDisplayName(fixture.winner)} selected. ${fixture.earnedXp} XP earned. Next comparison: ${getComparisonCopy(fixture.initialBattleCycle.activeDeck, fixture.resultingBattle)}.`
+    const expectedSelectionMessage = `${getValueDisplayName(fixture.winner)} chosen. ${fixture.earnedXp} XP earned. Next: ${getComparisonCopy(fixture.initialBattleCycle.activeDeck, fixture.resultingBattle)}.`
     await waitFor(() => {
       expect(accessibility.focus).toHaveBeenCalledTimes(1)
       expect(accessibility.announcement).toHaveBeenCalledTimes(1)
@@ -322,7 +322,7 @@ describe("NativeCrucible accessibility integration", () => {
         canRedo
       />,
     )
-    const expectedUndoMessage = `Undo complete. ${fixture.earnedXp} XP reversed for ${getValueDisplayName(fixture.winner)}. Restored comparison: ${getComparisonCopy(fixture.initialBattleCycle.activeDeck, fixture.initialBattle)}.`
+    const expectedUndoMessage = `Undo complete. ${fixture.earnedXp} XP removed from ${getValueDisplayName(fixture.winner)}. Restored: ${getComparisonCopy(fixture.initialBattleCycle.activeDeck, fixture.initialBattle)}.`
     await waitFor(() => {
       expect(accessibility.focus).toHaveBeenCalledTimes(2)
       expect(accessibility.announcement).toHaveBeenCalledTimes(2)
@@ -413,7 +413,7 @@ describe("NativeCrucible accessibility integration", () => {
         canUndo
       />,
     )
-    const expectedRedoMessage = `Redo complete. ${fixture.earnedXp} XP restored to ${getValueDisplayName(fixture.winner)}. Next comparison: ${getComparisonCopy(fixture.initialBattleCycle.activeDeck, fixture.resultingBattle)}.`
+    const expectedRedoMessage = `Redo complete. ${fixture.earnedXp} XP restored to ${getValueDisplayName(fixture.winner)}. Next: ${getComparisonCopy(fixture.initialBattleCycle.activeDeck, fixture.resultingBattle)}.`
     await waitFor(() => {
       expect(accessibility.focus).toHaveBeenCalledTimes(1)
       expect(accessibility.announcement).toHaveBeenCalledTimes(1)
