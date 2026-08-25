@@ -34,6 +34,16 @@ test.beforeEach(() => {
   )
 })
 
+test("the deployment publishes the generated service worker", async ({
+  request,
+}) => {
+  const response = await request.get("/sw.js")
+
+  expect(response.status()).toBe(200)
+  expect(response.headers()["content-type"]).toContain("javascript")
+  expect(await response.text()).toContain("precache")
+})
+
 test("protected Vercel Previews leave service-worker registration disabled", async ({
   page,
 }) => {
