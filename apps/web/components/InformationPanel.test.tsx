@@ -43,9 +43,11 @@ describe("InformationPanel Component Integration", () => {
       "overscroll-none",
       "select-none",
     )
-    expect(screen.getByTestId("information-panel-body")).toHaveClass(
-      "overflow-y-auto",
-    )
+    const informationPanelBody = screen.getByTestId("information-panel-body")
+    expect(informationPanelBody).toHaveClass("overflow-y-auto")
+    expect(informationPanelBody).toHaveAttribute("tabindex", "0")
+    informationPanelBody.focus()
+    expect(informationPanelBody).toHaveFocus()
 
     const primaryAction = screen.getByRole("button", { name: "Start" })
     expect(primaryAction).toHaveAttribute("data-slot", "button")
