@@ -7,6 +7,7 @@ import {
 import {
   createBattleCycleCandidate,
   createInitialBattleCycle,
+  type BattleCycleState,
 } from "@game/machines/src/BattleCycle"
 import { projectBattlePair } from "@game/machines/src/BattleScheduler"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
@@ -68,10 +69,7 @@ vi.mock("motion/react", () => ({
 function createPresentedBattle({
   activeDeck,
   scheduler,
-}: Pick<
-  ReturnType<typeof createInitialBattleCycle>,
-  "activeDeck" | "scheduler"
->) {
+}: Pick<BattleCycleState, "activeDeck" | "scheduler">) {
   return Object.freeze({
     pair: projectBattlePair(activeDeck, scheduler),
     scheduler,
@@ -79,7 +77,7 @@ function createPresentedBattle({
 }
 
 function getActiveValueDefinition(
-  activeDeck: ReturnType<typeof createInitialBattleCycle>["activeDeck"],
+  activeDeck: BattleCycleState["activeDeck"],
   valueId: ValueId,
 ) {
   const value = activeDeck.values.find(({ id }) => id === valueId)
