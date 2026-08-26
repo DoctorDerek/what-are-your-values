@@ -13,7 +13,7 @@ function WebEditorialInformationBlock({
   switch (block.kind) {
     case "section":
       return (
-        <section className="border-mapache-vivid-primary-cyan grid gap-3 border-l-8 pl-4">
+        <section className="border-mapache-vivid-primary-cyan grid grid-cols-1 gap-3 border-l-8 pl-4">
           <h3 className="text-2xl leading-tight font-black">{block.heading}</h3>
           {block.paragraphs.map((paragraph) => (
             <p key={paragraph} className="text-lg leading-relaxed font-medium">
@@ -34,7 +34,7 @@ function WebEditorialInformationBlock({
       )
     case "resource":
       return (
-        <section className="bg-mapache-vivid-light grid gap-3 border-4 border-black p-4 shadow-[6px_6px_0px_0px_#000000]">
+        <section className="bg-mapache-vivid-light grid grid-cols-1 gap-3 border-4 border-black p-4 shadow-[6px_6px_0px_0px_#000000]">
           <h3 className="text-2xl leading-tight font-black">{block.title}</h3>
           <p className="text-lg leading-relaxed font-medium">
             {block.description}
@@ -43,7 +43,7 @@ function WebEditorialInformationBlock({
             href={block.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-mapache-vivid-primary-cyan text-mapache-vivid-black! w-fit border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
+            className="bg-mapache-vivid-primary-cyan text-mapache-vivid-black! w-fit max-w-full border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
           >
             {block.actionLabel}
           </a>
@@ -75,7 +75,7 @@ function WebEditorialInformationSection({
       >
         {sectionTitle}
       </h2>
-      <div className="mt-6 grid max-w-5xl gap-6">
+      <div className="mt-6 grid max-w-5xl grid-cols-1 gap-6">
         {informationPanel.blocks.map((block, blockIndex) => (
           <WebEditorialInformationBlock
             key={`${informationPanel.id}:${blockIndex}`}
@@ -89,7 +89,7 @@ function WebEditorialInformationSection({
 
 export default function WebEditorialInformation() {
   return (
-    <div className="grid gap-10">
+    <div className="grid grid-cols-1 gap-10">
       {INFORMATION_PANEL_IDS.map((informationPanelId) => (
         <WebEditorialInformationSection
           key={informationPanelId}
