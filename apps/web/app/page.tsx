@@ -32,7 +32,7 @@ export default function Page() {
             </h2>
             <a
               href="mailto:derekraustin+wayvm@gmail.com"
-              className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark mt-6 inline-block border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
+              className="bg-mapache-vivid-primary-cyan text-mapache-vivid-black! mt-6 inline-block border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
             >
               Report a Problem
             </a>
