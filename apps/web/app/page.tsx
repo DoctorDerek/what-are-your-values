@@ -13,7 +13,7 @@ export default function Page() {
         <div className="mx-auto grid max-w-7xl gap-10">
           <a
             href="#game"
-            className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark w-fit border-4 border-black px-5 py-4 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white"
+            className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark w-fit max-w-full border-4 border-black px-5 py-4 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
             Start or Continue Game
           </a>
