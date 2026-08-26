@@ -60,6 +60,15 @@ describe("Data Management", () => {
       type: "application/json",
     })
 
+    expect(screen.getByRole("main")).toHaveAttribute(
+      "data-slot",
+      "mapache-screen",
+    )
+    expect(screen.getByRole("main")).toHaveClass(
+      "min-h-[100dvh]",
+      "[--mapache-screen-spacing:1rem]",
+      "sm:[--mapache-screen-spacing:2rem]",
+    )
     await waitFor(() =>
       expect(
         screen.getByRole("heading", { name: "Import & Export", level: 1 }),

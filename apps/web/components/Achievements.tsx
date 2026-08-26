@@ -3,6 +3,7 @@
 import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import { useEffect, useRef } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import { Button } from "@/components/ui/button"
 
 function AchievementCard({
@@ -79,7 +80,7 @@ export default function Achievements({
   }, [])
 
   return (
-    <main className="noise-bg bg-mapache-vivid-dark min-h-[100dvh] w-full p-4 sm:p-8">
+    <MapacheScreen spacing="standard" viewport="scrollable">
       <header className="mx-auto flex w-full max-w-5xl flex-col items-stretch gap-5 xl:flex-row xl:items-center xl:justify-between">
         <h1
           ref={headingRef}
@@ -134,6 +135,6 @@ export default function Achievements({
           ))}
         </ol>
       </section>
-    </main>
+    </MapacheScreen>
   )
 }

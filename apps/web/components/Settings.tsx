@@ -17,6 +17,7 @@ import {
   SETTINGS_PLAYER_DATA_RESET_KINDS,
 } from "@game/machines/src/PlayerSettingsPresentation"
 import { useEffect, useRef } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import PlayerDataResetActions from "./PlayerDataResetActions"
@@ -167,7 +168,11 @@ export default function Settings({
   }
 
   return (
-    <main className="noise-bg bg-mapache-vivid-dark flex h-[100dvh] w-full flex-col overflow-hidden p-4 xl:p-8">
+    <MapacheScreen
+      spacing="standard-xl"
+      viewport="fixed"
+      className="flex flex-col"
+    >
       <header className="mx-auto flex w-full max-w-5xl shrink-0 flex-col items-stretch gap-4 xl:flex-row xl:items-center xl:justify-between">
         <h1
           ref={headingRef}
@@ -297,6 +302,6 @@ export default function Settings({
           )}
         </div>
       </div>
-    </main>
+    </MapacheScreen>
   )
 }

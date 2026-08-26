@@ -2,6 +2,7 @@
 
 import type { ComponentProps, ReactNode } from "react"
 import { useId } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
@@ -81,9 +82,13 @@ function InformationPanelFrame({
 
 export default function InformationPanel(props: InformationPanelFrameProps) {
   return (
-    <main className="noise-bg bg-mapache-vivid-dark flex h-[100dvh] w-full items-stretch justify-center overflow-hidden p-4 text-center sm:p-6">
+    <MapacheScreen
+      spacing="compact"
+      viewport="fixed"
+      className="flex items-stretch justify-center text-center"
+    >
       <InformationPanelFrame {...props} />
-    </main>
+    </MapacheScreen>
   )
 }
 

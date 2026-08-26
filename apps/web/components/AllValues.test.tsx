@@ -55,6 +55,19 @@ describe("All Values Component Integration", () => {
 
     renderAllValues(rankedValues)
 
+    expect(screen.getByRole("main")).toHaveAttribute(
+      "data-slot",
+      "mapache-screen",
+    )
+    expect(screen.getByRole("main")).toHaveClass(
+      "min-h-[100dvh]",
+      "[--mapache-screen-spacing:0px]",
+    )
+    expect(
+      screen
+        .getByRole("heading", { name: "All Values", level: 1 })
+        .closest("header"),
+    ).toHaveClass("top-[env(safe-area-inset-top,0px)]")
     expect(
       screen.getByRole("heading", { name: "All Values", level: 1 }),
     ).toBeVisible()

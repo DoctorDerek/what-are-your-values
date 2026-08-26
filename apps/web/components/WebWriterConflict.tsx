@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import { Button } from "@/components/ui/button"
 import { webWriterConflictCopy } from "@/lib/WebWriterConflictCopy"
 
@@ -45,7 +46,11 @@ export default function WebWriterConflict({
   }, [areOptionsVisible])
 
   return (
-    <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 xl:p-8">
+    <MapacheScreen
+      spacing="standard-xl"
+      viewport="scrollable"
+      className="flex flex-col items-center"
+    >
       <div
         aria-busy={isExportPending}
         className="flex w-full max-w-5xl flex-col gap-5"
@@ -141,6 +146,6 @@ export default function WebWriterConflict({
           </Button>
         )}
       </div>
-    </main>
+    </MapacheScreen>
   )
 }

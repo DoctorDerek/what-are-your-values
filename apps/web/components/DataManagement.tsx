@@ -8,6 +8,7 @@ import type {
 } from "@game/machines/src/PlayerDataReset"
 import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
 import { useEffect, useRef } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import { Button } from "@/components/ui/button"
 import { WAYVM_IMPORT_FILE_ACCEPT } from "@/lib/PlayerDataFiles"
 import PlayerDataImportPreview from "./PlayerDataImportPreview"
@@ -106,7 +107,11 @@ export default function DataManagement({
   }
 
   return (
-    <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 sm:p-8">
+    <MapacheScreen
+      spacing="standard"
+      viewport="scrollable"
+      className="flex flex-col items-center"
+    >
       <div className="flex w-full max-w-5xl flex-wrap items-center justify-between gap-4">
         <h1
           ref={headingRef}
@@ -260,6 +265,6 @@ export default function DataManagement({
           </>
         )}
       </div>
-    </main>
+    </MapacheScreen>
   )
 }

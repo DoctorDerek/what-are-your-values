@@ -1,10 +1,13 @@
 import { playerDataRecoveryCopy } from "@game/machines/src/PlayerDataRecoveryCopy"
+import MapacheScreen from "@/components/MapacheScreen"
 
 export default function PlayerDataLoading() {
   return (
-    <main
+    <MapacheScreen
       aria-busy="true"
-      className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full items-center justify-center p-4 text-center sm:p-8"
+      spacing="standard"
+      viewport="scrollable"
+      className="flex items-center justify-center text-center"
     >
       <p
         role="status"
@@ -14,6 +17,6 @@ export default function PlayerDataLoading() {
       >
         {playerDataRecoveryCopy.loading}
       </p>
-    </main>
+    </MapacheScreen>
   )
 }

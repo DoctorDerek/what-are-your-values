@@ -4,6 +4,7 @@ import { playerDataRecoveryCopy } from "@game/machines/src/PlayerDataRecoveryCop
 import type { PlayerDataResetReview as PlayerDataResetReviewState } from "@game/machines/src/PlayerDataReset"
 import type { WayvmImportPreview } from "@game/machines/src/WayvmImportPreview"
 import { useEffect, useRef } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import { WAYVM_IMPORT_FILE_ACCEPT } from "@/lib/PlayerDataFiles"
 import PlayerDataImportPreview from "./PlayerDataImportPreview"
 import PlayerDataRecoveryActions, {
@@ -108,7 +109,11 @@ export default function PlayerDataRecovery(props: PlayerDataRecoveryProps) {
   }, [currentResetReview])
 
   return (
-    <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 sm:p-8">
+    <MapacheScreen
+      spacing="standard"
+      viewport="scrollable"
+      className="flex flex-col items-center"
+    >
       <div aria-busy={isBusy} className="flex w-full max-w-5xl flex-col gap-5">
         <h1
           ref={headingRef}
@@ -254,6 +259,6 @@ export default function PlayerDataRecovery(props: PlayerDataRecoveryProps) {
           />
         )}
       </div>
-    </main>
+    </MapacheScreen>
   )
 }

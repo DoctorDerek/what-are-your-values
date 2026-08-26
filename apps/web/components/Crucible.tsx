@@ -20,6 +20,7 @@ import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import useWebControlHintInputModality from "@/lib/useWebControlHintInputModality"
 import AchievementBanner from "./AchievementBanner"
 import BattleActionBar from "./BattleActionBar"
@@ -253,9 +254,13 @@ export default function Crucible({
 
   if (!currentPair) {
     return (
-      <div className="bg-mapache-vivid-dark noise-bg flex h-[100dvh] w-[100dvw] items-center justify-center text-6xl font-black text-white uppercase">
+      <MapacheScreen
+        spacing="safe-area-only"
+        viewport="fixed"
+        className="flex items-center justify-center text-6xl font-black text-white uppercase"
+      >
         Forging Matrix...
-      </div>
+      </MapacheScreen>
     )
   }
 
@@ -284,10 +289,12 @@ export default function Crucible({
   const winnerId = state.context.winnerId
 
   return (
-    <main
+    <MapacheScreen
       aria-label="Value battle"
       aria-busy={isPersistencePending}
-      className="noise-bg bg-mapache-vivid-dark relative flex h-[100dvh] w-[100dvw] touch-manipulation flex-col overflow-hidden overscroll-none select-none"
+      spacing="safe-area-only"
+      viewport="fixed"
+      className="relative flex touch-manipulation flex-col overscroll-none select-none"
     >
       <p
         role="status"
@@ -363,6 +370,6 @@ export default function Crucible({
           />
         </AnimatePresence>
       </div>
-    </main>
+    </MapacheScreen>
   )
 }

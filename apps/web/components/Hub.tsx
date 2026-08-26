@@ -5,6 +5,7 @@ import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import { getValueDisplayName, type ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import type { Ref } from "react"
+import MapacheScreen from "@/components/MapacheScreen"
 import { Button } from "@/components/ui/button"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
@@ -120,7 +121,11 @@ export default function Hub({
     projectHubValues(rankedValues)
 
   return (
-    <main className="noise-bg bg-mapache-vivid-dark flex min-h-[100dvh] w-full flex-col items-center p-4 sm:p-8">
+    <MapacheScreen
+      spacing="standard"
+      viewport="scrollable"
+      className="flex flex-col items-center"
+    >
       <div className="flex w-full max-w-7xl justify-end">
         <Button
           id={HUB_MENU_BUTTON_ID}
@@ -230,6 +235,6 @@ export default function Hub({
           </>
         )}
       </section>
-    </main>
+    </MapacheScreen>
   )
 }

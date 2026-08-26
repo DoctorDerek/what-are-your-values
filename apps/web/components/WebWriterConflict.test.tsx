@@ -31,6 +31,15 @@ describe("Web Writer Conflict", () => {
   it("presents the exact conflict contract and focuses its heading", async () => {
     renderWebWriterConflict()
 
+    expect(screen.getByRole("main")).toHaveAttribute(
+      "data-slot",
+      "mapache-screen",
+    )
+    expect(screen.getByRole("main")).toHaveClass(
+      "min-h-[100dvh]",
+      "[--mapache-screen-spacing:1rem]",
+      "xl:[--mapache-screen-spacing:2rem]",
+    )
     const heading = screen.getByRole("heading", {
       name: webWriterConflictCopy.title,
     })

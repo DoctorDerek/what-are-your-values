@@ -90,7 +90,12 @@ describe("Crucible Component Integration", () => {
     })
     const presentationRegion = banner.parentElement
 
-    expect(battleSurface).toHaveClass("overflow-hidden")
+    expect(battleSurface).toHaveAttribute("data-slot", "mapache-screen")
+    expect(battleSurface).toHaveClass(
+      "h-[100dvh]",
+      "overflow-hidden",
+      "[--mapache-screen-spacing:0px]",
+    )
     expect(battleActions).toHaveClass("relative", "shrink-0")
     expect(banner).toHaveClass("relative")
     expect(presentationRegion).toHaveClass(

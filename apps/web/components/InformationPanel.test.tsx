@@ -36,13 +36,18 @@ describe("InformationPanel Component Integration", () => {
       </InformationPanel>,
     )
 
-    expect(
-      screen.getByRole("main").querySelector("section"),
-    ).toHaveAccessibleName("Introduction")
-    expect(screen.getByRole("main")).not.toHaveClass(
-      "overscroll-none",
-      "select-none",
+    const introductionScreen = screen.getByRole("main")
+    expect(introductionScreen.querySelector("section")).toHaveAccessibleName(
+      "Introduction",
     )
+    expect(introductionScreen).toHaveAttribute("data-slot", "mapache-screen")
+    expect(introductionScreen).toHaveClass(
+      "h-[100dvh]",
+      "overflow-hidden",
+      "[--mapache-screen-spacing:1rem]",
+      "sm:[--mapache-screen-spacing:1.5rem]",
+    )
+    expect(introductionScreen).not.toHaveClass("overscroll-none", "select-none")
     const informationPanelBody = screen.getByTestId("information-panel-body")
     expect(informationPanelBody).toHaveClass("overflow-y-auto")
     expect(informationPanelBody).toHaveAttribute("tabindex", "0")
