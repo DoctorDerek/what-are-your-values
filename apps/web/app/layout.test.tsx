@@ -8,7 +8,7 @@ const { serwistProviderSpy } = vi.hoisted(() => ({
   serwistProviderSpy: vi.fn(),
 }))
 
-vi.mock("@serwist/next/react", () => ({
+vi.mock("@serwist/turbopack/react", () => ({
   SerwistProvider: ({
     children,
     ...registration

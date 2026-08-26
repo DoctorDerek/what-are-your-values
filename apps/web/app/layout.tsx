@@ -1,5 +1,5 @@
 import "./globals.css"
-import { SerwistProvider } from "@serwist/next/react"
+import { SerwistProvider } from "@serwist/turbopack/react"
 import type { Metadata, Viewport } from "next"
 import { createWebMetadata } from "@/lib/WebMetadata"
 
