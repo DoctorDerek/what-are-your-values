@@ -1,7 +1,6 @@
 import { introductionCopy } from "@game/data/src/IntroductionCopy"
 import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
-import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 import GameIsland from "@/components/GameIsland"
 
@@ -48,11 +47,15 @@ describe("GameIsland", () => {
     expect(screen.getByRole("status")).toHaveAttribute("aria-atomic", "true")
   })
 
-  it("gives JavaScript-disabled visitors a static Introduction route", () => {
-    const staticMarkup = renderToStaticMarkup(<GameIsland />)
+  it("gives an unavailable client a truthful static Introduction route", () => {
+    render(<GameIsland />)
 
-    expect(staticMarkup).toContain('<noscript><a href="#introduction"')
-    expect(staticMarkup).toContain("Read the Introduction</a></noscript>")
+    expect(
+      screen.getByText("The interactive game requires JavaScript."),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("link", { name: "Read the Introduction" }),
+    ).toHaveAttribute("href", "#introduction")
   })
 
   it("loads the canonical game client through the isolated boundary", async () => {

@@ -22,14 +22,15 @@ function GameIslandFallback() {
         <p role="status" aria-atomic="true" className="text-lg font-black">
           Loading game…
         </p>
-        <noscript>
-          <a
-            href="#introduction"
-            className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark border-4 border-black p-4 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000]"
-          >
-            Read the Introduction
-          </a>
-        </noscript>
+        <p className="text-lg font-black">
+          The interactive game requires JavaScript.
+        </p>
+        <a
+          href="#introduction"
+          className="bg-mapache-vivid-primary-cyan text-mapache-vivid-dark border-4 border-black p-4 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000]"
+        >
+          Read the Introduction
+        </a>
       </div>
     </MapacheScreen>
   )
