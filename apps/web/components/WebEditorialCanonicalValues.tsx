@@ -13,7 +13,7 @@ export default function WebEditorialCanonicalValues() {
       >
         100 Included Values
       </h2>
-      <dl className="mt-6 grid gap-4 xl:grid-cols-2">
+      <dl className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
         {CANONICAL_VALUES.map((canonicalValue) => (
           <div
             key={canonicalValue.id}
