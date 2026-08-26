@@ -15,14 +15,17 @@ test("a new player starts immediately and reviews the complete ranking", async (
 }) => {
   await page.goto("/")
 
+  const gameIsland = page.getByRole("region", {
+    name: "Play What Are Your Values, Mapache?",
+  })
   await expect(
-    page.getByRole("heading", {
+    gameIsland.getByRole("heading", {
       level: 1,
       name: "What Are Your Values, Mapache?",
     }),
   ).toBeVisible()
   await expect(
-    page.getByText(
+    gameIsland.getByText(
       "Private. Offline. Account-free. Your choices and Custom Values stay on this device unless you choose to export them.",
     ),
   ).toBeVisible()
