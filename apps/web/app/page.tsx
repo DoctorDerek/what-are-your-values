@@ -10,10 +10,10 @@ export default function Page() {
         aria-label="What Are Your Values, Mapache? information"
         className="noise-bg bg-mapache-vivid-dark text-mapache-vivid-dark px-[max(1rem,env(safe-area-inset-left,0px))] pt-[max(2.5rem,env(safe-area-inset-top,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] xl:px-[max(2rem,env(safe-area-inset-left,0px))] xl:pr-[max(2rem,env(safe-area-inset-right,0px))] xl:pb-[max(4rem,env(safe-area-inset-bottom,0px))]"
       >
-        <div className="mx-auto grid max-w-7xl gap-10">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10">
           <a
             href="#game"
-            className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark w-fit max-w-full min-w-0 border-4 border-black px-5 py-4 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white"
+            className="bg-mapache-vivid-secondary-green text-mapache-vivid-dark w-fit max-w-full border-4 border-black px-5 py-4 text-xl font-black uppercase shadow-[6px_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
             Start or Continue Game
           </a>
