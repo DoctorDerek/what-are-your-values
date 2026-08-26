@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { createWebMetadata } from "@/lib/WebMetadata"
 import RootLayout, { metadata, viewport } from "./layout"
 
 const { serwistProviderSpy } = vi.hoisted(() => ({
@@ -46,6 +47,7 @@ describe("Root layout", () => {
       description:
         "What Are Your Values, Mapache? is a fast-paced, value-sorting autobattler to help you find out what you value in life.",
     })
+    expect(metadata).toEqual(createWebMetadata(process.env.VERCEL_ENV))
     expect(document.documentElement).toHaveAttribute("lang", "en")
     expect(screen.getByText("Values client")).toBeVisible()
     expect(serwistProviderSpy).toHaveBeenCalledWith({

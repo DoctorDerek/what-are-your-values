@@ -1,13 +1,9 @@
 import "./globals.css"
 import { SerwistProvider } from "@serwist/next/react"
 import type { Metadata, Viewport } from "next"
+import { createWebMetadata } from "@/lib/WebMetadata"
 
-export const metadata: Metadata = {
-  title:
-    "What Are Your Values, Mapache? A Free Game To Find What You Value in Life",
-  description:
-    "What Are Your Values, Mapache? is a fast-paced, value-sorting autobattler to help you find out what you value in life.",
-}
+export const metadata: Metadata = createWebMetadata(process.env.VERCEL_ENV)
 
 export const viewport: Viewport = {
   viewportFit: "cover",
