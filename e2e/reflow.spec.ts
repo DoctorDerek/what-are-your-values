@@ -6,17 +6,75 @@ async function expectNoDocumentHorizontalOverflow(
   page: Page,
   productState: string,
 ) {
-  const geometry = await page.evaluate(() => ({
-    documentClientWidth: document.documentElement.clientWidth,
-    documentScrollWidth: Math.max(
+  const geometry = await page.evaluate(() => {
+    const documentClientWidth = document.documentElement.clientWidth
+    const documentScrollWidth = Math.max(
       document.documentElement.scrollWidth,
       document.body.scrollWidth,
-    ),
-  }))
+    )
+
+    const overflowCandidates =
+      documentScrollWidth > documentClientWidth
+        ? Array.from(document.body.querySelectorAll("*"))
+            .map((element) => {
+              const bounds = element.getBoundingClientRect()
+              const computedStyle = window.getComputedStyle(element)
+              const classNames = (element.getAttribute("class") ?? "")
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 4)
+                .join(".")
+              const selector = `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}${classNames ? `.${classNames}` : ""}`
+              const measuredExcess = Math.max(
+                0,
+                bounds.right - documentClientWidth,
+                -bounds.left,
+                element.scrollWidth - element.clientWidth,
+              )
+
+              return {
+                selector,
+                text: (element.textContent ?? "")
+                  .trim()
+                  .replace(/\s+/g, " ")
+                  .slice(0, 80),
+                left: Math.round(bounds.left * 100) / 100,
+                right: Math.round(bounds.right * 100) / 100,
+                width: Math.round(bounds.width * 100) / 100,
+                clientWidth: element.clientWidth,
+                scrollWidth: element.scrollWidth,
+                measuredExcess: Math.round(measuredExcess * 100) / 100,
+                boxShadow: computedStyle.boxShadow,
+                maxWidth: computedStyle.maxWidth,
+                minWidth: computedStyle.minWidth,
+                overflowWrap: computedStyle.overflowWrap,
+                whiteSpace: computedStyle.whiteSpace,
+              }
+            })
+            .filter(
+              ({ boxShadow, clientWidth, left, right, scrollWidth }) =>
+                left < 0 ||
+                right > documentClientWidth ||
+                scrollWidth > clientWidth ||
+                (boxShadow !== "none" && right > documentClientWidth - 16),
+            )
+            .sort(
+              (leftCandidate, rightCandidate) =>
+                rightCandidate.measuredExcess - leftCandidate.measuredExcess,
+            )
+            .slice(0, 12)
+        : []
+
+    return {
+      documentClientWidth,
+      documentScrollWidth,
+      overflowCandidates,
+    }
+  })
 
   expect(
     geometry.documentScrollWidth,
-    `${productState} document width ${geometry.documentScrollWidth}px exceeded its ${geometry.documentClientWidth}px viewport`,
+    `${productState} document width ${geometry.documentScrollWidth}px exceeded its ${geometry.documentClientWidth}px viewport. Candidates: ${JSON.stringify(geometry.overflowCandidates)}`,
   ).toBeLessThanOrEqual(geometry.documentClientWidth)
 }
 
