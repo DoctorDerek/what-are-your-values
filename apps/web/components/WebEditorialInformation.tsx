@@ -10,50 +10,46 @@ function WebEditorialInformationBlock({
 }: {
   readonly block: InformationPanelBlock
 }) {
-  if (block.kind === "section")
-    return (
-      <section className="border-mapache-vivid-primary-cyan grid gap-3 border-l-8 pl-4">
-        <h3 className="text-2xl leading-tight font-black">{block.heading}</h3>
-        {block.paragraphs.map((paragraph) => (
-          <p key={paragraph} className="text-lg leading-relaxed font-medium">
-            {paragraph}
-          </p>
-        ))}
-      </section>
-    )
-
-  if (block.kind === "lead")
-    return <p className="text-2xl leading-relaxed font-bold">{block.text}</p>
-
-  if (block.kind === "paragraph")
-    return <p className="text-lg leading-relaxed font-medium">{block.text}</p>
-
-  if (block.kind === "signature")
-    return (
-      <p className="text-right text-xl leading-relaxed font-black">
-        {block.text}
-      </p>
-    )
-
-  if (block.kind === "resource")
-    return (
-      <section className="bg-mapache-vivid-light grid gap-3 border-4 border-black p-4 shadow-[6px_6px_0px_0px_#000000]">
-        <h3 className="text-2xl leading-tight font-black">{block.title}</h3>
-        <p className="text-lg leading-relaxed font-medium">
-          {block.description}
+  switch (block.kind) {
+    case "section":
+      return (
+        <section className="border-mapache-vivid-primary-cyan grid gap-3 border-l-8 pl-4">
+          <h3 className="text-2xl leading-tight font-black">{block.heading}</h3>
+          {block.paragraphs.map((paragraph) => (
+            <p key={paragraph} className="text-lg leading-relaxed font-medium">
+              {paragraph}
+            </p>
+          ))}
+        </section>
+      )
+    case "lead":
+      return <p className="text-2xl leading-relaxed font-bold">{block.text}</p>
+    case "paragraph":
+      return <p className="text-lg leading-relaxed font-medium">{block.text}</p>
+    case "signature":
+      return (
+        <p className="text-right text-xl leading-relaxed font-black">
+          {block.text}
         </p>
-        <a
-          href={block.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-mapache-vivid-primary-cyan text-mapache-vivid-black! w-fit border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
-        >
-          {block.actionLabel}
-        </a>
-      </section>
-    )
-
-  return block satisfies never
+      )
+    case "resource":
+      return (
+        <section className="bg-mapache-vivid-light grid gap-3 border-4 border-black p-4 shadow-[6px_6px_0px_0px_#000000]">
+          <h3 className="text-2xl leading-tight font-black">{block.title}</h3>
+          <p className="text-lg leading-relaxed font-medium">
+            {block.description}
+          </p>
+          <a
+            href={block.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-mapache-vivid-primary-cyan text-mapache-vivid-black! w-fit border-4 border-black px-4 py-3 text-lg font-black uppercase shadow-[5px_5px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black"
+          >
+            {block.actionLabel}
+          </a>
+        </section>
+      )
+  }
 }
 
 function WebEditorialInformationSection({
