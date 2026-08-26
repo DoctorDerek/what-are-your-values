@@ -22,8 +22,6 @@
     "xstate": "^5"
   },
   "devDependencies": {
-    "@serwist/cli": "^9",
-    "@serwist/next": "^9",
     "@serwist/turbopack": "^9",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",
