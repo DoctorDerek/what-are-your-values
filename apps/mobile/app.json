@@ -19,6 +19,12 @@
     },
     "android": {
       "package": "com.doctorderek.whatareyourvaluesmapache"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "89ee96c0-b769-4052-b138-0928784f4d28"
+      }
+    },
+    "owner": "doctordereks-team"
   }
 }
