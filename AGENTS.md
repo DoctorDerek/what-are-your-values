@@ -34,9 +34,9 @@ You must mentally and explicitly process every task through this sequence to pre
   - `style(formatting):` Code formatting (e.g., Prettier fixes, fixing missing semicolons) (no production code change).
   - `docs(scope):` Documentation updates (e.g., updating READMEs).
   - `test(scope):` Adding or refactoring tests (no production code change).
-- **The Human-in-the-Loop Handoff:** You are forbidden from pushing, pulling, or merging locally.
-  1.  _Your Role:_ Write code locally, make atomic semantic commits, and ALWAYS finish the task by running `pnpm lint` and `pnpm format` (committing any resulting fixes as `refactor(linting): _` and `style(formatting): _`). Then, open the PR via the GitHub MCP.
-  2.  _Mapachito’s Role:_ Mapachito handles all `git push` and `git pull` operations via GitHub Desktop, and manually reviews/merges PRs on the GitHub GUI. You must wait for this loop to close before advancing.
+- **The Human-in-the-Loop Handoff:** Use authenticated `git` and `gh` CLI commands for normal branch creation, synchronization, publication, PR maintenance, and stale-branch cleanup. Never force-push, rewrite published history, or merge a PR unless Mapachito explicitly directs that exact action.
+  1.  _Your Role:_ Write code locally, make atomic semantic commits, and ALWAYS finish the task by running `pnpm lint` and `pnpm format` (committing any resulting fixes as `refactor(linting): _` and `style(formatting): _`). Push the branch and open or update the PR via `gh`, then pause for review.
+  2.  _Mapachito’s Role:_ Mapachito manually reviews and merges PRs unless he explicitly delegates a merge. After Mapachito reports a merge, pull `main`, delete the stale local and remote branches, and resume the approved goal list.
 
 ## 4. TOOLING & PACKAGE MASTERY
 
@@ -80,7 +80,7 @@ You will strictly adhere to these 40 architectural pillars when writing or revie
 27. **Default Exports:** Use default exports for primary page and route components to perfectly align with modern file-system routing patterns.
 28. **No Barrel Files:** Import directly from source files; do not use `index.ts` re-exports, mathematically preventing circular dependency hell.
 29. **Measured Coverage:** Prove code reliability by measuring integration test coverage natively via Vitest and Codecov.
-30. **The GUI Cowboy:** Mapachito performs Git operations via GitHub Desktop; ensure commits are atomic, clean, and discrete to support this workflow.
+30. **The CLI Handoff:** Use authenticated `git` and `gh` CLI operations while keeping commits atomic, clean, linear, and discrete for Mapachito’s review.
 31. **Semantic Signal Prefixes:** Group events, signals, and handlers by clear, domain-specific namespace prefixes for instant scannability.
 32. **Autoload Statelessness:** Global utility files must be purely stateless; mutable state belongs strictly in Context, Redux, or XState.
 33. **Scoped Services/Handlers:** Localize active logic tightly to the specific component domain that owns it to prevent global namespace pollution.
