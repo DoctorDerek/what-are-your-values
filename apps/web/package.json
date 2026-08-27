@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3037",
-    "build": "next build && serwist build serwist.config.mjs && node ../../scripts/runTypeScript.mjs scripts/copyServiceWorkerToStaticExport.cli.ts",
+    "build": "next build",
     "start": "vite preview --outDir out --port 3037 --strictPort"
   },
   "dependencies": {
@@ -22,8 +22,7 @@
     "xstate": "^5"
   },
   "devDependencies": {
-    "@serwist/cli": "^9",
-    "@serwist/next": "^9",
+    "@serwist/turbopack": "^9",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",
     "@types/react": "^19",

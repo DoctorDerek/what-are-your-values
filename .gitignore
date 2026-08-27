@@ -21,7 +21,6 @@
 /.next/
 /out/
 /apps/web/out/
-/apps/web/public/sw.js
 
 # production
 /build
