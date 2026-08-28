@@ -293,6 +293,7 @@ describe("NativeGameClient persistence recovery and lifecycle", () => {
         [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
       ]),
     )
+    const user = userEvent.setup()
     await render(<NativeGameClient />)
 
     expect(
@@ -316,6 +317,16 @@ describe("NativeGameClient persistence recovery and lifecycle", () => {
         name: playerDataRecoveryCopy.actions.restoreLastKnownGoodSave,
       }),
     ).not.toBeOnTheScreen()
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.tryAgain,
+      }),
+    )
+    await waitFor(() => expect(readAll).toHaveBeenCalledTimes(2))
+    expect(
+      await screen.findByText(playerDataRecoveryCopy.unreadableData.title),
+    ).toBeOnTheScreen()
   })
 
   it("allows a safe return when first-run initialization cannot persist", async () => {
