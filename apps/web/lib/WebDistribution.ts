@@ -1,5 +1,5 @@
 export const CANONICAL_WEB_ORIGIN =
-  "https://whatareyourvaluesmapache.com" as const
+  "https://www.whatareyourvaluesmapache.com" as const
 
 export const SHIPPED_ENGLISH_WEB_PATH = "/" as const
 

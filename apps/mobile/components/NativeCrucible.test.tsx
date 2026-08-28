@@ -210,4 +210,16 @@ describe("NativeCrucible", () => {
     expect(props.onExit).not.toHaveBeenCalled()
     expect(props.onOpenMenu).not.toHaveBeenCalled()
   })
+
+  it("rejects a projected pair whose authoritative progress is missing", async () => {
+    const props = createCrucibleProps(false)
+    const incompleteProgressById = new Map(battleCycle.progressById)
+    incompleteProgressById.delete(firstValueId)
+
+    await expect(
+      render(
+        <NativeCrucible {...props} progressById={incompleteProgressById} />,
+      ),
+    ).rejects.toThrow("Projected battle is missing Active Deck data")
+  })
 })
