@@ -362,6 +362,35 @@ describe("NativeGameClient persistence recovery and lifecycle", () => {
     ).toBeOnTheScreen()
   })
 
+  it("blocks corrupt-data recovery actions while a selected backup is read", async () => {
+    readAll.mockResolvedValue(
+      new Map([
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ]),
+    )
+    usePlayerDataFiles.mockReturnValue({
+      isReadingImportFile: true,
+      chooseBackup,
+    })
+    await render(<NativeGameClient />)
+
+    expect(await screen.findByText("Checking backup…")).toHaveProp(
+      "accessibilityLiveRegion",
+      "polite",
+    )
+    expect(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.importBackup,
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.deleteAllData,
+      }),
+    ).toBeDisabled()
+  })
+
   it("allows a safe return when first-run initialization cannot persist", async () => {
     compareAndSwapVerified.mockRejectedValueOnce(
       new Error("Native storage write failed"),
@@ -561,6 +590,27 @@ describe("NativeGameClient file operations and destructive actions", () => {
     ).toBeOnTheScreen()
     await user.press(screen.getByRole("button", { name: "Cancel" }))
     expect(screen.getByText("Import & Export")).toBeOnTheScreen()
+  })
+
+  it("blocks Import and Export navigation while a selected backup is read", async () => {
+    usePlayerDataFiles.mockReturnValue({
+      isReadingImportFile: true,
+      chooseBackup,
+    })
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await openMenuDestination(user, "Import & Export")
+
+    expect(await screen.findByText("Checking backup…")).toHaveProp(
+      "accessibilityLiveRegion",
+      "polite",
+    )
+    expect(screen.getByRole("button", { name: "Menu" })).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Back to Your Values" }),
+    ).toBeDisabled()
   })
 
   it("routes unreadable-save import and diagnostic export through recovery", async () => {
