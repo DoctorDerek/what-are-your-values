@@ -237,6 +237,30 @@ describe("NativeGameClient Menu navigation", () => {
 
     expect(await screen.findByText("Your Values")).toBeOnTheScreen()
   }, 10_000)
+
+  it("leaves active and return-target surfaces before routing onward", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await user.press(screen.getByRole("button", { name: "Battle" }))
+    expect(getPresentedChoiceNames()).toHaveLength(2)
+
+    await openMenuDestination(user, "Achievements")
+    expect(await screen.findByText("Achievements")).toBeOnTheScreen()
+    expect(screen.queryByLabelText("Value battle")).toBeNull()
+
+    await openMenuDestination(user, "Settings")
+    expect(await screen.findByText("Settings")).toBeOnTheScreen()
+
+    await openMenuDestination(user, "Browse All Values")
+    expect(await screen.findByText("All Values")).toBeOnTheScreen()
+    expect(screen.queryByText("Achievements")).toBeNull()
+    expect(screen.queryByText("Settings")).toBeNull()
+
+    await user.press(screen.getByRole("button", { name: "Close" }))
+    expect(await screen.findByText("Your Values")).toBeOnTheScreen()
+  }, 10_000)
 })
 
 describe("NativeGameClient battle routing", () => {
@@ -674,5 +698,31 @@ describe("NativeGameClient file operations and destructive actions", () => {
     await user.press(acknowledgedDeletion)
 
     expect(await screen.findByRole("button", { name: "Start" })).toBeEnabled()
+  })
+
+  it("confirms a reviewed level reset and reports the durable result", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await openMenuDestination(user, "Import & Export")
+    const actionLabel =
+      playerDataResetCopy["reset-levels-and-experience"].actionLabel
+
+    await user.press(screen.getByRole("button", { name: actionLabel }))
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-levels-and-experience"].confirmationTitle,
+      ),
+    ).toBeOnTheScreen()
+
+    await user.press(screen.getByRole("button", { name: actionLabel }))
+
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-levels-and-experience"]
+          .successAnnouncement,
+      ),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
   })
 })
