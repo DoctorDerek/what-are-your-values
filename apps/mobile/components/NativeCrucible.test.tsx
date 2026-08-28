@@ -235,10 +235,7 @@ describe("NativeCrucible", () => {
 
     await expect(
       render(
-        <NativeCrucible
-          {...props}
-          progressById={incompleteProgressById}
-        />,
+        <NativeCrucible {...props} progressById={incompleteProgressById} />,
       ),
     ).rejects.toThrow("Projected battle is missing Active Deck data")
   })

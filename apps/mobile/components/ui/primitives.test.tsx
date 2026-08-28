@@ -9,12 +9,7 @@ describe("native UI primitives", () => {
     const onPress = jest.fn()
     const user = userEvent.setup()
     await render(
-      <Button
-        asChild
-        size="compact"
-        variant="secondary"
-        onPress={onPress}
-      >
+      <Button asChild size="compact" variant="secondary" onPress={onPress}>
         <Pressable>
           <Text>Browse Values</Text>
         </Pressable>
@@ -26,10 +21,7 @@ describe("native UI primitives", () => {
       "className",
       expect.stringContaining("bg-mapache-vivid-primary-cyan"),
     )
-    expect(button).toHaveProp(
-      "className",
-      expect.stringContaining("min-h-12"),
-    )
+    expect(button).toHaveProp("className", expect.stringContaining("min-h-12"))
 
     await user.press(button)
 
@@ -43,9 +35,10 @@ describe("native UI primitives", () => {
       </Text>,
     )
 
-    expect(
-      screen.getByRole("heading", { name: "Section Title" }),
-    ).toHaveProp("aria-level", "2")
+    expect(screen.getByRole("heading", { name: "Section Title" })).toHaveProp(
+      "aria-level",
+      "2",
+    )
   })
 
   it("keeps explicitly unstyled text free of invented heading metadata", async () => {

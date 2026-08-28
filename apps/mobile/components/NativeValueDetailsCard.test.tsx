@@ -47,7 +47,9 @@ describe("NativeValueDetailsCard", () => {
 
     const details = screen.getByLabelText("Acceptance details")
     expect(within(details).getByLabelText("Rank 1")).toBeOnTheScreen()
-    expect(within(details).getByText("“to be accepted as I am”")).toBeOnTheScreen()
+    expect(
+      within(details).getByText("“to be accepted as I am”"),
+    ).toBeOnTheScreen()
     expect(within(details).queryByText("Yours")).toBeNull()
     expect(within(details).queryByRole("button", { name: "Edit" })).toBeNull()
     expect(within(details).queryByRole("button", { name: "Delete" })).toBeNull()
@@ -78,7 +80,9 @@ describe("NativeValueDetailsCard", () => {
       "className",
       expect.stringContaining("border-mapache-vivid-primary-cyan"),
     )
-    expect(within(details).queryByLabelText(`Rank ${rankedValue.rank}`)).toBeNull()
+    expect(
+      within(details).queryByLabelText(`Rank ${rankedValue.rank}`),
+    ).toBeNull()
     expect(within(details).getByText("Yours")).toBeOnTheScreen()
     expect(
       within(details).getByText("“Ability to solve problems creatively.”"),

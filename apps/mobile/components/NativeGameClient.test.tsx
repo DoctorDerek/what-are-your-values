@@ -770,8 +770,7 @@ describe("NativeGameClient file operations and destructive actions", () => {
 
     expect(
       await screen.findByText(
-        playerDataResetCopy["reset-levels-and-experience"]
-          .successAnnouncement,
+        playerDataResetCopy["reset-levels-and-experience"].successAnnouncement,
       ),
     ).toHaveProp("accessibilityLiveRegion", "polite")
   })
