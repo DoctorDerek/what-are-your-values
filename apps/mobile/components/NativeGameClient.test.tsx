@@ -138,6 +138,15 @@ describe("NativeGameClient Menu navigation", () => {
       expect(screen.getByRole("button", { name: "Back" })).toBeEnabled()
     })
 
+    await user.press(screen.getByRole("button", { name: "Menu" }))
+    const settingsMenu = getOpenDialog("Menu")
+    if (!settingsMenu)
+      throw new Error("The native Settings Menu dialog is unavailable")
+    await user.press(
+      within(settingsMenu).getByRole("button", { name: "Close Menu" }),
+    )
+    expect(screen.getByText("Settings")).toBeOnTheScreen()
+
     await user.press(screen.getByRole("button", { name: "Reset Achievements" }))
     expect(await screen.findByText("Reset Achievements?")).toBeOnTheScreen()
     await user.press(screen.getByRole("button", { name: "Cancel" }))
@@ -515,6 +524,19 @@ describe("NativeGameClient file operations and destructive actions", () => {
     expect(
       await screen.findByText(playerDataPortabilityCopy.exportSuccess),
     ).toHaveProp("accessibilityLiveRegion", "polite")
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["reset-levels-and-experience"].actionLabel,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-levels-and-experience"].confirmationTitle,
+      ),
+    ).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Cancel" }))
+    expect(screen.getByText("Import & Export")).toBeOnTheScreen()
   })
 
   it("routes unreadable-save import and diagnostic export through recovery", async () => {
