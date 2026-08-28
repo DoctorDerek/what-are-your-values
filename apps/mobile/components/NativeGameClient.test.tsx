@@ -1,27 +1,33 @@
-import { describe, expect, it, jest } from "@jest/globals"
 import {
+  BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_SNAPSHOT_A_KEY,
+} from "@game/machines/src/BattleProfileStore"
+import { createInMemoryDurableStore } from "@game/machines/src/InMemoryDurableStore"
+import { playerDataRecoveryCopy } from "@game/machines/src/PlayerDataRecoveryCopy"
+import { beforeEach, describe, expect, it, jest } from "@jest/globals"
+import {
+  act,
   render,
   screen,
   userEvent,
   waitFor,
   within,
 } from "@testing-library/react-native"
+import { AppState, type AppStateStatus } from "react-native"
 import NativeGameClient from "@/components/NativeGameClient"
+import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
+import { expoDurableStore } from "@/lib/ExpoDurableStore"
 
-jest.mock("@/lib/ExpoDurableStore", () => {
-  const { createInMemoryDurableStore } = jest.requireActual<
-    typeof import("@game/machines/src/InMemoryDurableStore")
-  >("@game/machines/src/InMemoryDurableStore")
-
-  return { expoDurableStore: createInMemoryDurableStore() }
-})
+jest.mock("@/lib/ExpoDurableStore", () => ({
+  expoDurableStore: {
+    readAll: jest.fn(),
+    compareAndSwapVerified: jest.fn(),
+  },
+}))
 
 jest.mock("@/components/useNativePlayerDataFiles", () => ({
   __esModule: true,
-  default: () => ({
-    isReadingImportFile: false,
-    chooseBackup: async () => undefined,
-  }),
+  default: jest.fn(),
 }))
 
 jest.mock("expo-crypto", () => {
@@ -33,6 +39,23 @@ jest.mock("expo-crypto", () => {
       return `00000000-0000-4000-8000-${nextUuid.toString().padStart(12, "0")}`
     },
   }
+})
+
+const readAll = jest.mocked(expoDurableStore.readAll)
+const compareAndSwapVerified = jest.mocked(
+  expoDurableStore.compareAndSwapVerified,
+)
+const usePlayerDataFiles = jest.mocked(useNativePlayerDataFiles)
+const chooseBackup = jest.fn(async () => undefined)
+
+beforeEach(() => {
+  const store = createInMemoryDurableStore()
+  readAll.mockImplementation(store.readAll)
+  compareAndSwapVerified.mockImplementation(store.compareAndSwapVerified)
+  usePlayerDataFiles.mockReturnValue({
+    isReadingImportFile: false,
+    chooseBackup,
+  })
 })
 
 async function openMenuDestination(
@@ -53,6 +76,12 @@ function getPresentedChoiceNames() {
       name: /^Choose .+\. Level \d+\. Choice [12]\.$/,
     })
     .map(({ props }) => props.accessibilityLabel as unknown)
+}
+
+function getOpenDialog(label: string) {
+  return screen
+    .queryAllByLabelText(label)
+    .find(({ props }) => props.role === "dialog")
 }
 
 describe("NativeGameClient Menu navigation", () => {
@@ -155,4 +184,125 @@ describe("NativeGameClient Menu navigation", () => {
 
     expect(getPresentedChoiceNames()).toEqual(presentedChoiceNames)
   }, 10_000)
+})
+
+describe("NativeGameClient persistence recovery and lifecycle", () => {
+  it("offers only a retry after initial durable storage cannot be read", async () => {
+    readAll.mockRejectedValueOnce(new Error("Native storage unavailable"))
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    expect(
+      await screen.findByText(playerDataRecoveryCopy.storageUnavailable.title),
+    ).toBeOnTheScreen()
+    expect(screen.getByText("Native storage unavailable")).toHaveProp(
+      "accessibilityRole",
+      "alert",
+    )
+    expect(screen.getAllByRole("button")).toHaveLength(1)
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.tryAgain,
+      }),
+    )
+
+    expect(await screen.findByRole("button", { name: "Start" })).toBeEnabled()
+  })
+
+  it("preserves corrupt local bytes behind the unreadable-data recovery surface", async () => {
+    readAll.mockResolvedValue(
+      new Map([
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ]),
+    )
+    await render(<NativeGameClient />)
+
+    expect(
+      await screen.findByText(playerDataRecoveryCopy.unreadableData.title),
+    ).toBeOnTheScreen()
+    expect(
+      screen.getByText(playerDataRecoveryCopy.unreadableData.noKnownGoodSave),
+    ).toHaveProp("accessibilityRole", "alert")
+    expect(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.importBackup,
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.exportUnreadableData,
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("button", {
+        name: playerDataRecoveryCopy.actions.restoreLastKnownGoodSave,
+      }),
+    ).not.toBeOnTheScreen()
+  })
+
+  it("allows a safe return when first-run initialization cannot persist", async () => {
+    compareAndSwapVerified.mockRejectedValueOnce(
+      new Error("Native storage write failed"),
+    )
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    expect(
+      await screen.findByText(playerDataRecoveryCopy.storageUnavailable.title),
+    ).toBeOnTheScreen()
+    expect(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.exportCurrentData,
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.returnWithoutNewChanges,
+      }),
+    ).toBeEnabled()
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.returnWithoutNewChanges,
+      }),
+    )
+
+    expect(await screen.findByRole("button", { name: "Start" })).toBeEnabled()
+  })
+
+  it("closes overlays and checkpoints only when the app enters background", async () => {
+    let notifyAppState: (appState: AppStateStatus) => void = () => undefined
+    const remove = jest.fn()
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_eventType, listener) => {
+        notifyAppState = listener
+        return { remove }
+      })
+    const user = userEvent.setup()
+    const { unmount } = await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await user.press(await screen.findByRole("button", { name: "Menu" }))
+    expect(getOpenDialog("Menu")).toBeDefined()
+
+    await act(async () => {
+      notifyAppState("active")
+      await Promise.resolve()
+    })
+    expect(getOpenDialog("Menu")).toBeDefined()
+
+    await act(async () => {
+      notifyAppState("background")
+      await Promise.resolve()
+    })
+    await waitFor(() => expect(getOpenDialog("Menu")).toBeUndefined())
+    expect(await screen.findByText("Your Values")).toBeOnTheScreen()
+
+    await unmount()
+    expect(remove).toHaveBeenCalledTimes(1)
+  })
 })
