@@ -34,7 +34,10 @@ export const VALUE_TO_ANIMAL_MAP = Object.freeze([
   defineAnimalMapping("pvcs-2011:compassion", "deer_female"),
   defineAnimalMapping("pvcs-2011:complexity", "crowpack"),
   defineAnimalMapping("pvcs-2011:compromise", "pandapack"),
-  defineAnimalMapping("pvcs-2011:contribution", "lildoggies/lildoggie02_dark_gray"),
+  defineAnimalMapping(
+    "pvcs-2011:contribution",
+    "lildoggies/lildoggie02_dark_gray",
+  ),
   defineAnimalMapping("pvcs-2011:cooperation", "bunnypack"),
   defineAnimalMapping("pvcs-2011:courage", "wolfpack"),
   defineAnimalMapping("pvcs-2011:courtesy", "kittens/kitten04_light_gray"),
@@ -98,7 +101,10 @@ export const VALUE_TO_ANIMAL_MAP = Object.freeze([
   defineAnimalMapping("pvcs-2011:purpose", "lilfox/lilfox_white"),
   defineAnimalMapping("pvcs-2011:rationality", "foxpack"),
   defineAnimalMapping("pvcs-2011:realism", "foxpack"),
-  defineAnimalMapping("pvcs-2011:responsibility", "lildoggies/lildoggie01_brown"),
+  defineAnimalMapping(
+    "pvcs-2011:responsibility",
+    "lildoggies/lildoggie01_brown",
+  ),
   defineAnimalMapping("pvcs-2011:risk", "lilfox/lilfox_red"),
   defineAnimalMapping("pvcs-2011:romance", "dragonfly/dragonfly03_pink"),
   defineAnimalMapping("pvcs-2011:safety", "lilhedgehog"),
