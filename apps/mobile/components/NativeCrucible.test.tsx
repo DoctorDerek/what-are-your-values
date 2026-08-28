@@ -104,7 +104,7 @@ describe("NativeCrucible", () => {
     expect(tapHints).toHaveLength(2)
     for (const tapHint of tapHints) {
       expect(tapHint).toHaveProp("aria-hidden", true)
-      expect(tapHint.props.className).toContain("w-14")
+      expect(tapHint.props.className).toContain("w-12")
       expect(tapHint.props.className).toContain("xl:w-24")
       expect(tapHint.props.className).not.toContain("opacity-0")
     }

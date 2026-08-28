@@ -3,6 +3,33 @@ import { render, screen, userEvent } from "@testing-library/react-native"
 import NativeBattleActionBar from "@/components/NativeBattleActionBar"
 
 describe("NativeBattleActionBar", () => {
+  it("keeps every compact action label on one fitted line", async () => {
+    await render(
+      <NativeBattleActionBar
+        canOpenMenu
+        canRedo
+        canStop
+        canUndo
+        onOpenMenu={jest.fn()}
+        onRedo={jest.fn()}
+        onStop={jest.fn()}
+        onUndo={jest.fn()}
+      />,
+    )
+
+    for (const actionName of ["Undo", "Redo", "Stop", "Menu"]) {
+      const action = screen.getByRole("button", { name: actionName })
+      const label = screen.getByText(actionName)
+
+      expect(action.props.className).toContain("min-w-0")
+      expect(action.props.className).toContain("px-2")
+      expect(action.props.className).toContain("xl:px-4")
+      expect(label).toHaveProp("adjustsFontSizeToFit", true)
+      expect(label).toHaveProp("minimumFontScale", 0.75)
+      expect(label).toHaveProp("numberOfLines", 1)
+    }
+  })
+
   it("exposes capability state and invokes only enabled battle actions", async () => {
     const onUndo = jest.fn()
     const onRedo = jest.fn()

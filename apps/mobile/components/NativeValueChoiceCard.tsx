@@ -136,11 +136,11 @@ function NativeValueChoiceCard(
           onPress={() => onActivate(value.id)}
         >
           <View className="w-full items-center">
-            <View className="w-full min-w-0 flex-row items-center gap-3 xl:gap-5">
+            <View className="w-full min-w-0 flex-row items-center gap-2 xl:gap-5">
               <Text
                 aria-hidden
                 className={cn(
-                  "w-14 shrink-0 text-center text-sm font-black text-black/50 uppercase xl:w-24 xl:text-xl",
+                  "w-12 shrink-0 text-center text-sm font-black text-black/50 uppercase xl:w-24 xl:text-xl",
                   !controlHint && "opacity-0",
                 )}
               >
@@ -148,7 +148,9 @@ function NativeValueChoiceCard(
               </Text>
               <Text
                 variant="h2"
-                className="min-w-0 flex-1 border-0 pb-0 text-center text-3xl leading-9 text-white uppercase xl:text-5xl xl:leading-[56px]"
+                className="min-w-0 flex-1 border-0 pb-0 text-center text-2xl leading-8 text-white uppercase xl:text-5xl xl:leading-[56px]"
+                lineBreakStrategyIOS="push-out"
+                textBreakStrategy="balanced"
               >
                 {displayName}
               </Text>
