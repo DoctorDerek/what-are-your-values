@@ -101,6 +101,20 @@ describe("NativeCustomValueForm", () => {
     expect(screen.getByRole("button", { name: "Save Value" })).toBeDisabled()
   })
 
+  it("keeps the name-field Next action separate from saving", async () => {
+    const props = createAddProps()
+    await render(<NativeCustomValueForm {...props} />)
+    const valueName = screen.getByLabelText("Value Name")
+    const definition = screen.getByLabelText("What This Value Means to Me")
+
+    expect(valueName).toHaveProp("returnKeyType", "next")
+    expect(definition).toHaveProp("multiline", true)
+
+    await fireEvent(valueName, "submitEditing")
+
+    expect(props.onSubmit).not.toHaveBeenCalled()
+  })
+
   it("opens exact canonical collisions instead of saving duplicates", async () => {
     const props = createAddProps()
     const user = userEvent.setup()
