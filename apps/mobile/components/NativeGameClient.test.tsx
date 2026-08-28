@@ -342,6 +342,17 @@ describe("NativeGameClient persistence recovery and lifecycle", () => {
 
     await user.press(
       screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.exportCurrentData,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataRecoveryCopy.storageUnavailable.currentBackupReady,
+      ),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
+
+    await user.press(
+      screen.getByRole("button", {
         name: playerDataRecoveryCopy.actions.returnWithoutNewChanges,
       }),
     )
@@ -384,6 +395,54 @@ describe("NativeGameClient persistence recovery and lifecycle", () => {
 })
 
 describe("NativeGameClient file operations and destructive actions", () => {
+  it("cancels then acknowledges complete deletion from corrupt-data recovery", async () => {
+    const corruptStore = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ])
+    readAll.mockImplementation(corruptStore.readAll)
+    compareAndSwapVerified.mockImplementation(
+      corruptStore.compareAndSwapVerified,
+    )
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(
+      await screen.findByRole("button", {
+        name: playerDataRecoveryCopy.actions.deleteAllData,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["delete-all-data"].confirmationTitle,
+      ),
+    ).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Cancel" }))
+    expect(
+      await screen.findByText(playerDataRecoveryCopy.unreadableData.title),
+    ).toBeOnTheScreen()
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.deleteAllData,
+      }),
+    )
+    await fireEvent(
+      screen.getByRole("switch", {
+        name: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      }),
+      "valueChange",
+      true,
+    )
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["delete-all-data"].actionLabel,
+      }),
+    )
+
+    expect(await screen.findByRole("button", { name: "Start" })).toBeEnabled()
+  })
+
   it("updates and deletes a Custom Value through the durable native shell", async () => {
     const user = userEvent.setup()
     await render(<NativeGameClient />)
