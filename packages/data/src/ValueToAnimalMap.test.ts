@@ -4,7 +4,36 @@ import { VALUE_TO_ANIMAL_MAP } from "./ValueToAnimalMap"
 import { ZOO_ANIMALS } from "./ZooAnimals"
 
 const canonicalAnimalMapContentHash =
-  "413d5f14eaf86062ee1c7da4d29b3d3451e1d0ed85c0f6122d4b548e59cded32"
+  "2517ef272e5bdae0162265af9078c947b0f053afbb6b762e1bf7d9e5ebcce415"
+
+const retiredZooAnimalIds: readonly string[] = Object.freeze([
+  "batpack",
+  "cat01_brown",
+  "cat02_dark_gray",
+  "cat03_orange",
+  "cat04_light_gray",
+  "cat05_black",
+  "dragonfly01_blue",
+  "dragonfly02_yellow",
+  "dragonfly03_pink",
+  "dragonfly04_green",
+  "kitten01_brown",
+  "kitten02_dark_gray",
+  "kitten03_orange",
+  "kitten04_light_gray",
+  "kitten05_black",
+  "lildoggie01_brown",
+  "lildoggie02_dark_gray",
+  "lildoggie03_orange",
+  "lildoggie04_light_gray",
+  "lildoggie05_black",
+  "lilfox_red",
+  "lilfox_white",
+  "mouse01_dark_gray",
+  "mouse02_brown",
+  "mouse03_light_gray",
+  "turtle_spritesheets",
+])
 
 function serializeCanonicalAnimalMap() {
   return JSON.stringify(
@@ -56,6 +85,17 @@ describe("canonical value-to-animal mapping", () => {
     expect(
       VALUE_TO_ANIMAL_MAP.map((mapping) => Object.keys(mapping).sort()),
     ).toEqual(Array.from({ length: 100 }, () => ["animalId", "valueId"]))
+  })
+
+  it("contains no retired animal aliases", () => {
+    const executableAnimalIds = [
+      ...ZOO_ANIMALS.map(({ id }) => id),
+      ...VALUE_TO_ANIMAL_MAP.map(({ animalId }) => animalId),
+    ]
+
+    expect(
+      executableAnimalIds.filter((id) => retiredZooAnimalIds.includes(id)),
+    ).toEqual([])
   })
 
   it("keeps the inventory and mappings immutable", () => {
