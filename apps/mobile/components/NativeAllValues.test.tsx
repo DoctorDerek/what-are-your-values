@@ -3,7 +3,10 @@ import {
   createCustomValueId,
   type CustomValueDefinition,
 } from "@game/data/src/Value"
-import { createInitialValueProgress } from "@game/data/src/ValueProgress"
+import {
+  createInitialValueProgress,
+  createValueProgress,
+} from "@game/data/src/ValueProgress"
 import { rankValues } from "@game/data/src/ValueRanking"
 import { describe, expect, it, jest } from "@jest/globals"
 import {
@@ -16,6 +19,25 @@ import NativeAllValues from "@/components/NativeAllValues"
 
 function createRankedValues(activeDeck: ActiveDeck) {
   return rankValues(activeDeck, createInitialValueProgress(activeDeck))
+}
+
+function createRankedValuesWithEvidence() {
+  const activeDeck = createActiveDeck([])
+  const progressById = new Map(createInitialValueProgress(activeDeck))
+  const firstValueId = activeDeck.valueIds[0]
+  if (!firstValueId) throw new Error("Canonical test value is unavailable")
+
+  progressById.set(
+    firstValueId,
+    createValueProgress(firstValueId, {
+      totalXp: 4,
+      profileWins: 1,
+      profileComparisons: 1,
+      currentCycleWins: 1,
+    }),
+  )
+
+  return rankValues(activeDeck, progressById)
 }
 
 function createIngenuityDeck() {
@@ -227,5 +249,39 @@ describe("NativeAllValues", () => {
     expect(screen.queryByLabelText("Add Custom Value")).not.toBeOnTheScreen()
     expect(screen.getByLabelText("Health details")).toBeOnTheScreen()
     expect(search).toHaveDisplayValue("")
+  })
+
+  it("separates the evidence-ranked Top Five from every remaining value", async () => {
+    const callbacks = createCallbacks()
+    const rankedValues = createRankedValuesWithEvidence().slice(0, 6)
+    await render(<NativeAllValues {...callbacks} rankedValues={rankedValues} />)
+
+    expect(screen.getAllByText("Top Five")).toHaveLength(1)
+    expect(screen.getAllByText("All Other Values")).toHaveLength(1)
+    expect(screen.getByLabelText("Rank 1")).toBeOnTheScreen()
+    expect(screen.getByLabelText("Rank 6")).toBeOnTheScreen()
+  })
+
+  it("explains that a failed save preserved the current data and draft", async () => {
+    const callbacks = createCallbacks()
+    const rankedValues = createRankedValues(createActiveDeck([])).slice(0, 3)
+    await render(
+      <NativeAllValues
+        {...callbacks}
+        persistenceIssue="Native storage write failed"
+        rankedValues={rankedValues}
+      />,
+    )
+
+    expect(screen.getByLabelText("Custom Value save failed")).toHaveProp(
+      "accessibilityRole",
+      "alert",
+    )
+    expect(screen.getByText("That change wasn’t saved.")).toBeOnTheScreen()
+    expect(
+      screen.getByText(
+        "Your current data and draft are unchanged. Review them and try again.",
+      ),
+    ).toBeOnTheScreen()
   })
 })
