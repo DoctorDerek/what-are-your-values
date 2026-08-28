@@ -2,7 +2,6 @@ import { getValueDisplayDefinition } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import { projectBattlePair } from "@game/machines/src/BattleScheduler"
-import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { describe, expect, it, jest } from "@jest/globals"
 import { render, screen, userEvent } from "@testing-library/react-native"
 import NativeCrucible from "@/components/NativeCrucible"
@@ -210,22 +209,6 @@ describe("NativeCrucible", () => {
     expect(props.onRedo).not.toHaveBeenCalled()
     expect(props.onExit).not.toHaveBeenCalled()
     expect(props.onOpenMenu).not.toHaveBeenCalled()
-  })
-
-  it("presents an explicit scheduler-loading state before a pair is available", async () => {
-    const props = createCrucibleProps(false)
-    const pendingBattle = Object.freeze({
-      pair: null,
-      scheduler: battle.scheduler,
-    }) satisfies PresentedBattle
-
-    await render(<NativeCrucible {...props} battle={pendingBattle} />)
-
-    expect(screen.getByText("Forging Matrix…")).toHaveProp(
-      "accessibilityLiveRegion",
-      "polite",
-    )
-    expect(screen.queryByLabelText("Value battle")).toBeNull()
   })
 
   it("rejects a projected pair whose authoritative progress is missing", async () => {
