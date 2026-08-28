@@ -230,6 +230,38 @@ describe("NativeGameClient Menu navigation", () => {
   }, 10_000)
 })
 
+describe("NativeGameClient battle routing", () => {
+  it("commits a winner then routes Undo Redo and Stop through the native shell", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await user.press(screen.getByRole("button", { name: "Battle" }))
+
+    await user.press(
+      screen.getAllByRole("button", {
+        name: /^Choose .+\. Level \d+\. Choice [12]\.$/,
+      })[0],
+    )
+    await user.press(
+      await screen.findByRole("button", { name: "Dismiss achievement" }),
+    )
+
+    const undo = await screen.findByRole("button", { name: "Undo" })
+    await waitFor(() => expect(undo).toBeEnabled())
+    await user.press(undo)
+
+    const redo = screen.getByRole("button", { name: "Redo" })
+    await waitFor(() => expect(redo).toBeEnabled())
+    await user.press(redo)
+    await waitFor(() => expect(undo).toBeEnabled())
+
+    await user.press(screen.getByRole("button", { name: "Stop" }))
+
+    expect(await screen.findByText("Your Values")).toBeOnTheScreen()
+  }, 10_000)
+})
+
 describe("NativeGameClient persistence recovery and lifecycle", () => {
   it("offers only a retry after initial durable storage cannot be read", async () => {
     readAll.mockRejectedValueOnce(new Error("Native storage unavailable"))
