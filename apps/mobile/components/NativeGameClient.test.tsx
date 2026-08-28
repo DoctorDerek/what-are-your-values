@@ -384,6 +384,46 @@ describe("NativeGameClient persistence recovery and lifecycle", () => {
 })
 
 describe("NativeGameClient file operations and destructive actions", () => {
+  it("updates and deletes a Custom Value through the durable native shell", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await user.press(
+      await screen.findByRole("button", { name: "Add Custom Value" }),
+    )
+    await user.press(
+      screen.getByRole("button", { name: /^\+ Start with Ingenuity/ }),
+    )
+    await user.press(screen.getByRole("button", { name: "Save Value" }))
+
+    await user.type(screen.getByLabelText("Search All Values"), "Ingenuity")
+    const ingenuity = await screen.findByLabelText("Ingenuity details")
+    await user.press(within(ingenuity).getByRole("button", { name: "Edit" }))
+    const definition = screen.getByLabelText("What This Value Means to Me")
+    await user.clear(definition)
+    await user.type(definition, "Resourceful and original problem solving.")
+    await user.press(screen.getByRole("button", { name: "Review Update" }))
+    await user.press(screen.getByRole("button", { name: "Update Value" }))
+
+    await user.type(screen.getByLabelText("Search All Values"), "Ingenuity")
+    expect(
+      await screen.findByText("“Resourceful and original problem solving.”"),
+    ).toBeOnTheScreen()
+    await user.press(
+      within(screen.getByLabelText("Ingenuity details")).getByRole("button", {
+        name: "Delete",
+      }),
+    )
+    await user.press(screen.getByRole("button", { name: "Remove Value" }))
+
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText("Ingenuity details"),
+      ).not.toBeOnTheScreen(),
+    )
+  }, 10_000)
+
   it("routes ordinary backup selection and export through the native file boundary", async () => {
     const user = userEvent.setup()
     await render(<NativeGameClient />)
