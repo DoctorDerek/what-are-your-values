@@ -1,5 +1,6 @@
 import {
   BATTLE_PROFILE_MANIFEST_KEY,
+  BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY,
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
 } from "@game/machines/src/BattleProfileStore"
 import { createInMemoryDurableStore } from "@game/machines/src/InMemoryDurableStore"
@@ -10,6 +11,7 @@ import {
   playerDataResetBackupReadyNotice,
   playerDataResetCopy,
 } from "@game/machines/src/PlayerDataResetCopy"
+import { createWayvmExportV1TestVector } from "@game/machines/src/WayvmExportV1TestVector"
 import { beforeEach, describe, expect, it, jest } from "@jest/globals"
 import {
   act,
@@ -24,6 +26,7 @@ import { AppState, type AppStateStatus } from "react-native"
 import NativeGameClient from "@/components/NativeGameClient"
 import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
+import type { NativePlayerDataFileDestination } from "@/lib/NativePlayerDataFileEvents"
 
 jest.mock("@/lib/ExpoDurableStore", () => ({
   expoDurableStore: {
@@ -592,6 +595,57 @@ describe("NativeGameClient file operations and destructive actions", () => {
     expect(screen.getByText("Import & Export")).toBeOnTheScreen()
   })
 
+  it("cancels then confirms a reviewed backup from Import and Export", async () => {
+    const { serialized } = await createWayvmExportV1TestVector()
+    usePlayerDataFiles.mockImplementation(({ send }) => ({
+      isReadingImportFile: false,
+      chooseBackup: async (destination: NativePlayerDataFileDestination) => {
+        if (destination !== "data-management")
+          throw new Error("The backup picker received the wrong destination")
+
+        send({
+          type: "DATA_MANAGEMENT.IMPORT_PREPARE_REQUESTED",
+          serialized,
+        })
+      },
+    }))
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await openMenuDestination(user, "Import & Export")
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataPortabilityCopy.chooseBackupAction,
+      }),
+    )
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.importPreviewTitle),
+    ).toBeOnTheScreen()
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataPortabilityCopy.importCancelAction,
+      }),
+    )
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.importCancelled),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataPortabilityCopy.chooseBackupAction,
+      }),
+    )
+    await user.press(
+      await screen.findByRole("button", {
+        name: playerDataPortabilityCopy.importReplaceAction,
+      }),
+    )
+
+    expect(await screen.findByText("Your Values")).toBeOnTheScreen()
+  }, 10_000)
+
   it("blocks Import and Export navigation while a selected backup is read", async () => {
     usePlayerDataFiles.mockReturnValue({
       isReadingImportFile: true,
@@ -640,6 +694,89 @@ describe("NativeGameClient file operations and destructive actions", () => {
         playerDataRecoveryCopy.unreadableData.diagnosticReady,
       ),
     ).toHaveProp("accessibilityLiveRegion", "polite")
+  })
+
+  it("cancels then confirms a selected backup from corrupt-data recovery", async () => {
+    const { serialized } = await createWayvmExportV1TestVector()
+    const corruptStore = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+    ])
+    readAll.mockImplementation(corruptStore.readAll)
+    compareAndSwapVerified.mockImplementation(
+      corruptStore.compareAndSwapVerified,
+    )
+    usePlayerDataFiles.mockImplementation(({ send }) => ({
+      isReadingImportFile: false,
+      chooseBackup: async (destination: NativePlayerDataFileDestination) => {
+        if (destination !== "recovery")
+          throw new Error("The recovery picker received the wrong destination")
+
+        send({ type: "RECOVERY.IMPORT_PREPARE_REQUESTED", serialized })
+      },
+    }))
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(
+      await screen.findByRole("button", {
+        name: playerDataRecoveryCopy.actions.importBackup,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataRecoveryCopy.unreadableData.selectedBackupReviewTitle,
+      ),
+    ).toBeOnTheScreen()
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataPortabilityCopy.importCancelAction,
+      }),
+    )
+    expect(
+      await screen.findByText(playerDataRecoveryCopy.unreadableData.title),
+    ).toBeOnTheScreen()
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.importBackup,
+      }),
+    )
+    await user.press(
+      await screen.findByRole("button", {
+        name: playerDataRecoveryCopy.unreadableData.selectedBackupReviewAction,
+      }),
+    )
+
+    expect(await screen.findByText("Your Values")).toBeOnTheScreen()
+  }, 10_000)
+
+  it("reviews a retained last-known-good backup from corrupt-data recovery", async () => {
+    const { serialized } = await createWayvmExportV1TestVector()
+    const corruptStore = createInMemoryDurableStore([
+      [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+      [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      [BATTLE_PROFILE_PRE_IMPORT_BACKUP_KEY, serialized],
+    ])
+    readAll.mockImplementation(corruptStore.readAll)
+    compareAndSwapVerified.mockImplementation(
+      corruptStore.compareAndSwapVerified,
+    )
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(
+      await screen.findByRole("button", {
+        name: playerDataRecoveryCopy.actions.restoreLastKnownGoodSave,
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        playerDataRecoveryCopy.unreadableData.restoreReviewTitle,
+      ),
+    ).toBeOnTheScreen()
   })
 
   it("routes every scoped reset through review and preserves remaining data", async () => {
