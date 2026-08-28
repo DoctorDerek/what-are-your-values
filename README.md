@@ -29,7 +29,7 @@ The public web application currently includes:
 
 ## Release status
 
-The public release is web-only. The Expo workspace implements the same private core loop, durable local persistence, JSON import/export, and local achievements. Its canonical build gate exports both iOS and Android bundles. Physical-device QA, signed native builds, and store submissions remain pending.
+The public release is web-only. The Expo workspace implements the same private core loop, durable local persistence, JSON import/export, and local achievements. Its canonical build gate exports both iOS and Android bundles. An EAS-signed Android development build has been installed and smoke-tested on a physical device. Deeper Android lifecycle and accessibility QA, iOS signing and device QA, and store submissions remain pending.
 
 ## Native iteration
 
