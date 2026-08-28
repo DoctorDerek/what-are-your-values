@@ -17,13 +17,17 @@ const NON_PRODUCTION_VERCEL_ENVIRONMENTS = Object.freeze([
 
 describe("web distribution", () => {
   it("owns one exact canonical English production URL", () => {
-    expect(CANONICAL_WEB_ORIGIN).toBe("https://whatareyourvaluesmapache.com")
+    expect(CANONICAL_WEB_ORIGIN).toBe(
+      "https://www.whatareyourvaluesmapache.com",
+    )
     expect(SHIPPED_ENGLISH_WEB_PATH).toBe("/")
-    expect(CANONICAL_WEB_ROOT_URL).toBe("https://whatareyourvaluesmapache.com/")
+    expect(CANONICAL_WEB_ROOT_URL).toBe(
+      "https://www.whatareyourvaluesmapache.com/",
+    )
 
     const canonicalUrl = new URL(CANONICAL_WEB_ROOT_URL)
     expect(canonicalUrl.protocol).toBe("https:")
-    expect(canonicalUrl.hostname).toBe("whatareyourvaluesmapache.com")
+    expect(canonicalUrl.hostname).toBe("www.whatareyourvaluesmapache.com")
     expect(canonicalUrl.pathname).toBe("/")
     expect(canonicalUrl.username).toBe("")
     expect(canonicalUrl.password).toBe("")
