@@ -3,10 +3,17 @@ import {
   BATTLE_PROFILE_SNAPSHOT_A_KEY,
 } from "@game/machines/src/BattleProfileStore"
 import { createInMemoryDurableStore } from "@game/machines/src/InMemoryDurableStore"
+import { playerDataPortabilityCopy } from "@game/machines/src/PlayerDataPortabilityCopy"
 import { playerDataRecoveryCopy } from "@game/machines/src/PlayerDataRecoveryCopy"
+import { DELETE_ALL_DATA_ACKNOWLEDGMENT } from "@game/machines/src/PlayerDataReset"
+import {
+  playerDataResetBackupReadyNotice,
+  playerDataResetCopy,
+} from "@game/machines/src/PlayerDataResetCopy"
 import { beforeEach, describe, expect, it, jest } from "@jest/globals"
 import {
   act,
+  fireEvent,
   render,
   screen,
   userEvent,
@@ -304,5 +311,167 @@ describe("NativeGameClient persistence recovery and lifecycle", () => {
 
     await unmount()
     expect(remove).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("NativeGameClient file operations and destructive actions", () => {
+  it("routes ordinary backup selection and export through the native file boundary", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await openMenuDestination(user, "Import & Export")
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataPortabilityCopy.chooseBackupAction,
+      }),
+    )
+    expect(chooseBackup).toHaveBeenCalledWith("data-management")
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataPortabilityCopy.exportAction,
+      }),
+    )
+    expect(
+      await screen.findByText(playerDataPortabilityCopy.exportSuccess),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
+  })
+
+  it("routes unreadable-save import and diagnostic export through recovery", async () => {
+    readAll.mockResolvedValue(
+      new Map([
+        [BATTLE_PROFILE_MANIFEST_KEY, "corrupt-manifest"],
+        [BATTLE_PROFILE_SNAPSHOT_A_KEY, "corrupt-checkpoint"],
+      ]),
+    )
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(
+      await screen.findByRole("button", {
+        name: playerDataRecoveryCopy.actions.importBackup,
+      }),
+    )
+    expect(chooseBackup).toHaveBeenCalledWith("recovery")
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataRecoveryCopy.actions.exportUnreadableData,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataRecoveryCopy.unreadableData.diagnosticReady,
+      ),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
+  })
+
+  it("routes every scoped reset through review and preserves remaining data", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await user.press(
+      await screen.findByRole("button", { name: "Add Custom Value" }),
+    )
+    await user.press(
+      screen.getByRole("button", { name: /^\+ Start with Ingenuity/ }),
+    )
+    await user.press(screen.getByRole("button", { name: "Save Value" }))
+    await user.press(await screen.findByRole("button", { name: "Close" }))
+    await openMenuDestination(user, "Import & Export")
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["delete-all-custom-values"].actionLabel,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["delete-all-custom-values"].confirmationTitle,
+      ),
+    ).toBeOnTheScreen()
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["delete-all-custom-values"].actionLabel,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["delete-all-custom-values"].successAnnouncement,
+      ),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
+
+    await openMenuDestination(user, "Settings")
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["reset-levels-and-experience"].actionLabel,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-levels-and-experience"].confirmationTitle,
+      ),
+    ).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Export Data" }))
+    expect(
+      await screen.findByText(playerDataResetBackupReadyNotice),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
+    await user.press(screen.getByRole("button", { name: "Cancel" }))
+
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["reset-achievements"].actionLabel,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-achievements"].confirmationTitle,
+      ),
+    ).toBeOnTheScreen()
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["reset-achievements"].actionLabel,
+      }),
+    )
+    expect(
+      await screen.findByText(
+        playerDataResetCopy["reset-achievements"].successAnnouncement,
+      ),
+    ).toHaveProp("accessibilityLiveRegion", "polite")
+  }, 10_000)
+
+  it("requires explicit acknowledgement before deleting every local record", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+    await openMenuDestination(user, "Settings")
+    await user.press(
+      screen.getByRole("button", {
+        name: playerDataResetCopy["delete-all-data"].actionLabel,
+      }),
+    )
+
+    const confirmDeletion = await screen.findByRole("button", {
+      name: playerDataResetCopy["delete-all-data"].actionLabel,
+    })
+    expect(confirmDeletion).toBeDisabled()
+    await fireEvent(
+      screen.getByRole("switch", {
+        name: DELETE_ALL_DATA_ACKNOWLEDGMENT,
+      }),
+      "valueChange",
+      true,
+    )
+    const acknowledgedDeletion = screen.getByRole("button", {
+      name: playerDataResetCopy["delete-all-data"].actionLabel,
+    })
+    expect(acknowledgedDeletion).toBeEnabled()
+    await user.press(acknowledgedDeletion)
+
+    expect(await screen.findByRole("button", { name: "Start" })).toBeEnabled()
   })
 })
