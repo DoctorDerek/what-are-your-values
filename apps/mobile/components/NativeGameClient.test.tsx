@@ -191,6 +191,43 @@ describe("NativeGameClient Menu navigation", () => {
 
     expect(getPresentedChoiceNames()).toEqual(presentedChoiceNames)
   }, 10_000)
+
+  it("routes every direct Hub destination back to the same durable profile", async () => {
+    const user = userEvent.setup()
+    await render(<NativeGameClient />)
+
+    await user.press(await screen.findByRole("button", { name: "Start" }))
+
+    await user.press(screen.getByRole("button", { name: "Achievements" }))
+    expect(await screen.findByText("Achievements")).toBeOnTheScreen()
+    await user.press(
+      screen.getByRole("button", { name: "Back to Your Values" }),
+    )
+
+    await user.press(screen.getByRole("button", { name: "Import & Export" }))
+    expect(await screen.findByText("Import & Export")).toBeOnTheScreen()
+    await user.press(
+      screen.getByRole("button", { name: "Back to Your Values" }),
+    )
+
+    await user.press(screen.getByRole("button", { name: "Browse All Values" }))
+    expect(await screen.findByText("All Values")).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Close" }))
+
+    const valueDestination = screen.getAllByRole("button", {
+      name: /^Open .+ in All Values$/,
+    })[0]
+    await user.press(valueDestination)
+    expect(await screen.findByText("All Values")).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Close" }))
+
+    await user.press(screen.getByRole("button", { name: "Add Custom Value" }))
+    expect(await screen.findByText("Custom Value Builder")).toBeOnTheScreen()
+    await user.press(screen.getByRole("button", { name: "Cancel" }))
+    await user.press(screen.getByRole("button", { name: "Close" }))
+
+    expect(await screen.findByText("Your Values")).toBeOnTheScreen()
+  }, 10_000)
 })
 
 describe("NativeGameClient persistence recovery and lifecycle", () => {
