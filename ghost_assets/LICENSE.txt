@@ -7,3 +7,11 @@ These archives are included solely to support authorized builds. No license or p
 Neither possession of this repository, access to its source code, nor access to any compiled deployment grants rights in these assets. All use remains subject to the applicable original licenses and end-user license agreements.
 
 All rights not expressly granted by the applicable rights holders are reserved.
+
+SEETHINGSWARM ANIMAL PACKS
+
+The SeethingSwarm animal sources are published by SeethingSwarm at https://seethingswarm.itch.io/. Each individual pack's current storefront terms govern that pack. Those terms may permit use and modification in commercial projects while prohibiting resale, giveaway, or open distribution of the source assets. Blockchain and NFT restrictions apply wherever the applicable pack terms state them. Review the current terms before each authorized build or distribution.
+
+Credit name, when shown: SeethingSwarm.
+
+Receipts, purchase records, and other private authorization evidence must remain outside public source control. Anyone creating or deploying an archive must independently confirm that they possess the rights required by the current terms. Possession of this repository or its encrypted archives is not evidence of authorization.
