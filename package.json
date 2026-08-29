@@ -2,6 +2,9 @@
   "name": "what-are-your-values-mapache",
   "private": true,
   "type": "module",
+  "imports": {
+    "#game/data/*": "./packages/data/*.ts"
+  },
   "engines": {
     "node": "^24"
   },
