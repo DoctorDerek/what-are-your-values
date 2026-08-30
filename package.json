@@ -2,11 +2,15 @@
   "name": "what-are-your-values-mapache",
   "private": true,
   "type": "module",
+  "imports": {
+    "#game/data/*": "./packages/data/*.ts"
+  },
   "engines": {
     "node": "^24"
   },
   "packageManager": "pnpm@11.22.0",
   "scripts": {
+    "animal-assets:generate-registry": "node scripts/runTypeScript.mjs scripts/animal-assets/generateSeethingSwarmRegistry.cli.ts",
     "dev": "turbo dev",
     "mobile:dev": "pnpm --filter @game/mobile run dev",
     "mobile:doctor": "pnpm --filter @game/mobile run doctor",
