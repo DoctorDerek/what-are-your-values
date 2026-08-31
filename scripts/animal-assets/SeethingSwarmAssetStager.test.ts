@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import {
   mkdir,
   mkdtemp,
@@ -25,6 +26,10 @@ const assetPaths = Object.freeze({
 })
 
 const temporaryDirectories: string[] = []
+
+function sha256(contents: string) {
+  return createHash("sha256").update(contents).digest("hex")
+}
 
 afterEach(async () => {
   await Promise.all(
@@ -127,9 +132,21 @@ describe("SeethingSwarm asset stager", () => {
     expect(result).toEqual({
       evidenceSnapshotId: "seethingswarm-test-snapshot",
       assets: [
-        { relativePath: assetPaths.idle, byteLength: 4 },
-        { relativePath: assetPaths.run, byteLength: 7 },
-        { relativePath: assetPaths.effect, byteLength: 3 },
+        {
+          relativePath: assetPaths.idle,
+          byteLength: 4,
+          sha256: sha256("idle"),
+        },
+        {
+          relativePath: assetPaths.run,
+          byteLength: 7,
+          sha256: sha256("running"),
+        },
+        {
+          relativePath: assetPaths.effect,
+          byteLength: 3,
+          sha256: sha256("fly"),
+        },
       ],
       totalBytes: 14,
     })

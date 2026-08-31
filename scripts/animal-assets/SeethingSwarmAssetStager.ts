@@ -1,5 +1,13 @@
-import { randomUUID } from "node:crypto"
-import { copyFile, lstat, mkdir, rename, rm, stat } from "node:fs/promises"
+import { createHash, randomUUID } from "node:crypto"
+import {
+  copyFile,
+  lstat,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+} from "node:fs/promises"
 import {
   basename,
   dirname,
@@ -13,6 +21,7 @@ import type { SeethingSwarmValidatedSnapshot } from "./SeethingSwarmSnapshotVali
 export type SeethingSwarmStagedAsset = Readonly<{
   relativePath: string
   byteLength: number
+  sha256: string
 }>
 
 export type SeethingSwarmStagingResult = Readonly<{
@@ -104,9 +113,22 @@ async function copyVerifiedAsset(
     throw new Error(`Incomplete SeethingSwarm asset copy: ${relativePath}`)
   }
 
+  const [sourceContents, destinationContents] = await Promise.all([
+    readFile(sourcePath),
+    readFile(destinationPath),
+  ])
+  const sourceHash = createHash("sha256").update(sourceContents).digest("hex")
+  const destinationHash = createHash("sha256")
+    .update(destinationContents)
+    .digest("hex")
+  if (sourceHash !== destinationHash) {
+    throw new Error(`Altered SeethingSwarm asset copy: ${relativePath}`)
+  }
+
   return Object.freeze({
     relativePath,
     byteLength: destinationStats.size,
+    sha256: destinationHash,
   }) satisfies SeethingSwarmStagedAsset
 }
 

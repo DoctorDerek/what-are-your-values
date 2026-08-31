@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import type { SeethingSwarmStagingResult } from "./SeethingSwarmAssetStager"
 import { generateSeethingSwarmWebAssetModule } from "./SeethingSwarmWebAssetModuleGenerator"
@@ -10,7 +11,11 @@ function createStagingResult(
 ) {
   const assets = Object.freeze(
     paths.map((relativePath, index) =>
-      Object.freeze({ relativePath, byteLength: index + 1 }),
+      Object.freeze({
+        relativePath,
+        byteLength: index + 1,
+        sha256: createHash("sha256").update(relativePath).digest("hex"),
+      }),
     ),
   )
 

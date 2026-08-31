@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import ts from "typescript"
 import { describe, expect, it } from "vitest"
 import type { SeethingSwarmStagingResult } from "./SeethingSwarmAssetStager"
@@ -11,7 +12,11 @@ function createStagingResult(
 ) {
   const assets = Object.freeze(
     paths.map((relativePath, index) =>
-      Object.freeze({ relativePath, byteLength: index + 1 }),
+      Object.freeze({
+        relativePath,
+        byteLength: index + 1,
+        sha256: createHash("sha256").update(relativePath).digest("hex"),
+      }),
     ),
   )
 
