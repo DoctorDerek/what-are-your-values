@@ -118,7 +118,7 @@ export function createSeethingSwarmLicensedStaticAssetAdapter<PlatformAsset>(
 }
 
 export function createSeethingSwarmTypographyOnlyStaticAssetAdapter(
-  registry = SEETHING_SWARM_PLACEHOLDER_REGISTRY,
+  registry: SeethingSwarmPublicFallbackRegistry = SEETHING_SWARM_PLACEHOLDER_REGISTRY,
 ) {
   assertTypographyOnlyAnimals(registry.animals)
 

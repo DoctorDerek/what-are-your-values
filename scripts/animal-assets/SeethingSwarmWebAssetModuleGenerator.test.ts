@@ -132,6 +132,7 @@ describe("SeethingSwarm web asset module generator", () => {
             Object.freeze({
               relativePath: "pack/animation.png",
               byteLength,
+              sha256: "0".repeat(64),
             }),
           ]),
           totalBytes: byteLength,

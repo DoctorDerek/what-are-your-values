@@ -9,6 +9,7 @@ import {
   createSeethingSwarmTypographyOnlyStaticAssetAdapter,
   SEETHING_SWARM_STATIC_ASSET_MODES,
   type SeethingSwarmStaticAssetAdapter,
+  type SeethingSwarmStaticAssetSource,
 } from "./SeethingSwarmStaticAssetAdapter"
 
 const testRegistry = Object.freeze({
@@ -46,20 +47,23 @@ const testRegistry = Object.freeze({
   auxiliaryEffectCount: 1,
 }) satisfies SeethingSwarmAnimalRegistry
 
-const licensedSources = Object.freeze([
-  Object.freeze({
-    relativePath: "batpack_spritesheets/bat_idle_strip4.png",
-    asset: Object.freeze({ uri: "idle" }),
-  }),
-  Object.freeze({
-    relativePath: "batpack_spritesheets/bat_run_strip6.png",
-    asset: Object.freeze({ uri: "run" }),
-  }),
-  Object.freeze({
-    relativePath: "batpack_spritesheets/sparkle_strip2.png",
-    asset: Object.freeze({ uri: "sparkle" }),
-  }),
-])
+type TestPlatformAsset = Readonly<{ uri: string }>
+
+const licensedSources: readonly SeethingSwarmStaticAssetSource<TestPlatformAsset>[] =
+  Object.freeze([
+    Object.freeze({
+      relativePath: "batpack_spritesheets/bat_idle_strip4.png",
+      asset: Object.freeze({ uri: "idle" }),
+    }),
+    Object.freeze({
+      relativePath: "batpack_spritesheets/bat_run_strip6.png",
+      asset: Object.freeze({ uri: "run" }),
+    }),
+    Object.freeze({
+      relativePath: "batpack_spritesheets/sparkle_strip2.png",
+      asset: Object.freeze({ uri: "sparkle" }),
+    }),
+  ])
 
 function readAdapterMode<PlatformAsset>(
   adapter: SeethingSwarmStaticAssetAdapter<PlatformAsset>,
@@ -77,10 +81,11 @@ describe("SeethingSwarm static asset adapter", () => {
   })
 
   it("creates a deeply frozen licensed adapter in registry path order", () => {
-    const adapter = createSeethingSwarmLicensedStaticAssetAdapter(
-      testRegistry,
-      licensedSources,
-    )
+    const adapter =
+      createSeethingSwarmLicensedStaticAssetAdapter<TestPlatformAsset>(
+        testRegistry,
+        licensedSources,
+      )
 
     expect(readAdapterMode(adapter)).toBe("licensed")
     expect(adapter).toEqual({
@@ -95,7 +100,7 @@ describe("SeethingSwarm static asset adapter", () => {
 
   it("rejects incomplete mismatched and out-of-order licensed sources", () => {
     expect(() =>
-      createSeethingSwarmLicensedStaticAssetAdapter(
+      createSeethingSwarmLicensedStaticAssetAdapter<TestPlatformAsset>(
         testRegistry,
         licensedSources.slice(0, -1),
       ),
@@ -103,20 +108,22 @@ describe("SeethingSwarm static asset adapter", () => {
       "Invalid SeethingSwarm licensed source count: expected 3, received 2",
     )
     expect(() =>
-      createSeethingSwarmLicensedStaticAssetAdapter(testRegistry, [
-        Object.freeze({
-          relativePath: "batpack_spritesheets/unexpected.png",
-          asset: "unexpected",
-        }),
-        ...licensedSources.slice(1),
-      ]),
+      createSeethingSwarmLicensedStaticAssetAdapter<TestPlatformAsset>(
+        testRegistry,
+        [
+          Object.freeze({
+            relativePath: "batpack_spritesheets/unexpected.png",
+            asset: Object.freeze({ uri: "unexpected" }),
+          }),
+          ...licensedSources.slice(1),
+        ],
+      ),
     ).toThrow("Invalid SeethingSwarm licensed source at position 0")
     expect(() =>
-      createSeethingSwarmLicensedStaticAssetAdapter(testRegistry, [
-        licensedSources[1]!,
-        licensedSources[0]!,
-        licensedSources[2]!,
-      ]),
+      createSeethingSwarmLicensedStaticAssetAdapter<TestPlatformAsset>(
+        testRegistry,
+        [licensedSources[1]!, licensedSources[0]!, licensedSources[2]!],
+      ),
     ).toThrow("Invalid SeethingSwarm licensed source at position 0")
   })
 
@@ -124,7 +131,9 @@ describe("SeethingSwarm static asset adapter", () => {
     "rejects a licensed path without a platform asset handle: %s",
     (asset) => {
       expect(() =>
-        createSeethingSwarmLicensedStaticAssetAdapter(testRegistry, [
+        createSeethingSwarmLicensedStaticAssetAdapter<
+          TestPlatformAsset | null | undefined
+        >(testRegistry, [
           { ...licensedSources[0]!, asset },
           licensedSources[1]!,
           licensedSources[2]!,
