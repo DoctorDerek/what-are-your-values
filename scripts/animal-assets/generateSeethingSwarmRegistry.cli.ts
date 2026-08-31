@@ -10,6 +10,7 @@ import {
   sep,
 } from "node:path"
 import { fileURLToPath } from "node:url"
+import { sanitizeSeethingSwarmPrivateSourceError } from "./SeethingSwarmPrivatePathSanitizer"
 import { generateSeethingSwarmAnimalRegistry } from "./SeethingSwarmRegistryGenerator"
 import { validateSeethingSwarmSnapshot } from "./SeethingSwarmSnapshotValidator"
 
@@ -109,31 +110,6 @@ export async function writeSeethingSwarmRegistryAtomically(
   }
 }
 
-function sanitizePrivateSourcePath(error: unknown, sourceRoot: string) {
-  const message = error instanceof Error ? error.message : "Unknown failure"
-  const absoluteSourceRoot = resolve(sourceRoot)
-  const pathVariants = new Set([
-    sourceRoot,
-    absoluteSourceRoot,
-    sourceRoot.replaceAll("\\", "/"),
-    absoluteSourceRoot.replaceAll("\\", "/"),
-  ])
-
-  let sanitizedMessage = message
-  for (const pathVariant of pathVariants) {
-    if (pathVariant !== "") {
-      sanitizedMessage = sanitizedMessage.replaceAll(
-        pathVariant,
-        "[private source root]",
-      )
-    }
-  }
-
-  return new Error(
-    `SeethingSwarm registry generation failed: ${sanitizedMessage}`,
-  )
-}
-
 export async function runSeethingSwarmRegistryCli(
   arguments_: readonly string[],
   repositoryRoot = process.cwd(),
@@ -160,7 +136,11 @@ export async function runSeethingSwarmRegistryCli(
       auxiliaryEffectCount: generated.registry.auxiliaryEffectCount,
     })
   } catch (error: unknown) {
-    throw sanitizePrivateSourcePath(error, options.sourceRoot)
+    throw sanitizeSeethingSwarmPrivateSourceError(
+      error,
+      options.sourceRoot,
+      "registry generation",
+    )
   }
 }
 

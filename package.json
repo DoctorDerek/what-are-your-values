@@ -11,6 +11,7 @@
   "packageManager": "pnpm@11.22.0",
   "scripts": {
     "animal-assets:generate-registry": "node scripts/runTypeScript.mjs scripts/animal-assets/generateSeethingSwarmRegistry.cli.ts",
+    "animal-assets:stage": "node scripts/runTypeScript.mjs scripts/animal-assets/stageSeethingSwarmAssets.cli.ts",
     "dev": "turbo dev",
     "mobile:dev": "pnpm --filter @game/mobile run dev",
     "mobile:doctor": "pnpm --filter @game/mobile run doctor",
