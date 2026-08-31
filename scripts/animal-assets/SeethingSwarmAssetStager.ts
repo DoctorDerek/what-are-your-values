@@ -160,6 +160,23 @@ async function replaceStagingTree(
   }
 }
 
+export async function publishSeethingSwarmPreparedAssetTree(
+  preparedRoot: string,
+  outputRoot: string,
+) {
+  const resolvedPreparedRoot = resolve(preparedRoot)
+  const resolvedOutputRoot = resolve(outputRoot)
+  assertSeparateRoots(resolvedPreparedRoot, resolvedOutputRoot)
+  const outputParent = dirname(resolvedOutputRoot)
+  const backupRoot = resolve(
+    outputParent,
+    `.${basename(resolvedOutputRoot)}.${randomUUID()}.backup`,
+  )
+
+  await mkdir(outputParent, { recursive: true })
+  await replaceStagingTree(resolvedPreparedRoot, resolvedOutputRoot, backupRoot)
+}
+
 function assertSeparateRoots(sourceRoot: string, outputRoot: string) {
   if (
     sourceRoot === outputRoot ||
