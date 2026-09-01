@@ -1,5 +1,9 @@
 import { projectHubValues } from "@game/data/src/HubValueProjection"
 import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
+import {
+  resolveValueAnimalPresentation,
+  type SeethingSwarmAnimalPresentationAdapter,
+} from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import { Fragment } from "react"
@@ -11,7 +15,9 @@ import { Text } from "@/components/ui/text"
 
 export default function NativeHub({
   rankedValues,
+  animalPresentationAdapter,
   dataNotice,
+  shouldReduceMotion,
   onAddCustomValue,
   onBrowseAllValues,
   onOpenAchievements,
@@ -21,7 +27,9 @@ export default function NativeHub({
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
+  animalPresentationAdapter: SeethingSwarmAnimalPresentationAdapter<number>
   dataNotice: string | null
+  shouldReduceMotion: boolean
   onAddCustomValue: () => void
   onBrowseAllValues: () => void
   onOpenAchievements: () => void
@@ -110,24 +118,36 @@ export default function NativeHub({
             )}
           </View>
         }
-        renderItem={({ item, index }) => (
-          <Fragment>
-            <NativeHubValueRow
-              rankedValue={item}
-              showRank={hasComparisons}
-              isTopFive={hasComparisons && index < 5}
-              onOpen={() => onOpenValue(item.definition.id)}
-            />
-            {hasComparisons && index === 4 ? (
-              <View>
-                {hubActionRail}
-                <Text className="bg-mapache-vivid-primary-cyan mb-5 border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
-                  All Other Values
-                </Text>
-              </View>
-            ) : null}
-          </Fragment>
-        )}
+        renderItem={({ item, index }) => {
+          const isTopFive = hasComparisons && index < 5
+          return (
+            <Fragment>
+              <NativeHubValueRow
+                rankedValue={item}
+                showRank={hasComparisons}
+                isTopFive={isTopFive}
+                valuePresentation={
+                  isTopFive
+                    ? resolveValueAnimalPresentation(
+                        item.definition,
+                        animalPresentationAdapter,
+                      )
+                    : undefined
+                }
+                shouldReduceMotion={shouldReduceMotion}
+                onOpen={() => onOpenValue(item.definition.id)}
+              />
+              {hasComparisons && index === 4 ? (
+                <View>
+                  {hubActionRail}
+                  <Text className="bg-mapache-vivid-primary-cyan mb-5 border-y-8 border-black px-4 py-3 text-center text-2xl font-black text-black uppercase">
+                    All Other Values
+                  </Text>
+                </View>
+              ) : null}
+            </Fragment>
+          )
+        }}
       />
     </MapacheScreen>
   )

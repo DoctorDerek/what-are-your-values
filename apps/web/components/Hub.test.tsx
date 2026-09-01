@@ -1,3 +1,4 @@
+import { createSeethingSwarmTypographyOnlyAnimalPresentationAdapter } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import { getValueDisplayName } from "@game/data/src/Value"
 import { rankValues } from "@game/data/src/ValueRanking"
 import {
@@ -9,6 +10,12 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import Hub from "./Hub"
 
+const animalPresentationProps = Object.freeze({
+  animalPresentationAdapter:
+    createSeethingSwarmTypographyOnlyAnimalPresentationAdapter(),
+  shouldReduceMotion: false,
+})
+
 describe("Hub Component Integration", () => {
   it("shows every included value alphabetically before the first comparison", () => {
     const battleCycle = createInitialBattleCycle("empty-hub-seed")
@@ -18,6 +25,7 @@ describe("Hub Component Integration", () => {
 
     render(
       <Hub
+        {...animalPresentationProps}
         rankedValues={rankValues(
           battleCycle.activeDeck,
           battleCycle.progressById,
@@ -54,6 +62,7 @@ describe("Hub Component Integration", () => {
 
     render(
       <Hub
+        {...animalPresentationProps}
         rankedValues={rankValues(
           battleCycle.activeDeck,
           battleCycle.progressById,
@@ -119,6 +128,7 @@ describe("Hub Component Integration", () => {
 
     render(
       <Hub
+        {...animalPresentationProps}
         rankedValues={rankValues(
           battleCycle.activeDeck,
           battleCycle.progressById,
@@ -137,7 +147,7 @@ describe("Hub Component Integration", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(100)
     expect(
       screen.getByRole("button", {
-        name: `Open ${getValueDisplayName(winner)} in All Values`,
+        name: `Rank 1. Open ${getValueDisplayName(winner)} in All Values`,
       }),
     ).toBeVisible()
     expect(screen.getByText("Level 3")).toBeVisible()
@@ -152,6 +162,7 @@ describe("Hub Component Integration", () => {
 
     render(
       <Hub
+        {...animalPresentationProps}
         rankedValues={rankValues(
           battleCycle.activeDeck,
           battleCycle.progressById,
@@ -188,6 +199,7 @@ describe("Hub Component Integration", () => {
 
     render(
       <Hub
+        {...animalPresentationProps}
         rankedValues={rankValues(
           battleCycle.activeDeck,
           battleCycle.progressById,

@@ -1,4 +1,5 @@
 import { createActiveDeck } from "@game/data/src/ActiveDeck"
+import { createSeethingSwarmTypographyOnlyAnimalPresentationAdapter } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import { getValueDisplayName } from "@game/data/src/Value"
 import {
   createInitialValueProgress,
@@ -10,6 +11,11 @@ import { render, screen, userEvent } from "@testing-library/react-native"
 import NativeHub from "@/components/NativeHub"
 
 const activeDeck = createActiveDeck([])
+const animalPresentationProps = Object.freeze({
+  animalPresentationAdapter:
+    createSeethingSwarmTypographyOnlyAnimalPresentationAdapter(),
+  shouldReduceMotion: false,
+})
 
 function createUnplayedRankedValues() {
   return rankValues(activeDeck, createInitialValueProgress(activeDeck))
@@ -52,6 +58,7 @@ describe("NativeHub", () => {
     await render(
       <NativeHub
         {...callbacks}
+        {...animalPresentationProps}
         dataNotice={null}
         rankedValues={rankedValues}
       />,
@@ -106,6 +113,7 @@ describe("NativeHub", () => {
     await render(
       <NativeHub
         {...callbacks}
+        {...animalPresentationProps}
         dataNotice="Your imported data is ready."
         rankedValues={rankedValues}
       />,
@@ -121,7 +129,7 @@ describe("NativeHub", () => {
 
     await user.press(
       screen.getByRole("button", {
-        name: `Open ${firstRankedValueName} in All Values`,
+        name: `Rank 1. Open ${firstRankedValueName} in All Values`,
       }),
     )
     await user.press(screen.getByRole("button", { name: "Battle" }))

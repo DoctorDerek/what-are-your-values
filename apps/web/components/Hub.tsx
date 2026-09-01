@@ -2,22 +2,75 @@
 
 import { projectHubValues } from "@game/data/src/HubValueProjection"
 import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
+import {
+  resolveValueAnimalPresentation,
+  type SeethingSwarmAnimalPresentationAdapter,
+  type ValueAnimalPresentation,
+} from "@game/data/src/SeethingSwarmAnimalPresentation"
 import { getValueDisplayName, type ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
+import type { StaticImageData } from "next/image"
 import type { Ref } from "react"
 import MapacheScreen from "@/components/MapacheScreen"
+import SeethingSwarmAnimal from "@/components/SeethingSwarmAnimal"
 import { Button } from "@/components/ui/button"
 import ValueLevelProgress from "@/components/ValueLevelProgress"
 
 export const HUB_MENU_BUTTON_ID = "hub-menu-button"
 
+function ValueRankPresentation({
+  rank,
+  valuePresentation,
+  shouldReduceMotion,
+}: {
+  rank: number
+  valuePresentation: ValueAnimalPresentation<StaticImageData> | undefined
+  shouldReduceMotion: boolean
+}) {
+  if (!valuePresentation || valuePresentation.kind === "typography-only")
+    return (
+      <span
+        data-value-presentation="typography-only"
+        className="bg-mapache-vivid-secondary-purple border-4 border-black px-3 py-2 text-2xl font-black text-white uppercase"
+      >
+        #{rank}
+      </span>
+    )
+
+  return (
+    <span
+      aria-hidden="true"
+      data-value-presentation={valuePresentation.kind}
+      className="relative flex h-[72px] w-[72px] flex-none items-center justify-center overflow-hidden bg-white shadow-[inset_0_0_0_4px_#000000]"
+    >
+      {valuePresentation.kind === "animal" ? (
+        <SeethingSwarmAnimal
+          presentation={valuePresentation.animal}
+          shouldReduceMotion={shouldReduceMotion}
+        />
+      ) : (
+        <span className="text-mapache-vivid-secondary-purple text-4xl font-black uppercase">
+          {valuePresentation.initial}
+        </span>
+      )}
+      <span className="bg-mapache-vivid-secondary-purple absolute top-0 left-0 z-10 border-r-4 border-b-4 border-black px-1.5 py-1 text-sm leading-none font-black text-white uppercase">
+        #{rank}
+      </span>
+    </span>
+  )
+}
+
 function ValueRow({
   rankedValue,
   hasComparisons,
+  valuePresentation,
+  shouldReduceMotion,
   onOpenValue,
 }: {
   rankedValue: RankedValue
   hasComparisons: boolean
+  valuePresentation?: ValueAnimalPresentation<StaticImageData>
+  shouldReduceMotion: boolean
   onOpenValue: (valueId: ValueId, focusTargetId: string) => void
 }) {
   const { definition, progress, rank } = rankedValue
@@ -35,15 +88,18 @@ function ValueRow({
         type="button"
         onClick={(event) => onOpenValue(definition.id, event.currentTarget.id)}
         className="flex w-full min-w-0 cursor-pointer flex-wrap items-center gap-4 p-4 text-left hover:-translate-y-1 hover:shadow-[0_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black sm:gap-6 sm:p-5"
-        aria-label={`Open ${displayName} in All Values`}
+        aria-label={
+          hasComparisons
+            ? `Rank ${rank}. Open ${displayName} in All Values`
+            : `Open ${displayName} in All Values`
+        }
       >
         {hasComparisons ? (
-          <span
-            aria-label={`Rank ${rank}`}
-            className="bg-mapache-vivid-secondary-purple border-4 border-black px-3 py-2 text-2xl font-black text-white uppercase"
-          >
-            #{rank}
-          </span>
+          <ValueRankPresentation
+            rank={rank}
+            valuePresentation={valuePresentation}
+            shouldReduceMotion={shouldReduceMotion}
+          />
         ) : null}
         <span className="min-w-0 flex-1 text-2xl font-black [overflow-wrap:anywhere] break-words uppercase sm:text-3xl">
           {displayName}
@@ -100,8 +156,10 @@ function ValueActionRail({
 
 export default function Hub({
   rankedValues,
+  animalPresentationAdapter,
   browseAllValuesButtonRef,
   dataNotice,
+  shouldReduceMotion,
   onBrowseAllValues,
   onAddCustomValue,
   onOpenMenu,
@@ -109,8 +167,10 @@ export default function Hub({
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
+  animalPresentationAdapter: SeethingSwarmAnimalPresentationAdapter<StaticImageData>
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   dataNotice: string | null
+  shouldReduceMotion: boolean
   onBrowseAllValues: (focusTargetId: string) => void
   onAddCustomValue: (focusTargetId: string) => void
   onOpenMenu: () => void
@@ -184,6 +244,11 @@ export default function Hub({
                     key={rankedValue.definition.id}
                     rankedValue={rankedValue}
                     hasComparisons
+                    valuePresentation={resolveValueAnimalPresentation(
+                      rankedValue.definition,
+                      animalPresentationAdapter,
+                    )}
+                    shouldReduceMotion={shouldReduceMotion}
                     onOpenValue={onOpenValue}
                   />
                 ))}
@@ -208,6 +273,7 @@ export default function Hub({
                     key={rankedValue.definition.id}
                     rankedValue={rankedValue}
                     hasComparisons
+                    shouldReduceMotion={shouldReduceMotion}
                     onOpenValue={onOpenValue}
                   />
                 ))}
@@ -228,6 +294,7 @@ export default function Hub({
                   key={rankedValue.definition.id}
                   rankedValue={rankedValue}
                   hasComparisons={false}
+                  shouldReduceMotion={shouldReduceMotion}
                   onOpenValue={onOpenValue}
                 />
               ))}

@@ -766,7 +766,7 @@ describe("GameClient Integration", () => {
     ).toBeVisible()
     expect(
       screen.getByRole("button", {
-        name: `Open ${winnerName} in All Values`,
+        name: `Rank 1. Open ${winnerName} in All Values`,
       }),
     ).toBeVisible()
     expect(screen.getByText("Level 3")).toBeVisible()

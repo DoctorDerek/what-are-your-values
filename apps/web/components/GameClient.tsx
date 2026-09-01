@@ -43,6 +43,7 @@ import Controls from "@/components/Controls"
 import { ReopenedInformationPanel } from "@/components/InformationPanel"
 import InformationPanelContent from "@/components/InformationPanelContent"
 import ProductMenu from "@/components/ProductMenu"
+import { SEETHING_SWARM_WEB_ANIMAL_PRESENTATIONS } from "@/generated/seethingswarm/SeethingSwarmAnimalPresentations"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
 import {
   downloadPlayerDataFile,
@@ -680,8 +681,10 @@ function WritableGameClient({
       <>
         <Hub
           rankedValues={rankedValues}
+          animalPresentationAdapter={SEETHING_SWARM_WEB_ANIMAL_PRESENTATIONS}
           browseAllValuesButtonRef={browseAllValuesButtonRef}
           dataNotice={state.context.portabilityNotice}
+          shouldReduceMotion={shouldReduceMotion}
           onBrowseAllValues={(focusTargetId) =>
             openAllValues({ focusTargetId })
           }
