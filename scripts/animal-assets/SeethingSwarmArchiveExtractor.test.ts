@@ -13,10 +13,11 @@ import {
   Uint8ArrayWriter,
   ZipWriter,
 } from "@zip.js/zip.js/index-native.js"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { extractSeethingSwarmArchive } from "./SeethingSwarmArchiveExtractor"
 import {
   getSeethingSwarmAssetCustodyPaths,
+  SEETHING_SWARM_ARCHIVE_LIMITS,
   SEETHING_SWARM_REQUIRED_ARCHIVE_ENTRY_NAMES,
 } from "./SeethingSwarmAssetCustody"
 import { runSeethingSwarmAssetDecryption } from "./SeethingSwarmAssetDecryption"
@@ -24,12 +25,17 @@ import { runSeethingSwarmAssetDecryption } from "./SeethingSwarmAssetDecryption"
 const TEST_ASSET_KEY = "synthetic-test-key"
 
 type TestArchiveEntry = {
-  content?: string
+  content?: string | Uint8Array
   directory?: boolean
   encrypted?: boolean
   name: string
   unixMode?: number
   zipCrypto?: boolean
+}
+
+function getTestArchiveEntryData(entry: TestArchiveEntry) {
+  if (entry.content instanceof Uint8Array) return entry.content
+  return new TextEncoder().encode(entry.content ?? entry.name)
 }
 
 function getRequiredTestArchiveEntries(): readonly TestArchiveEntry[] {
@@ -64,9 +70,7 @@ async function writeTestArchive(
     } else {
       await zipWriter.add(
         entry.name,
-        new Uint8ArrayReader(
-          new TextEncoder().encode(entry.content ?? entry.name),
-        ),
+        new Uint8ArrayReader(getTestArchiveEntryData(entry)),
         options,
       )
     }
@@ -176,6 +180,52 @@ describe("SeethingSwarm archive extraction", () => {
       }),
     ).rejects.toThrow("Archive is missing required custody entries.")
     await expectNoTemporaryCustodyDirectories(paths.vendorDirectory)
+  })
+
+  it("rejects empty archives and bounded payload violations", async () => {
+    const paths = getSeethingSwarmAssetCustodyPaths(repositoryRoot)
+    const maximumEntry = new Uint8Array(
+      SEETHING_SWARM_ARCHIVE_LIMITS.maximumEntrySizeBytes,
+    )
+    const invalidArchives = [
+      {
+        entries: [],
+        expectedError: "Archive contains an invalid custody entry count.",
+      },
+      {
+        entries: [
+          ...getRequiredTestArchiveEntries(),
+          {
+            content: new Uint8Array(maximumEntry.byteLength + 1),
+            name: "seethingswarm/assets/oversized.png",
+          },
+        ],
+        expectedError: "Archive custody entry exceeds its size limit.",
+      },
+      {
+        entries: [
+          ...getRequiredTestArchiveEntries(),
+          ...Array.from({ length: 4 }, (_, index) => ({
+            content: maximumEntry,
+            name: `seethingswarm/assets/boundary-${index}.png`,
+          })),
+        ],
+        expectedError: "Archive custody payload exceeds its size limit.",
+      },
+    ] as const
+
+    for (const invalidArchive of invalidArchives) {
+      await writeTestArchive(paths.archivePath, invalidArchive.entries)
+      await expect(
+        extractSeethingSwarmArchive({
+          archivePath: paths.archivePath,
+          assetKey: TEST_ASSET_KEY,
+          custodyDirectory: paths.custodyDirectory,
+          vendorDirectory: paths.vendorDirectory,
+        }),
+      ).rejects.toThrow(invalidArchive.expectedError)
+      await expectNoTemporaryCustodyDirectories(paths.vendorDirectory)
+    }
   })
 
   it("rejects plaintext and legacy ZipCrypto entries", async () => {
@@ -305,5 +355,30 @@ describe("SeethingSwarm archive extraction", () => {
       "private-wrong-key",
     )
     expect((invalidKeyError as Error).message).not.toContain(repositoryRoot)
+  })
+
+  it("uses standard output for successful keyed extraction by default", async () => {
+    const paths = getSeethingSwarmAssetCustodyPaths(repositoryRoot)
+    await writeTestArchive(paths.archivePath, getRequiredTestArchiveEntries())
+    const standardOutputWrite = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true)
+
+    try {
+      const result = await runSeethingSwarmAssetDecryption({
+        environment: {
+          GHOST_ASSET_KEY_WHAT_ARE_YOUR_VALUES_MAPACHE: TEST_ASSET_KEY,
+        },
+        repositoryRoot,
+      })
+
+      expect(result).toEqual({ mode: "licensed" })
+      expect(Object.isFrozen(result)).toBe(true)
+      expect(standardOutputWrite).toHaveBeenCalledWith(
+        "Extracted the authorized SeethingSwarm asset archive.\n",
+      )
+    } finally {
+      standardOutputWrite.mockRestore()
+    }
   })
 })

@@ -4,6 +4,7 @@ import {
   readdir,
   readFile,
   rm,
+  symlink,
   unlink,
   writeFile,
 } from "node:fs/promises"
@@ -17,6 +18,7 @@ import { extractSeethingSwarmArchive } from "./SeethingSwarmArchiveExtractor"
 import {
   getSeethingSwarmAssetCustodyPaths,
   SEETHING_SWARM_ARCHIVE_ENTRY_ROOT,
+  SEETHING_SWARM_ARCHIVE_LIMITS,
   SEETHING_SWARM_REQUIRED_ARCHIVE_ENTRY_NAMES,
 } from "./SeethingSwarmAssetCustody"
 
@@ -180,6 +182,103 @@ describe("SeethingSwarm archive creation", () => {
       }),
     ).rejects.toThrow("Licensed custody is missing required files.")
     expect((await readFile(paths.archivePath)).equals(validArchive)).toBe(true)
+  })
+
+  it("rejects empty licensed custody", async () => {
+    const paths = getSeethingSwarmAssetCustodyPaths(repositoryRoot)
+    await mkdir(paths.custodyDirectory, { recursive: true })
+
+    await expect(
+      createSeethingSwarmArchive({
+        archivePath: paths.archivePath,
+        assetKey: TEST_ASSET_KEY,
+        custodyDirectory: paths.custodyDirectory,
+      }),
+    ).rejects.toThrow("Licensed custody contains an invalid file count.")
+  })
+
+  it("rejects symbolic links inside licensed custody", async () => {
+    const paths = getSeethingSwarmAssetCustodyPaths(repositoryRoot)
+    await createSyntheticCustody(paths.custodyDirectory)
+    const externalDirectory = resolve(repositoryRoot, "external-assets")
+    await mkdir(externalDirectory)
+    await symlink(
+      externalDirectory,
+      resolve(paths.custodyDirectory, "linked-assets"),
+      "junction",
+    )
+
+    await expect(
+      createSeethingSwarmArchive({
+        archivePath: paths.archivePath,
+        assetKey: TEST_ASSET_KEY,
+        custodyDirectory: paths.custodyDirectory,
+      }),
+    ).rejects.toThrow("Licensed custody cannot contain symbolic links.")
+  })
+
+  it.runIf(process.platform === "linux")(
+    "rejects case-ambiguous licensed custody names",
+    async () => {
+      const paths = getSeethingSwarmAssetCustodyPaths(repositoryRoot)
+      await createSyntheticCustody(paths.custodyDirectory)
+      await writeFile(
+        resolve(paths.custodyDirectory, "assets/ambiguous.png"),
+        "lowercase",
+      )
+      await writeFile(
+        resolve(paths.custodyDirectory, "assets/AMBIGUOUS.png"),
+        "uppercase",
+      )
+
+      await expect(
+        createSeethingSwarmArchive({
+          archivePath: paths.archivePath,
+          assetKey: TEST_ASSET_KEY,
+          custodyDirectory: paths.custodyDirectory,
+        }),
+      ).rejects.toThrow("Licensed custody contains ambiguous file names.")
+    },
+  )
+
+  it("rejects licensed custody files above the per-entry limit", async () => {
+    const paths = getSeethingSwarmAssetCustodyPaths(repositoryRoot)
+    await createSyntheticCustody(paths.custodyDirectory)
+    await writeFile(
+      resolve(paths.custodyDirectory, "assets/oversized.png"),
+      Buffer.alloc(SEETHING_SWARM_ARCHIVE_LIMITS.maximumEntrySizeBytes + 1),
+    )
+
+    await expect(
+      createSeethingSwarmArchive({
+        archivePath: paths.archivePath,
+        assetKey: TEST_ASSET_KEY,
+        custodyDirectory: paths.custodyDirectory,
+      }),
+    ).rejects.toThrow("Licensed custody file exceeds its size limit.")
+  })
+
+  it("rejects licensed custody above the aggregate size limit", async () => {
+    const paths = getSeethingSwarmAssetCustodyPaths(repositoryRoot)
+    await createSyntheticCustody(paths.custodyDirectory)
+    const maximumEntry = Buffer.alloc(
+      SEETHING_SWARM_ARCHIVE_LIMITS.maximumEntrySizeBytes,
+    )
+
+    for (let index = 0; index < 4; index += 1) {
+      await writeFile(
+        resolve(paths.custodyDirectory, `assets/boundary-${index}.png`),
+        maximumEntry,
+      )
+    }
+
+    await expect(
+      createSeethingSwarmArchive({
+        archivePath: paths.archivePath,
+        assetKey: TEST_ASSET_KEY,
+        custodyDirectory: paths.custodyDirectory,
+      }),
+    ).rejects.toThrow("Licensed custody payload exceeds its size limit.")
   })
 
   it("rejects weak keys and archive output inside licensed custody", async () => {
