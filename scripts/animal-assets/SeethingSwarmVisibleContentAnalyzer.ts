@@ -30,6 +30,9 @@ function assertRawRgbaImage(
   image: SeethingSwarmRawRgbaImage,
   selection: SeethingSwarmHubAnimationSelection,
 ) {
+  assertPositiveSafeInteger(selection.frameWidth, "character frame width")
+  assertPositiveSafeInteger(selection.frameHeight, "character frame height")
+  assertPositiveSafeInteger(selection.frameCount, "character frame count")
   assertPositiveSafeInteger(image.width, "sprite-strip width")
   assertPositiveSafeInteger(image.height, "sprite-strip height")
   if (image.channels !== 4) {
@@ -37,6 +40,7 @@ function assertRawRgbaImage(
   }
 
   const expectedWidth = selection.frameWidth * selection.frameCount
+  assertPositiveSafeInteger(expectedWidth, "sprite-strip expected width")
   if (image.width !== expectedWidth || image.height !== selection.frameHeight) {
     throw new Error(
       `Invalid sprite-strip geometry for ${selection.animalId}: expected ${expectedWidth}x${selection.frameHeight}, received ${image.width}x${image.height}`,
