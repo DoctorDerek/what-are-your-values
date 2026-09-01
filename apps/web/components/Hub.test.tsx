@@ -225,9 +225,10 @@ describe("Hub Component Integration", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(100)
     expect(
       screen.getByRole("button", {
-        name: `Rank 1. Open ${getValueDisplayName(winner)} in All Values`,
+        name: `Open ${getValueDisplayName(winner)} in All Values`,
       }),
     ).toBeVisible()
+    expect(screen.getByLabelText("Rank 1")).toBeVisible()
     expect(screen.getByText("Level 3")).toBeVisible()
     expect(
       container.querySelectorAll('[data-value-presentation="typography-only"]'),
@@ -284,10 +285,12 @@ describe("Hub Component Integration", () => {
     expect(
       container.querySelectorAll('[data-reduced-motion="true"]'),
     ).toHaveLength(5)
+    expect(screen.getAllByLabelText(/^Rank \d+$/)).toHaveLength(100)
     const sixthValue = rankedValues[5]
     const sixthValueButton = screen.getByRole("button", {
-      name: `Rank 6. Open ${getValueDisplayName(sixthValue.definition)} in All Values`,
+      name: `Open ${getValueDisplayName(sixthValue.definition)} in All Values`,
     })
+    expect(within(sixthValueButton).getByLabelText("Rank 6")).toBeVisible()
     expect(sixthValueButton.querySelector("[data-animal-id]")).toBeNull()
   })
 
@@ -309,7 +312,7 @@ describe("Hub Component Integration", () => {
     )
 
     const customValueButton = screen.getByRole("button", {
-      name: "Rank 1. Open 🧠 Curiosity in All Values",
+      name: "Open 🧠 Curiosity in All Values",
     })
     const customValueTile = customValueButton.querySelector<HTMLElement>(
       '[data-value-presentation="custom-initial"]',
@@ -318,6 +321,7 @@ describe("Hub Component Integration", () => {
     expect(customValueTile).toHaveClass("h-[72px]", "w-[72px]")
     expect(customValueTile).toHaveAttribute("aria-hidden", "true")
     expect(within(customValueTile).getByText("🧠")).toBeVisible()
+    expect(within(customValueButton).getByLabelText("Rank 1")).toBeVisible()
     expect(customValueTile.querySelector("[data-animal-id]")).toBeNull()
     expect(
       container.querySelectorAll('[data-value-presentation="animal"]'),
