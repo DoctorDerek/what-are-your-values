@@ -1,50 +1,14 @@
-import type {
-  SeethingSwarmAnimalPresentation,
-  SeethingSwarmAnimalPresentationAdapter,
-} from "#game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmAnimalPresentationAdapter } from "#game/data/src/SeethingSwarmAnimalPresentation"
 import {
   assertSeethingSwarmPreparedPresentationAdapter,
   getSeethingSwarmPresentationAssetImportPath,
+  serializeSeethingSwarmPresentationModuleEntry,
 } from "./SeethingSwarmPresentationAssetPreparer"
 
 const webAssetIdentifierPrefix = "seethingSwarmWebAnimal"
 
 function getWebAssetIdentifier(index: number) {
   return `${webAssetIdentifierPrefix}${index.toString().padStart(2, "0")}`
-}
-
-function serializeVisibleBounds(
-  presentation: SeethingSwarmAnimalPresentation<string>,
-) {
-  return [
-    "      visibleBounds: Object.freeze({",
-    `        left: ${presentation.visibleBounds.left},`,
-    `        top: ${presentation.visibleBounds.top},`,
-    `        width: ${presentation.visibleBounds.width},`,
-    `        height: ${presentation.visibleBounds.height},`,
-    "      }),",
-  ]
-}
-
-function serializePresentation(
-  presentation: SeethingSwarmAnimalPresentation<string>,
-  index: number,
-) {
-  return [
-    "    Object.freeze({",
-    `      animalId: ${JSON.stringify(presentation.animalId)},`,
-    `      animationId: ${JSON.stringify(presentation.animationId)},`,
-    `      relativePath: ${JSON.stringify(presentation.relativePath)},`,
-    `      frameWidth: ${presentation.frameWidth},`,
-    `      frameHeight: ${presentation.frameHeight},`,
-    `      frameCount: ${presentation.frameCount},`,
-    ...serializeVisibleBounds(presentation),
-    `      integerScale: ${presentation.integerScale},`,
-    `      frameOffsetX: ${presentation.frameOffsetX},`,
-    `      frameOffsetY: ${presentation.frameOffsetY},`,
-    `      asset: ${getWebAssetIdentifier(index)},`,
-    "    }),",
-  ]
 }
 
 function generateTypographyOnlyModule() {
@@ -69,7 +33,12 @@ export function generateSeethingSwarmWebPresentationModule(
         getSeethingSwarmPresentationAssetImportPath(asset),
       )}`,
   )
-  const presentationLines = adapter.animals.flatMap(serializePresentation)
+  const presentationLines = adapter.animals.flatMap((presentation, index) =>
+    serializeSeethingSwarmPresentationModuleEntry(
+      presentation,
+      getWebAssetIdentifier(index),
+    ),
+  )
 
   return `${[
     'import type { SeethingSwarmLicensedAnimalPresentationAdapter } from "@game/data/src/SeethingSwarmAnimalPresentation"',
