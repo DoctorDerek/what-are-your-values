@@ -1,12 +1,28 @@
-import { createSeethingSwarmTypographyOnlyAnimalPresentationAdapter } from "@game/data/src/SeethingSwarmAnimalPresentation"
-import { getValueDisplayName } from "@game/data/src/Value"
+import { createActiveDeck } from "@game/data/src/ActiveDeck"
+import {
+  createSeethingSwarmTypographyOnlyAnimalPresentationAdapter,
+  type SeethingSwarmAnimalPresentationAdapter,
+} from "@game/data/src/SeethingSwarmAnimalPresentation"
+import {
+  createCustomValueId,
+  getValueDisplayName,
+  type CustomValueDefinition,
+  type ValueId,
+} from "@game/data/src/Value"
+import {
+  createInitialValueProgress,
+  createValueProgress,
+} from "@game/data/src/ValueProgress"
 import { rankValues } from "@game/data/src/ValueRanking"
+import { VALUE_TO_ANIMAL_MAP } from "@game/data/src/ValueToAnimalMap"
+import { ZOO_ANIMALS } from "@game/data/src/ZooAnimals"
 import {
   createBattleCycleCandidate,
   createInitialBattleCycle,
 } from "@game/machines/src/BattleCycle"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
 import { fireEvent, render, screen, within } from "@testing-library/react"
+import type { StaticImageData } from "next/image"
 import { describe, expect, it, vi } from "vitest"
 import Hub from "./Hub"
 
@@ -15,6 +31,66 @@ const animalPresentationProps = Object.freeze({
     createSeethingSwarmTypographyOnlyAnimalPresentationAdapter(),
   shouldReduceMotion: false,
 })
+const licensedAnimalPresentationAdapter = Object.freeze({
+  mode: "licensed",
+  evidenceSnapshotId: "seethingswarm-animals:hub-integration-test",
+  animals: Object.freeze(
+    ZOO_ANIMALS.map(({ id }) =>
+      Object.freeze({
+        animalId: id,
+        animationId: "idle",
+        relativePath: `${id}/idle.png`,
+        frameWidth: 1,
+        frameHeight: 1,
+        frameCount: 1,
+        visibleBounds: Object.freeze({ left: 0, top: 0, width: 1, height: 1 }),
+        integerScale: 72,
+        frameOffsetX: 0,
+        frameOffsetY: 0,
+        asset: Object.freeze({
+          src: `/test-animals/${encodeURIComponent(id)}.png`,
+          width: 1,
+          height: 1,
+        }),
+      }),
+    ),
+  ),
+}) satisfies SeethingSwarmAnimalPresentationAdapter<StaticImageData>
+
+function getMappedAnimalId(valueId: ValueId) {
+  const mapping = VALUE_TO_ANIMAL_MAP.find(
+    ({ valueId: mappedValueId }) => mappedValueId === valueId,
+  )
+  if (!mapping) throw new Error(`Missing test animal mapping for ${valueId}`)
+  return mapping.animalId
+}
+
+function createCustomRankedValues() {
+  const customValue = Object.freeze({
+    kind: "custom",
+    id: createCustomValueId("custom:00000000-0000-4000-8000-000000000777"),
+    name: "🧠 Curiosity",
+    definition: "Keep asking why and how.",
+    creationOrdinal: 1,
+    createdAt: "2026-09-01T00:00:00.000Z",
+    updatedAt: "2026-09-01T00:00:00.000Z",
+  }) satisfies CustomValueDefinition
+  const activeDeck = createActiveDeck([customValue])
+  const progressById = new Map(createInitialValueProgress(activeDeck))
+  progressById.set(
+    customValue.id,
+    createValueProgress(customValue.id, {
+      totalXp: 100,
+      profileWins: 1,
+      profileComparisons: 1,
+      currentCycleWins: 1,
+    }),
+  )
+  return Object.freeze({
+    customValue,
+    rankedValues: rankValues(activeDeck, progressById),
+  })
+}
 
 describe("Hub Component Integration", () => {
   it("shows every included value alphabetically before the first comparison", () => {
@@ -23,7 +99,7 @@ describe("Hub Component Integration", () => {
     const onAddCustomValue = vi.fn()
     const onOpenValue = vi.fn()
 
-    render(
+    const { container } = render(
       <Hub
         {...animalPresentationProps}
         rankedValues={rankValues(
@@ -53,6 +129,8 @@ describe("Hub Component Integration", () => {
     ).toBeVisible()
     expect(screen.getByText("Included Values")).toBeVisible()
     expect(screen.getByText(/Not ranked yet\./)).toBeVisible()
+    expect(container.querySelector("[data-value-presentation]")).toBeNull()
+    expect(container.querySelector("[data-animal-id]")).toBeNull()
     const firstRow = screen.getAllByRole("listitem")[0]
     expect(within(firstRow).getByText("Acceptance")).toBeVisible()
   })
@@ -60,7 +138,7 @@ describe("Hub Component Integration", () => {
   it("renders all fresh rows without fabricated ranks and exposes the action rail", () => {
     const battleCycle = createInitialBattleCycle("fresh-hub-seed")
 
-    render(
+    const { container } = render(
       <Hub
         {...animalPresentationProps}
         rankedValues={rankValues(
@@ -126,7 +204,7 @@ describe("Hub Component Integration", () => {
       throw new Error("Winner definition is missing")
     }
 
-    render(
+    const { container } = render(
       <Hub
         {...animalPresentationProps}
         rankedValues={rankValues(
@@ -151,6 +229,105 @@ describe("Hub Component Integration", () => {
       }),
     ).toBeVisible()
     expect(screen.getByText("Level 3")).toBeVisible()
+    expect(
+      container.querySelectorAll('[data-value-presentation="typography-only"]'),
+    ).toHaveLength(100)
+    expect(container.querySelector("[data-animal-id]")).toBeNull()
+  })
+
+  it("renders exactly five mapped canonical animals and propagates Reduced Motion", () => {
+    const initialBattleCycle = createInitialBattleCycle("animal-hub-seed")
+    const [winnerId] = projectScheduledPair(
+      initialBattleCycle.activeDeck,
+      initialBattleCycle.scheduler,
+    ).pair
+    const battleCycle = createBattleCycleCandidate({
+      battleCycle: initialBattleCycle,
+      winnerId,
+      expectedScheduler: initialBattleCycle.scheduler,
+    })
+    const rankedValues = rankValues(
+      battleCycle.activeDeck,
+      battleCycle.progressById,
+    )
+    const { container } = render(
+      <Hub
+        rankedValues={rankedValues}
+        animalPresentationAdapter={licensedAnimalPresentationAdapter}
+        dataNotice={null}
+        shouldReduceMotion
+        onBrowseAllValues={vi.fn()}
+        onAddCustomValue={vi.fn()}
+        onOpenMenu={vi.fn()}
+        onOpenValue={vi.fn()}
+        onStartBattle={vi.fn()}
+      />,
+    )
+
+    const animalPresentations = [
+      ...container.querySelectorAll('[data-value-presentation="animal"]'),
+    ]
+    expect(animalPresentations).toHaveLength(5)
+    for (const animalPresentation of animalPresentations) {
+      expect(animalPresentation).toHaveAttribute("aria-hidden", "true")
+      expect(animalPresentation).not.toHaveAttribute("tabindex")
+    }
+    expect(
+      [...container.querySelectorAll("[data-animal-id]")].map((element) =>
+        element.getAttribute("data-animal-id"),
+      ),
+    ).toEqual(
+      rankedValues
+        .slice(0, 5)
+        .map(({ definition }) => getMappedAnimalId(definition.id)),
+    )
+    expect(
+      container.querySelectorAll('[data-reduced-motion="true"]'),
+    ).toHaveLength(5)
+    const sixthValue = rankedValues[5]
+    const sixthValueButton = screen.getByRole("button", {
+      name: `Rank 6. Open ${getValueDisplayName(sixthValue.definition)} in All Values`,
+    })
+    expect(sixthValueButton.querySelector("[data-animal-id]")).toBeNull()
+  })
+
+  it("renders an equal Custom Value initial tile without inferring an animal", () => {
+    const onOpenValue = vi.fn()
+    const { customValue, rankedValues } = createCustomRankedValues()
+    const { container } = render(
+      <Hub
+        rankedValues={rankedValues}
+        animalPresentationAdapter={licensedAnimalPresentationAdapter}
+        dataNotice={null}
+        shouldReduceMotion={false}
+        onBrowseAllValues={vi.fn()}
+        onAddCustomValue={vi.fn()}
+        onOpenMenu={vi.fn()}
+        onOpenValue={onOpenValue}
+        onStartBattle={vi.fn()}
+      />,
+    )
+
+    const customValueButton = screen.getByRole("button", {
+      name: "Rank 1. Open 🧠 Curiosity in All Values",
+    })
+    const customValueTile = customValueButton.querySelector<HTMLElement>(
+      '[data-value-presentation="custom-initial"]',
+    )
+    if (!customValueTile) throw new Error("Custom Value tile is missing")
+    expect(customValueTile).toHaveClass("h-[72px]", "w-[72px]")
+    expect(customValueTile).toHaveAttribute("aria-hidden", "true")
+    expect(within(customValueTile).getByText("🧠")).toBeVisible()
+    expect(customValueTile.querySelector("[data-animal-id]")).toBeNull()
+    expect(
+      container.querySelectorAll('[data-value-presentation="animal"]'),
+    ).toHaveLength(4)
+
+    fireEvent.click(customValueButton)
+    expect(onOpenValue).toHaveBeenCalledWith(
+      customValue.id,
+      `hub-value-${customValue.id}-button`,
+    )
   })
 
   it("routes action and row presses with stable focus target identifiers", () => {
