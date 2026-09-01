@@ -92,6 +92,29 @@ describe("SeethingSwarm presentation preparation CLI", () => {
     },
   )
 
+  it("uses the current repository and standard output when invoked without overrides", async () => {
+    const result = { mode: "typography-only", assetCount: 0 } as const
+    const standardOutputWrite = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true)
+    dependencyMocks.prepare.mockResolvedValue(result)
+
+    try {
+      await expect(
+        runSeethingSwarmPresentationPreparationCli(),
+      ).resolves.toEqual(result)
+      expect(dependencyMocks.prepare).toHaveBeenCalledWith(
+        getSeethingSwarmPresentationPreparationPaths(process.cwd()),
+        { web: expect.any(Function), native: expect.any(Function) },
+      )
+      expect(standardOutputWrite).toHaveBeenCalledWith(
+        "Prepared typography-only SeethingSwarm presentation bindings for web and native builds.\n",
+      )
+    } finally {
+      standardOutputWrite.mockRestore()
+    }
+  })
+
   it("redacts private staging paths from preparation failures", async () => {
     const repositoryRoot = resolve("synthetic-private-repository")
     const stagingRoot =
