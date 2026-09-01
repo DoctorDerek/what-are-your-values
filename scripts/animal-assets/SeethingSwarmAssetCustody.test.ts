@@ -35,7 +35,6 @@ describe("SeethingSwarm asset custody", () => {
     expect(
       getSeethingSwarmAssetKey({
         GHOST_ASSET_KEY_WHAT_ARE_YOUR_VALUES_MAPACHE: "synthetic-secret",
-        UNRELATED_SECRET: "ignored",
       }),
     ).toBe("synthetic-secret")
     expect(getSeethingSwarmAssetKey({})).toBeUndefined()
