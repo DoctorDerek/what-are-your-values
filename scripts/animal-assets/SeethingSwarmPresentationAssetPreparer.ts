@@ -459,14 +459,28 @@ async function pathExists(path: string) {
   }
 }
 
+function isPathOutsideRoot(root: string, candidate: string) {
+  const relativePath = relative(root, candidate)
+  return (
+    relativePath === ".." ||
+    relativePath.startsWith(`..${sep}`) ||
+    isAbsolute(relativePath)
+  )
+}
+
+function assertSeparateTrees(firstRoot: string, secondRoot: string) {
+  if (
+    firstRoot === secondRoot ||
+    !isPathOutsideRoot(firstRoot, secondRoot) ||
+    !isPathOutsideRoot(secondRoot, firstRoot)
+  ) {
+    throw new Error("SeethingSwarm presentation trees must be separate")
+  }
+}
+
 function resolveConfinedAssetPath(root: string, relativePath: string) {
   const absolutePath = resolve(root, ...relativePath.split("/"))
-  const confinedPath = relative(root, absolutePath)
-  if (
-    confinedPath === ".." ||
-    confinedPath.startsWith(`..${sep}`) ||
-    isAbsolute(confinedPath)
-  ) {
+  if (isPathOutsideRoot(root, absolutePath)) {
     throw new Error(`Unsafe SeethingSwarm presentation path: ${relativePath}`)
   }
   return absolutePath
@@ -606,9 +620,12 @@ export async function prepareSeethingSwarmPresentationAssets(
     webOutputRoot: resolve(paths.webOutputRoot),
     nativeOutputRoot: resolve(paths.nativeOutputRoot),
   })
-  if (resolvedPaths.webOutputRoot === resolvedPaths.nativeOutputRoot) {
-    throw new Error("Web and native SeethingSwarm outputs must be separate")
-  }
+  assertSeparateTrees(
+    resolvedPaths.webOutputRoot,
+    resolvedPaths.nativeOutputRoot,
+  )
+  assertSeparateTrees(resolvedPaths.stagingRoot, resolvedPaths.webOutputRoot)
+  assertSeparateTrees(resolvedPaths.stagingRoot, resolvedPaths.nativeOutputRoot)
 
   const custodyStates = await Promise.all([
     pathExists(resolvedPaths.registryPath),
