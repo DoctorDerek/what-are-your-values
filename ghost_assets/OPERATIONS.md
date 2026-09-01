@@ -64,7 +64,7 @@ The current build profiles select those EAS environments according to Expo’s p
 
 ## Verification modes
 
-An unkeyed build is an intentional public-source verification mode. It must finish successfully with typography-only animal presentation and must remove any stale prepared PNG output.
+An unkeyed clean clone with no ignored licensed custody is the intentional public-source verification mode. It must finish successfully with typography-only animal presentation and must remove any stale prepared PNG output. On an authorized workstation that already contains verified `vendor/seethingswarm` custody, omitting the key skips archive extraction without deleting that local source, so presentation preparation may still use the licensed animals.
 
 A keyed build is an authorized protected mode. It must fail if the archive is absent, malformed, ambiguously named, unsafe, corrupt, or encrypted with a different key. A successful keyed build extracts into ignored custody, verifies the presentation receipt, and prepares exactly the licensed animal strips selected by the registry.
 
