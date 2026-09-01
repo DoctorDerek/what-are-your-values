@@ -30,6 +30,7 @@ function ValueRankPresentation({
   if (!valuePresentation || valuePresentation.kind === "typography-only")
     return (
       <span
+        aria-label={`Rank ${rank}`}
         data-value-presentation="typography-only"
         className="bg-mapache-vivid-secondary-purple border-4 border-black px-3 py-2 text-2xl font-black text-white uppercase"
       >
@@ -38,25 +39,30 @@ function ValueRankPresentation({
     )
 
   return (
-    <span
-      aria-hidden="true"
-      data-value-presentation={valuePresentation.kind}
-      className="relative flex h-[72px] w-[72px] flex-none items-center justify-center overflow-hidden bg-white shadow-[inset_0_0_0_4px_#000000]"
-    >
-      {valuePresentation.kind === "animal" ? (
-        <SeethingSwarmAnimal
-          presentation={valuePresentation.animal}
-          shouldReduceMotion={shouldReduceMotion}
-        />
-      ) : (
-        <span className="text-mapache-vivid-secondary-purple text-4xl font-black uppercase">
-          {valuePresentation.initial}
+    <>
+      <span
+        aria-hidden="true"
+        data-value-presentation={valuePresentation.kind}
+        className="relative flex h-[72px] w-[72px] flex-none items-center justify-center overflow-hidden bg-white shadow-[inset_0_0_0_4px_#000000]"
+      >
+        {valuePresentation.kind === "animal" ? (
+          <SeethingSwarmAnimal
+            presentation={valuePresentation.animal}
+            shouldReduceMotion={shouldReduceMotion}
+          />
+        ) : (
+          <span className="text-mapache-vivid-secondary-purple text-4xl font-black uppercase">
+            {valuePresentation.initial}
+          </span>
+        )}
+        <span className="bg-mapache-vivid-secondary-purple absolute top-0 left-0 z-10 border-r-4 border-b-4 border-black px-1.5 py-1 text-sm leading-none font-black text-white uppercase">
+          #{rank}
         </span>
-      )}
-      <span className="bg-mapache-vivid-secondary-purple absolute top-0 left-0 z-10 border-r-4 border-b-4 border-black px-1.5 py-1 text-sm leading-none font-black text-white uppercase">
-        #{rank}
       </span>
-    </span>
+      <span aria-label={`Rank ${rank}`} className="sr-only">
+        Rank {rank}
+      </span>
+    </>
   )
 }
 
@@ -88,11 +94,7 @@ function ValueRow({
         type="button"
         onClick={(event) => onOpenValue(definition.id, event.currentTarget.id)}
         className="flex w-full min-w-0 cursor-pointer flex-wrap items-center gap-4 p-4 text-left hover:-translate-y-1 hover:shadow-[0_6px_0px_0px_#000000] focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-black sm:gap-6 sm:p-5"
-        aria-label={
-          hasComparisons
-            ? `Rank ${rank}. Open ${displayName} in All Values`
-            : `Open ${displayName} in All Values`
-        }
+        aria-label={`Open ${displayName} in All Values`}
       >
         {hasComparisons ? (
           <ValueRankPresentation
