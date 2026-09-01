@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "pnpm --workspace-root run animal-assets:extract-and-prepare-presentation",
+    "predev": "pnpm --workspace-root run animal-assets:prepare-presentation",
+    "prestart": "pnpm --workspace-root run animal-assets:prepare-presentation",
     "dev": "next dev --port 3037",
     "build": "next build",
     "start": "vite preview --outDir out --port 3037 --strictPort"

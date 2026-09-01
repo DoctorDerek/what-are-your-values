@@ -769,6 +769,7 @@ describe("GameClient Integration", () => {
         name: `Open ${winnerName} in All Values`,
       }),
     ).toBeVisible()
+    expect(screen.getByLabelText("Rank 1")).toBeVisible()
     expect(screen.getByText("Level 3")).toBeVisible()
     expect(setItem).not.toHaveBeenCalled()
   })

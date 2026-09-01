@@ -47,6 +47,10 @@ yarn-error.log*
 # Expo mobile workspace state
 apps/mobile/.expo/
 
+# Generated licensed or typography-only SeethingSwarm presentation bindings
+apps/web/generated/seethingswarm/
+apps/mobile/generated/seethingswarm/
+
 # Other Next.js
 node_modules
 target
