@@ -8,57 +8,24 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises"
-import { dirname, relative, resolve, sep } from "node:path"
+import { dirname, resolve } from "node:path"
 import {
   Uint8ArrayReader,
   Uint8ArrayWriter,
   ZipReader,
 } from "@zip.js/zip.js/index-native.js"
+import { resolveSeethingSwarmArchiveOutputPath } from "./SeethingSwarmArchiveEntry"
 import {
   SEETHING_SWARM_ARCHIVE_ENTRY_ROOT,
+  SEETHING_SWARM_ARCHIVE_LIMITS,
   SEETHING_SWARM_REQUIRED_ARCHIVE_ENTRY_NAMES,
 } from "./SeethingSwarmAssetCustody"
-
-const MAXIMUM_ARCHIVE_ENTRY_COUNT = 2_048
-const MAXIMUM_ARCHIVE_ENTRY_SIZE_BYTES = 16 * 1_024 * 1_024
-const MAXIMUM_ARCHIVE_TOTAL_SIZE_BYTES = 64 * 1_024 * 1_024
-const SAFE_ARCHIVE_ENTRY_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/
 
 type ExtractSeethingSwarmArchiveOptions = {
   archivePath: string
   assetKey: string
   custodyDirectory: string
   vendorDirectory: string
-}
-
-function resolveArchiveOutputPath(
-  extractionDirectory: string,
-  entryName: string,
-) {
-  const expectedPrefix = `${SEETHING_SWARM_ARCHIVE_ENTRY_ROOT}/`
-  const entryPathSegments = entryName.split("/")
-
-  if (
-    !entryName.startsWith(expectedPrefix) ||
-    entryName.includes("\\") ||
-    !SAFE_ARCHIVE_ENTRY_NAME_PATTERN.test(entryName) ||
-    entryPathSegments.some(
-      (entryPathSegment) =>
-        entryPathSegment === "" ||
-        entryPathSegment === "." ||
-        entryPathSegment === "..",
-    )
-  )
-    throw new Error("Archive contains an unsafe custody entry name.")
-
-  const resolvedExtractionDirectory = resolve(extractionDirectory)
-  const outputPath = resolve(resolvedExtractionDirectory, ...entryPathSegments)
-  const relativeOutputPath = relative(resolvedExtractionDirectory, outputPath)
-
-  if (relativeOutputPath === ".." || relativeOutputPath.startsWith(`..${sep}`))
-    throw new Error("Archive entry resolves outside its custody boundary.")
-
-  return outputPath
 }
 
 async function pathExists(path: string) {
@@ -120,7 +87,10 @@ export async function extractSeethingSwarmArchive({
         strictness: "strict",
       })
 
-      if (entries.length === 0 || entries.length > MAXIMUM_ARCHIVE_ENTRY_COUNT)
+      if (
+        entries.length === 0 ||
+        entries.length > SEETHING_SWARM_ARCHIVE_LIMITS.maximumEntryCount
+      )
         throw new Error("Archive contains an invalid custody entry count.")
 
       const normalizedEntryNames = new Set<string>()
@@ -135,11 +105,17 @@ export async function extractSeethingSwarmArchive({
         )
           throw new Error("Archive contains an invalid custody entry type.")
 
-        if (entry.uncompressedSize > MAXIMUM_ARCHIVE_ENTRY_SIZE_BYTES)
+        if (
+          entry.uncompressedSize >
+          SEETHING_SWARM_ARCHIVE_LIMITS.maximumEntrySizeBytes
+        )
           throw new Error("Archive custody entry exceeds its size limit.")
 
         totalUncompressedSize += entry.uncompressedSize
-        if (totalUncompressedSize > MAXIMUM_ARCHIVE_TOTAL_SIZE_BYTES)
+        if (
+          totalUncompressedSize >
+          SEETHING_SWARM_ARCHIVE_LIMITS.maximumTotalSizeBytes
+        )
           throw new Error("Archive custody payload exceeds its size limit.")
 
         const normalizedEntryName = entry.filename.toLowerCase()
@@ -147,7 +123,7 @@ export async function extractSeethingSwarmArchive({
           throw new Error("Archive contains ambiguous custody entry names.")
         normalizedEntryNames.add(normalizedEntryName)
 
-        const outputPath = resolveArchiveOutputPath(
+        const outputPath = resolveSeethingSwarmArchiveOutputPath(
           extractionDirectory,
           entry.filename,
         )

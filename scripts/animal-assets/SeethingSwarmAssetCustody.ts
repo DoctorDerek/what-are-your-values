@@ -4,6 +4,11 @@ export const SEETHING_SWARM_ASSET_KEY_ENVIRONMENT_VARIABLE_NAME =
   "GHOST_ASSET_KEY_WHAT_ARE_YOUR_VALUES_MAPACHE"
 export const SEETHING_SWARM_ARCHIVE_FILE_NAME = "seethingswarm-assets.zip"
 export const SEETHING_SWARM_ARCHIVE_ENTRY_ROOT = "seethingswarm"
+export const SEETHING_SWARM_ARCHIVE_LIMITS = Object.freeze({
+  maximumEntryCount: 2_048,
+  maximumEntrySizeBytes: 16 * 1_024 * 1_024,
+  maximumTotalSizeBytes: 64 * 1_024 * 1_024,
+})
 export const SEETHING_SWARM_REQUIRED_ARCHIVE_ENTRY_NAMES = Object.freeze([
   "seethingswarm/registry.json",
   "seethingswarm/assets/staging-receipt.json",
