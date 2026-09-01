@@ -1,0 +1,34 @@
+.tile {
+  position: relative;
+  display: block;
+  width: var(--animal-tile-size);
+  height: var(--animal-tile-size);
+  flex: 0 0 var(--animal-tile-size);
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.strip {
+  position: absolute;
+  top: var(--animal-strip-top);
+  left: var(--animal-strip-left);
+  width: var(--animal-strip-width);
+  max-width: none;
+  height: var(--animal-strip-height);
+  image-rendering: pixelated;
+  animation-name: advance-seething-swarm-strip;
+  animation-duration: var(--animal-animation-duration);
+  animation-timing-function: steps(var(--animal-frame-count), end);
+  animation-iteration-count: infinite;
+}
+
+.staticStrip {
+  animation: none;
+}
+
+@keyframes advance-seething-swarm-strip {
+  to {
+    transform: translate3d(var(--animal-strip-travel), 0, 0);
+  }
+}
