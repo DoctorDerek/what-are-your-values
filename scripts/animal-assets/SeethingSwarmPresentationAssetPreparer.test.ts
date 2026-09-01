@@ -608,6 +608,55 @@ describe("SeethingSwarm presentation asset preparer", () => {
     ).toThrow("Invalid SeethingSwarm receipt schema version")
   })
 
+  it("rejects malformed registry fields before they can define licensed custody", () => {
+    const validRegistry = createRegistryDocument().registry
+    const firstAnimal = validRegistry.animals[0]!
+    const remainingAnimals = validRegistry.animals.slice(1)
+    const invalidRegistries = [
+      {
+        registry: { ...validRegistry, animals: "not-an-array" },
+        message: "Invalid animal registry: animals",
+      },
+      {
+        registry: {
+          ...validRegistry,
+          animals: [{ ...firstAnimal, familyId: "" }, ...remainingAnimals],
+        },
+        message: "Invalid animal registry: familyId",
+      },
+      {
+        registry: {
+          ...validRegistry,
+          animals: [{ ...firstAnimal, frameWidth: 0 }, ...remainingAnimals],
+        },
+        message: "Invalid animal registry: frameWidth",
+      },
+      {
+        registry: {
+          ...validRegistry,
+          animals: [
+            { ...firstAnimal, animalId: "not-a-zoo-animal" },
+            ...remainingAnimals,
+          ],
+        },
+        message: "Invalid animal registry animalId: not-a-zoo-animal",
+      },
+      {
+        registry: {
+          ...validRegistry,
+          evidenceSnapshotId: "seethingswarm-animals:different-snapshot",
+        },
+        message: "Mismatched SeethingSwarm registry snapshot",
+      },
+    ]
+
+    for (const { registry, message } of invalidRegistries) {
+      expect(() =>
+        parseSeethingSwarmAnimalRegistryJson(JSON.stringify(registry)),
+      ).toThrow(message)
+    }
+  })
+
   it("rejects malformed receipt ordering hashes counts totals and aggregate evidence", async () => {
     const paths = await createWorkspace()
     const fixture = await createCompleteCustody(paths)
@@ -639,6 +688,19 @@ describe("SeethingSwarm presentation asset preparer", () => {
         message: "Invalid SeethingSwarm receipt SHA-256",
       },
       {
+        receipt: {
+          ...fixture.receipt,
+          generatedModules: {
+            ...fixture.receipt.generatedModules,
+            web: {
+              ...fixture.receipt.generatedModules.web,
+              sha256: "not-a-sha256",
+            },
+          },
+        },
+        message: "Invalid SeethingSwarm web module SHA-256",
+      },
+      {
         receipt: { ...fixture.receipt, assetCount: 1 },
         message: "Invalid SeethingSwarm receipt asset count",
       },
@@ -660,5 +722,29 @@ describe("SeethingSwarm presentation asset preparer", () => {
         parseSeethingSwarmAssetReceiptJson(JSON.stringify(receipt)),
       ).toThrow(message)
     }
+  })
+
+  it("propagates unexpected custody inspection failures", async () => {
+    const paths = await createWorkspace()
+
+    await expect(
+      prepareSeethingSwarmPresentationAssets(
+        { ...paths, registryPath: `${paths.registryPath}\0invalid` },
+        moduleGenerators,
+      ),
+    ).rejects.toMatchObject({ code: "ERR_INVALID_ARG_VALUE" })
+  })
+
+  it("rejects a directory substituted for the custody registry file", async () => {
+    const paths = await createWorkspace()
+    await Promise.all([
+      mkdir(paths.registryPath, { recursive: true }),
+      mkdir(paths.stagingRoot, { recursive: true }),
+    ])
+    await writeFile(paths.receiptPath, "{}")
+
+    await expect(
+      prepareSeethingSwarmPresentationAssets(paths, moduleGenerators),
+    ).rejects.toThrow("Invalid SeethingSwarm presentation file")
   })
 })
