@@ -30,6 +30,7 @@ const moduleGenerators = Object.freeze({
   web: generateSeethingSwarmWebPresentationModule,
   native: generateSeethingSwarmNativePresentationModule,
 })
+const FULL_CUSTODY_INTEGRATION_TEST_TIMEOUT_MS = 15_000
 const temporaryDirectories: string[] = []
 
 afterEach(async () => {
@@ -331,49 +332,67 @@ describe("SeethingSwarm presentation asset preparer", () => {
     expect(firstNativeModule).not.toContain("./assets/")
   })
 
-  it("copies exactly 45 receipt-verified calm strips into deterministic platform trees", async () => {
-    const paths = await createWorkspace()
-    const fixture = await createCompleteCustody(paths)
+  it(
+    "copies exactly 45 receipt-verified calm strips into deterministic platform trees",
+    async () => {
+      const paths = await createWorkspace()
+      const fixture = await createCompleteCustody(paths)
 
-    const firstResult = await prepareSeethingSwarmPresentationAssets(
-      paths,
-      moduleGenerators,
-    )
-    const firstWebFiles = await listRelativeFiles(paths.webOutputRoot)
-    const firstNativeFiles = await listRelativeFiles(paths.nativeOutputRoot)
-    const firstWebModule = await readGeneratedModule(paths.webOutputRoot)
-    const firstNativeModule = await readGeneratedModule(paths.nativeOutputRoot)
-    const secondResult = await prepareSeethingSwarmPresentationAssets(
-      paths,
-      moduleGenerators,
-    )
+      const firstResult = await prepareSeethingSwarmPresentationAssets(
+        paths,
+        moduleGenerators,
+      )
+      const firstWebFiles = await listRelativeFiles(paths.webOutputRoot)
+      const firstNativeFiles = await listRelativeFiles(paths.nativeOutputRoot)
+      const firstWebModule = await readGeneratedModule(paths.webOutputRoot)
+      const firstNativeModule = await readGeneratedModule(
+        paths.nativeOutputRoot,
+      )
+      const secondResult = await prepareSeethingSwarmPresentationAssets(
+        paths,
+        moduleGenerators,
+      )
 
-    expect(firstResult).toEqual({ mode: "licensed", assetCount: 45 })
-    expect(secondResult).toEqual(firstResult)
-    expect(Object.isFrozen(firstResult)).toBe(true)
-    expect(firstWebFiles).toHaveLength(46)
-    expect(firstNativeFiles).toHaveLength(46)
-    expect(
-      firstWebFiles.filter((relativePath) => relativePath.endsWith(".png")),
-    ).toEqual(fixture.selectedPaths.map((path) => `assets/${path}`).toSorted())
-    expect(
-      firstNativeFiles.filter((relativePath) => relativePath.endsWith(".png")),
-    ).toEqual(fixture.selectedPaths.map((path) => `assets/${path}`).toSorted())
-    expect(
-      firstWebModule.match(/^import seethingSwarmWebAnimal/gmu),
-    ).toHaveLength(45)
-    expect(firstNativeModule.match(/require\("\.\/assets\//gu)).toHaveLength(45)
-    expect(firstWebModule).not.toContain(paths.repositoryRoot)
-    expect(firstNativeModule).not.toContain(paths.repositoryRoot)
-    expect(await readGeneratedModule(paths.webOutputRoot)).toBe(firstWebModule)
-    expect(await readGeneratedModule(paths.nativeOutputRoot)).toBe(
-      firstNativeModule,
-    )
-    expect(await listRelativeFiles(paths.webOutputRoot)).toEqual(firstWebFiles)
-    expect(await listRelativeFiles(paths.nativeOutputRoot)).toEqual(
-      firstNativeFiles,
-    )
-  })
+      expect(firstResult).toEqual({ mode: "licensed", assetCount: 45 })
+      expect(secondResult).toEqual(firstResult)
+      expect(Object.isFrozen(firstResult)).toBe(true)
+      expect(firstWebFiles).toHaveLength(46)
+      expect(firstNativeFiles).toHaveLength(46)
+      expect(
+        firstWebFiles.filter((relativePath) => relativePath.endsWith(".png")),
+      ).toEqual(
+        fixture.selectedPaths.map((path) => `assets/${path}`).toSorted(),
+      )
+      expect(
+        firstNativeFiles.filter((relativePath) =>
+          relativePath.endsWith(".png"),
+        ),
+      ).toEqual(
+        fixture.selectedPaths.map((path) => `assets/${path}`).toSorted(),
+      )
+      expect(
+        firstWebModule.match(/^import seethingSwarmWebAnimal/gmu),
+      ).toHaveLength(45)
+      expect(firstNativeModule.match(/require\("\.\/assets\//gu)).toHaveLength(
+        45,
+      )
+      expect(firstWebModule).not.toContain(paths.repositoryRoot)
+      expect(firstNativeModule).not.toContain(paths.repositoryRoot)
+      expect(await readGeneratedModule(paths.webOutputRoot)).toBe(
+        firstWebModule,
+      )
+      expect(await readGeneratedModule(paths.nativeOutputRoot)).toBe(
+        firstNativeModule,
+      )
+      expect(await listRelativeFiles(paths.webOutputRoot)).toEqual(
+        firstWebFiles,
+      )
+      expect(await listRelativeFiles(paths.nativeOutputRoot)).toEqual(
+        firstNativeFiles,
+      )
+    },
+    FULL_CUSTODY_INTEGRATION_TEST_TIMEOUT_MS,
+  )
 
   it.each([
     "registry-only",
