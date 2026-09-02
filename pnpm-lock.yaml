@@ -45,6 +45,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4
         version: 4.1.10(vitest@4.1.10)
+      '@zip.js/zip.js':
+        specifier: ^2
+        version: 2.9.0
       chrome-launcher:
         specifier: ^1
         version: 1.2.1(supports-color@8.1.1)
@@ -3567,6 +3570,10 @@ packages:
     peerDependenciesMeta:
       xstate:
         optional: true
+
+  '@zip.js/zip.js@2.9.0':
+    resolution: {integrity: sha512-AblaO/5MIVKiVExlF7GD17qn5NSsQ7qdtE+uEIMU6OiwHLqPxaI5Z5gLxMDxdEBzaiVVRCFNABcIc3sZpFcUeA==}
+    engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=18.0.0'}
 
   abab@2.0.6:
     resolution: {integrity: sha512-j2afSsaIENvHZN2B8GOpF566vZ5WVk5opAiMTvWgaQT8DkbOqsTfvNAvHoRGU2zzP8cPoqys+xHTRDWW8L+/BA==}
@@ -10955,6 +10962,8 @@ snapshots:
       xstate: 5.32.4
     transitivePeerDependencies:
       - '@types/react'
+
+  '@zip.js/zip.js@2.9.0': {}
 
   abab@2.0.6: {}
 

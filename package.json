@@ -10,6 +10,7 @@
   },
   "packageManager": "pnpm@11.22.0",
   "scripts": {
+    "animal-assets:create-encrypted-archive": "node scripts/runTypeScript.mjs scripts/animal-assets/createSeethingSwarmArchive.cli.ts",
     "animal-assets:generate-registry": "node scripts/runTypeScript.mjs scripts/animal-assets/generateSeethingSwarmRegistry.cli.ts",
     "animal-assets:extract-and-prepare-presentation": "node --import jiti/register scripts/decrypt-assets.ts && pnpm run animal-assets:prepare-presentation",
     "animal-assets:prepare-presentation": "node scripts/runTypeScript.mjs scripts/animal-assets/prepareSeethingSwarmPresentationAssets.cli.ts",
@@ -47,6 +48,7 @@
     "@types/node": "^24",
     "@vitejs/plugin-react": "^6",
     "@vitest/coverage-v8": "^4",
+    "@zip.js/zip.js": "^2",
     "chrome-launcher": "^1",
     "eslint": "^9",
     "eslint-config-flat-gitignore": "^2",
