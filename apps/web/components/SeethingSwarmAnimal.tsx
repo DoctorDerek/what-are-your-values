@@ -1,8 +1,9 @@
 import {
+  createSeethingSwarmAnimalPresentationGeometry,
   SEETHING_SWARM_HUB_FRAME_DURATION_MS,
   SEETHING_SWARM_HUB_TILE_SIZE,
-  type SeethingSwarmAnimalPresentation,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import Image, { type StaticImageData } from "next/image"
 import type { CSSProperties } from "react"
 import styles from "./SeethingSwarmAnimal.module.css"
@@ -22,21 +23,26 @@ type SeethingSwarmAnimalTileStyle = CSSProperties & {
 }
 
 export default function SeethingSwarmAnimal({
-  presentation,
+  clip,
   shouldReduceMotion,
 }: {
-  presentation: SeethingSwarmAnimalPresentation<StaticImageData>
+  clip: SeethingSwarmRuntimeCharacterClip<StaticImageData>
   shouldReduceMotion: boolean
 }) {
-  const scaledFrameWidth = presentation.frameWidth * presentation.integerScale
-  const scaledFrameHeight = presentation.frameHeight * presentation.integerScale
-  const scaledStripWidth = scaledFrameWidth * presentation.frameCount
+  const geometry = createSeethingSwarmAnimalPresentationGeometry(
+    clip.frameWidth,
+    clip.frameHeight,
+    clip.visibleBounds,
+  )
+  const scaledFrameWidth = clip.frameWidth * geometry.integerScale
+  const scaledFrameHeight = clip.frameHeight * geometry.integerScale
+  const scaledStripWidth = scaledFrameWidth * clip.frameCount
   const stripStyle: SeethingSwarmAnimalStyle = {
-    "--animal-animation-duration": `${presentation.frameCount * SEETHING_SWARM_HUB_FRAME_DURATION_MS}ms`,
-    "--animal-frame-count": presentation.frameCount,
+    "--animal-animation-duration": `${clip.frameCount * SEETHING_SWARM_HUB_FRAME_DURATION_MS}ms`,
+    "--animal-frame-count": clip.frameCount,
     "--animal-strip-height": `${scaledFrameHeight}px`,
-    "--animal-strip-left": `${presentation.frameOffsetX}px`,
-    "--animal-strip-top": `${presentation.frameOffsetY}px`,
+    "--animal-strip-left": `${geometry.frameOffsetX}px`,
+    "--animal-strip-top": `${geometry.frameOffsetY}px`,
     "--animal-strip-travel": `${-scaledStripWidth}px`,
     "--animal-strip-width": `${scaledStripWidth}px`,
   }
@@ -48,8 +54,8 @@ export default function SeethingSwarmAnimal({
     <span
       aria-hidden="true"
       className={styles.tile}
-      data-animal-id={presentation.animalId}
-      data-frame-count={presentation.frameCount}
+      data-animal-id={clip.animalId}
+      data-frame-count={clip.frameCount}
       data-reduced-motion={shouldReduceMotion}
       style={tileStyle}
     >
@@ -58,7 +64,7 @@ export default function SeethingSwarmAnimal({
         className={`${styles.strip} ${shouldReduceMotion ? styles.staticStrip : ""}`}
         draggable={false}
         height={scaledFrameHeight}
-        src={presentation.asset}
+        src={clip.asset}
         style={stripStyle}
         unoptimized
         width={scaledStripWidth}

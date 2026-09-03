@@ -43,7 +43,7 @@ import Controls from "@/components/Controls"
 import { ReopenedInformationPanel } from "@/components/InformationPanel"
 import InformationPanelContent from "@/components/InformationPanelContent"
 import ProductMenu from "@/components/ProductMenu"
-import { SEETHING_SWARM_WEB_ANIMAL_PRESENTATIONS } from "@/generated/seethingswarm/SeethingSwarmAnimalPresentations"
+import { SEETHING_SWARM_WEB_RUNTIME_CLIP_CATALOG } from "@/generated/seethingswarm/SeethingSwarmRuntimeClipCatalog"
 import { createIndexedDbDurableStore } from "@/lib/IndexedDbDurableStore"
 import {
   downloadPlayerDataFile,
@@ -681,7 +681,7 @@ function WritableGameClient({
       <>
         <Hub
           rankedValues={rankedValues}
-          animalPresentationAdapter={SEETHING_SWARM_WEB_ANIMAL_PRESENTATIONS}
+          runtimeClipCatalog={SEETHING_SWARM_WEB_RUNTIME_CLIP_CATALOG}
           browseAllValuesButtonRef={browseAllValuesButtonRef}
           dataNotice={state.context.portabilityNotice}
           shouldReduceMotion={shouldReduceMotion}

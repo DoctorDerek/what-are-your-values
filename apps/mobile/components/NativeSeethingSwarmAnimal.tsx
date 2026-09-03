@@ -1,8 +1,9 @@
 import {
+  createSeethingSwarmAnimalPresentationGeometry,
   SEETHING_SWARM_HUB_FRAME_DURATION_MS,
   SEETHING_SWARM_HUB_TILE_SIZE,
-  type SeethingSwarmAnimalPresentation,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { useEffect } from "react"
 import { Image, View, type ImageStyle, type ViewStyle } from "react-native"
 import Animated, {
@@ -16,16 +17,21 @@ import Animated, {
 } from "react-native-reanimated"
 
 export default function NativeSeethingSwarmAnimal({
-  presentation,
+  clip,
   shouldReduceMotion,
 }: {
-  presentation: SeethingSwarmAnimalPresentation<number>
+  clip: SeethingSwarmRuntimeCharacterClip<number>
   shouldReduceMotion: boolean
 }) {
   const frameProgress = useSharedValue(0)
-  const scaledFrameWidth = presentation.frameWidth * presentation.integerScale
-  const scaledFrameHeight = presentation.frameHeight * presentation.integerScale
-  const scaledStripWidth = scaledFrameWidth * presentation.frameCount
+  const geometry = createSeethingSwarmAnimalPresentationGeometry(
+    clip.frameWidth,
+    clip.frameHeight,
+    clip.visibleBounds,
+  )
+  const scaledFrameWidth = clip.frameWidth * geometry.integerScale
+  const scaledFrameHeight = clip.frameHeight * geometry.integerScale
+  const scaledStripWidth = scaledFrameWidth * clip.frameCount
   const tileStyle: ViewStyle = {
     width: SEETHING_SWARM_HUB_TILE_SIZE,
     height: SEETHING_SWARM_HUB_TILE_SIZE,
@@ -34,8 +40,8 @@ export default function NativeSeethingSwarmAnimal({
   }
   const stripStyle: ViewStyle = {
     position: "absolute",
-    left: presentation.frameOffsetX,
-    top: presentation.frameOffsetY,
+    left: geometry.frameOffsetX,
+    top: geometry.frameOffsetY,
     width: scaledStripWidth,
     height: scaledFrameHeight,
   }
@@ -45,7 +51,7 @@ export default function NativeSeethingSwarmAnimal({
   }
   const animatedStyle = useAnimatedStyle(() => {
     const frameIndex = Math.min(
-      presentation.frameCount - 1,
+      clip.frameCount - 1,
       Math.floor(frameProgress.get()),
     )
     return {
@@ -56,13 +62,12 @@ export default function NativeSeethingSwarmAnimal({
   useEffect(() => {
     cancelAnimation(frameProgress)
     frameProgress.set(0)
-    if (shouldReduceMotion || presentation.frameCount === 1) return
+    if (shouldReduceMotion || clip.frameCount === 1) return
 
     frameProgress.set(
       withRepeat(
-        withTiming(presentation.frameCount, {
-          duration:
-            presentation.frameCount * SEETHING_SWARM_HUB_FRAME_DURATION_MS,
+        withTiming(clip.frameCount, {
+          duration: clip.frameCount * SEETHING_SWARM_HUB_FRAME_DURATION_MS,
           easing: Easing.linear,
           reduceMotion: ReduceMotion.Never,
         }),
@@ -74,9 +79,9 @@ export default function NativeSeethingSwarmAnimal({
     )
 
     return () => cancelAnimation(frameProgress)
-  }, [frameProgress, presentation.frameCount, shouldReduceMotion])
+  }, [clip.frameCount, frameProgress, shouldReduceMotion])
 
-  const testId = `seething-swarm-animal-${presentation.animalId.replaceAll("/", "-")}`
+  const testId = `seething-swarm-animal-${clip.animalId.replaceAll("/", "-")}`
 
   return (
     <View
@@ -96,7 +101,7 @@ export default function NativeSeethingSwarmAnimal({
           alt=""
           fadeDuration={0}
           resizeMode="stretch"
-          source={presentation.asset}
+          source={clip.asset}
           style={imageStyle}
           testID={`${testId}-image`}
         />

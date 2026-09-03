@@ -1,9 +1,7 @@
 import { projectHubValues } from "@game/data/src/HubValueProjection"
 import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
-import {
-  resolveValueAnimalPresentation,
-  type SeethingSwarmAnimalPresentationAdapter,
-} from "@game/data/src/SeethingSwarmAnimalPresentation"
+import { resolveValueAnimalPresentation } from "@game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import type { ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import { Fragment } from "react"
@@ -15,7 +13,7 @@ import { Text } from "@/components/ui/text"
 
 export default function NativeHub({
   rankedValues,
-  animalPresentationAdapter,
+  runtimeClipCatalog,
   dataNotice,
   shouldReduceMotion,
   onAddCustomValue,
@@ -27,7 +25,7 @@ export default function NativeHub({
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
-  animalPresentationAdapter: SeethingSwarmAnimalPresentationAdapter<number>
+  runtimeClipCatalog: SeethingSwarmRuntimeClipCatalog<number>
   dataNotice: string | null
   shouldReduceMotion: boolean
   onAddCustomValue: () => void
@@ -130,7 +128,7 @@ export default function NativeHub({
                   isTopFive
                     ? resolveValueAnimalPresentation(
                         item.definition,
-                        animalPresentationAdapter,
+                        runtimeClipCatalog,
                       )
                     : undefined
                 }

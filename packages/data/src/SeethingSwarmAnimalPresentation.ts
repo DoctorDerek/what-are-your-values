@@ -1,12 +1,14 @@
 import { splitGraphemes } from "unicode-segmenter/grapheme"
-import type { SeethingSwarmAnimalRegistry } from "./SeethingSwarmAnimalRegistry"
 import {
   createSeethingSwarmVisibleContentBounds,
-  type SeethingSwarmVisibleContentBounds,
+  SeethingSwarmRuntimeAnimalClips,
+  SeethingSwarmRuntimeCharacterClip,
+  SeethingSwarmRuntimeClipCatalog,
+  SeethingSwarmVisibleContentBounds,
 } from "./SeethingSwarmRuntimeClipCatalog"
 import type { ActiveValueDefinition } from "./Value"
 import { VALUE_TO_ANIMAL_MAP } from "./ValueToAnimalMap"
-import { ZOO_ANIMALS, type ZooAnimalId } from "./ZooAnimals"
+import type { ZooAnimalId } from "./ZooAnimals"
 
 export const SEETHING_SWARM_HUB_ANIMATION_CANDIDATES = Object.freeze([
   "idle",
@@ -25,41 +27,10 @@ export type SeethingSwarmAnimalPresentationGeometry = Readonly<{
   frameOffsetY: number
 }>
 
-export type SeethingSwarmHubAnimationSelection = Readonly<{
-  animalId: ZooAnimalId
-  animationId: SeethingSwarmHubAnimationId
-  relativePath: string
-  frameWidth: number
-  frameHeight: number
-  frameCount: number
-}>
-
-export type SeethingSwarmAnimalPresentation<PlatformAsset> = Readonly<
-  SeethingSwarmHubAnimationSelection &
-    SeethingSwarmAnimalPresentationGeometry & {
-      asset: PlatformAsset
-    }
->
-
-export type SeethingSwarmLicensedAnimalPresentationAdapter<PlatformAsset> =
-  Readonly<{
-    mode: "licensed"
-    evidenceSnapshotId: string
-    animals: readonly SeethingSwarmAnimalPresentation<PlatformAsset>[]
-  }>
-
-export type SeethingSwarmTypographyOnlyAnimalPresentationAdapter = Readonly<{
-  mode: "typography-only"
-}>
-
-export type SeethingSwarmAnimalPresentationAdapter<PlatformAsset> =
-  | SeethingSwarmLicensedAnimalPresentationAdapter<PlatformAsset>
-  | SeethingSwarmTypographyOnlyAnimalPresentationAdapter
-
 export type ValueAnimalPresentation<PlatformAsset> =
   | Readonly<{
       kind: "animal"
-      animal: SeethingSwarmAnimalPresentation<PlatformAsset>
+      clip: SeethingSwarmRuntimeCharacterClip<PlatformAsset>
     }>
   | Readonly<{
       kind: "custom-initial"
@@ -119,12 +90,14 @@ export function createSeethingSwarmAnimalPresentationGeometry(
   }) satisfies SeethingSwarmAnimalPresentationGeometry
 }
 
-function getCalmAnimation(
-  animal: SeethingSwarmAnimalRegistry["animals"][number],
+function resolveCalmAnimalClip<PlatformAsset>(
+  animal: SeethingSwarmRuntimeAnimalClips<PlatformAsset>,
 ) {
   for (const animationId of SEETHING_SWARM_HUB_ANIMATION_CANDIDATES) {
-    const animation = animal.animations[animationId]
-    if (animation) return Object.freeze({ animationId, animation })
+    const clip = animal.characterClips.find(
+      (candidate) => candidate.animationId === animationId,
+    )
+    if (clip) return clip
   }
 
   throw new Error(
@@ -132,119 +105,20 @@ function getCalmAnimation(
   )
 }
 
-export function selectSeethingSwarmHubAnimations(
-  registry: SeethingSwarmAnimalRegistry,
+function resolveAnimalClips<PlatformAsset>(
+  catalog: Extract<
+    SeethingSwarmRuntimeClipCatalog<PlatformAsset>,
+    { mode: "licensed" }
+  >,
+  animalId: ZooAnimalId,
 ) {
-  if (registry.animals.length !== ZOO_ANIMALS.length) {
-    throw new Error(
-      `Invalid SeethingSwarm Hub animal count: ${registry.animals.length}`,
-    )
-  }
-
-  return Object.freeze(
-    ZOO_ANIMALS.map(({ id }, index) => {
-      const animal = registry.animals[index]
-      if (animal?.animalId !== id) {
-        throw new Error(
-          `Invalid SeethingSwarm Hub animal at position ${index}: expected ${id}, received ${animal?.animalId ?? "missing"}`,
-        )
-      }
-
-      const { animationId, animation } = getCalmAnimation(animal)
-      return Object.freeze({
-        animalId: animal.animalId,
-        animationId,
-        relativePath: animation.relativePath,
-        frameWidth: animal.frameWidth,
-        frameHeight: animal.frameHeight,
-        frameCount: animation.frameCount,
-      }) satisfies SeethingSwarmHubAnimationSelection
-    }),
+  const animal = catalog.animals.find(
+    (candidate) => candidate.animalId === animalId,
   )
-}
-
-function assertMatchingPresentation<PlatformAsset>(
-  expected: SeethingSwarmHubAnimationSelection,
-  presentation: SeethingSwarmAnimalPresentation<PlatformAsset> | undefined,
-  index: number,
-) {
-  if (!presentation) {
-    throw new Error(
-      `Missing SeethingSwarm Hub presentation at position ${index}`,
-    )
+  if (!animal) {
+    throw new Error(`Missing animal presentation for animal: ${animalId}`)
   }
-
-  for (const property of [
-    "animalId",
-    "animationId",
-    "relativePath",
-    "frameWidth",
-    "frameHeight",
-    "frameCount",
-  ] as const) {
-    if (presentation[property] !== expected[property]) {
-      throw new Error(
-        `Invalid SeethingSwarm Hub ${property} at position ${index}: expected ${expected[property]}, received ${presentation[property]}`,
-      )
-    }
-  }
-  if (presentation.asset === null || presentation.asset === undefined) {
-    throw new Error(`Missing SeethingSwarm Hub asset: ${expected.relativePath}`)
-  }
-
-  const expectedGeometry = createSeethingSwarmAnimalPresentationGeometry(
-    expected.frameWidth,
-    expected.frameHeight,
-    presentation.visibleBounds,
-  )
-  for (const property of [
-    "integerScale",
-    "frameOffsetX",
-    "frameOffsetY",
-  ] as const) {
-    if (presentation[property] !== expectedGeometry[property]) {
-      throw new Error(
-        `Invalid SeethingSwarm Hub ${property} for ${expected.animalId}: expected ${expectedGeometry[property]}, received ${presentation[property]}`,
-      )
-    }
-  }
-}
-
-export function createSeethingSwarmLicensedAnimalPresentationAdapter<
-  PlatformAsset,
->(
-  registry: SeethingSwarmAnimalRegistry,
-  presentations: readonly SeethingSwarmAnimalPresentation<PlatformAsset>[],
-) {
-  const selections = selectSeethingSwarmHubAnimations(registry)
-  if (presentations.length !== selections.length) {
-    throw new Error(
-      `Invalid SeethingSwarm Hub presentation count: expected ${selections.length}, received ${presentations.length}`,
-    )
-  }
-
-  selections.forEach((selection, index) =>
-    assertMatchingPresentation(selection, presentations[index], index),
-  )
-
-  return Object.freeze({
-    mode: "licensed",
-    evidenceSnapshotId: registry.evidenceSnapshotId,
-    animals: Object.freeze(
-      presentations.map((presentation) =>
-        Object.freeze({
-          ...presentation,
-          visibleBounds: Object.freeze({ ...presentation.visibleBounds }),
-        }),
-      ),
-    ),
-  }) satisfies SeethingSwarmLicensedAnimalPresentationAdapter<PlatformAsset>
-}
-
-export function createSeethingSwarmTypographyOnlyAnimalPresentationAdapter() {
-  return Object.freeze({
-    mode: "typography-only",
-  }) satisfies SeethingSwarmTypographyOnlyAnimalPresentationAdapter
+  return animal
 }
 
 function getCustomValueInitial(valueName: string) {
@@ -255,9 +129,9 @@ function getCustomValueInitial(valueName: string) {
 
 export function resolveValueAnimalPresentation<PlatformAsset>(
   value: ActiveValueDefinition,
-  adapter: SeethingSwarmAnimalPresentationAdapter<PlatformAsset>,
+  catalog: SeethingSwarmRuntimeClipCatalog<PlatformAsset>,
 ): ValueAnimalPresentation<PlatformAsset> {
-  if (adapter.mode === "typography-only") {
+  if (catalog.mode === "typography-only") {
     return TYPOGRAPHY_ONLY_VALUE_PRESENTATION
   }
   if (value.kind === "custom") {
@@ -273,14 +147,9 @@ export function resolveValueAnimalPresentation<PlatformAsset>(
   if (!animalId) {
     throw new Error(`Missing animal mapping for canonical value: ${value.id}`)
   }
-  const animal = adapter.animals.find(
-    (presentation) => presentation.animalId === animalId,
-  )
-  if (!animal) {
-    throw new Error(
-      `Missing animal presentation for canonical value: ${value.id}`,
-    )
-  }
 
-  return Object.freeze({ kind: "animal", animal })
+  return Object.freeze({
+    kind: "animal",
+    clip: resolveCalmAnimalClip(resolveAnimalClips(catalog, animalId)),
+  })
 }
