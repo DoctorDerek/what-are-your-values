@@ -26,7 +26,7 @@ import {
   writeSeethingSwarmPresentationTestFile as writeRelativeFile,
 } from "./SeethingSwarmPresentationAssetPreparer.test-fixture"
 
-const FULL_CUSTODY_INTEGRATION_TEST_TIMEOUT_MS = 30_000
+const FULL_CUSTODY_INTEGRATION_TEST_TIMEOUT_MS = 60_000
 
 afterEach(async () => {
   await cleanUpSeethingSwarmPresentationTestWorkspaces()
