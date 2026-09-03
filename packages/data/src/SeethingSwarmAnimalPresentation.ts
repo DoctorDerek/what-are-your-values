@@ -1,5 +1,9 @@
 import { splitGraphemes } from "unicode-segmenter/grapheme"
 import type { SeethingSwarmAnimalRegistry } from "./SeethingSwarmAnimalRegistry"
+import {
+  createSeethingSwarmVisibleContentBounds,
+  type SeethingSwarmVisibleContentBounds,
+} from "./SeethingSwarmRuntimeClipCatalog"
 import type { ActiveValueDefinition } from "./Value"
 import { VALUE_TO_ANIMAL_MAP } from "./ValueToAnimalMap"
 import { ZOO_ANIMALS, type ZooAnimalId } from "./ZooAnimals"
@@ -13,13 +17,6 @@ export const SEETHING_SWARM_HUB_FRAME_DURATION_MS = 160
 
 export type SeethingSwarmHubAnimationId =
   (typeof SEETHING_SWARM_HUB_ANIMATION_CANDIDATES)[number]
-
-export type SeethingSwarmVisibleContentBounds = Readonly<{
-  left: number
-  top: number
-  width: number
-  height: number
-}>
 
 export type SeethingSwarmAnimalPresentationGeometry = Readonly<{
   visibleBounds: SeethingSwarmVisibleContentBounds
@@ -82,34 +79,6 @@ function assertPositiveSafeInteger(value: number, label: string) {
   }
 }
 
-function assertNonNegativeSafeInteger(value: number, label: string) {
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`Invalid ${label}: ${value}`)
-  }
-}
-
-function freezeVisibleBounds(
-  bounds: SeethingSwarmVisibleContentBounds,
-  frameWidth: number,
-  frameHeight: number,
-) {
-  assertNonNegativeSafeInteger(bounds.left, "visible-content left edge")
-  assertNonNegativeSafeInteger(bounds.top, "visible-content top edge")
-  assertPositiveSafeInteger(bounds.width, "visible-content width")
-  assertPositiveSafeInteger(bounds.height, "visible-content height")
-
-  if (
-    bounds.left + bounds.width > frameWidth ||
-    bounds.top + bounds.height > frameHeight
-  ) {
-    throw new Error(
-      `Visible SeethingSwarm content exceeds its ${frameWidth}x${frameHeight} frame`,
-    )
-  }
-
-  return Object.freeze({ ...bounds })
-}
-
 export function createSeethingSwarmAnimalPresentationGeometry(
   frameWidth: number,
   frameHeight: number,
@@ -117,10 +86,10 @@ export function createSeethingSwarmAnimalPresentationGeometry(
 ) {
   assertPositiveSafeInteger(frameWidth, "SeethingSwarm frame width")
   assertPositiveSafeInteger(frameHeight, "SeethingSwarm frame height")
-  const frozenVisibleBounds = freezeVisibleBounds(
-    visibleBounds,
+  const frozenVisibleBounds = createSeethingSwarmVisibleContentBounds(
     frameWidth,
     frameHeight,
+    visibleBounds,
   )
   const integerScale = Math.floor(
     Math.min(
