@@ -1,116 +1,21 @@
 import { describe, expect, it } from "vitest"
 import {
-  createSeethingSwarmAnimalManifest,
-  type SeethingSwarmAnimalManifestInput,
-} from "./SeethingSwarmAnimalManifest"
-import { createSeethingSwarmAnimalRegistry } from "./SeethingSwarmAnimalRegistry"
-import {
   createSeethingSwarmLicensedRuntimeClipCatalog,
   createSeethingSwarmTypographyOnlyRuntimeClipCatalog,
   createSeethingSwarmVisibleContentBounds,
   resolveSeethingSwarmRuntimeAuxiliaryEffectClip,
   resolveSeethingSwarmRuntimeCharacterClip,
-  type SeethingSwarmRuntimeAssetSource,
 } from "./SeethingSwarmRuntimeClipCatalog"
-import { SEETHING_SWARM_SOURCE_SNAPSHOT } from "./SeethingSwarmSourceEvidence"
-import { ZOO_ANIMALS } from "./ZooAnimals"
-
-const frogpackAnimalIndex = ZOO_ANIMALS.findIndex(({ id }) => id === "frogpack")
-
-function createCompleteTestRegistry() {
-  return createSeethingSwarmAnimalRegistry(
-    ZOO_ANIMALS.map(({ id }, animalIndex) => {
-      const familyId = `animal_${animalIndex}`
-      const sourceRelativePath = `${familyId}_spritesheets`
-      const animationCount = animalIndex === 0 ? 26 : 17
-
-      return createSeethingSwarmAnimalManifest({
-        animalId: id,
-        familyId,
-        sourceRelativePath,
-        sourceColorLabel: "neutral",
-        frameWidth: 32,
-        frameHeight: 32,
-        animations: Object.freeze(
-          Array.from({ length: animationCount }, (_, animationIndex) =>
-            Object.freeze({
-              animationId: `animation_${animationIndex}`,
-              relativePath: `${sourceRelativePath}/animation_${animationIndex}.png`,
-              frameCount: (animationIndex % 8) + 1,
-            }),
-          ),
-        ),
-        ...(animalIndex === frogpackAnimalIndex
-          ? {
-              auxiliaryEffects: Object.freeze([
-                Object.freeze({
-                  effectId: "fly",
-                  relativePath: `${sourceRelativePath}/fly.png`,
-                  frameWidth: 8,
-                  frameHeight: 6,
-                  frameCount: 2,
-                }),
-              ]),
-            }
-          : {}),
-        evidenceSnapshotId: SEETHING_SWARM_SOURCE_SNAPSHOT.sourceSnapshotId,
-      } satisfies SeethingSwarmAnimalManifestInput)
-    }),
-  )
-}
-
-function createRuntimeAssetSources(registry = createCompleteTestRegistry()) {
-  return Object.freeze(
-    registry.animals
-      .flatMap((animal) => [
-        ...Object.values(animal.animations).map(({ relativePath }) =>
-          Object.freeze({
-            relativePath,
-            visibleBounds: Object.freeze({
-              left: 2,
-              top: 3,
-              width: 24,
-              height: 25,
-            }),
-            asset: `asset:${relativePath}`,
-          }),
-        ),
-        ...Object.values(animal.auxiliaryEffects ?? {}).map(
-          ({ relativePath }) =>
-            Object.freeze({
-              relativePath,
-              visibleBounds: Object.freeze({
-                left: 1,
-                top: 1,
-                width: 6,
-                height: 4,
-              }),
-              asset: `asset:${relativePath}`,
-            }),
-        ),
-      ])
-      .toSorted((first, second) => {
-        if (first.relativePath < second.relativePath) return -1
-        if (first.relativePath > second.relativePath) return 1
-        return 0
-      }),
-  ) satisfies readonly SeethingSwarmRuntimeAssetSource<string>[]
-}
-
-function createCompleteTestCatalog() {
-  const registry = createCompleteTestRegistry()
-  return Object.freeze({
-    registry,
-    catalog: createSeethingSwarmLicensedRuntimeClipCatalog(
-      registry,
-      createRuntimeAssetSources(registry),
-    ),
-  })
-}
+import {
+  createCompleteSeethingSwarmRuntimeClipTestFixture,
+  createCompleteSeethingSwarmRuntimeClipTestRegistry,
+  createCompleteSeethingSwarmRuntimeClipTestSources,
+} from "./SeethingSwarmRuntimeClipCatalog.test-fixture"
 
 describe("SeethingSwarm runtime clip catalog", () => {
   it("resolves all 774 canonical character clips and the Frog effect", () => {
-    const { registry, catalog } = createCompleteTestCatalog()
+    const { registry, catalog } =
+      createCompleteSeethingSwarmRuntimeClipTestFixture()
     const resolvedCharacterClips = registry.animals.flatMap((animal) =>
       Object.keys(animal.animations).map((animationId) =>
         resolveSeethingSwarmRuntimeCharacterClip(
@@ -150,7 +55,7 @@ describe("SeethingSwarm runtime clip catalog", () => {
   })
 
   it("deeply freezes every level of catalog metadata", () => {
-    const { catalog } = createCompleteTestCatalog()
+    const { catalog } = createCompleteSeethingSwarmRuntimeClipTestFixture()
     const characterClips = catalog.animals.flatMap(
       ({ characterClips }) => characterClips,
     )
@@ -178,7 +83,7 @@ describe("SeethingSwarm runtime clip catalog", () => {
   })
 
   it("keeps character and auxiliary identities in disjoint lookup domains", () => {
-    const { catalog } = createCompleteTestCatalog()
+    const { catalog } = createCompleteSeethingSwarmRuntimeClipTestFixture()
 
     expect(() =>
       resolveSeethingSwarmRuntimeCharacterClip(catalog, "frogpack", "fly"),
@@ -213,8 +118,8 @@ describe("SeethingSwarm runtime clip catalog", () => {
   })
 
   it("rejects incomplete unordered nullish and geometrically invalid sources", () => {
-    const registry = createCompleteTestRegistry()
-    const sources = createRuntimeAssetSources(registry)
+    const registry = createCompleteSeethingSwarmRuntimeClipTestRegistry()
+    const sources = createCompleteSeethingSwarmRuntimeClipTestSources(registry)
 
     expect(() =>
       createSeethingSwarmLicensedRuntimeClipCatalog(
@@ -247,8 +152,8 @@ describe("SeethingSwarm runtime clip catalog", () => {
   })
 
   it("rejects registry totals that disagree with the resolved catalog", () => {
-    const registry = createCompleteTestRegistry()
-    const sources = createRuntimeAssetSources(registry)
+    const registry = createCompleteSeethingSwarmRuntimeClipTestRegistry()
+    const sources = createCompleteSeethingSwarmRuntimeClipTestSources(registry)
 
     expect(() =>
       createSeethingSwarmLicensedRuntimeClipCatalog(
