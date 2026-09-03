@@ -1,31 +1,30 @@
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import type { SeethingSwarmHubAnimationSelection } from "#game/data/src/SeethingSwarmAnimalPresentation"
 import sharp from "sharp"
 import { describe, expect, it } from "vitest"
 import {
   analyzeSeethingSwarmVisibleContent,
   analyzeSeethingSwarmVisibleContentFile,
   type SeethingSwarmRawRgbaImage,
+  type SeethingSwarmVisibleContentSelection,
 } from "./SeethingSwarmVisibleContentAnalyzer"
 
 function createSelection(
-  overrides: Partial<SeethingSwarmHubAnimationSelection> = {},
+  overrides: Partial<SeethingSwarmVisibleContentSelection> = {},
 ) {
   return Object.freeze({
     animalId: "bat",
-    animationId: "idle_upright",
     relativePath: "bat_spritesheets/bat_idle_upright_strip5.png",
     frameWidth: 4,
     frameHeight: 4,
     frameCount: 5,
     ...overrides,
-  }) satisfies SeethingSwarmHubAnimationSelection
+  }) satisfies SeethingSwarmVisibleContentSelection
 }
 
 function createTransparentImage(
-  selection: SeethingSwarmHubAnimationSelection = createSelection(),
+  selection: SeethingSwarmVisibleContentSelection = createSelection(),
 ) {
   const width = selection.frameWidth * selection.frameCount
   const height = selection.frameHeight
@@ -39,7 +38,7 @@ function createTransparentImage(
 
 function setOpaquePixel(
   image: SeethingSwarmRawRgbaImage,
-  selection: SeethingSwarmHubAnimationSelection,
+  selection: SeethingSwarmVisibleContentSelection,
   frameIndex: number,
   x: number,
   y: number,
@@ -69,7 +68,7 @@ function createPopulatedImage() {
 
 function fillEveryFrame(
   image: SeethingSwarmRawRgbaImage,
-  selection: SeethingSwarmHubAnimationSelection,
+  selection: SeethingSwarmVisibleContentSelection,
 ) {
   for (let frameIndex = 0; frameIndex < selection.frameCount; frameIndex += 1) {
     setOpaquePixel(image, selection, frameIndex, 0, 0)

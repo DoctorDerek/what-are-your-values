@@ -64,12 +64,12 @@ describe("SeethingSwarm presentation preparation CLI", () => {
 
   it.each([
     [
-      { mode: "licensed", assetCount: 45 },
-      "Prepared 45 verified SeethingSwarm Hub animals for web and native builds.\n",
+      { mode: "licensed", assetCount: 775 },
+      "Prepared 775 verified SeethingSwarm runtime clips for web and native builds.\n",
     ],
     [
       { mode: "typography-only", assetCount: 0 },
-      "Prepared typography-only SeethingSwarm presentation bindings for web and native builds.\n",
+      "Prepared typography-only SeethingSwarm runtime bindings for web and native builds.\n",
     ],
   ] as const)(
     "reports only the verified %s preparation result",
@@ -108,7 +108,7 @@ describe("SeethingSwarm presentation preparation CLI", () => {
         { web: expect.any(Function), native: expect.any(Function) },
       )
       expect(standardOutputWrite).toHaveBeenCalledWith(
-        "Prepared typography-only SeethingSwarm presentation bindings for web and native builds.\n",
+        "Prepared typography-only SeethingSwarm runtime bindings for web and native builds.\n",
       )
     } finally {
       standardOutputWrite.mockRestore()

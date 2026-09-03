@@ -27,13 +27,19 @@ export function createCompleteSeethingSwarmRuntimeClipTestRegistry() {
         frameWidth: 32,
         frameHeight: 32,
         animations: Object.freeze(
-          Array.from({ length: animationCount }, (_, animationIndex) =>
-            Object.freeze({
-              animationId: `animation_${animationIndex}`,
-              relativePath: `${sourceRelativePath}/animation_${animationIndex}.png`,
+          Array.from({ length: animationCount }, (_, animationIndex) => {
+            const animationId =
+              animationIndex === 0
+                ? id === "bat"
+                  ? "idle_upright"
+                  : "idle"
+                : `animation_${animationIndex}`
+            return Object.freeze({
+              animationId,
+              relativePath: `${sourceRelativePath}/${animationId}.png`,
               frameCount: (animationIndex % 8) + 1,
-            }),
-          ),
+            })
+          }),
         ),
         ...(animalIndex === frogpackAnimalIndex
           ? {

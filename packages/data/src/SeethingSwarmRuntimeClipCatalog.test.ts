@@ -92,11 +92,9 @@ describe("SeethingSwarm runtime clip catalog", () => {
       resolveSeethingSwarmRuntimeAuxiliaryEffectClip(
         catalog,
         "frogpack",
-        "animation_0",
+        "idle",
       ),
-    ).toThrow(
-      "Missing SeethingSwarm runtime auxiliary effect: frogpack/animation_0",
-    )
+    ).toThrow("Missing SeethingSwarm runtime auxiliary effect: frogpack/idle")
     expect(() =>
       resolveSeethingSwarmRuntimeCharacterClip(
         catalog,
