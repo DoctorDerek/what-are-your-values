@@ -1,3 +1,4 @@
+import { createSeethingSwarmTypographyOnlyRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import {
   getValueDisplayDefinition,
   getValueDisplayName,
@@ -43,6 +44,7 @@ function createHistoryProps() {
     isMenuOpen: false,
     isPersistencePending: false,
     shouldReduceMotion: false,
+    runtimeClipCatalog: createSeethingSwarmTypographyOnlyRuntimeClipCatalog(),
     onAchievementPresented: vi.fn(),
     onOpenMenu: vi.fn(),
     onUndo: vi.fn(),
@@ -110,7 +112,8 @@ describe("Crucible Component Integration", () => {
       "min-h-0",
       "flex-1",
       "flex-col",
-      "xl:flex-row",
+      "xl:grid",
+      "xl:grid-cols-2",
     )
   })
 

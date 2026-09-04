@@ -100,6 +100,28 @@ vi.mock("@/lib/IndexedDbDurableStore", async () => {
   }
 })
 
+vi.mock("./SeethingSwarmBattleStage", async () => {
+  const { useEffect } = await import("react")
+
+  return {
+    default: function MockSeethingSwarmBattleStage({
+      isNextBattleReady,
+      winnerId,
+      onResultAnimationComplete,
+    }: {
+      readonly isNextBattleReady: boolean
+      readonly winnerId: string | null
+      readonly onResultAnimationComplete: () => void
+    }) {
+      useEffect(() => {
+        if (winnerId && isNextBattleReady) onResultAnimationComplete()
+      }, [isNextBattleReady, onResultAnimationComplete, winnerId])
+
+      return <div aria-hidden="true" data-testid="mock-battle-stage" />
+    },
+  }
+})
+
 class InvariantErrorBoundary extends Component<
   Readonly<{ children: ReactNode }>,
   Readonly<{ message: string | null }>
@@ -1191,7 +1213,8 @@ describe("GameClient Integration", () => {
     expect(presentationRegion?.nextElementSibling).toHaveClass(
       "min-h-0",
       "flex-1",
-      "xl:flex-row",
+      "xl:grid",
+      "xl:grid-cols-2",
     )
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),

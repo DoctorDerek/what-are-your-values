@@ -1,6 +1,7 @@
 "use client"
 
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
+import type { SeethingSwarmRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
@@ -19,11 +20,13 @@ import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPres
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
 import { AnimatePresence } from "motion/react"
+import type { StaticImageData } from "next/image"
 import { useCallback, useEffect, useRef, useState } from "react"
 import MapacheScreen from "@/components/MapacheScreen"
 import useWebControlHintInputModality from "@/lib/useWebControlHintInputModality"
 import AchievementBanner from "./AchievementBanner"
 import BattleActionBar from "./BattleActionBar"
+import SeethingSwarmBattleStage from "./SeethingSwarmBattleStage"
 import { ValueChoiceCard } from "./ValueChoiceCard"
 
 type BattleAccessibilityAnnouncement = Readonly<{
@@ -36,6 +39,7 @@ export default function Crucible({
   achievement,
   battle,
   progressById,
+  runtimeClipCatalog,
   canUndo,
   canRedo,
   controlHintPreference,
@@ -54,6 +58,7 @@ export default function Crucible({
   achievement: AchievementPresentation | null
   battle: PresentedBattle
   progressById: ValueProgressById
+  runtimeClipCatalog: SeethingSwarmRuntimeClipCatalog<StaticImageData>
   canUndo: boolean
   canRedo: boolean
   controlHintPreference: ControlHintPreference
@@ -142,7 +147,7 @@ export default function Crucible({
   const currentBattle = state.context.currentBattle
   const currentPair = currentBattle?.pair ?? null
   const isAnimating = state.matches("AnimatingResult")
-  const handleAnimationComplete = useCallback(() => {
+  const handleResultAnimationComplete = useCallback(() => {
     if (isAnimating) {
       send({ type: "ANIMATION.RESULT_FINISHED" })
     }
@@ -252,7 +257,7 @@ export default function Crucible({
     progressById,
   ])
 
-  if (!currentPair) {
+  if (!currentBattle || !currentPair) {
     return (
       <MapacheScreen
         spacing="safe-area-only"
@@ -331,7 +336,7 @@ export default function Crucible({
         />
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col xl:flex-row">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col xl:grid xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)_auto]">
         <AnimatePresence mode="popLayout">
           <ValueChoiceCard
             ref={firstChoiceRef}
@@ -347,9 +352,17 @@ export default function Crucible({
             shouldReduceMotion={shouldReduceMotion}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
-            onAnimationComplete={handleAnimationComplete}
           />
         </AnimatePresence>
+
+        <SeethingSwarmBattleStage
+          battle={currentBattle}
+          isNextBattleReady={state.context.pendingBattle !== null}
+          runtimeClipCatalog={runtimeClipCatalog}
+          shouldReduceMotion={shouldReduceMotion}
+          winnerId={winnerId}
+          onResultAnimationComplete={handleResultAnimationComplete}
+        />
 
         <AnimatePresence mode="popLayout">
           <ValueChoiceCard
@@ -366,7 +379,6 @@ export default function Crucible({
             shouldReduceMotion={shouldReduceMotion}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
-            onAnimationComplete={handleAnimationComplete}
           />
         </AnimatePresence>
       </div>

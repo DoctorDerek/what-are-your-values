@@ -1,3 +1,4 @@
+import { createSeethingSwarmTypographyOnlyRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import {
   getValueDisplayDefinition,
   getValueDisplayName,
@@ -146,6 +147,7 @@ function createCrucibleProps(
     isMenuOpen: false,
     isPersistencePending: false,
     shouldReduceMotion: true,
+    runtimeClipCatalog: createSeethingSwarmTypographyOnlyRuntimeClipCatalog(),
     onAchievementPresented: vi.fn(),
     onExit: vi.fn(),
     onOpenMenu: vi.fn(),

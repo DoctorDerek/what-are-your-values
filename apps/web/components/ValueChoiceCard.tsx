@@ -25,7 +25,6 @@ type ValueChoiceCardProps = {
   shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
-  onAnimationComplete: () => void
 }
 
 export const ValueChoiceCard = forwardRef<
@@ -44,7 +43,6 @@ export const ValueChoiceCard = forwardRef<
     shouldReduceMotion,
     onActivate,
     onFocus,
-    onAnimationComplete,
   },
   ref,
 ) {
@@ -75,8 +73,7 @@ export const ValueChoiceCard = forwardRef<
       animate={valueChoiceMotion.animate}
       exit={valueChoiceMotion.exit}
       transition={valueChoiceMotion.transition}
-      onAnimationComplete={onAnimationComplete}
-      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain`}
+      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain ${isFirst ? "xl:col-start-1 xl:row-start-1" : "xl:col-start-2 xl:row-start-1"}`}
     >
       <button
         ref={ref}
