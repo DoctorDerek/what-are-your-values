@@ -6,7 +6,11 @@ import {
 import { ACHIEVEMENT_CATALOG } from "@game/machines/src/AchievementCatalog"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
-import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
+import {
+  createBattleCycleCandidate,
+  createInitialBattleCycle,
+} from "@game/machines/src/BattleCycle"
+import { projectBattlePair } from "@game/machines/src/BattleScheduler"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
 import {
@@ -32,6 +36,33 @@ function createBattleProps(seed: string) {
   }) satisfies PresentedBattle
 
   return { battleCycle, battle }
+}
+
+function createBattleTransitionProps(seed: string) {
+  const { battleCycle, battle } = createBattleProps(seed)
+  const winnerId = battle.pair[0]
+  const resultingBattleCycle = createBattleCycleCandidate({
+    battleCycle,
+    winnerId,
+    expectedScheduler: battle.scheduler,
+  })
+  const resultingBattle = Object.freeze({
+    pair: projectBattlePair(
+      resultingBattleCycle.activeDeck,
+      resultingBattleCycle.scheduler,
+    ),
+    scheduler: resultingBattleCycle.scheduler,
+  }) satisfies PresentedBattle
+  const winner = battleCycle.activeDeck.values.find(({ id }) => id === winnerId)
+  if (!winner) throw new Error("Projected winner definition is missing")
+
+  return { battleCycle, battle, resultingBattleCycle, resultingBattle, winner }
+}
+
+function getPresentedCombatantIds(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>("[data-combatant-side]"),
+  ).map((combatant) => combatant.dataset.valueId)
 }
 
 function createHistoryProps() {
@@ -331,6 +362,118 @@ describe("Crucible Component Integration", () => {
     expect(onWinnerSelected).toHaveBeenCalledWith(winnerId, battle.scheduler)
 
     act(() => cardA.click())
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+  })
+
+  it("holds the current pair through rapid input until both battle visuals finish", async () => {
+    const onWinnerSelected = vi.fn()
+    const {
+      battleCycle,
+      battle,
+      resultingBattleCycle,
+      resultingBattle,
+      winner,
+    } = createBattleTransitionProps("battle-stage-rapid-input-seed")
+
+    const props = {
+      ...createHistoryProps(),
+      activeDeck: battleCycle.activeDeck,
+      battle,
+      progressById: battleCycle.progressById,
+      onExit: vi.fn(),
+      onWinnerSelected,
+    }
+    const { container, rerender } = render(<Crucible {...props} />)
+    const firstChoice = await screen.findByRole("button", {
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: winner,
+        level: 1,
+      }),
+    })
+
+    fireEvent.click(firstChoice)
+    fireEvent.click(firstChoice)
+    fireEvent.keyDown(window, { key: "2" })
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Crucible
+        {...props}
+        battle={resultingBattle}
+        progressById={resultingBattleCycle.progressById}
+      />,
+    )
+    expect(firstChoice).toBeInTheDocument()
+    const resultVisuals = container.querySelectorAll(
+      '[data-placeholder-playback="one-shot"]',
+    )
+    expect(resultVisuals).toHaveLength(2)
+    expect(getPresentedCombatantIds(container)).toEqual(battle.pair)
+
+    fireEvent.animationEnd(resultVisuals[0]!)
+    expect(getPresentedCombatantIds(container)).toEqual(battle.pair)
+    fireEvent.animationEnd(resultVisuals[1]!)
+
+    await waitFor(() =>
+      expect(getPresentedCombatantIds(container)).toEqual(resultingBattle.pair),
+    )
+    expect(
+      container.querySelector("[data-battle-stage-state]"),
+    ).toHaveAttribute("data-battle-stage-state", "awaiting-input")
+    expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps decorative static combatants and advances a durable Reduced Motion result", async () => {
+    const onWinnerSelected = vi.fn()
+    const {
+      battleCycle,
+      battle,
+      resultingBattleCycle,
+      resultingBattle,
+      winner,
+    } = createBattleTransitionProps("battle-stage-reduced-motion-seed")
+
+    const props = {
+      ...createHistoryProps(),
+      activeDeck: battleCycle.activeDeck,
+      battle,
+      progressById: battleCycle.progressById,
+      shouldReduceMotion: true,
+      onExit: vi.fn(),
+      onWinnerSelected,
+    }
+    const { container, rerender } = render(<Crucible {...props} />)
+    const firstChoice = await screen.findByRole("button", {
+      name: getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: winner,
+        level: 1,
+      }),
+    })
+    const stage = container.querySelector("[data-battle-stage-state]")
+    expect(stage).toHaveAttribute("aria-hidden", "true")
+    expect(
+      container.querySelectorAll('[data-placeholder-playback="loop"]'),
+    ).toHaveLength(2)
+
+    fireEvent.click(firstChoice)
+    rerender(
+      <Crucible
+        {...props}
+        battle={resultingBattle}
+        progressById={resultingBattleCycle.progressById}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(getPresentedCombatantIds(container)).toEqual(resultingBattle.pair),
+    )
+    expect(
+      screen.getAllByRole("button", {
+        name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+      }),
+    ).toHaveLength(2)
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
   })
 
