@@ -17,14 +17,29 @@
   max-width: none;
   height: var(--animal-strip-height);
   image-rendering: pixelated;
+}
+
+.loopStrip,
+.oneShotStrip {
   animation-name: advance-seething-swarm-strip;
   animation-duration: var(--animal-animation-duration);
   animation-timing-function: steps(var(--animal-frame-count), end);
+}
+
+.loopStrip {
   animation-iteration-count: infinite;
+}
+
+.oneShotStrip {
+  animation-iteration-count: 1;
 }
 
 .staticStrip {
   animation: none;
+}
+
+.faceLeft {
+  transform: scaleX(-1);
 }
 
 @keyframes advance-seething-swarm-strip {

@@ -54,9 +54,11 @@ export function createSeethingSwarmAnimalPresentationGeometry(
   frameWidth: number,
   frameHeight: number,
   visibleBounds: SeethingSwarmVisibleContentBounds,
+  tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
 ) {
   assertPositiveSafeInteger(frameWidth, "SeethingSwarm frame width")
   assertPositiveSafeInteger(frameHeight, "SeethingSwarm frame height")
+  assertPositiveSafeInteger(tileSize, "SeethingSwarm tile size")
   const frozenVisibleBounds = createSeethingSwarmVisibleContentBounds(
     frameWidth,
     frameHeight,
@@ -64,22 +66,22 @@ export function createSeethingSwarmAnimalPresentationGeometry(
   )
   const integerScale = Math.floor(
     Math.min(
-      SEETHING_SWARM_HUB_TILE_SIZE / frozenVisibleBounds.width,
-      SEETHING_SWARM_HUB_TILE_SIZE / frozenVisibleBounds.height,
+      tileSize / frozenVisibleBounds.width,
+      tileSize / frozenVisibleBounds.height,
     ),
   )
   if (integerScale < 1) {
     throw new Error(
-      `Visible SeethingSwarm content cannot fit the ${SEETHING_SWARM_HUB_TILE_SIZE}-unit Hub tile`,
+      `Visible SeethingSwarm content cannot fit the ${tileSize}-unit tile`,
     )
   }
 
   const scaledVisibleWidth = frozenVisibleBounds.width * integerScale
   const frameOffsetX =
-    Math.floor((SEETHING_SWARM_HUB_TILE_SIZE - scaledVisibleWidth) / 2) -
+    Math.floor((tileSize - scaledVisibleWidth) / 2) -
     frozenVisibleBounds.left * integerScale
   const frameOffsetY =
-    SEETHING_SWARM_HUB_TILE_SIZE -
+    tileSize -
     (frozenVisibleBounds.top + frozenVisibleBounds.height) * integerScale
 
   return Object.freeze({
