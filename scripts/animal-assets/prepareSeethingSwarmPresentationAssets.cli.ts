@@ -1,12 +1,12 @@
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { generateSeethingSwarmNativePresentationModule } from "./SeethingSwarmNativePresentationModuleGenerator"
+import { generateSeethingSwarmNativeRuntimeClipCatalogModule } from "./SeethingSwarmNativeRuntimeClipCatalogModuleGenerator"
 import {
   prepareSeethingSwarmPresentationAssets,
   type SeethingSwarmPresentationPreparationPaths,
 } from "./SeethingSwarmPresentationAssetPreparer"
 import { sanitizeSeethingSwarmPrivateSourceError } from "./SeethingSwarmPrivatePathSanitizer"
-import { generateSeethingSwarmWebPresentationModule } from "./SeethingSwarmWebPresentationModuleGenerator"
+import { generateSeethingSwarmWebRuntimeClipCatalogModule } from "./SeethingSwarmWebRuntimeClipCatalogModuleGenerator"
 
 export function getSeethingSwarmPresentationPreparationPaths(
   repositoryRoot: string,
@@ -34,13 +34,13 @@ export async function runSeethingSwarmPresentationPreparationCli(
   const paths = getSeethingSwarmPresentationPreparationPaths(repositoryRoot)
   try {
     const result = await prepareSeethingSwarmPresentationAssets(paths, {
-      web: generateSeethingSwarmWebPresentationModule,
-      native: generateSeethingSwarmNativePresentationModule,
+      web: generateSeethingSwarmWebRuntimeClipCatalogModule,
+      native: generateSeethingSwarmNativeRuntimeClipCatalogModule,
     })
     writeStatus(
       result.mode === "licensed"
-        ? `Prepared ${result.assetCount} verified SeethingSwarm Hub animals for web and native builds.\n`
-        : "Prepared typography-only SeethingSwarm presentation bindings for web and native builds.\n",
+        ? `Prepared ${result.assetCount} verified SeethingSwarm runtime clips for web and native builds.\n`
+        : "Prepared typography-only SeethingSwarm runtime bindings for web and native builds.\n",
     )
     return result
   } catch (error: unknown) {

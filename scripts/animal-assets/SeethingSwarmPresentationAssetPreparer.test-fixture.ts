@@ -6,13 +6,13 @@ import { SEETHING_SWARM_SOURCE_SNAPSHOT } from "#game/data/src/SeethingSwarmSour
 import { ZOO_ANIMALS } from "#game/data/src/ZooAnimals"
 import sharp from "sharp"
 import { SEETHING_SWARM_ASSET_RECEIPT_SCHEMA_VERSION } from "./SeethingSwarmAssetReceipt"
-import { generateSeethingSwarmNativePresentationModule } from "./SeethingSwarmNativePresentationModuleGenerator"
+import { generateSeethingSwarmNativeRuntimeClipCatalogModule } from "./SeethingSwarmNativeRuntimeClipCatalogModuleGenerator"
 import type { SeethingSwarmPresentationPreparationPaths } from "./SeethingSwarmPresentationAssetPreparer"
-import { generateSeethingSwarmWebPresentationModule } from "./SeethingSwarmWebPresentationModuleGenerator"
+import { generateSeethingSwarmWebRuntimeClipCatalogModule } from "./SeethingSwarmWebRuntimeClipCatalogModuleGenerator"
 
 export const seethingSwarmPresentationModuleGenerators = Object.freeze({
-  web: generateSeethingSwarmWebPresentationModule,
-  native: generateSeethingSwarmNativePresentationModule,
+  web: generateSeethingSwarmWebRuntimeClipCatalogModule,
+  native: generateSeethingSwarmNativeRuntimeClipCatalogModule,
 })
 
 const temporaryDirectories: string[] = []
@@ -153,17 +153,9 @@ export function createSeethingSwarmPresentationRegistryFixture() {
   })
 }
 
-function createReceipt(
-  allAssetPaths: readonly string[],
-  selectedPaths: readonly string[],
-  selectedPng: Uint8Array,
-) {
-  const selectedPathSet = new Set(selectedPaths)
+function createReceipt(assetContents: ReadonlyMap<string, Uint8Array>) {
   const assets = Object.freeze(
-    allAssetPaths.map((relativePath) => {
-      const contents = selectedPathSet.has(relativePath)
-        ? selectedPng
-        : Buffer.from(relativePath)
+    [...assetContents.entries()].map(([relativePath, contents]) => {
       return Object.freeze({
         relativePath,
         byteLength: contents.byteLength,
@@ -223,17 +215,32 @@ export async function createCompleteSeethingSwarmPresentationCustody(
   paths: SeethingSwarmPresentationPreparationPaths,
 ) {
   const fixture = createSeethingSwarmPresentationRegistryFixture()
-  const rawStrip = Buffer.alloc(4 * 4 * 4 * 4, 255)
-  const selectedPng = await sharp(rawStrip, {
-    raw: { width: 16, height: 4, channels: 4 },
-  })
-    .png()
-    .toBuffer()
-  const receipt = createReceipt(
-    fixture.allAssetPaths,
-    fixture.selectedPaths,
-    selectedPng,
+  const frameCounts = [1, 2, 4] as const
+  const stripPngEntries = await Promise.all(
+    frameCounts.map(async (frameCount) => {
+      const width = 4 * frameCount
+      const rawStrip = Buffer.alloc(width * 4 * 4, 255)
+      const png = await sharp(rawStrip, {
+        raw: { width, height: 4, channels: 4 },
+      })
+        .png()
+        .toBuffer()
+      return [frameCount, png] as const
+    }),
   )
+  const stripPngs = new Map(stripPngEntries)
+  const assetContents = new Map(
+    fixture.allAssetPaths.map((relativePath) => {
+      const frameCount = Number(relativePath.match(/strip(\d+)\.png$/u)?.[1])
+      const contents = stripPngs.get(frameCount as 1 | 2 | 4)
+      if (!contents) {
+        throw new Error(`Missing test PNG geometry for ${relativePath}`)
+      }
+      return [relativePath, contents] as const
+    }),
+  )
+  const receipt = createReceipt(assetContents)
+  const selectedPng = stripPngs.get(4)!
 
   await Promise.all([
     writeSeethingSwarmPresentationTestFile(
@@ -251,15 +258,15 @@ export async function createCompleteSeethingSwarmPresentationCustody(
       "SeethingSwarmWebStaticAssets.ts",
       "w",
     ),
-    ...fixture.selectedPaths.map((relativePath) =>
+    ...fixture.allAssetPaths.map((relativePath) =>
       writeSeethingSwarmPresentationTestFile(
         paths.stagingRoot,
         relativePath,
-        selectedPng,
+        assetContents.get(relativePath)!,
       ),
     ),
   ])
   await writeFile(paths.receiptPath, `${JSON.stringify(receipt, null, 2)}\n`)
 
-  return Object.freeze({ ...fixture, selectedPng, receipt })
+  return Object.freeze({ ...fixture, assetContents, selectedPng, receipt })
 }

@@ -1,9 +1,9 @@
 import { createActiveDeck } from "@game/data/src/ActiveDeck"
 import {
-  createSeethingSwarmTypographyOnlyAnimalPresentationAdapter,
-  type SeethingSwarmAnimalPresentation,
-  type SeethingSwarmAnimalPresentationAdapter,
-} from "@game/data/src/SeethingSwarmAnimalPresentation"
+  createSeethingSwarmTypographyOnlyRuntimeClipCatalog,
+  type SeethingSwarmRuntimeCharacterClip,
+  type SeethingSwarmRuntimeClipCatalog,
+} from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import {
   createCustomValueId,
   getValueDisplayName,
@@ -29,13 +29,13 @@ jest.mock("@/components/NativeSeethingSwarmAnimal", () => {
     __esModule: true,
     default: jest.fn(
       ({
-        presentation,
+        clip,
       }: {
-        presentation: SeethingSwarmAnimalPresentation<number>
+        clip: SeethingSwarmRuntimeCharacterClip<number>
         shouldReduceMotion: boolean
       }) => (
         <View
-          testID={`mock-seething-swarm-animal-${presentation.animalId.replaceAll("/", "-")}`}
+          testID={`mock-seething-swarm-animal-${clip.animalId.replaceAll("/", "-")}`}
         />
       ),
     ),
@@ -45,31 +45,41 @@ jest.mock("@/components/NativeSeethingSwarmAnimal", () => {
 const activeDeck = createActiveDeck([])
 const nativeAnimalRendererMock = jest.mocked(NativeSeethingSwarmAnimal)
 const animalPresentationProps = Object.freeze({
-  animalPresentationAdapter:
-    createSeethingSwarmTypographyOnlyAnimalPresentationAdapter(),
+  runtimeClipCatalog: createSeethingSwarmTypographyOnlyRuntimeClipCatalog(),
   shouldReduceMotion: false,
 })
-const licensedAnimalPresentationAdapter = Object.freeze({
+const licensedRuntimeClipCatalog = Object.freeze({
   mode: "licensed",
   evidenceSnapshotId: "seethingswarm-animals:hub-integration-test",
   animals: Object.freeze(
     ZOO_ANIMALS.map(({ id }, index) =>
       Object.freeze({
         animalId: id,
-        animationId: "idle",
-        relativePath: `${id}/idle.png`,
-        frameWidth: 1,
-        frameHeight: 1,
-        frameCount: 1,
-        visibleBounds: Object.freeze({ left: 0, top: 0, width: 1, height: 1 }),
-        integerScale: 72,
-        frameOffsetX: 0,
-        frameOffsetY: 0,
-        asset: index + 1,
+        characterClips: Object.freeze([
+          Object.freeze({
+            kind: "character",
+            animalId: id,
+            animationId: "idle",
+            relativePath: `${id}/idle.png`,
+            frameWidth: 1,
+            frameHeight: 1,
+            frameCount: 1,
+            visibleBounds: Object.freeze({
+              left: 0,
+              top: 0,
+              width: 1,
+              height: 1,
+            }),
+            asset: index + 1,
+          }),
+        ]),
+        auxiliaryEffectClips: Object.freeze([]),
       }),
     ),
   ),
-}) satisfies SeethingSwarmAnimalPresentationAdapter<number>
+  characterClipCount: ZOO_ANIMALS.length,
+  auxiliaryEffectClipCount: 0,
+}) satisfies SeethingSwarmRuntimeClipCatalog<number>
 
 function getMappedAnimalId(valueId: ValueId) {
   const mapping = VALUE_TO_ANIMAL_MAP.find(
@@ -242,7 +252,7 @@ describe("NativeHub", () => {
     await render(
       <NativeHub
         {...callbacks}
-        animalPresentationAdapter={licensedAnimalPresentationAdapter}
+        runtimeClipCatalog={licensedRuntimeClipCatalog}
         dataNotice={null}
         rankedValues={rankedValues}
         shouldReduceMotion
@@ -268,7 +278,7 @@ describe("NativeHub", () => {
       Array.from(
         new Set(
           nativeAnimalRendererMock.mock.calls.map(
-            ([{ presentation }]) => presentation.animalId,
+            ([{ clip }]) => clip.animalId,
           ),
         ),
       ),
@@ -302,7 +312,7 @@ describe("NativeHub", () => {
     await render(
       <NativeHub
         {...callbacks}
-        animalPresentationAdapter={licensedAnimalPresentationAdapter}
+        runtimeClipCatalog={licensedRuntimeClipCatalog}
         dataNotice={null}
         rankedValues={rankedValues}
         shouldReduceMotion={false}
@@ -331,7 +341,7 @@ describe("NativeHub", () => {
       Array.from(
         new Set(
           nativeAnimalRendererMock.mock.calls.map(
-            ([{ presentation }]) => presentation.animalId,
+            ([{ clip }]) => clip.animalId,
           ),
         ),
       ),

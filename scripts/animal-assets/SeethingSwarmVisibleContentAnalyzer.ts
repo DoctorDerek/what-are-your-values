@@ -1,9 +1,15 @@
-import {
-  createSeethingSwarmAnimalPresentationGeometry,
-  type SeethingSwarmHubAnimationSelection,
-  type SeethingSwarmVisibleContentBounds,
-} from "#game/data/src/SeethingSwarmAnimalPresentation"
+import { createSeethingSwarmAnimalPresentationGeometry } from "#game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmVisibleContentBounds } from "#game/data/src/SeethingSwarmRuntimeClipCatalog"
+import type { ZooAnimalId } from "#game/data/src/ZooAnimals"
 import sharp from "sharp"
+
+export type SeethingSwarmVisibleContentSelection = Readonly<{
+  animalId: ZooAnimalId
+  relativePath: string
+  frameWidth: number
+  frameHeight: number
+  frameCount: number
+}>
 
 export type SeethingSwarmRawRgbaImage = Readonly<{
   data: Uint8Array
@@ -28,7 +34,7 @@ function assertPositiveSafeInteger(value: number, label: string) {
 
 function assertRawRgbaImage(
   image: SeethingSwarmRawRgbaImage,
-  selection: SeethingSwarmHubAnimationSelection,
+  selection: SeethingSwarmVisibleContentSelection,
 ) {
   assertPositiveSafeInteger(selection.frameWidth, "character frame width")
   assertPositiveSafeInteger(selection.frameHeight, "character frame height")
@@ -57,7 +63,7 @@ function assertRawRgbaImage(
 
 function analyzeFrameBounds(
   image: SeethingSwarmRawRgbaImage,
-  selection: SeethingSwarmHubAnimationSelection,
+  selection: SeethingSwarmVisibleContentSelection,
   frameIndex: number,
 ) {
   let minimumX = selection.frameWidth
@@ -115,7 +121,7 @@ function createUnionBounds(
 
 export function analyzeSeethingSwarmVisibleContent(
   image: SeethingSwarmRawRgbaImage,
-  selection: SeethingSwarmHubAnimationSelection,
+  selection: SeethingSwarmVisibleContentSelection,
 ) {
   assertRawRgbaImage(image, selection)
   const frameBounds = Object.freeze(
@@ -141,7 +147,7 @@ export function analyzeSeethingSwarmVisibleContent(
 
 export async function analyzeSeethingSwarmVisibleContentFile(
   absolutePath: string,
-  selection: SeethingSwarmHubAnimationSelection,
+  selection: SeethingSwarmVisibleContentSelection,
 ) {
   const { data, info } = await sharp(absolutePath)
     .ensureAlpha()

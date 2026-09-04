@@ -9,16 +9,16 @@ import {
   sep,
 } from "node:path"
 import { createSeethingSwarmAnimalManifest } from "#game/data/src/SeethingSwarmAnimalManifest"
-import type {
-  SeethingSwarmAnimalPresentation,
-  SeethingSwarmAnimalPresentationAdapter,
-} from "#game/data/src/SeethingSwarmAnimalPresentation"
 import {
-  createSeethingSwarmLicensedAnimalPresentationAdapter,
-  createSeethingSwarmTypographyOnlyAnimalPresentationAdapter,
-  selectSeethingSwarmHubAnimations,
-} from "#game/data/src/SeethingSwarmAnimalPresentation"
-import { createSeethingSwarmAnimalRegistry } from "#game/data/src/SeethingSwarmAnimalRegistry"
+  createSeethingSwarmAnimalRegistry,
+  type SeethingSwarmAnimalRegistry,
+} from "#game/data/src/SeethingSwarmAnimalRegistry"
+import {
+  createSeethingSwarmLicensedRuntimeClipCatalog,
+  createSeethingSwarmTypographyOnlyRuntimeClipCatalog,
+  type SeethingSwarmRuntimeAssetSource,
+  type SeethingSwarmRuntimeClipCatalog,
+} from "#game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { ZOO_ANIMALS, type ZooAnimalId } from "#game/data/src/ZooAnimals"
 import {
   SEETHING_SWARM_ASSET_RECEIPT_SCHEMA_VERSION,
@@ -27,10 +27,13 @@ import {
   type SeethingSwarmGeneratedModuleReceipt,
 } from "./SeethingSwarmAssetReceipt"
 import { publishSeethingSwarmPreparedAssetTree } from "./SeethingSwarmAssetStager"
-import { analyzeSeethingSwarmVisibleContentFile } from "./SeethingSwarmVisibleContentAnalyzer"
+import {
+  analyzeSeethingSwarmVisibleContentFile,
+  type SeethingSwarmVisibleContentSelection,
+} from "./SeethingSwarmVisibleContentAnalyzer"
 
-export const SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME =
-  "SeethingSwarmAnimalPresentations.ts"
+export const SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME =
+  "SeethingSwarmRuntimeClipCatalog.ts"
 
 export type SeethingSwarmPresentationPreparationPaths = Readonly<{
   registryPath: string
@@ -40,10 +43,16 @@ export type SeethingSwarmPresentationPreparationPaths = Readonly<{
   nativeOutputRoot: string
 }>
 
-export type SeethingSwarmPresentationModuleGenerators = Readonly<{
-  web: (adapter: SeethingSwarmAnimalPresentationAdapter<string>) => string
-  native: (adapter: SeethingSwarmAnimalPresentationAdapter<string>) => string
+export type SeethingSwarmRuntimeClipCatalogModuleGenerators = Readonly<{
+  web: (catalog: SeethingSwarmRuntimeClipCatalog<string>) => string
+  native: (catalog: SeethingSwarmRuntimeClipCatalog<string>) => string
 }>
+
+function compareText(first: string, second: string) {
+  if (first < second) return -1
+  if (first > second) return 1
+  return 0
+}
 
 function assertSafeRelativePngPath(value: string, label: string) {
   const segments = value.split("/")
@@ -59,82 +68,6 @@ function assertSafeRelativePngPath(value: string, label: string) {
   ) {
     throw new Error(`Invalid SeethingSwarm ${label} asset path: ${value}`)
   }
-}
-
-export function assertSeethingSwarmPreparedPresentationAdapter(
-  adapter: SeethingSwarmAnimalPresentationAdapter<string>,
-  label: string,
-) {
-  if (adapter.mode === "typography-only") {
-    if (Object.keys(adapter).join(",") !== "mode") {
-      throw new Error(`Invalid SeethingSwarm ${label} typography-only metadata`)
-    }
-    return
-  }
-  if (adapter.evidenceSnapshotId.trim() === "") {
-    throw new Error(`Missing SeethingSwarm ${label} evidence snapshot ID`)
-  }
-  if (adapter.animals.length !== ZOO_ANIMALS.length) {
-    throw new Error(
-      `Invalid SeethingSwarm ${label} presentation count: ${adapter.animals.length}`,
-    )
-  }
-
-  const comparablePaths = new Set<string>()
-  for (const [index, expectedAnimal] of ZOO_ANIMALS.entries()) {
-    const presentation = adapter.animals[index]
-    if (presentation?.animalId !== expectedAnimal.id) {
-      throw new Error(
-        `Invalid SeethingSwarm ${label} presentation at position ${index}: expected ${expectedAnimal.id}, received ${presentation?.animalId ?? "missing"}`,
-      )
-    }
-    if (presentation.asset !== presentation.relativePath) {
-      throw new Error(
-        `Mismatched SeethingSwarm ${label} prepared asset: ${presentation.animalId}`,
-      )
-    }
-
-    assertSafeRelativePngPath(presentation.asset, label)
-    const comparablePath = presentation.asset.toLowerCase()
-    if (comparablePaths.has(comparablePath)) {
-      throw new Error(
-        `Duplicate SeethingSwarm ${label} prepared asset: ${presentation.asset}`,
-      )
-    }
-    comparablePaths.add(comparablePath)
-  }
-}
-
-export function getSeethingSwarmPresentationAssetImportPath(
-  relativePath: string,
-) {
-  return `./assets/${relativePath}`
-}
-
-export function serializeSeethingSwarmPresentationModuleEntry(
-  presentation: SeethingSwarmAnimalPresentation<string>,
-  assetExpression: string,
-) {
-  return [
-    "    Object.freeze({",
-    `      animalId: ${JSON.stringify(presentation.animalId)},`,
-    `      animationId: ${JSON.stringify(presentation.animationId)},`,
-    `      relativePath: ${JSON.stringify(presentation.relativePath)},`,
-    `      frameWidth: ${presentation.frameWidth},`,
-    `      frameHeight: ${presentation.frameHeight},`,
-    `      frameCount: ${presentation.frameCount},`,
-    "      visibleBounds: Object.freeze({",
-    `        left: ${presentation.visibleBounds.left},`,
-    `        top: ${presentation.visibleBounds.top},`,
-    `        width: ${presentation.visibleBounds.width},`,
-    `        height: ${presentation.visibleBounds.height},`,
-    "      }),",
-    `      integerScale: ${presentation.integerScale},`,
-    `      frameOffsetX: ${presentation.frameOffsetX},`,
-    `      frameOffsetY: ${presentation.frameOffsetY},`,
-    `      asset: ${assetExpression},`,
-    "    }),",
-  ]
 }
 
 function assertObject(value: unknown, label: string): asserts value is object {
@@ -498,7 +431,49 @@ async function assertRealPath(
   }
 }
 
-async function createLicensedPresentationAdapter(
+function listSeethingSwarmRuntimeClipSelections(
+  registry: SeethingSwarmAnimalRegistry,
+) {
+  const selections: SeethingSwarmVisibleContentSelection[] = []
+  for (const animal of registry.animals) {
+    for (const [, animation] of Object.entries(animal.animations).toSorted(
+      ([firstAnimationId], [secondAnimationId]) =>
+        compareText(firstAnimationId, secondAnimationId),
+    )) {
+      selections.push(
+        Object.freeze({
+          animalId: animal.animalId,
+          relativePath: animation.relativePath,
+          frameWidth: animal.frameWidth,
+          frameHeight: animal.frameHeight,
+          frameCount: animation.frameCount,
+        }),
+      )
+    }
+    for (const [, effect] of Object.entries(
+      animal.auxiliaryEffects ?? {},
+    ).toSorted(([firstEffectId], [secondEffectId]) =>
+      compareText(firstEffectId, secondEffectId),
+    )) {
+      selections.push(
+        Object.freeze({
+          animalId: animal.animalId,
+          relativePath: effect.relativePath,
+          frameWidth: effect.frameWidth,
+          frameHeight: effect.frameHeight,
+          frameCount: effect.frameCount,
+        }),
+      )
+    }
+  }
+  return Object.freeze(
+    selections.toSorted((first, second) =>
+      compareText(first.relativePath, second.relativePath),
+    ),
+  )
+}
+
+async function createLicensedRuntimeClipCatalog(
   registryPath: string,
   stagingRoot: string,
   receiptPath: string,
@@ -523,12 +498,19 @@ async function createLicensedPresentationAdapter(
   const receiptAssets = new Map(
     receipt.assets.map((asset) => [asset.relativePath, asset]),
   )
-  const presentations: SeethingSwarmAnimalPresentation<string>[] = []
-  for (const selection of selectSeethingSwarmHubAnimations(registry)) {
+  const selections = listSeethingSwarmRuntimeClipSelections(registry)
+  if (selections.length !== receipt.assets.length) {
+    throw new Error(
+      `Mismatched SeethingSwarm runtime asset count: expected ${receipt.assets.length}, received ${selections.length}`,
+    )
+  }
+
+  const sources: SeethingSwarmRuntimeAssetSource<string>[] = []
+  for (const selection of selections) {
     const expectedAsset = receiptAssets.get(selection.relativePath)
     if (!expectedAsset) {
       throw new Error(
-        `Missing selected SeethingSwarm receipt asset: ${selection.relativePath}`,
+        `Missing SeethingSwarm runtime receipt asset: ${selection.relativePath}`,
       )
     }
     const sourcePath = resolveConfinedAssetPath(
@@ -542,7 +524,7 @@ async function createLicensedPresentationAdapter(
       getSha256(contents) !== expectedAsset.sha256
     ) {
       throw new Error(
-        `Altered selected SeethingSwarm asset: ${selection.relativePath}`,
+        `Altered SeethingSwarm runtime asset: ${selection.relativePath}`,
       )
     }
     const analysis = await analyzeSeethingSwarmVisibleContentFile(
@@ -559,22 +541,16 @@ async function createLicensedPresentationAdapter(
       await writeFile(outputPath, contents, { flag: "wx" })
     }
 
-    presentations.push(
+    sources.push(
       Object.freeze({
-        ...selection,
+        relativePath: selection.relativePath,
         visibleBounds: analysis.unionVisibleBounds,
-        integerScale: analysis.integerScale,
-        frameOffsetX: analysis.frameOffsetX,
-        frameOffsetY: analysis.frameOffsetY,
         asset: selection.relativePath,
       }),
     )
   }
 
-  return createSeethingSwarmLicensedAnimalPresentationAdapter(
-    registry,
-    presentations,
-  )
+  return createSeethingSwarmLicensedRuntimeClipCatalog(registry, sources)
 }
 
 function createPreparedRoot(outputRoot: string) {
@@ -587,22 +563,28 @@ function createPreparedRoot(outputRoot: string) {
 async function writeGeneratedModules(
   webPreparedRoot: string,
   nativePreparedRoot: string,
-  adapter: SeethingSwarmAnimalPresentationAdapter<string>,
-  generators: SeethingSwarmPresentationModuleGenerators,
+  catalog: SeethingSwarmRuntimeClipCatalog<string>,
+  generators: SeethingSwarmRuntimeClipCatalogModuleGenerators,
 ) {
-  const webModuleSource = generators.web(adapter)
-  const nativeModuleSource = generators.native(adapter)
+  const webModuleSource = generators.web(catalog)
+  const nativeModuleSource = generators.native(catalog)
   if (webModuleSource.trim() === "" || nativeModuleSource.trim() === "") {
-    throw new Error("Missing generated SeethingSwarm presentation module")
+    throw new Error("Missing generated SeethingSwarm runtime clip module")
   }
   await Promise.all([
     writeFile(
-      resolve(webPreparedRoot, SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME),
+      resolve(
+        webPreparedRoot,
+        SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME,
+      ),
       webModuleSource,
       { encoding: "utf8", flag: "wx" },
     ),
     writeFile(
-      resolve(nativePreparedRoot, SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME),
+      resolve(
+        nativePreparedRoot,
+        SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME,
+      ),
       nativeModuleSource,
       { encoding: "utf8", flag: "wx" },
     ),
@@ -611,7 +593,7 @@ async function writeGeneratedModules(
 
 export async function prepareSeethingSwarmPresentationAssets(
   paths: SeethingSwarmPresentationPreparationPaths,
-  generators: SeethingSwarmPresentationModuleGenerators,
+  generators: SeethingSwarmRuntimeClipCatalogModuleGenerators,
 ) {
   const resolvedPaths = Object.freeze({
     registryPath: resolve(paths.registryPath),
@@ -650,19 +632,19 @@ export async function prepareSeethingSwarmPresentationAssets(
       mkdir(webPreparedRoot, { recursive: false }),
       mkdir(nativePreparedRoot, { recursive: false }),
     ])
-    const adapter = hasCompleteCustody
-      ? await createLicensedPresentationAdapter(
+    const catalog = hasCompleteCustody
+      ? await createLicensedRuntimeClipCatalog(
           resolvedPaths.registryPath,
           resolvedPaths.stagingRoot,
           resolvedPaths.receiptPath,
           webPreparedRoot,
           nativePreparedRoot,
         )
-      : createSeethingSwarmTypographyOnlyAnimalPresentationAdapter()
+      : createSeethingSwarmTypographyOnlyRuntimeClipCatalog()
     await writeGeneratedModules(
       webPreparedRoot,
       nativePreparedRoot,
-      adapter,
+      catalog,
       generators,
     )
     await publishSeethingSwarmPreparedAssetTree(
@@ -675,8 +657,11 @@ export async function prepareSeethingSwarmPresentationAssets(
     )
 
     return Object.freeze({
-      mode: adapter.mode,
-      assetCount: adapter.mode === "licensed" ? adapter.animals.length : 0,
+      mode: catalog.mode,
+      assetCount:
+        catalog.mode === "licensed"
+          ? catalog.characterClipCount + catalog.auxiliaryEffectClipCount
+          : 0,
     })
   } catch (error: unknown) {
     await Promise.all([

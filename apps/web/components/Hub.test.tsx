@@ -1,8 +1,8 @@
 import { createActiveDeck } from "@game/data/src/ActiveDeck"
 import {
-  createSeethingSwarmTypographyOnlyAnimalPresentationAdapter,
-  type SeethingSwarmAnimalPresentationAdapter,
-} from "@game/data/src/SeethingSwarmAnimalPresentation"
+  createSeethingSwarmTypographyOnlyRuntimeClipCatalog,
+  type SeethingSwarmRuntimeClipCatalog,
+} from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import {
   createCustomValueId,
   getValueDisplayName,
@@ -27,35 +27,45 @@ import { describe, expect, it, vi } from "vitest"
 import Hub from "./Hub"
 
 const animalPresentationProps = Object.freeze({
-  animalPresentationAdapter:
-    createSeethingSwarmTypographyOnlyAnimalPresentationAdapter(),
+  runtimeClipCatalog: createSeethingSwarmTypographyOnlyRuntimeClipCatalog(),
   shouldReduceMotion: false,
 })
-const licensedAnimalPresentationAdapter = Object.freeze({
+const licensedRuntimeClipCatalog = Object.freeze({
   mode: "licensed",
   evidenceSnapshotId: "seethingswarm-animals:hub-integration-test",
   animals: Object.freeze(
     ZOO_ANIMALS.map(({ id }) =>
       Object.freeze({
         animalId: id,
-        animationId: "idle",
-        relativePath: `${id}/idle.png`,
-        frameWidth: 1,
-        frameHeight: 1,
-        frameCount: 1,
-        visibleBounds: Object.freeze({ left: 0, top: 0, width: 1, height: 1 }),
-        integerScale: 72,
-        frameOffsetX: 0,
-        frameOffsetY: 0,
-        asset: Object.freeze({
-          src: `/test-animals/${encodeURIComponent(id)}.png`,
-          width: 1,
-          height: 1,
-        }),
+        characterClips: Object.freeze([
+          Object.freeze({
+            kind: "character",
+            animalId: id,
+            animationId: "idle",
+            relativePath: `${id}/idle.png`,
+            frameWidth: 1,
+            frameHeight: 1,
+            frameCount: 1,
+            visibleBounds: Object.freeze({
+              left: 0,
+              top: 0,
+              width: 1,
+              height: 1,
+            }),
+            asset: Object.freeze({
+              src: `/test-animals/${encodeURIComponent(id)}.png`,
+              width: 1,
+              height: 1,
+            }),
+          }),
+        ]),
+        auxiliaryEffectClips: Object.freeze([]),
       }),
     ),
   ),
-}) satisfies SeethingSwarmAnimalPresentationAdapter<StaticImageData>
+  characterClipCount: ZOO_ANIMALS.length,
+  auxiliaryEffectClipCount: 0,
+}) satisfies SeethingSwarmRuntimeClipCatalog<StaticImageData>
 
 function getMappedAnimalId(valueId: ValueId) {
   const mapping = VALUE_TO_ANIMAL_MAP.find(
@@ -254,7 +264,7 @@ describe("Hub Component Integration", () => {
     const { container } = render(
       <Hub
         rankedValues={rankedValues}
-        animalPresentationAdapter={licensedAnimalPresentationAdapter}
+        runtimeClipCatalog={licensedRuntimeClipCatalog}
         dataNotice={null}
         shouldReduceMotion
         onBrowseAllValues={vi.fn()}
@@ -300,7 +310,7 @@ describe("Hub Component Integration", () => {
     const { container } = render(
       <Hub
         rankedValues={rankedValues}
-        animalPresentationAdapter={licensedAnimalPresentationAdapter}
+        runtimeClipCatalog={licensedRuntimeClipCatalog}
         dataNotice={null}
         shouldReduceMotion={false}
         onBrowseAllValues={vi.fn()}

@@ -13,7 +13,7 @@ import {
   parseSeethingSwarmAnimalRegistryJson,
   parseSeethingSwarmAssetReceiptJson,
   prepareSeethingSwarmPresentationAssets,
-  SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME,
+  SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME,
 } from "./SeethingSwarmPresentationAssetPreparer"
 import {
   cleanUpSeethingSwarmPresentationTestWorkspaces,
@@ -26,7 +26,7 @@ import {
   writeSeethingSwarmPresentationTestFile as writeRelativeFile,
 } from "./SeethingSwarmPresentationAssetPreparer.test-fixture"
 
-const FULL_CUSTODY_INTEGRATION_TEST_TIMEOUT_MS = 15_000
+const FULL_CUSTODY_INTEGRATION_TEST_TIMEOUT_MS = 60_000
 
 afterEach(async () => {
   await cleanUpSeethingSwarmPresentationTestWorkspaces()
@@ -34,7 +34,7 @@ afterEach(async () => {
 
 async function readGeneratedModule(outputRoot: string) {
   return readFile(
-    join(outputRoot, SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME),
+    join(outputRoot, SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME),
     "utf8",
   )
 }
@@ -43,7 +43,9 @@ async function expectNoPreparedSiblings(outputRoot: string) {
   const outputParent = dirname(outputRoot)
   expect(
     (await readdir(outputParent)).filter((entry) =>
-      entry.startsWith(`.${SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME}.`),
+      entry.startsWith(
+        `.${SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME}.`,
+      ),
     ),
   ).toEqual([])
   expect(
@@ -84,27 +86,27 @@ describe("SeethingSwarm presentation asset preparer", () => {
     expect(secondResult).toEqual(firstResult)
     expect(Object.isFrozen(firstResult)).toBe(true)
     expect(await listRelativeFiles(paths.webOutputRoot)).toEqual([
-      SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME,
+      SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME,
     ])
     expect(await listRelativeFiles(paths.nativeOutputRoot)).toEqual([
-      SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME,
+      SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME,
     ])
     expect(await readGeneratedModule(paths.webOutputRoot)).toBe(firstWebModule)
     expect(await readGeneratedModule(paths.nativeOutputRoot)).toBe(
       firstNativeModule,
     )
     expect(firstWebModule).toContain(
-      "createSeethingSwarmTypographyOnlyAnimalPresentationAdapter",
+      "createSeethingSwarmTypographyOnlyRuntimeClipCatalog",
     )
     expect(firstNativeModule).toContain(
-      "createSeethingSwarmTypographyOnlyAnimalPresentationAdapter",
+      "createSeethingSwarmTypographyOnlyRuntimeClipCatalog",
     )
     expect(firstWebModule).not.toContain("./assets/")
     expect(firstNativeModule).not.toContain("./assets/")
   })
 
   it(
-    "copies exactly 45 receipt-verified calm strips into deterministic platform trees",
+    "copies all 775 receipt-verified runtime strips into deterministic platform trees",
     async () => {
       const paths = await createWorkspace()
       const fixture = await createCompleteCustody(paths)
@@ -124,28 +126,28 @@ describe("SeethingSwarm presentation asset preparer", () => {
         moduleGenerators,
       )
 
-      expect(firstResult).toEqual({ mode: "licensed", assetCount: 45 })
+      expect(firstResult).toEqual({ mode: "licensed", assetCount: 775 })
       expect(secondResult).toEqual(firstResult)
       expect(Object.isFrozen(firstResult)).toBe(true)
-      expect(firstWebFiles).toHaveLength(46)
-      expect(firstNativeFiles).toHaveLength(46)
+      expect(firstWebFiles).toHaveLength(776)
+      expect(firstNativeFiles).toHaveLength(776)
       expect(
         firstWebFiles.filter((relativePath) => relativePath.endsWith(".png")),
       ).toEqual(
-        fixture.selectedPaths.map((path) => `assets/${path}`).toSorted(),
+        fixture.allAssetPaths.map((path) => `assets/${path}`).toSorted(),
       )
       expect(
         firstNativeFiles.filter((relativePath) =>
           relativePath.endsWith(".png"),
         ),
       ).toEqual(
-        fixture.selectedPaths.map((path) => `assets/${path}`).toSorted(),
+        fixture.allAssetPaths.map((path) => `assets/${path}`).toSorted(),
       )
       expect(
-        firstWebModule.match(/^import seethingSwarmWebAnimal/gmu),
-      ).toHaveLength(45)
+        firstWebModule.match(/^import seethingSwarmWebClip/gmu),
+      ).toHaveLength(775)
       expect(firstNativeModule.match(/require\("\.\/assets\//gu)).toHaveLength(
-        45,
+        775,
       )
       expect(firstWebModule).not.toContain(paths.repositoryRoot)
       expect(firstNativeModule).not.toContain(paths.repositoryRoot)
@@ -194,7 +196,7 @@ describe("SeethingSwarm presentation asset preparer", () => {
     ).rejects.toThrow("Partial SeethingSwarm presentation custody")
   })
 
-  it("rejects a selected strip changed after the verified receipt while preserving prior output", async () => {
+  it("rejects a runtime strip changed after the verified receipt while preserving prior output", async () => {
     const paths = await createWorkspace()
     const fixture = await createCompleteCustody(paths)
     await Promise.all([
@@ -210,7 +212,7 @@ describe("SeethingSwarm presentation asset preparer", () => {
     await expect(
       prepareSeethingSwarmPresentationAssets(paths, moduleGenerators),
     ).rejects.toThrow(
-      `Altered selected SeethingSwarm asset: ${fixture.selectedPaths[0]}`,
+      `Altered SeethingSwarm runtime asset: ${fixture.selectedPaths[0]}`,
     )
     await expect(
       readFile(join(paths.webOutputRoot, "sentinel.txt"), "utf8"),
@@ -224,14 +226,25 @@ describe("SeethingSwarm presentation asset preparer", () => {
     ])
   })
 
-  it("rejects a selected calm strip omitted from an otherwise valid receipt", async () => {
+  it("rejects a runtime strip omitted from an otherwise valid receipt", async () => {
     const paths = await createWorkspace()
     const fixture = await createCompleteCustody(paths)
     const missingPath = fixture.selectedPaths[0]!
+    const missingAsset = fixture.receipt.assets.find(
+      ({ relativePath }) => relativePath === missingPath,
+    )!
     const receipt = rebuildReceipt(fixture.receipt, {
       assets: Object.freeze(
-        fixture.receipt.assets.filter(
-          ({ relativePath }) => relativePath !== missingPath,
+        [
+          ...fixture.receipt.assets.filter(
+            ({ relativePath }) => relativePath !== missingPath,
+          ),
+          {
+            ...missingAsset,
+            relativePath: "zz_unreferenced/extra_strip1.png",
+          },
+        ].toSorted((first, second) =>
+          first.relativePath.localeCompare(second.relativePath),
         ),
       ),
     })
@@ -240,7 +253,7 @@ describe("SeethingSwarm presentation asset preparer", () => {
     await expect(
       prepareSeethingSwarmPresentationAssets(paths, moduleGenerators),
     ).rejects.toThrow(
-      `Missing selected SeethingSwarm receipt asset: ${missingPath}`,
+      `Missing SeethingSwarm runtime receipt asset: ${missingPath}`,
     )
   })
 
@@ -315,7 +328,7 @@ describe("SeethingSwarm presentation asset preparer", () => {
           web: () => web,
           native: () => native,
         }),
-      ).rejects.toThrow("Missing generated SeethingSwarm presentation module")
+      ).rejects.toThrow("Missing generated SeethingSwarm runtime clip module")
     },
   )
 

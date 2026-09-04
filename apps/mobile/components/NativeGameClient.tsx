@@ -53,7 +53,7 @@ import NativePlayerDataLoading from "@/components/NativePlayerDataLoading"
 import NativeProductMenu from "@/components/NativeProductMenu"
 import NativeSettings from "@/components/NativeSettings"
 import useNativePlayerDataFiles from "@/components/useNativePlayerDataFiles"
-import { SEETHING_SWARM_NATIVE_ANIMAL_PRESENTATIONS } from "@/generated/seethingswarm/SeethingSwarmAnimalPresentations"
+import { SEETHING_SWARM_NATIVE_RUNTIME_CLIP_CATALOG } from "@/generated/seethingswarm/SeethingSwarmRuntimeClipCatalog"
 import { expoDurableStore } from "@/lib/ExpoDurableStore"
 import { createNativeAppLifecycleEvent } from "@/lib/NativeAppLifecycleEvents"
 import packageMetadata from "@/package.json"
@@ -473,7 +473,7 @@ export default function NativeGameClient() {
       <View className="flex-1">
         <NativeHub
           rankedValues={rankedValues}
-          animalPresentationAdapter={SEETHING_SWARM_NATIVE_ANIMAL_PRESENTATIONS}
+          runtimeClipCatalog={SEETHING_SWARM_NATIVE_RUNTIME_CLIP_CATALOG}
           dataNotice={state.context.portabilityNotice}
           shouldReduceMotion={shouldReduceMotion}
           onAddCustomValue={() =>

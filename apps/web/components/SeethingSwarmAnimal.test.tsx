@@ -1,7 +1,4 @@
-import type {
-  SeethingSwarmAnimalPresentation,
-  SeethingSwarmAnimalPresentationAdapter,
-} from "@game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { render, screen } from "@testing-library/react"
 import type { CSSProperties } from "react"
 import { describe, expect, it, vi } from "vitest"
@@ -50,7 +47,8 @@ vi.mock("next/image", () => ({
   ),
 }))
 
-const presentation = Object.freeze({
+const clip = Object.freeze({
+  kind: "character",
   animalId: "bat",
   animationId: "idle_upright",
   relativePath: "bat_spritesheets/bat_idle_upright_strip4.png",
@@ -58,30 +56,16 @@ const presentation = Object.freeze({
   frameHeight: 4,
   frameCount: 4,
   visibleBounds: Object.freeze({ left: 1, top: 1, width: 2, height: 2 }),
-  integerScale: 36,
-  frameOffsetX: -36,
-  frameOffsetY: -36,
   asset: Object.freeze({
     src: "/generated/seethingswarm/bat-idle.png",
     width: 16,
     height: 4,
   }),
-}) satisfies SeethingSwarmAnimalPresentation<MockStaticImageData>
-
-const licensedAdapter = Object.freeze({
-  mode: "licensed",
-  evidenceSnapshotId: "seethingswarm-animals:2026-03-15",
-  animals: Object.freeze([presentation]),
-}) satisfies SeethingSwarmAnimalPresentationAdapter<MockStaticImageData>
+}) satisfies SeethingSwarmRuntimeCharacterClip<MockStaticImageData>
 
 describe("SeethingSwarmAnimal", () => {
   it("reserves fixed geometry and animates source pixels in discrete authored frames", () => {
-    render(
-      <SeethingSwarmAnimal
-        presentation={licensedAdapter.animals[0]!}
-        shouldReduceMotion={false}
-      />,
-    )
+    render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion={false} />)
 
     const image = screen.getByTestId("next-image")
     const tile = image.parentElement
@@ -93,7 +77,7 @@ describe("SeethingSwarmAnimal", () => {
     expect(image).toHaveAttribute("data-alt", "")
     expect(image).toHaveAttribute("data-draggable", "false")
     expect(image).toHaveAttribute("data-unoptimized", "true")
-    expect(image).toHaveAttribute("data-src", presentation.asset.src)
+    expect(image).toHaveAttribute("data-src", clip.asset.src)
     expect(image).toHaveAttribute("data-width", "576")
     expect(image).toHaveAttribute("data-height", "144")
     expect(image).toHaveStyle({
@@ -111,9 +95,7 @@ describe("SeethingSwarmAnimal", () => {
   })
 
   it("keeps the first authored frame static when Reduced Motion is active", () => {
-    render(
-      <SeethingSwarmAnimal presentation={presentation} shouldReduceMotion />,
-    )
+    render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion />)
 
     const image = screen.getByTestId("next-image")
     expect(image.parentElement).toHaveAttribute("data-reduced-motion", "true")

@@ -41,7 +41,7 @@ function NativeValueRankPresentation({
     >
       {valuePresentation.kind === "animal" ? (
         <NativeSeethingSwarmAnimal
-          presentation={valuePresentation.animal}
+          clip={valuePresentation.clip}
           shouldReduceMotion={shouldReduceMotion}
         />
       ) : (

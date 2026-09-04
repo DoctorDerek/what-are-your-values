@@ -9,7 +9,7 @@ import {
 import { runSeethingSwarmAssetDecryption } from "./SeethingSwarmAssetDecryption"
 import {
   prepareSeethingSwarmPresentationAssets,
-  SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME,
+  SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME,
 } from "./SeethingSwarmPresentationAssetPreparer"
 import {
   cleanUpSeethingSwarmPresentationTestWorkspaces,
@@ -64,7 +64,7 @@ describe("SeethingSwarm protected build asset lifecycle", () => {
       expect(protectedBuildResult).toEqual({ mode: "licensed" })
       expect(licensedPresentationResult).toEqual({
         mode: "licensed",
-        assetCount: 45,
+        assetCount: 775,
       })
       expect(protectedBuildStatus).toEqual([
         "Extracted the authorized SeethingSwarm asset archive.\n",
@@ -76,14 +76,14 @@ describe("SeethingSwarm protected build asset lifecycle", () => {
           await listSeethingSwarmPresentationTestFiles(paths.webOutputRoot)
         ).filter((relativePath) => relativePath.endsWith(".png")),
       ).toEqual(
-        fixture.selectedPaths.map((path) => `assets/${path}`).toSorted(),
+        fixture.allAssetPaths.map((path) => `assets/${path}`).toSorted(),
       )
       expect(
         (
           await listSeethingSwarmPresentationTestFiles(paths.nativeOutputRoot)
         ).filter((relativePath) => relativePath.endsWith(".png")),
       ).toEqual(
-        fixture.selectedPaths.map((path) => `assets/${path}`).toSorted(),
+        fixture.allAssetPaths.map((path) => `assets/${path}`).toSorted(),
       )
 
       await rm(custodyPaths.vendorDirectory, {
@@ -108,19 +108,19 @@ describe("SeethingSwarm protected build asset lifecycle", () => {
       })
       expect(
         await listSeethingSwarmPresentationTestFiles(paths.webOutputRoot),
-      ).toEqual([SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME])
+      ).toEqual([SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME])
       expect(
         await listSeethingSwarmPresentationTestFiles(paths.nativeOutputRoot),
-      ).toEqual([SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME])
+      ).toEqual([SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME])
       expect(
         await readFile(
           join(
             paths.webOutputRoot,
-            SEETHING_SWARM_PRESENTATION_MODULE_FILE_NAME,
+            SEETHING_SWARM_RUNTIME_CLIP_CATALOG_MODULE_FILE_NAME,
           ),
           "utf8",
         ),
-      ).toContain("createSeethingSwarmTypographyOnlyAnimalPresentationAdapter")
+      ).toContain("createSeethingSwarmTypographyOnlyRuntimeClipCatalog")
     },
     BUILD_ASSET_LIFECYCLE_TEST_TIMEOUT_MS,
   )

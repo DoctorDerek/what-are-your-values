@@ -1,4 +1,4 @@
-import type { SeethingSwarmAnimalPresentation } from "@game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { describe, expect, it, jest } from "@jest/globals"
 import { render, screen } from "@testing-library/react-native"
 import { StyleSheet } from "react-native"
@@ -16,7 +16,8 @@ jest.mock("react-native-reanimated", () => {
   }
 })
 
-const presentation = Object.freeze({
+const clip = Object.freeze({
+  kind: "character",
   animalId: "bat",
   animationId: "idle_upright",
   relativePath: "bat_spritesheets/bat_idle_upright_strip4.png",
@@ -24,20 +25,12 @@ const presentation = Object.freeze({
   frameHeight: 4,
   frameCount: 4,
   visibleBounds: Object.freeze({ left: 1, top: 1, width: 2, height: 2 }),
-  integerScale: 36,
-  frameOffsetX: -36,
-  frameOffsetY: -36,
   asset: 7,
-}) satisfies SeethingSwarmAnimalPresentation<number>
+}) satisfies SeethingSwarmRuntimeCharacterClip<number>
 
 describe("NativeSeethingSwarmAnimal", () => {
   it("reserves fixed bottom-anchored geometry with hidden decorative semantics", async () => {
-    await render(
-      <NativeSeethingSwarmAnimal
-        presentation={presentation}
-        shouldReduceMotion
-      />,
-    )
+    await render(<NativeSeethingSwarmAnimal clip={clip} shouldReduceMotion />)
 
     const hiddenQuery = { includeHiddenElements: true }
     const tile = screen.getByTestId("seething-swarm-animal-bat", hiddenQuery)
@@ -80,10 +73,7 @@ describe("NativeSeethingSwarmAnimal", () => {
     const repeatMock = jest.mocked(Reanimated.withRepeat)
 
     await render(
-      <NativeSeethingSwarmAnimal
-        presentation={presentation}
-        shouldReduceMotion={false}
-      />,
+      <NativeSeethingSwarmAnimal clip={clip} shouldReduceMotion={false} />,
     )
 
     expect(timingMock).toHaveBeenCalledWith(4, {
@@ -104,10 +94,7 @@ describe("NativeSeethingSwarmAnimal", () => {
     const timingMock = jest.mocked(Reanimated.withTiming)
     const repeatMock = jest.mocked(Reanimated.withRepeat)
     const { rerender } = await render(
-      <NativeSeethingSwarmAnimal
-        presentation={presentation}
-        shouldReduceMotion
-      />,
+      <NativeSeethingSwarmAnimal clip={clip} shouldReduceMotion />,
     )
 
     expect(timingMock).not.toHaveBeenCalled()
@@ -115,7 +102,7 @@ describe("NativeSeethingSwarmAnimal", () => {
 
     await rerender(
       <NativeSeethingSwarmAnimal
-        presentation={{ ...presentation, frameCount: 1 }}
+        clip={{ ...clip, frameCount: 1 }}
         shouldReduceMotion={false}
       />,
     )

@@ -4,9 +4,9 @@ import { projectHubValues } from "@game/data/src/HubValueProjection"
 import { PRODUCT_MENU_COPY } from "@game/data/src/ProductMenu"
 import {
   resolveValueAnimalPresentation,
-  type SeethingSwarmAnimalPresentationAdapter,
   type ValueAnimalPresentation,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
+import type { SeethingSwarmRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { getValueDisplayName, type ValueId } from "@game/data/src/Value"
 import type { RankedValue } from "@game/data/src/ValueRanking"
 import type { StaticImageData } from "next/image"
@@ -47,7 +47,7 @@ function ValueRankPresentation({
       >
         {valuePresentation.kind === "animal" ? (
           <SeethingSwarmAnimal
-            presentation={valuePresentation.animal}
+            clip={valuePresentation.clip}
             shouldReduceMotion={shouldReduceMotion}
           />
         ) : (
@@ -158,7 +158,7 @@ function ValueActionRail({
 
 export default function Hub({
   rankedValues,
-  animalPresentationAdapter,
+  runtimeClipCatalog,
   browseAllValuesButtonRef,
   dataNotice,
   shouldReduceMotion,
@@ -169,7 +169,7 @@ export default function Hub({
   onStartBattle,
 }: {
   rankedValues: readonly RankedValue[]
-  animalPresentationAdapter: SeethingSwarmAnimalPresentationAdapter<StaticImageData>
+  runtimeClipCatalog: SeethingSwarmRuntimeClipCatalog<StaticImageData>
   browseAllValuesButtonRef?: Ref<HTMLButtonElement>
   dataNotice: string | null
   shouldReduceMotion: boolean
@@ -248,7 +248,7 @@ export default function Hub({
                     hasComparisons
                     valuePresentation={resolveValueAnimalPresentation(
                       rankedValue.definition,
-                      animalPresentationAdapter,
+                      runtimeClipCatalog,
                     )}
                     shouldReduceMotion={shouldReduceMotion}
                     onOpenValue={onOpenValue}
