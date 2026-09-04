@@ -76,6 +76,27 @@ describe("SeethingSwarm animal presentation", () => {
     expect(Object.isFrozen(geometry.visibleBounds)).toBe(true)
   })
 
+  it("preserves bottom-center geometry inside a larger requested tile", () => {
+    expect(
+      createSeethingSwarmAnimalPresentationGeometry(
+        32,
+        32,
+        {
+          left: 2,
+          top: 4,
+          width: 20,
+          height: 24,
+        },
+        120,
+      ),
+    ).toEqual({
+      visibleBounds: { left: 2, top: 4, width: 20, height: 24 },
+      integerScale: 5,
+      frameOffsetX: 0,
+      frameOffsetY: -20,
+    })
+  })
+
   it.each([
     [0, 32, { left: 0, top: 0, width: 1, height: 1 }, "frame width"],
     [32, 0, { left: 0, top: 0, width: 1, height: 1 }, "frame height"],
@@ -86,14 +107,16 @@ describe("SeethingSwarm animal presentation", () => {
     [32, 32, { left: 31, top: 0, width: 2, height: 1 }, "exceeds"],
     [32, 32, { left: 0, top: 31, width: 1, height: 2 }, "exceeds"],
     [80, 80, { left: 0, top: 0, width: 80, height: 80 }, "cannot fit"],
+    [32, 32, { left: 0, top: 0, width: 1, height: 1 }, "tile size", 0],
   ] as const)(
     "rejects invalid presentation geometry %#",
-    (frameWidth, frameHeight, bounds, expectedMessage) => {
+    (frameWidth, frameHeight, bounds, expectedMessage, tileSize) => {
       expect(() =>
         createSeethingSwarmAnimalPresentationGeometry(
           frameWidth,
           frameHeight,
           bounds,
+          tileSize,
         ),
       ).toThrow(expectedMessage)
     },
