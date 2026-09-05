@@ -1,20 +1,15 @@
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
-import { describe, expect, it, jest } from "@jest/globals"
-import { render, screen } from "@testing-library/react-native"
-import { StyleSheet } from "react-native"
-import * as Reanimated from "react-native-reanimated"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals"
+import { act, fireEvent, render, screen } from "@testing-library/react-native"
+import { getAnimatedStyle } from "react-native-reanimated"
 import NativeSeethingSwarmAnimal from "@/components/NativeSeethingSwarmAnimal"
-
-jest.mock("react-native-reanimated", () => {
-  const reanimatedMock = jest.requireActual<
-    typeof import("react-native-reanimated")
-  >("react-native-reanimated/mock")
-  return {
-    ...reanimatedMock,
-    withRepeat: jest.fn((animation: number) => animation),
-    withTiming: jest.fn((toValue: number) => toValue),
-  }
-})
 
 const clip = Object.freeze({
   kind: "character",
@@ -27,21 +22,35 @@ const clip = Object.freeze({
   visibleBounds: Object.freeze({ left: 1, top: 1, width: 2, height: 2 }),
   asset: 7,
 }) satisfies SeethingSwarmRuntimeCharacterClip<number>
+const hidden = { includeHiddenElements: true }
+const getStrip = () =>
+  screen.getByTestId("seething-swarm-animal-bat-strip", hidden)
+const getImage = () =>
+  screen.getByTestId("seething-swarm-animal-bat-image", hidden)
+async function advance(milliseconds: number) {
+  await act(async () => {
+    jest.advanceTimersByTime(milliseconds)
+  })
+}
+
+beforeEach(() => {
+  jest.useFakeTimers()
+})
+afterEach(() => {
+  jest.useRealTimers()
+})
 
 describe("NativeSeethingSwarmAnimal", () => {
-  it("reserves fixed bottom-anchored geometry with hidden decorative semantics", async () => {
-    await render(<NativeSeethingSwarmAnimal clip={clip} shouldReduceMotion />)
-
-    const hiddenQuery = { includeHiddenElements: true }
-    const tile = screen.getByTestId("seething-swarm-animal-bat", hiddenQuery)
-    const strip = screen.getByTestId(
-      "seething-swarm-animal-bat-strip",
-      hiddenQuery,
+  it("preserves integer geometry, facing, asset pixels, and decorative semantics", async () => {
+    await render(
+      <NativeSeethingSwarmAnimal
+        clip={clip}
+        shouldReduceMotion
+        facing="left"
+      />,
     )
-    const image = screen.getByTestId(
-      "seething-swarm-animal-bat-image",
-      hiddenQuery,
-    )
+    const tile = screen.getByTestId("seething-swarm-animal-bat", hidden)
+    expect(screen.queryByTestId("seething-swarm-animal-bat")).toBeNull()
     expect(tile).toHaveProp("accessible", false)
     expect(tile).toHaveProp("accessibilityElementsHidden", true)
     expect(tile).toHaveProp("importantForAccessibility", "no-hide-descendants")
@@ -49,71 +58,167 @@ describe("NativeSeethingSwarmAnimal", () => {
     expect(tile).toHaveStyle({
       width: 72,
       height: 72,
-      flexShrink: 0,
-      overflow: "hidden",
+      transform: [{ scaleX: -1 }],
     })
-    expect(StyleSheet.flatten(strip.props.style)).toMatchObject({
-      position: "absolute",
+    expect(getStrip()).toHaveStyle({
       left: -36,
       top: -36,
       width: 576,
       height: 144,
       transform: [{ translateX: -0 }],
     })
-    expect(image).toHaveProp("accessible", false)
-    expect(image).toHaveProp("alt", "")
-    expect(image).toHaveProp("fadeDuration", 0)
-    expect(image).toHaveProp("resizeMode", "stretch")
-    expect(image).toHaveProp("source", 7)
-    expect(image).toHaveStyle({ width: 576, height: 144 })
+    expect(getImage()).toHaveProp("source", 7)
+    expect(getImage()).toHaveProp("fadeDuration", 0)
+    expect(getImage()).toHaveProp("alt", "")
+    expect(getImage()).toHaveStyle({ width: 576, height: 144 })
   })
 
-  it("starts a quantized UI-thread loop only when resolved motion is allowed", async () => {
-    const timingMock = jest.mocked(Reanimated.withTiming)
-    const repeatMock = jest.mocked(Reanimated.withRepeat)
-
+  it("waits for load and advances discrete frames through a complete one-shot", async () => {
+    const complete = jest.fn()
     await render(
-      <NativeSeethingSwarmAnimal clip={clip} shouldReduceMotion={false} />,
-    )
-
-    expect(timingMock).toHaveBeenCalledWith(4, {
-      duration: 640,
-      easing: Reanimated.Easing.linear,
-      reduceMotion: Reanimated.ReduceMotion.Never,
-    })
-    expect(repeatMock).toHaveBeenCalledWith(
-      expect.anything(),
-      -1,
-      false,
-      undefined,
-      Reanimated.ReduceMotion.Never,
-    )
-  })
-
-  it("does not create an animation for Reduced Motion or a single authored frame", async () => {
-    const timingMock = jest.mocked(Reanimated.withTiming)
-    const repeatMock = jest.mocked(Reanimated.withRepeat)
-    const { rerender } = await render(
-      <NativeSeethingSwarmAnimal clip={clip} shouldReduceMotion />,
-    )
-
-    expect(timingMock).not.toHaveBeenCalled()
-    expect(repeatMock).not.toHaveBeenCalled()
-
-    await rerender(
       <NativeSeethingSwarmAnimal
-        clip={{ ...clip, frameCount: 1 }}
+        clip={clip}
         shouldReduceMotion={false}
+        playbackMode="one-shot"
+        onPlaybackComplete={complete}
       />,
     )
-
-    expect(timingMock).not.toHaveBeenCalled()
-    expect(repeatMock).not.toHaveBeenCalled()
-    const strip = screen.getByTestId("seething-swarm-animal-bat-strip", {
-      includeHiddenElements: true,
-    })
-    expect(StyleSheet.flatten(strip.props.style)).toMatchObject({
+    await advance(1000)
+    expect(complete).not.toHaveBeenCalled()
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
       transform: [{ translateX: -0 }],
     })
+    await fireEvent(getImage(), "load")
+    await advance(360)
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
+      transform: [{ translateX: -288 }],
+    })
+    expect(complete).not.toHaveBeenCalled()
+    await advance(400)
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
+      transform: [{ translateX: -432 }],
+    })
+    expect(complete).toHaveBeenCalledTimes(1)
+  })
+
+  it("loops without emitting a result and cancels on unmount", async () => {
+    const complete = jest.fn()
+    const { unmount } = await render(
+      <NativeSeethingSwarmAnimal
+        clip={clip}
+        shouldReduceMotion={false}
+        onPlaybackComplete={complete}
+      />,
+    )
+    await fireEvent(getImage(), "load")
+    await advance(540)
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
+      transform: [{ translateX: -432 }],
+    })
+    await advance(240)
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
+      transform: [{ translateX: -0 }],
+    })
+    expect(complete).not.toHaveBeenCalled()
+    await unmount()
+    await advance(1000)
+    expect(complete).not.toHaveBeenCalled()
+  })
+
+  it("holds final frames at the shared combatant scale and supports a static frame", async () => {
+    const props = {
+      clip,
+      shouldReduceMotion: false,
+      tileSize: 112,
+      maximumIntegerScale: 20,
+    }
+    const { rerender } = await render(
+      <NativeSeethingSwarmAnimal {...props} playbackMode="hold-final-frame" />,
+    )
+    await fireEvent(getImage(), "load")
+    await advance(1000)
+    expect(getStrip()).toHaveStyle({
+      left: 16,
+      top: 52,
+      width: 320,
+      height: 80,
+    })
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
+      transform: [{ translateX: -240 }],
+    })
+    await rerender(
+      <NativeSeethingSwarmAnimal {...props} playbackMode="static" />,
+    )
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
+      transform: [{ translateX: -0 }],
+    })
+  })
+
+  it("completes single-frame and reduced-motion one-shots without animated delay", async () => {
+    for (const scenario of [
+      { shouldReduceMotion: true, clip },
+      { shouldReduceMotion: false, clip: { ...clip, frameCount: 1 } },
+    ]) {
+      const complete = jest.fn()
+      const { unmount } = await render(
+        <NativeSeethingSwarmAnimal
+          {...scenario}
+          playbackMode="one-shot"
+          onPlaybackComplete={complete}
+        />,
+      )
+      await fireEvent(getImage(), "load")
+      expect(getStrip()).toHaveStyle({ transform: [{ translateX: -0 }] })
+      expect(complete).toHaveBeenCalledTimes(1)
+      await unmount()
+    }
+  })
+
+  it("uses the latest callback without restarting and rejects canceled work", async () => {
+    const prior = jest.fn()
+    const latest = jest.fn()
+    const props = {
+      clip,
+      shouldReduceMotion: false,
+      playbackMode: "one-shot" as const,
+    }
+    const { rerender, unmount } = await render(
+      <NativeSeethingSwarmAnimal {...props} onPlaybackComplete={prior} />,
+    )
+    await fireEvent(getImage(), "load")
+    await advance(350)
+    await rerender(
+      <NativeSeethingSwarmAnimal {...props} onPlaybackComplete={latest} />,
+    )
+    await advance(400)
+    expect(prior).not.toHaveBeenCalled()
+    expect(latest).toHaveBeenCalledTimes(1)
+    await rerender(
+      <NativeSeethingSwarmAnimal
+        {...props}
+        clip={{ ...clip, asset: 8 }}
+        onPlaybackComplete={prior}
+      />,
+    )
+    await fireEvent(getImage(), "load")
+    await advance(200)
+    await unmount()
+    await advance(1000)
+    expect(prior).not.toHaveBeenCalled()
+  })
+
+  it("reports image failure to its scoped combatant fallback", async () => {
+    const onLoadError = jest.fn()
+    await render(
+      <NativeSeethingSwarmAnimal
+        clip={clip}
+        shouldReduceMotion
+        onLoadError={onLoadError}
+      />,
+    )
+    await fireEvent(getImage(), "error", {
+      nativeEvent: { error: "decode failed" },
+    })
+    expect(onLoadError).toHaveBeenCalledTimes(1)
   })
 })
