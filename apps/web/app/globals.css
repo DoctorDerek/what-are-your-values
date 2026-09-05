@@ -1,6 +1,41 @@
 @import "tailwindcss";
 @import "@game/design-tokens/mapachito-vivid.css";
 
+@theme inline {
+  --animate-seething-swarm-strip: advance-seething-swarm-strip
+    var(--animal-animation-duration) steps(var(--animal-frame-count), end);
+  --animate-seething-swarm-placeholder-rest: seething-swarm-placeholder-rest
+    900ms steps(2, end) infinite;
+  --animate-seething-swarm-placeholder-attack: seething-swarm-placeholder-attack
+    var(--battle-result-duration) ease-out 1 both;
+  --animate-seething-swarm-placeholder-reaction: seething-swarm-placeholder-reaction
+    var(--battle-result-duration) ease-out 1 both;
+
+  @keyframes advance-seething-swarm-strip {
+    to {
+      transform: translate3d(var(--animal-strip-travel), 0, 0);
+    }
+  }
+
+  @keyframes seething-swarm-placeholder-rest {
+    50% {
+      transform: translateY(-0.25rem);
+    }
+  }
+
+  @keyframes seething-swarm-placeholder-attack {
+    45% {
+      transform: translateX(var(--battle-travel)) scale(1.08);
+    }
+  }
+
+  @keyframes seething-swarm-placeholder-reaction {
+    40% {
+      transform: translateX(var(--battle-recoil)) rotate(var(--battle-tilt));
+    }
+  }
+}
+
 html,
 body {
   padding: 0;

@@ -6,7 +6,6 @@ import {
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import Image, { type StaticImageData } from "next/image"
 import type { CSSProperties } from "react"
-import styles from "./SeethingSwarmAnimal.module.css"
 
 type SeethingSwarmAnimalStyle = CSSProperties & {
   "--animal-animation-duration": string
@@ -89,15 +88,15 @@ export default function SeethingSwarmAnimal({
   }
   const playbackClassName =
     effectivePlaybackMode === "loop"
-      ? styles.loopStrip
+      ? "animate-seething-swarm-strip [animation-iteration-count:infinite]"
       : effectivePlaybackMode === "one-shot"
-        ? styles.oneShotStrip
-        : styles.staticStrip
+        ? "animate-seething-swarm-strip"
+        : "animate-none"
 
   return (
     <span
       aria-hidden="true"
-      className={`${styles.tile} ${facing === "left" ? styles.faceLeft : ""}`}
+      className={`pointer-events-none relative block size-(--animal-tile-size) flex-[0_0_var(--animal-tile-size)] overflow-hidden select-none ${facing === "left" ? "-scale-x-100" : ""}`}
       data-animal-id={clip.animalId}
       data-facing={facing}
       data-frame-count={clip.frameCount}
@@ -107,7 +106,7 @@ export default function SeethingSwarmAnimal({
     >
       <Image
         alt=""
-        className={`${styles.strip} ${playbackClassName}`}
+        className={`absolute top-(--animal-strip-top) left-(--animal-strip-left) h-(--animal-strip-height) w-(--animal-strip-width) max-w-none [image-rendering:pixelated] ${playbackClassName}`}
         draggable={false}
         height={scaledFrameHeight}
         onAnimationEnd={

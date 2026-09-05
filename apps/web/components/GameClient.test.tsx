@@ -1196,9 +1196,11 @@ describe("GameClient Integration", () => {
     if (!winnerCard) throw new Error("Banner test winner is unavailable")
     fireEvent.click(winnerCard)
 
-    expect(
-      await screen.findByRole("heading", { name: "First Battle" }),
-    ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "First Battle" }),
+      ).toBeVisible(),
+    )
     const battleSurface = screen.getByRole("main", { name: "Value battle" })
     const achievementBanner = screen.getByRole("complementary", {
       name: "Achievement unlocked",
