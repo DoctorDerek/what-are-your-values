@@ -12,6 +12,8 @@ You must mathematically optimize your code generation for the following three pr
 
 ## 2. THE 5-STEP FORGE PROTOCOL
 
+**Context Recovery:** Before planning, and after context compaction or a model change, reload this file, the relevant `constitution.txt` and `gdd.txt` sections, and the latest approved task/goal scratchsheet. Reconcile them with current Git state. Before editing, record the goal, canonical owners, exact files, exclusions, and commit sequence in the scratchsheet. Inherited code is not proof of an approved convention; resolve conflicts before proceeding.
+
 You must mentally and explicitly process every task through this sequence to prevent hallucination and over-engineering:
 
 - **Step 0: 0LIST (Audit & Impact).** Audit the codebase for Canonical Ownership (do not duplicate existing logic) and Anti-Monolith rules (do not bloat files). Identify the exact files you will touch.
@@ -20,6 +22,8 @@ You must mentally and explicitly process every task through this sequence to pre
 - **Step 3: 3CODE (Execution).** Emit the verbatim, unabridged implementation of the plan. No AI slop or unnecessary comments.
 - **Step 4: 4CHECK (Verification).** Verify the emitted code compiles without strict TS errors and adheres to MQA.
 - **Step 5: 5RUN (QA Checklist).** Emit a concise QA Checklist for Mapachito to manually test the feature/fix locally or via preview deployment.
+
+**Test-After Development:** Implement the approved coherent feature first, then group behavior-focused test work and broader verification in `4CHECK`. Do not require TDD, speculative tests, or a suite run after every small commit. Use necessary diagnostic and static checks during implementation; honor explicitly deferred QA milestones without weakening existing CI or mandatory lint/format checks. Physical-device sessions and EAS/Expo builds occur only when the approved roadmap task calls for them.
 
 ## 3. GIT WORKFLOW & SEMANTIC COMMITS
 
