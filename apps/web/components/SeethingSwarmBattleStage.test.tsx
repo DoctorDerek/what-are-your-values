@@ -3,29 +3,9 @@ import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
 import { projectScheduledPair } from "@game/machines/src/PairScheduler"
 import { fireEvent, render, waitFor } from "@testing-library/react"
-import type { CSSProperties } from "react"
 import { describe, expect, it, vi } from "vitest"
 import SeethingSwarmBattleStage from "./SeethingSwarmBattleStage"
 import { createSeethingSwarmBattleStageTestCatalog } from "./SeethingSwarmBattleStage.test-fixture"
-
-type MockNextImageProps = Readonly<{
-  className: string
-  onAnimationEnd?: () => void
-  src: Readonly<{ src: string }>
-  style: CSSProperties
-}>
-
-vi.mock("next/image", () => ({
-  default: ({ className, onAnimationEnd, src, style }: MockNextImageProps) => (
-    <span
-      className={className}
-      data-src={src.src}
-      data-testid="battle-stage-image"
-      onAnimationEnd={onAnimationEnd}
-      style={style}
-    />
-  ),
-}))
 
 function createPresentedBattle(seed: string) {
   const battleCycle = createInitialBattleCycle(seed)
@@ -124,7 +104,7 @@ describe("SeethingSwarmBattleStage", () => {
     )
 
     const resultImages = container.querySelectorAll(
-      '[data-playback-mode="one-shot"] [data-testid="battle-stage-image"]',
+      '[data-playback-mode="one-shot"] img',
     )
     expect(resultImages).toHaveLength(2)
     fireEvent.animationEnd(resultImages[0]!)

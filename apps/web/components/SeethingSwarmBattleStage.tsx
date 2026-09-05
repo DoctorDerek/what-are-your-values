@@ -15,7 +15,6 @@ import {
   type CSSProperties,
 } from "react"
 import SeethingSwarmAnimal from "./SeethingSwarmAnimal"
-import styles from "./SeethingSwarmBattleStage.module.css"
 
 const SEETHING_SWARM_BATTLE_RESULT_DURATION_MS = 480
 const SEETHING_SWARM_BATTLE_TILE_SIZE = 112
@@ -52,10 +51,10 @@ function getPlaceholderAnimationClassName({
   readonly role: SeethingSwarmBattleClipRole
   readonly shouldReduceMotion: boolean
 }) {
-  if (shouldReduceMotion) return styles.placeholderStatic
-  if (role === "attack") return styles.placeholderAttack
-  if (role === "reaction") return styles.placeholderReaction
-  return styles.placeholderRest
+  if (shouldReduceMotion) return "animate-none"
+  if (role === "attack") return "animate-seething-swarm-placeholder-attack"
+  if (role === "reaction") return "animate-seething-swarm-placeholder-reaction"
+  return "animate-seething-swarm-placeholder-rest"
 }
 
 export default function SeethingSwarmBattleStage({
@@ -185,7 +184,7 @@ export default function SeethingSwarmBattleStage({
             ) : (
               <span
                 key={`${choreography.choreographyIdentity}:${combatant.side}:${role}`}
-                className={`${styles.placeholderAnimal} ${getPlaceholderAnimationClassName({ role, shouldReduceMotion })}`}
+                className={`relative block h-15 w-18 origin-bottom rounded-[45%_45%_35%_35%] border-4 border-black bg-white shadow-[0.35rem_0.35rem_0_black] before:absolute before:-top-4 before:left-1 before:size-6 before:-rotate-22 before:rounded-[50%_50%_20%_20%] before:border-4 before:border-black before:bg-white after:absolute after:-top-4 after:right-1 after:size-6 after:rotate-22 after:rounded-[50%_50%_20%_20%] after:border-4 after:border-black after:bg-white ${getPlaceholderAnimationClassName({ role, shouldReduceMotion })}`}
                 data-placeholder-playback={
                   role === "rest" ? "loop" : "one-shot"
                 }
@@ -195,7 +194,7 @@ export default function SeethingSwarmBattleStage({
                     : undefined
                 }
               >
-                <span className={styles.placeholderFace} />
+                <span className="absolute top-4 left-1/2 size-[0.55rem] -translate-x-1/2 rounded-full bg-black shadow-[-1rem_0_0_black,1rem_0_0_black]" />
               </span>
             )}
 
