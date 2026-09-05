@@ -14,6 +14,8 @@ You must mathematically optimize your code generation for the following three pr
 
 **Context Recovery:** Before planning, and after context compaction or a model change, reload this file, the relevant `constitution.txt` and `gdd.txt` sections, and the latest approved task/goal scratchsheet. Reconcile them with current Git state. Before editing, record the goal, canonical owners, exact files, exclusions, and commit sequence in the scratchsheet. Inherited code is not proof of an approved convention; resolve conflicts before proceeding.
 
+**Canonical Authority:** Apply Mapachito's current instruction and the approved WAYVM GDD to this product. Use the Constitution for its engineering intent and the GDD's TypeScript/Expo adaptations rather than copying Godot lifecycle examples literally. Sibling repositories and the orchestration prompt provide reusable engineering evidence, not replacement gameplay rules, package versions, coverage targets, or release gates. Stop at a material conflict instead of silently choosing a different product. Keep the GDD, Constitution, and disposable scratchsheets local-only.
+
 You must mentally and explicitly process every task through this sequence to prevent hallucination and over-engineering:
 
 - **Step 0: 0LIST (Audit & Impact).** Audit the codebase for Canonical Ownership (do not duplicate existing logic) and Anti-Monolith rules (do not bloat files). Identify the exact files you will touch.
@@ -50,8 +52,15 @@ You must mentally and explicitly process every task through this sequence to pre
   - _Exception 2 (Expo Override):_ If the project utilizes Expo / React Native, you are CONSTITUTIONALLY MANDATED to pull up the Expo SDK Reference page at `https://docs.expo.dev/versions/latest/#each-expo-sdk-version-depends-on-a-react-native-version`. You must look up the current Expo SDK version and rigidly pin the EXACT package versions for its dependencies (React, React Native, React Native Web, etc.) as listed on that page.
 - **Package Verification:** Never hallucinate package versions. Execute `pnpm info <package> version` in the terminal to verify factual data before updating lockfiles.
 - **Typography:** You must exclusively use “Curly Double Quotes” (“ ”) and curly apostrophes (’) in all UI-facing text. Straight quotes are banned in the UI presentation layer.
-- **Styling Ownership:** Tailwind CSS is the shared styling language; native applies compatible utilities through Uniwind. Use utilities for layout, appearance, states, and pseudo-elements. Keep necessary web keyframes and animation tokens in the existing Tailwind stylesheet, with typed CSS variables for runtime geometry. Do not introduce CSS Modules, BEM, or another styling system when this pattern works. Audit existing styling owners before extending a component; an inherited exception is not permission to duplicate it.
+- **Styling Ownership:** Tailwind CSS is the shared styling language; native applies compatible utilities through Uniwind. Use utilities for layout, appearance, states, and supported pseudo-elements. Keep necessary web keyframes and animation tokens in the existing Tailwind stylesheet, with typed CSS variables for runtime geometry. Do not introduce CSS Modules, BEM, or another styling system when this pattern works. Do not disguise a parallel stylesheet as `@apply` component selectors, class dictionaries, or static inline styles. Audit existing styling owners before extending a component; an inherited exception is not permission to duplicate it. Stop propagating styling drift and correct the affected scope through a reviewable PR without adding unrelated changes.
 - **Behavior-First Test Selectors:** Prefer accessible role/name, label, and text queries for controls. Use narrowly scoped test IDs or data attributes when meaningful user-facing queries are unavailable, such as decorative `aria-hidden` animation surfaces. Never add accessibility roles or labels solely for tests. Prove interactions and rendered outcomes; selector attributes and class-name assertions alone do not prove visibility, motion, usability, or correctness.
+
+### Next.js and Expo architecture
+
+- `apps/web` owns the Next.js shell; `apps/mobile` owns the Expo Router shell. Share product rules, XState actors, types, schemas, copy, catalogs, design tokens, semantic component contracts, and compatible composition by default. Specialize presentation only where the platform requires it: focused leaf-level `Platform.OS`/`Platform.select`, then platform files when structure diverges, then separate screens only when justified. Do not duplicate domain behavior to obtain native UI fidelity.
+- Keep shared domain packages independent of Next.js, Expo Router, DOM APIs, React Native APIs, and concrete storage/file implementations. Resolve genuine platform dependencies through typed actor inputs or scoped providers; do not inspect platform globals during shared-module initialization or import one app's internals into the other.
+- Use semantic HTML and selectively adopted shadcn/ui primitives on web, React Native and selectively adopted React Native Reusables primitives on native. Preserve the existing Tailwind/Uniwind tokens and default-versus-`xl:` composition at 1280. Viewport hooks and device detection do not select duplicated structural render trees. Fluid sizing, wrapping, safe areas, and accessible text scaling remain necessary inside both compositions.
+- Web motion uses the existing Tailwind animation owners or Motion; native motion uses React Native Reanimated. Typed runtime geometry and animation values are valid platform-specific exceptions to static utilities. Preserve canonical actor state and semantic completion events, including Reduced Motion and backgrounding; rendering never invents a parallel gameplay clock. Clean up resources owned by the mounted scope rather than assuming garbage collection cancels active work.
 
 ## 5. THE 40 PILLARS OF MQA (MINIMUM QREAM ARCHITECTURE)
 
@@ -65,16 +74,16 @@ You will strictly adhere to these 40 architectural pillars when writing or revie
 6. **Clean Up Instrumentation:** Scrub all temporary print statements before making any semantic commit to keep the codebase sterile.
 7. **Intellectual Honesty:** Base architectural confidence on empirical execution success and compiler verification, not unearned assumptions.
 8. **No Code Comments:** Code must self-document via strict types and semantic naming; comments are banned except for explicitly labeled exceptions preventing specific regressions.
-9. **Check State Directly:** Evaluate state natively (e.g., checking a state machine's `.active` property); avoid writing redundant boolean wrapper functions.
+9. **Check State Directly:** Read typed XState snapshots through `snapshot.matches(...)`, context, or focused selectors; never assume a Godot-style `.active` property or mirror actor state into independent booleans.
 10. **No Unnecessary Ifs:** Trust the framework and your strict TS types; fail loudly on bad data rather than writing defensive checks for impossible states.
-11. **No Code Duplication:** Keep UI WET for native platform fidelity, but STATE DRY by centralizing logic and state machines.
+11. **No Code Duplication:** Share knowledge, state, behavior, and compatible UI composition by default; specialize platform presentation only where native and web requirements genuinely differ.
 12. **Unique Access:** Strictly use absolute path aliases (e.g., `@/components/`); relative directory traversal (`../../`) is banned.
-13. **Trust in the Engine:** Rely on native React/Next.js memory management; avoid writing unnecessary manual unmounting or teardown boilerplate.
+13. **Trust in the Engine:** Trust documented framework lifecycles while cleaning up owned listeners, subscriptions, timers, animation handles, and platform observers; avoid both ceremonial teardown and leaked active work.
 14. **Do Nothing Unnecessary:** Execute exactly the requested scope; do not over-engineer, abstract prematurely, or add unrequested features.
 15. **No Vestigial Code:** Remove empty code blocks, unused imports, unused variables, and abandoned functions immediately.
 16. **Access State Directly:** Expose state publicly and access it where needed via hooks or context rather than relying on deep, unnecessary prop-drilling.
-17. **No Untyped Params or Returns:** The `any` type is banned; explicitly type all parameters, returns, and variables. Strictly type caught `unknown` errors.
-18. **Use Hooks, Don't Pass Nodes:** Initialize references via standard React hooks; avoid passing raw component nodes or setter chains deeply as props.
+17. **No Untyped Boundaries:** Explicitly type public contracts, actor inputs/events, schemas, and platform adapters. External data enters as `unknown` and requires validation; `any` and unchecked casts are prohibited.
+18. **Use Hooks and Typed Dependencies:** Resolve references through framework hooks and genuine services through typed actor inputs or scoped providers; avoid raw-node, ad hoc service-object, and setter-chain prop drilling.
 19. **Centralized Signals/Events:** Route application-wide state transitions and side effects through centralized event buses or state charts.
 20. **No Duplicate Magic Numbers:** Extract default states, string literals, and configuration values into centralized constant files.
 21. **Idiomatic Instantiation:** Use standard React functional component lifecycles; reject custom initialization wrappers or OOP pseudo-constructors.
@@ -82,7 +91,7 @@ You will strictly adhere to these 40 architectural pillars when writing or revie
 23. **Composition Over Inheritance:** Build UIs by composing small, single-purpose components rather than deep, rigid class hierarchies.
 24. **Deterministic Boot Sequence:** Explicitly sequence application startup to prevent race conditions and React hydration mismatches.
 25. **Sovereign Time:** Respect developer review time by keeping operations frictionless, PRs pristine, and commits atomic.
-26. **Implicit Returns:** Let TypeScript infer return types where possible; avoid visual noise like explicit `: React.FC` or `: void` definitions.
+26. **Implicit Returns:** Infer clear internal return types; use explicit returns for public contracts, migrations, adapters, and complex boundaries where inference could conceal a breaking change. Avoid ceremonial `React.FC` annotations.
 27. **Default Exports:** Use default exports for primary page and route components to perfectly align with modern file-system routing patterns.
 28. **No Barrel Files:** Import directly from source files; do not use `index.ts` re-exports, mathematically preventing circular dependency hell.
 29. **Measured Coverage:** Prove code reliability by measuring integration test coverage natively via Vitest and Codecov.
@@ -90,7 +99,7 @@ You will strictly adhere to these 40 architectural pillars when writing or revie
 31. **Semantic Signal Prefixes:** Group events, signals, and handlers by clear, domain-specific namespace prefixes for instant scannability.
 32. **Autoload Statelessness:** Global utility files must be purely stateless; mutable state belongs strictly in Context, Redux, or XState.
 33. **Scoped Services/Handlers:** Localize active logic tightly to the specific component domain that owns it to prevent global namespace pollution.
-34. **Anti-Race Condition Law:** Await explicit Promises or deterministic state machine events; arbitrary `setTimeout` delays are banned.
+34. **Anti-Race Condition Law:** Sequence through explicit completion, actor events, abort signals, or durable transactions. Timers may express presentation pacing but never prove that rendering or storage completed.
 35. **Data Segregation:** Separate static configuration, copy text, and enums from active procedural rendering logic into dedicated resources.
 36. **Descriptive Precision:** Use long, exhaustively accurate variable and function names; abbreviation is obfuscation.
 37. **Strict Typing Over Untyped Dictionaries:** The generic `Record<string, any>` type is banned as a data payload; define exact TypeScript Interfaces.
