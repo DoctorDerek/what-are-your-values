@@ -22,48 +22,97 @@ type SeethingSwarmAnimalTileStyle = CSSProperties & {
   "--animal-tile-size": string
 }
 
+export const SEETHING_SWARM_ANIMAL_PLAYBACK_MODES = Object.freeze([
+  "loop",
+  "one-shot",
+  "hold-final-frame",
+  "static",
+] as const)
+
+export type SeethingSwarmAnimalPlaybackMode =
+  (typeof SEETHING_SWARM_ANIMAL_PLAYBACK_MODES)[number]
+
+export const SEETHING_SWARM_ANIMAL_FACING_DIRECTIONS = Object.freeze([
+  "left",
+  "right",
+] as const)
+
+export type SeethingSwarmAnimalFacingDirection =
+  (typeof SEETHING_SWARM_ANIMAL_FACING_DIRECTIONS)[number]
+
 export default function SeethingSwarmAnimal({
   clip,
+  facing = "right",
+  frameDurationMs = SEETHING_SWARM_HUB_FRAME_DURATION_MS,
+  playbackMode = "loop",
   shouldReduceMotion,
+  tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
+  onPlaybackComplete,
 }: {
   clip: SeethingSwarmRuntimeCharacterClip<StaticImageData>
+  facing?: SeethingSwarmAnimalFacingDirection
+  frameDurationMs?: number
+  playbackMode?: SeethingSwarmAnimalPlaybackMode
   shouldReduceMotion: boolean
+  tileSize?: number
+  onPlaybackComplete?: () => void
 }) {
+  const effectivePlaybackMode =
+    shouldReduceMotion &&
+    (playbackMode === "loop" || playbackMode === "one-shot")
+      ? "static"
+      : playbackMode
   const geometry = createSeethingSwarmAnimalPresentationGeometry(
     clip.frameWidth,
     clip.frameHeight,
     clip.visibleBounds,
+    tileSize,
   )
   const scaledFrameWidth = clip.frameWidth * geometry.integerScale
   const scaledFrameHeight = clip.frameHeight * geometry.integerScale
   const scaledStripWidth = scaledFrameWidth * clip.frameCount
+  const stripLeft =
+    effectivePlaybackMode === "hold-final-frame"
+      ? geometry.frameOffsetX - scaledFrameWidth * (clip.frameCount - 1)
+      : geometry.frameOffsetX
   const stripStyle: SeethingSwarmAnimalStyle = {
-    "--animal-animation-duration": `${clip.frameCount * SEETHING_SWARM_HUB_FRAME_DURATION_MS}ms`,
+    "--animal-animation-duration": `${clip.frameCount * frameDurationMs}ms`,
     "--animal-frame-count": clip.frameCount,
     "--animal-strip-height": `${scaledFrameHeight}px`,
-    "--animal-strip-left": `${geometry.frameOffsetX}px`,
+    "--animal-strip-left": `${stripLeft}px`,
     "--animal-strip-top": `${geometry.frameOffsetY}px`,
     "--animal-strip-travel": `${-scaledStripWidth}px`,
     "--animal-strip-width": `${scaledStripWidth}px`,
   }
   const tileStyle: SeethingSwarmAnimalTileStyle = {
-    "--animal-tile-size": `${SEETHING_SWARM_HUB_TILE_SIZE}px`,
+    "--animal-tile-size": `${tileSize}px`,
   }
+  const playbackClassName =
+    effectivePlaybackMode === "loop"
+      ? styles.loopStrip
+      : effectivePlaybackMode === "one-shot"
+        ? styles.oneShotStrip
+        : styles.staticStrip
 
   return (
     <span
       aria-hidden="true"
-      className={styles.tile}
+      className={`${styles.tile} ${facing === "left" ? styles.faceLeft : ""}`}
       data-animal-id={clip.animalId}
+      data-facing={facing}
       data-frame-count={clip.frameCount}
+      data-playback-mode={effectivePlaybackMode}
       data-reduced-motion={shouldReduceMotion}
       style={tileStyle}
     >
       <Image
         alt=""
-        className={`${styles.strip} ${shouldReduceMotion ? styles.staticStrip : ""}`}
+        className={`${styles.strip} ${playbackClassName}`}
         draggable={false}
         height={scaledFrameHeight}
+        onAnimationEnd={
+          effectivePlaybackMode === "one-shot" ? onPlaybackComplete : undefined
+        }
         src={clip.asset}
         style={stripStyle}
         unoptimized

@@ -847,6 +847,7 @@ function WritableGameClient({
           achievement={pendingAchievementPresentation}
           battle={presentedBattle}
           progressById={battleProfile.progressById}
+          runtimeClipCatalog={SEETHING_SWARM_WEB_RUNTIME_CLIP_CATALOG}
           canUndo={battleProfile.history.length > 0}
           canRedo={battleProfile.redo.length > 0}
           controlHintPreference={playerData.settings.controlHints}

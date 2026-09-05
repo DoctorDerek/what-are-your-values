@@ -25,7 +25,6 @@ type ValueChoiceCardProps = {
   shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
-  onAnimationComplete: () => void
 }
 
 export const ValueChoiceCard = forwardRef<
@@ -44,7 +43,6 @@ export const ValueChoiceCard = forwardRef<
     shouldReduceMotion,
     onActivate,
     onFocus,
-    onAnimationComplete,
   },
   ref,
 ) {
@@ -75,8 +73,7 @@ export const ValueChoiceCard = forwardRef<
       animate={valueChoiceMotion.animate}
       exit={valueChoiceMotion.exit}
       transition={valueChoiceMotion.transition}
-      onAnimationComplete={onAnimationComplete}
-      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain`}
+      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain ${isFirst ? "xl:col-start-1 xl:row-start-1" : "xl:col-start-2 xl:row-start-1"}`}
     >
       <button
         ref={ref}
@@ -100,7 +97,7 @@ export const ValueChoiceCard = forwardRef<
             >
               {controlHint ?? reservedControlHint}
             </span>
-            <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(1.25rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:text-[clamp(2.5rem,4vw,4.75rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
+            <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(1rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:text-[clamp(2rem,3.25vw,4rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
               {displayName}
             </h2>
             <span className="inline-block border-2 border-black bg-white px-2 py-1 text-sm font-black whitespace-nowrap text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[6px_6px_0px_0px_#000000]">

@@ -190,7 +190,7 @@ describe("SeethingSwarm visible-content analyzer", () => {
     image.data.fill(255)
 
     expect(() => analyzeSeethingSwarmVisibleContent(image, selection)).toThrow(
-      "cannot fit the 72-unit Hub tile",
+      "cannot fit the 72-unit tile",
     )
   })
 
