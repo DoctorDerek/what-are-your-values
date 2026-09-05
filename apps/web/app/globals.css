@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @import "@game/design-tokens/mapachito-vivid.css";
 
+@theme inline {
+  --animate-seething-swarm-strip: advance-seething-swarm-strip
+    var(--animal-animation-duration) steps(var(--animal-frame-count), end);
+
+  @keyframes advance-seething-swarm-strip {
+    to {
+      transform: translate3d(var(--animal-strip-travel), 0, 0);
+    }
+  }
+}
+
 html,
 body {
   padding: 0;

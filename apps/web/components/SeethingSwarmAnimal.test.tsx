@@ -1,54 +1,8 @@
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { render, screen } from "@testing-library/react"
-import type { CSSProperties } from "react"
+import type { StaticImageData } from "next/image"
 import { describe, expect, it, vi } from "vitest"
 import SeethingSwarmAnimal from "./SeethingSwarmAnimal"
-import styles from "./SeethingSwarmAnimal.module.css"
-
-type MockStaticImageData = Readonly<{
-  src: string
-  width: number
-  height: number
-}>
-
-type MockNextImageProps = Readonly<{
-  alt: string
-  className: string
-  draggable: boolean
-  height: number
-  onAnimationEnd?: () => void
-  src: MockStaticImageData
-  style: CSSProperties
-  unoptimized: boolean
-  width: number
-}>
-
-vi.mock("next/image", () => ({
-  default: ({
-    alt,
-    className,
-    draggable,
-    height,
-    onAnimationEnd,
-    src,
-    style,
-    unoptimized,
-    width,
-  }: MockNextImageProps) => (
-    <span
-      className={className}
-      data-alt={alt}
-      data-draggable={draggable}
-      data-height={height}
-      data-src={src.src}
-      data-testid="next-image"
-      data-unoptimized={unoptimized}
-      data-width={width}
-      onAnimationEnd={onAnimationEnd}
-      style={style}
-    />
-  ),
-}))
 
 const clip = Object.freeze({
   kind: "character",
@@ -64,13 +18,13 @@ const clip = Object.freeze({
     width: 16,
     height: 4,
   }),
-}) satisfies SeethingSwarmRuntimeCharacterClip<MockStaticImageData>
+}) satisfies SeethingSwarmRuntimeCharacterClip<StaticImageData>
 
 describe("SeethingSwarmAnimal", () => {
   it("reserves fixed geometry and animates source pixels in discrete authored frames", () => {
     render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion={false} />)
 
-    const image = screen.getByTestId("next-image")
+    const image = screen.getByAltText("")
     const tile = image.parentElement
     expect(tile).toHaveAttribute("aria-hidden", "true")
     expect(tile).toHaveAttribute("data-animal-id", "bat")
@@ -79,12 +33,12 @@ describe("SeethingSwarmAnimal", () => {
     expect(tile).toHaveAttribute("data-playback-mode", "loop")
     expect(tile).toHaveAttribute("data-reduced-motion", "false")
     expect(tile).toHaveStyle({ "--animal-tile-size": "72px" })
-    expect(image).toHaveAttribute("data-alt", "")
-    expect(image).toHaveAttribute("data-draggable", "false")
-    expect(image).toHaveAttribute("data-unoptimized", "true")
-    expect(image).toHaveAttribute("data-src", clip.asset.src)
-    expect(image).toHaveAttribute("data-width", "576")
-    expect(image).toHaveAttribute("data-height", "144")
+    expect(image).toHaveAttribute("alt", "")
+    expect(image).toHaveAttribute("draggable", "false")
+    expect(image).toHaveAttribute("src", clip.asset.src)
+    expect(image).not.toHaveAttribute("srcset")
+    expect(image).toHaveAttribute("width", "576")
+    expect(image).toHaveAttribute("height", "144")
     expect(image).toHaveStyle({
       "--animal-animation-duration": "640ms",
       "--animal-frame-count": "4",
@@ -94,18 +48,15 @@ describe("SeethingSwarmAnimal", () => {
       "--animal-strip-travel": "-576px",
       "--animal-strip-width": "576px",
     })
-    expect(image).toHaveClass(styles.strip, styles.loopStrip)
-    expect(image).not.toHaveClass(styles.staticStrip)
     expect(tile).not.toHaveAttribute("tabindex")
   })
 
   it("keeps the first authored frame static when Reduced Motion is active", () => {
     render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion />)
 
-    const image = screen.getByTestId("next-image")
+    const image = screen.getByAltText("")
     expect(image.parentElement).toHaveAttribute("data-reduced-motion", "true")
     expect(image.parentElement).toHaveAttribute("data-playback-mode", "static")
-    expect(image).toHaveClass(styles.strip, styles.staticStrip)
     expect(image).toHaveStyle({
       "--animal-strip-left": "-36px",
       "--animal-strip-top": "-36px",
@@ -127,13 +78,11 @@ describe("SeethingSwarmAnimal", () => {
       />,
     )
 
-    const image = screen.getByTestId("next-image")
+    const image = screen.getByAltText("")
     const tile = image.parentElement
     expect(tile).toHaveAttribute("data-facing", "left")
     expect(tile).toHaveAttribute("data-playback-mode", "one-shot")
     expect(tile).toHaveStyle({ "--animal-tile-size": "96px" })
-    expect(tile).toHaveClass(styles.faceLeft)
-    expect(image).toHaveClass(styles.strip, styles.oneShotStrip)
     expect(image).toHaveStyle({
       "--animal-animation-duration": "400ms",
       "--animal-strip-height": "192px",
@@ -158,12 +107,11 @@ describe("SeethingSwarmAnimal", () => {
       />,
     )
 
-    const image = screen.getByTestId("next-image")
+    const image = screen.getByAltText("")
     expect(image.parentElement).toHaveAttribute(
       "data-playback-mode",
       "hold-final-frame",
     )
-    expect(image).toHaveClass(styles.strip, styles.staticStrip)
     expect(image).toHaveStyle({ "--animal-strip-left": "-468px" })
 
     image.dispatchEvent(new AnimationEvent("animationend", { bubbles: true }))
@@ -179,9 +127,8 @@ describe("SeethingSwarmAnimal", () => {
       />,
     )
 
-    const image = screen.getByTestId("next-image")
+    const image = screen.getByAltText("")
     expect(image.parentElement).toHaveAttribute("data-playback-mode", "static")
-    expect(image).toHaveClass(styles.strip, styles.staticStrip)
     expect(image).toHaveStyle({ "--animal-strip-left": "-36px" })
   })
 })
