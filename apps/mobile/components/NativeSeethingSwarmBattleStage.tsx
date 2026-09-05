@@ -47,7 +47,7 @@ function NativeBattlePlayback({
           testID={`battle-combatant-${combatant.side}`}
           className="items-center"
         >
-          <Text className="text-xs font-black text-black">
+          <Text className="text-xs font-black text-white">
             {combatant.side === "first" ? "1" : "2"}
           </Text>
           {"clips" in combatant ? (
@@ -74,7 +74,7 @@ function NativeBattlePlayback({
         </View>
       ))}
       <View className="absolute inset-x-0 top-2 items-center">
-        <Text className="text-sm font-black text-black">VS</Text>
+        <Text className="text-sm font-black text-white">VS</Text>
       </View>
     </View>
   )
@@ -118,7 +118,7 @@ export default function NativeSeethingSwarmBattleStage({
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
       testID="seething-swarm-battle-stage"
-      className="bg-mapache-vivid-primary-yellow h-36 shrink-0 overflow-hidden border-4 border-black px-2 pb-1 xl:h-40"
+      className="bg-mapache-vivid-dark h-36 shrink-0 overflow-hidden border-4 border-black px-2 pb-1 xl:h-40"
     >
       <NativeBattlePlayback
         key={`${choreography.choreographyIdentity}:${winnerId ?? "awaiting"}`}

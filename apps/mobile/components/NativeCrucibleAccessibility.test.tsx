@@ -1,3 +1,4 @@
+import { createSeethingSwarmTypographyOnlyRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import {
   getValueDisplayDefinition,
   getValueDisplayName,
@@ -82,6 +83,7 @@ function createNativeCrucibleProps(
     activeDeck: fixture.initialBattleCycle.activeDeck,
     achievement: null,
     battle: fixture.initialBattle,
+    runtimeClipCatalog: createSeethingSwarmTypographyOnlyRuntimeClipCatalog(),
     progressById: fixture.initialBattleCycle.progressById,
     canUndo: false,
     canRedo: false,

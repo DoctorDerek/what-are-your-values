@@ -1,3 +1,4 @@
+import { createSeethingSwarmTypographyOnlyRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { getValueDisplayDefinition } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
 import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
@@ -30,6 +31,7 @@ function createCrucibleProps(isPersistencePending: boolean) {
     activeDeck: battleCycle.activeDeck,
     achievement: null,
     battle,
+    runtimeClipCatalog: createSeethingSwarmTypographyOnlyRuntimeClipCatalog(),
     progressById: battleCycle.progressById,
     canUndo: true,
     canRedo: true,

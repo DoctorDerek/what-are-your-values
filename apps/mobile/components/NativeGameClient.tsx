@@ -668,6 +668,7 @@ export default function NativeGameClient() {
           activeDeck={battleProfile.activeDeck}
           achievement={pendingAchievementPresentation}
           battle={presentedBattle}
+          runtimeClipCatalog={SEETHING_SWARM_NATIVE_RUNTIME_CLIP_CATALOG}
           progressById={battleProfile.progressById}
           canUndo={battleProfile.history.length > 0}
           canRedo={battleProfile.redo.length > 0}

@@ -8,7 +8,7 @@ import type {
   SeethingSwarmBattleClipRole,
   SeethingSwarmBattleClipSelection,
   SeethingSwarmLicensedBattleCombatant,
-} from "@game/machines/src/SeethingSwarmBattleChoreography"
+} from "./SeethingSwarmBattleChoreography"
 
 const BATTLE_INTRODUCTION_ROLES = Object.freeze([
   "entry",

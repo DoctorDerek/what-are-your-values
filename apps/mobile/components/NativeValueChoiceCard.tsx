@@ -9,11 +9,11 @@ import { forwardRef, useEffect, type ForwardedRef } from "react"
 import { Pressable, ScrollView, View } from "react-native"
 import Animated, {
   cancelAnimation,
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated"
-import { scheduleOnRN } from "react-native-worklets"
 import { Text } from "@/components/ui/text"
 import {
   createNativeValueChoiceMotion,
@@ -29,10 +29,8 @@ type NativeValueChoiceCardProps = {
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
-  reportsAnimationCompletion: boolean
   shouldReduceMotion: boolean
   onActivate: (valueId: ValueId) => void
-  onAnimationComplete: () => void
 }
 
 function NativeValueChoiceCard(
@@ -44,10 +42,8 @@ function NativeValueChoiceCard(
     winnerId,
     isEnabled,
     isAnimating,
-    reportsAnimationCompletion,
     shouldReduceMotion,
     onActivate,
-    onAnimationComplete,
   }: NativeValueChoiceCardProps,
   ref: ForwardedRef<View>,
 ) {
@@ -68,7 +64,10 @@ function NativeValueChoiceCard(
       isDefeated,
       shouldReduceMotion,
     })
-    const timing = { duration: motion.durationMilliseconds }
+    const timing = {
+      duration: motion.durationMilliseconds,
+      reduceMotion: ReduceMotion.Never,
+    }
 
     cancelAnimation(opacity)
     cancelAnimation(scale)
@@ -78,26 +77,22 @@ function NativeValueChoiceCard(
       opacity.set(motion.opacity)
       scale.set(motion.scale)
       translateY.set(motion.translateY)
-      if (isAnimating && reportsAnimationCompletion) onAnimationComplete()
       return
     }
 
     opacity.set(withTiming(motion.opacity, timing))
     scale.set(withTiming(motion.scale, timing))
-    translateY.set(
-      withTiming(motion.translateY, timing, (finished) => {
-        if (finished && isAnimating && reportsAnimationCompletion)
-          scheduleOnRN(onAnimationComplete)
-      }),
-    )
+    translateY.set(withTiming(motion.translateY, timing))
+    return () => {
+      cancelAnimation(opacity)
+      cancelAnimation(scale)
+      cancelAnimation(translateY)
+    }
   }, [
-    isAnimating,
     isDefeated,
     isWinner,
-    onAnimationComplete,
     opacity,
     position,
-    reportsAnimationCompletion,
     scale,
     shouldReduceMotion,
     translateY,
