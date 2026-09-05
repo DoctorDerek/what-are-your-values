@@ -217,8 +217,8 @@ export default function NativeCrucible({
         shouldReduceMotion={shouldReduceMotion}
         onPresented={onAchievementPresented}
       />
-      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3">
-        <View className="shrink-0 xl:order-last">
+      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-col-reverse">
+        <View className="shrink-0">
           <NativeSeethingSwarmBattleStage
             battle={currentBattle}
             catalog={runtimeClipCatalog}
