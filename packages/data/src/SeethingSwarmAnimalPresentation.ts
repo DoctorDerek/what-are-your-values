@@ -16,6 +16,26 @@ export const SEETHING_SWARM_HUB_ANIMATION_CANDIDATES = Object.freeze([
 ] as const)
 export const SEETHING_SWARM_HUB_TILE_SIZE = 72
 export const SEETHING_SWARM_HUB_FRAME_DURATION_MS = 160
+export const SEETHING_SWARM_BATTLE_RESULT_DURATION_MS = 480
+export const SEETHING_SWARM_BATTLE_TILE_SIZE = 112
+
+export const SEETHING_SWARM_ANIMAL_PLAYBACK_MODES = Object.freeze([
+  "loop",
+  "one-shot",
+  "hold-final-frame",
+  "static",
+] as const)
+
+export type SeethingSwarmAnimalPlaybackMode =
+  (typeof SEETHING_SWARM_ANIMAL_PLAYBACK_MODES)[number]
+
+export const SEETHING_SWARM_ANIMAL_FACING_DIRECTIONS = Object.freeze([
+  "left",
+  "right",
+] as const)
+
+export type SeethingSwarmAnimalFacingDirection =
+  (typeof SEETHING_SWARM_ANIMAL_FACING_DIRECTIONS)[number]
 
 export type SeethingSwarmHubAnimationId =
   (typeof SEETHING_SWARM_HUB_ANIMATION_CANDIDATES)[number]
@@ -55,6 +75,7 @@ export function createSeethingSwarmAnimalPresentationGeometry(
   frameHeight: number,
   visibleBounds: SeethingSwarmVisibleContentBounds,
   tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
+  maximumIntegerScale?: number,
 ) {
   assertPositiveSafeInteger(frameWidth, "SeethingSwarm frame width")
   assertPositiveSafeInteger(frameHeight, "SeethingSwarm frame height")
@@ -64,10 +85,18 @@ export function createSeethingSwarmAnimalPresentationGeometry(
     frameHeight,
     visibleBounds,
   )
-  const integerScale = Math.floor(
-    Math.min(
-      tileSize / frozenVisibleBounds.width,
-      tileSize / frozenVisibleBounds.height,
+  if (maximumIntegerScale !== undefined)
+    assertPositiveSafeInteger(
+      maximumIntegerScale,
+      "SeethingSwarm maximum scale",
+    )
+  const integerScale = Math.min(
+    maximumIntegerScale ?? Infinity,
+    Math.floor(
+      Math.min(
+        tileSize / frozenVisibleBounds.width,
+        tileSize / frozenVisibleBounds.height,
+      ),
     ),
   )
   if (integerScale < 1) {

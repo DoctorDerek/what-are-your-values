@@ -2,6 +2,8 @@ import {
   createSeethingSwarmAnimalPresentationGeometry,
   SEETHING_SWARM_HUB_FRAME_DURATION_MS,
   SEETHING_SWARM_HUB_TILE_SIZE,
+  type SeethingSwarmAnimalFacingDirection,
+  type SeethingSwarmAnimalPlaybackMode,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import Image, { type StaticImageData } from "next/image"
@@ -20,24 +22,6 @@ type SeethingSwarmAnimalStyle = CSSProperties & {
 type SeethingSwarmAnimalTileStyle = CSSProperties & {
   "--animal-tile-size": string
 }
-
-export const SEETHING_SWARM_ANIMAL_PLAYBACK_MODES = Object.freeze([
-  "loop",
-  "one-shot",
-  "hold-final-frame",
-  "static",
-] as const)
-
-export type SeethingSwarmAnimalPlaybackMode =
-  (typeof SEETHING_SWARM_ANIMAL_PLAYBACK_MODES)[number]
-
-export const SEETHING_SWARM_ANIMAL_FACING_DIRECTIONS = Object.freeze([
-  "left",
-  "right",
-] as const)
-
-export type SeethingSwarmAnimalFacingDirection =
-  (typeof SEETHING_SWARM_ANIMAL_FACING_DIRECTIONS)[number]
 
 export default function SeethingSwarmAnimal({
   clip,
