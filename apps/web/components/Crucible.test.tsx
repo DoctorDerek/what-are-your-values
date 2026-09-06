@@ -454,7 +454,7 @@ describe("Crucible Component Integration", () => {
     const stage = container.querySelector("[data-battle-stage-state]")
     expect(stage).toHaveAttribute("aria-hidden", "true")
     expect(
-      container.querySelectorAll('[data-placeholder-playback="loop"]'),
+      container.querySelectorAll('[data-placeholder-playback="static"]'),
     ).toHaveLength(2)
 
     fireEvent.click(firstChoice)
@@ -518,6 +518,33 @@ describe("Crucible Component Integration", () => {
     expect(screen.queryByText(/^Definition of /)).not.toBeInTheDocument()
     fireEvent.click(definitionCopy)
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
+  })
+
+  it("ignores keyboard events already consumed by an open dialog", async () => {
+    const { battleCycle, battle } = createBattleProps("consumed-dialog-key")
+    const onOpenMenu = vi.fn()
+    const onWinnerSelected = vi.fn()
+    render(
+      <Crucible
+        {...createHistoryProps()}
+        activeDeck={battleCycle.activeDeck}
+        battle={battle}
+        progressById={battleCycle.progressById}
+        onExit={vi.fn()}
+        onOpenMenu={onOpenMenu}
+        onWinnerSelected={onWinnerSelected}
+      />,
+    )
+    await screen.findAllByRole("button", {
+      name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+    })
+    for (const key of ["Escape", "1", "2"]) {
+      const event = new KeyboardEvent("keydown", { key, cancelable: true })
+      event.preventDefault()
+      fireEvent(window, event)
+    }
+    expect(onOpenMenu).not.toHaveBeenCalled()
+    expect(onWinnerSelected).not.toHaveBeenCalled()
   })
 
   it("supports arrow focus, keyboard confirmation, and Escape", async () => {
