@@ -101,6 +101,7 @@ export default function SeethingSwarmCombatant({
             key={selection.role}
             className={`absolute inset-0 ${isVisible ? "visible" : "invisible"}`}
             data-battle-active-clip={isVisible}
+            data-battle-clip={selection.role}
           >
             <SeethingSwarmAnimal
               clip={selection.clip}
