@@ -27,7 +27,7 @@ type ValueChoiceCardProps = {
   isEnabled: boolean
   isAnimating: boolean
   controlHint: string | null
-  combatant?: (isAttended: boolean) => ReactNode
+  combatant?: (isAttended: boolean, reward?: ReactNode) => ReactNode
   reward?: BattleRewardPresentation | null
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
@@ -95,9 +95,9 @@ export const ValueChoiceCard = forwardRef<
         }}
         onPointerLeave={() => setIsHovered(false)}
         onPointerCancel={() => setIsHovered(false)}
-        className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer flex-col items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
+        className={`relative grid min-h-0 w-full min-w-0 flex-1 cursor-pointer grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] grid-rows-[minmax(0,1fr)_auto] items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default xl:flex xl:flex-col ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
       >
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:px-8 xl:py-8">
+        <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:h-auto xl:px-8 xl:py-8">
           <div className="my-auto w-full">
             <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-2 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-5">
               <span
@@ -126,13 +126,12 @@ export const ValueChoiceCard = forwardRef<
             className={`pointer-events-none relative flex w-full shrink-0 items-end px-4 pb-2 ${isFirst ? "justify-start xl:justify-end" : "justify-end xl:justify-start"}`}
           >
             <span className="flex w-28 flex-col items-center xl:w-56">
-              <span
-                aria-hidden="true"
-                className="relative z-10 flex h-10 w-full flex-col justify-end pb-1 text-center text-xs leading-4 font-black text-black xl:text-base"
-              >
-                {reward ? (
+              <span aria-hidden="true" className="block h-10 w-full" />
+              {combatant(
+                isEnabled && (isHovered || isFocused),
+                reward ? (
                   <span
-                    className="block border-2 border-black bg-white px-1"
+                    className="block border-2 border-black bg-white px-1 text-center text-xs leading-4 font-black text-black xl:text-base"
                     title={reward.progressLabel}
                   >
                     {reward.label}
@@ -143,9 +142,8 @@ export const ValueChoiceCard = forwardRef<
                       />
                     </span>
                   </span>
-                ) : null}
-              </span>
-              {combatant(isEnabled && (isHovered || isFocused))}
+                ) : null,
+              )}
             </span>
           </span>
         ) : null}

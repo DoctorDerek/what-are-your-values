@@ -60,8 +60,8 @@ function BattlePlayback({
   shouldReduceMotion: boolean
   onResultComplete: () => void
   children: (combatants: {
-    first: (isAttended: boolean) => ReactNode
-    second: (isAttended: boolean) => ReactNode
+    first: (isAttended: boolean, reward?: ReactNode) => ReactNode
+    second: (isAttended: boolean, reward?: ReactNode) => ReactNode
   }) => ReactNode
 }) {
   const [resultCue, setResultCue] =
@@ -144,7 +144,7 @@ function BattlePlayback({
   }
 
   const combatants = choreography.combatants.map(
-    (combatant) => (isAttended: boolean) => (
+    (combatant) => (isAttended: boolean, reward?: ReactNode) => (
       <div
         aria-hidden="true"
         key={combatant.side}
@@ -180,6 +180,11 @@ function BattlePlayback({
               setResultCue("strike")
           }}
         >
+          {reward ? (
+            <span className="absolute bottom-full left-0 z-10 w-full pb-1">
+              {reward}
+            </span>
+          ) : null}
           {"clips" in combatant ? (
             <SeethingSwarmCombatant
               combatant={combatant}
@@ -228,8 +233,8 @@ export default function SeethingSwarmBattleStage({
   winnerId: ValueId | null
   onResultAnimationComplete: () => void
   children: (combatants: {
-    first: (isAttended: boolean) => ReactNode
-    second: (isAttended: boolean) => ReactNode
+    first: (isAttended: boolean, reward?: ReactNode) => ReactNode
+    second: (isAttended: boolean, reward?: ReactNode) => ReactNode
   }) => ReactNode
 }) {
   const isDocumentHidden = useSyncExternalStore(

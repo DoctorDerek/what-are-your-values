@@ -39,8 +39,8 @@ function NativeBattlePlayback({
   shouldReduceMotion: boolean
   onResultComplete: () => void
   children: (combatants: {
-    first: (isAttended: boolean) => ReactNode
-    second: (isAttended: boolean) => ReactNode
+    first: (isAttended: boolean, reward?: ReactNode) => ReactNode
+    second: (isAttended: boolean, reward?: ReactNode) => ReactNode
   }) => ReactNode
 }) {
   const [resultCue, setResultCue] =
@@ -124,7 +124,7 @@ function NativeBattlePlayback({
   }
 
   const combatants = choreography.combatants.map(
-    (combatant) => (isAttended: boolean) => (
+    (combatant) => (isAttended: boolean, reward?: ReactNode) => (
       <View
         key={combatant.side}
         ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
@@ -142,6 +142,11 @@ function NativeBattlePlayback({
           shouldReduceMotion={shouldReduceMotion}
           onApproachComplete={() => setResultCue("strike")}
         >
+          {reward ? (
+            <View className="absolute bottom-full left-0 z-10 w-full pb-1">
+              {reward}
+            </View>
+          ) : null}
           {"clips" in combatant ? (
             <NativeSeethingSwarmCombatant
               combatant={combatant}
@@ -198,8 +203,8 @@ export default function NativeSeethingSwarmBattleStage({
   shouldReduceMotion: boolean
   onResultComplete: () => void
   children: (combatants: {
-    first: (isAttended: boolean) => ReactNode
-    second: (isAttended: boolean) => ReactNode
+    first: (isAttended: boolean, reward?: ReactNode) => ReactNode
+    second: (isAttended: boolean, reward?: ReactNode) => ReactNode
   }) => ReactNode
 }) {
   const [isForeground, setIsForeground] = useState(

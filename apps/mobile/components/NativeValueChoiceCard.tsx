@@ -19,7 +19,7 @@ type NativeValueChoiceCardProps = {
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
-  combatant?: (isAttended: boolean) => ReactNode
+  combatant?: (isAttended: boolean, reward?: ReactNode) => ReactNode
   reward?: BattleRewardPresentation | null
   onActivate: (valueId: ValueId) => void
 }
@@ -66,7 +66,7 @@ function NativeValueChoiceCard(
         })}
         accessibilityRole="button"
         accessibilityState={{ disabled: !isEnabled, selected: isWinner }}
-        className="min-h-0 flex-1 flex-col items-center"
+        className="min-h-0 flex-1 flex-row flex-wrap items-center xl:flex-col xl:flex-nowrap"
         disabled={!isEnabled}
         onPress={() => onActivate(value.id)}
         onHoverIn={() => setIsHovered(true)}
@@ -75,7 +75,7 @@ function NativeValueChoiceCard(
         onBlur={() => setIsFocused(false)}
       >
         <ScrollView
-          className="min-h-0 w-full min-w-0 flex-1"
+          className="max-h-full min-h-0 min-w-0 grow basis-80 xl:w-full xl:flex-1 xl:basis-auto"
           contentContainerClassName="grow justify-center px-3 py-3 xl:px-6 xl:py-8"
           nestedScrollEnabled
         >
@@ -110,7 +110,7 @@ function NativeValueChoiceCard(
         {combatant ? (
           <View
             className={cn(
-              "w-full shrink-0 flex-row items-end px-4 pb-2",
+              "w-40 grow flex-row items-end px-4 pb-2 xl:w-full xl:grow-0",
               position === "first"
                 ? "justify-start xl:justify-end"
                 : "justify-end xl:justify-start",
@@ -120,9 +120,11 @@ function NativeValueChoiceCard(
               <View
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
-                className="z-10 h-10 w-full justify-end pb-1"
-              >
-                {reward ? (
+                className="h-10 w-full"
+              />
+              {combatant(
+                isEnabled && (isHovered || isFocused),
+                reward ? (
                   <View className="border-2 border-black bg-white px-1">
                     <Text className="text-center text-xs leading-4 font-black text-black xl:text-base">
                       {reward.label}
@@ -134,9 +136,8 @@ function NativeValueChoiceCard(
                       />
                     </View>
                   </View>
-                ) : null}
-              </View>
-              {combatant(isEnabled && (isHovered || isFocused))}
+                ) : null,
+              )}
             </View>
           </View>
         ) : null}
