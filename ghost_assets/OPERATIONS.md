@@ -52,6 +52,12 @@ vercel env add GHOST_ASSET_KEY_WHAT_ARE_YOUR_VALUES_MAPACHE production --sensiti
 
 Environment-variable changes affect only new deployments. Redeploy Preview and Production after adding or rotating the key. The existing web prebuild runs archive extraction before presentation preparation.
 
+Vercel can keep `apps/web` as its Root Directory and `turbo run build` as its Build Command. `apps/web/turbo.json` extends the existing root build task and declares the private key in the web task’s `env`. Turbo’s strict environment filtering otherwise removes the key before the web prebuild, even when Vercel has it configured. Do not use loose environment mode, blanket pass-through, or a public-prefixed key to work around that boundary.
+
+The key participates in the web build’s cache fingerprint, so unkeyed, keyed, and rotated-key builds have distinct cache identities. The encrypted archive and existing preparation scripts, runner, and runner configuration are explicit root-relative inputs; changing them invalidates the consuming web build. Ordinary web inputs and inherited build dependencies and outputs remain intact. This uses the existing Turbo cache and asset lifecycle, not another workflow.
+
+For a fresh protected deployment, verify the safe extraction and preparation status lines, then open its exact deployment URL and start a battle. Both combatants must load licensed animal images, the selected animal must attack, the other must react, and the next pair must appear. A successful deployment or a test accepting placeholder mode does not prove that licensed assets shipped. Public-source CI intentionally retains the placeholder-compatible path.
+
 ## EAS protected native builds
 
 In the Expo project dashboard, create the same project-level variable with Secret visibility. Assign the same value to every EAS environment that will build licensed animals:
@@ -74,10 +80,10 @@ Use the repository’s standard quality commands after changing the archive or c
 pnpm format
 pnpm lint
 pnpm test:coverage
-pnpm build
+pnpm exec turbo run build --filter=@game/web
 ```
 
-Inspect build logs only for the safe extraction status. The key and private filesystem paths must never appear.
+The build command above targets web only. Native exports, EAS builds, and physical-device checks remain separate approved roadmap work. Inspect build logs only for safe extraction and preparation status. The key and private filesystem paths must never appear.
 
 ## Rotation and incident response
 
