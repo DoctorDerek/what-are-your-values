@@ -86,7 +86,7 @@ describe("AchievementBanner Integration", () => {
     expect(onPresented).toHaveBeenCalledExactlyOnceWith(firstAchievement.id)
   })
 
-  it("keeps battle feedback relative with compact base and xl copy", () => {
+  it("keeps battle feedback stationary without moving over the value cards", () => {
     render(
       <AchievementBanner
         achievement={firstAchievementPresentation}
@@ -102,10 +102,13 @@ describe("AchievementBanner Integration", () => {
     })
     expect(banner).toHaveClass("relative")
     expect(banner).not.toHaveClass("fixed")
-    expect(screen.getByText("Compare your first pair of values.")).toHaveClass(
-      "xl:mt-0",
-      "xl:pr-16",
+    expect(banner).toHaveAttribute(
+      "data-motion-initial",
+      JSON.stringify({ opacity: 0, y: 0 }),
     )
+    expect(screen.getByText("Compare your first pair of values.")).toBeVisible()
+    expect(screen.getByRole("heading", { name: "First Battle" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Dismiss achievement" })).toBeEnabled()
   })
 
   it("anchors dismissal at the top-right without dividing milestone copy", () => {

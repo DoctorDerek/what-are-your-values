@@ -549,7 +549,16 @@ for (const { width, height } of [
     for (const card of await stage.locator("[data-value-card]").all()) {
       const choice = card.getByRole("button", { name: /^Choose / })
       await expect(choice.getByRole("heading")).toBeInViewport()
+      const readingRegion = card.getByRole("region")
+      const needsReadingScroll = await readingRegion.evaluate(
+        (region) => region.scrollHeight > region.clientHeight,
+      )
+      if (needsReadingScroll) {
+        await readingRegion.focus()
+        await page.keyboard.press("End")
+      }
       await expect(choice.locator("p")).toBeInViewport()
+      if (needsReadingScroll) await page.keyboard.press("Home")
       const animal = card.locator("[data-combatant-side]")
       await expect(animal).toBeInViewport()
       const textDoesNotOverlapAnimal = await card.evaluate((card) => {
