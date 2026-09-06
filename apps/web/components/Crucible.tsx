@@ -19,7 +19,6 @@ import type { ControlHintPreference } from "@game/machines/src/PlayerSettings"
 import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPresentation"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { AnimatePresence } from "motion/react"
 import type { StaticImageData } from "next/image"
 import { useCallback, useEffect, useRef, useState } from "react"
 import MapacheScreen from "@/components/MapacheScreen"
@@ -337,8 +336,16 @@ export default function Crucible({
         />
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col xl:grid xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)_auto]">
-        <AnimatePresence mode="popLayout">
+      <SeethingSwarmBattleStage
+        battle={currentBattle}
+        isNextBattleReady={state.context.pendingBattle !== null}
+        isPaused={isMenuOpen}
+        runtimeClipCatalog={runtimeClipCatalog}
+        shouldReduceMotion={shouldReduceMotion}
+        winnerId={winnerId}
+        onResultAnimationComplete={handleResultAnimationComplete}
+      >
+        {(combatants) => <>
           <ValueChoiceCard
             ref={firstChoiceRef}
             key={`Card A: ${idA} vs. ${idB}`}
@@ -351,22 +358,10 @@ export default function Crucible({
             isAnimating={isAnimating}
             controlHint={firstControlHint}
             shouldReduceMotion={shouldReduceMotion}
+            combatant={combatants.first}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
           />
-        </AnimatePresence>
-
-        <SeethingSwarmBattleStage
-          battle={currentBattle}
-          isNextBattleReady={state.context.pendingBattle !== null}
-          isPaused={isMenuOpen}
-          runtimeClipCatalog={runtimeClipCatalog}
-          shouldReduceMotion={shouldReduceMotion}
-          winnerId={winnerId}
-          onResultAnimationComplete={handleResultAnimationComplete}
-        />
-
-        <AnimatePresence mode="popLayout">
           <ValueChoiceCard
             ref={secondChoiceRef}
             key={`Card B: ${idB} vs. ${idA}`}
@@ -379,11 +374,12 @@ export default function Crucible({
             isAnimating={isAnimating}
             controlHint={secondControlHint}
             shouldReduceMotion={shouldReduceMotion}
+            combatant={combatants.second}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
           />
-        </AnimatePresence>
-      </div>
+        </>}
+      </SeethingSwarmBattleStage>
     </MapacheScreen>
   )
 }

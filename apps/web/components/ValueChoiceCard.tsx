@@ -8,7 +8,7 @@ import {
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
 import { motion } from "motion/react"
-import { forwardRef, useId } from "react"
+import { forwardRef, useId, type ReactNode } from "react"
 import { createValueChoiceMotion } from "@/components/ValueChoiceMotion"
 
 export type ValueChoicePosition = "first" | "second"
@@ -23,6 +23,7 @@ type ValueChoiceCardProps = {
   isAnimating: boolean
   controlHint: string | null
   shouldReduceMotion: boolean
+  combatant?: ReactNode
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
 }
@@ -41,6 +42,7 @@ export const ValueChoiceCard = forwardRef<
     isAnimating,
     controlHint,
     shouldReduceMotion,
+    combatant,
     onActivate,
     onFocus,
   },
@@ -49,7 +51,6 @@ export const ValueChoiceCard = forwardRef<
   const isFirst = position === "first"
   const displayName = getValueDisplayName(value)
   const isWinner = isAnimating && winnerId === value.id
-  const isDefeated = isAnimating && winnerId !== value.id
   const positionClasses = isFirst
     ? "bg-mapache-vivid-primary-cyan border-b-8 border-black xl:border-r-8 xl:border-b-0"
     : "bg-mapache-vivid-primary-raspberry"
@@ -59,21 +60,16 @@ export const ValueChoiceCard = forwardRef<
   const reservedControlHint = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
   const valueChoiceMotion = createValueChoiceMotion({
-    isFirst,
-    isWinner,
-    isDefeated,
-    isAnimating,
     shouldReduceMotion,
   })
 
   return (
     <motion.div
-      layout
       initial={valueChoiceMotion.initial}
       animate={valueChoiceMotion.animate}
       exit={valueChoiceMotion.exit}
       transition={valueChoiceMotion.transition}
-      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 touch-pan-x touch-pan-y flex-col overflow-x-hidden overflow-y-auto overscroll-contain ${isFirst ? "xl:col-start-1 xl:row-start-1" : "xl:col-start-2 xl:row-start-1"}`}
+      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 flex-col ${isWinner ? "z-10" : ""}`}
     >
       <button
         ref={ref}
@@ -87,9 +83,10 @@ export const ValueChoiceCard = forwardRef<
         disabled={!isEnabled}
         onClick={() => onActivate(value.id)}
         onFocus={() => onFocus(value.id)}
-        className={`relative flex min-h-[50%] w-full min-w-0 flex-1 cursor-pointer flex-col items-center px-3 py-4 hover:brightness-110 focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default disabled:hover:brightness-100 xl:px-8 xl:py-8 ${focusedId === value.id ? "ring-8 ring-white ring-inset" : ""}`}
+        className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default ${isFirst ? "flex-col" : "flex-col-reverse xl:flex-col"} ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
       >
-        <div className="my-auto w-full max-w-full min-w-0 text-center">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:px-8 xl:py-8">
+        <div className="my-auto w-full">
           <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-5">
             <span
               aria-hidden="true"
@@ -111,6 +108,12 @@ export const ValueChoiceCard = forwardRef<
             “{getValueDisplayDefinition(value)}”
           </p>
         </div>
+        </div>
+        {combatant ? (
+          <span className={`pointer-events-none relative flex h-28 w-28 shrink-0 items-end justify-center ${isFirst ? "-translate-x-14 xl:translate-x-0 xl:self-end" : "translate-x-14 xl:translate-x-0 xl:self-start"}`}>
+            {combatant}
+          </span>
+        ) : null}
       </button>
     </motion.div>
   )

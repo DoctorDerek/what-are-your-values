@@ -15,6 +15,7 @@ import {
   useRef,
   useSyncExternalStore,
   type CSSProperties,
+  type ReactNode,
 } from "react"
 import SeethingSwarmCombatant from "@/components/SeethingSwarmCombatant"
 import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
@@ -42,12 +43,14 @@ function BattlePlayback({
   isNextBattleReady,
   shouldReduceMotion,
   onResultComplete,
+  children,
 }: {
   choreography: SeethingSwarmBattleChoreography<StaticImageData>
   winnerId: ValueId | null
   isNextBattleReady: boolean
   shouldReduceMotion: boolean
   onResultComplete: () => void
+  children: (combatants: { first: ReactNode; second: ReactNode }) => ReactNode
 }) {
   const completedSidesRef = useRef(new Set<SeethingSwarmBattleCombatantSide>())
   const hasReportedResultRef = useRef(false)
@@ -65,10 +68,11 @@ function BattlePlayback({
     reportResult()
   }
 
-  return choreography.combatants.map((combatant, index) => (
+  const combatants = choreography.combatants.map((combatant) => (
     <div
+      aria-hidden="true"
       key={combatant.side}
-      className={`row-start-1 flex min-w-0 flex-col items-center justify-end self-stretch ${combatant.side === "first" ? "col-start-1" : "col-start-3"}`}
+      className="pointer-events-none relative flex size-28 shrink-0 items-end justify-center"
       data-animal-id={combatant.animalId}
       data-combatant-side={combatant.side}
       data-value-id={combatant.valueId}
@@ -94,11 +98,9 @@ function BattlePlayback({
           onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
         />
       )}
-      <span className="mt-1 border-2 border-white bg-black px-2 py-0.5 text-center text-xs leading-none font-black text-white xl:mt-2 xl:text-base">
-        {index + 1}
-      </span>
     </div>
   ))
+  return children({ first: combatants[0], second: combatants[1] })
 }
 
 export default function SeethingSwarmBattleStage({
@@ -109,6 +111,7 @@ export default function SeethingSwarmBattleStage({
   shouldReduceMotion,
   winnerId,
   onResultAnimationComplete,
+  children,
 }: {
   battle: PresentedBattle
   isNextBattleReady: boolean
@@ -117,6 +120,7 @@ export default function SeethingSwarmBattleStage({
   shouldReduceMotion: boolean
   winnerId: ValueId | null
   onResultAnimationComplete: () => void
+  children: (combatants: { first: ReactNode; second: ReactNode }) => ReactNode
 }) {
   const isDocumentHidden = useSyncExternalStore(
     subscribeToDocumentVisibility,
@@ -137,24 +141,22 @@ export default function SeethingSwarmBattleStage({
 
   return (
     <div
-      aria-hidden="true"
-      className="bg-mapache-vivid-dark relative grid h-[clamp(7rem,20dvh,11rem)] shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2 overflow-hidden border-b-8 border-black px-2 pt-2 text-white xl:col-span-2 xl:col-start-1 xl:row-start-2 xl:h-52 xl:gap-8 xl:border-t-8 xl:border-b-0 xl:px-10 xl:pt-4"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col xl:flex-row"
       data-battle-stage-mode={choreography.mode}
       data-battle-stage-state={winnerId ? "resolving" : "awaiting-input"}
       data-choreography-identity={choreography.choreographyIdentity}
       style={stageStyle}
     >
       <BattlePlayback
-        key={`${choreography.choreographyIdentity}:${winnerId ?? "awaiting"}`}
+        key={choreography.choreographyIdentity}
         choreography={choreography}
         winnerId={winnerId}
         isNextBattleReady={isNextBattleReady}
         shouldReduceMotion={shouldReduceMotion || isPaused || isDocumentHidden}
         onResultComplete={onResultAnimationComplete}
-      />
-      <span className="col-start-2 row-start-1 self-center border-4 border-white bg-black px-2 py-1 text-sm font-black uppercase shadow-[3px_3px_0px_0px_#ffffff] xl:px-3 xl:py-2 xl:text-xl">
-        VS
-      </span>
+      >
+        {children}
+      </BattlePlayback>
     </div>
   )
 }
