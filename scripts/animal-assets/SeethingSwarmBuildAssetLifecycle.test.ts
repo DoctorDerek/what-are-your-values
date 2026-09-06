@@ -1,5 +1,8 @@
+import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
 import { readFile, rm } from "node:fs/promises"
-import { join } from "node:path"
+import { createRequire } from "node:module"
+import { join, resolve } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { createSeethingSwarmArchive } from "./SeethingSwarmArchiveCreator"
 import {
@@ -22,11 +25,106 @@ import {
 const SYNTHETIC_ASSET_KEY = "synthetic-build-lifecycle-key-with-ample-length"
 const BUILD_ASSET_LIFECYCLE_TEST_TIMEOUT_MS = 60_000
 
+function readWebBuildDryRun(assetKey?: string) {
+  const summary: unknown = JSON.parse(
+    execFileSync(
+      process.execPath,
+      [
+        createRequire(import.meta.url).resolve("turbo/bin/turbo"),
+        "run",
+        "build",
+        "--filter=@game/web",
+        "--dry=json",
+        "--cache=local:rw",
+      ],
+      {
+        cwd: resolve("apps/web"),
+        env: {
+          ...process.env,
+          [SEETHING_SWARM_ASSET_KEY_ENVIRONMENT_VARIABLE_NAME]: assetKey,
+        },
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: BUILD_ASSET_LIFECYCLE_TEST_TIMEOUT_MS,
+      },
+    ),
+  )
+  assert(
+    summary !== null &&
+      typeof summary === "object" &&
+      "tasks" in summary &&
+      Array.isArray(summary.tasks),
+  )
+  const webBuild: unknown = summary.tasks.find(
+    (task: unknown) =>
+      task !== null &&
+      typeof task === "object" &&
+      "taskId" in task &&
+      task.taskId === "@game/web#build",
+  )
+  assert(
+    webBuild !== null &&
+      typeof webBuild === "object" &&
+      "hash" in webBuild &&
+      typeof webBuild.hash === "string",
+  )
+  return webBuild
+}
+
 afterEach(async () => {
   await cleanUpSeethingSwarmPresentationTestWorkspaces()
 })
 
 describe("SeethingSwarm protected build asset lifecycle", () => {
+  it("passes the protected key through strict Turbo builds with distinct cache identities", () => {
+    const publicBuild = readWebBuildDryRun()
+    const protectedBuild = readWebBuildDryRun(SYNTHETIC_ASSET_KEY)
+    const rotatedBuild = readWebBuildDryRun(`${SYNTHETIC_ASSET_KEY}-rotated`)
+
+    expect(
+      new Set([publicBuild.hash, protectedBuild.hash, rotatedBuild.hash]).size,
+    ).toBe(3)
+    expect(protectedBuild).toMatchObject({
+      command: "next build",
+      envMode: "strict",
+      environmentVariables: {
+        specified: {
+          env: [SEETHING_SWARM_ASSET_KEY_ENVIRONMENT_VARIABLE_NAME],
+          passThroughEnv: null,
+        },
+        configured: [
+          expect.stringMatching(
+            `^${SEETHING_SWARM_ASSET_KEY_ENVIRONMENT_VARIABLE_NAME}=`,
+          ),
+        ],
+      },
+      resolvedTaskDefinition: {
+        cache: true,
+        dependsOn: ["^build"],
+        outputs: expect.arrayContaining([
+          ".next/**",
+          "!.next/cache/**",
+          "out/**",
+        ]),
+      },
+      inputs: expect.objectContaining(
+        Object.fromEntries(
+          [
+            "package.json",
+            "next.config.ts",
+            "../../ghost_assets/seethingswarm-assets.zip",
+            "../../scripts/decrypt-assets.ts",
+            "../../scripts/runTypeScript.mjs",
+            "../../scripts/animal-assets/SeethingSwarmAssetDecryption.ts",
+            "../../scripts/animal-assets/SeethingSwarmPresentationAssetPreparer.ts",
+            "../../scripts/animal-assets/SeethingSwarmWebRuntimeClipCatalogModuleGenerator.ts",
+            "../../tsconfig.json",
+          ].map((path) => [path, expect.any(String)]),
+        ),
+      ),
+    })
+  })
+
   it(
     "injects licensed presentation assets and restores the public typography fallback",
     async () => {
