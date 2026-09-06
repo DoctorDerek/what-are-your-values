@@ -124,55 +124,62 @@ function NativeBattlePlayback({
   }
 
   const combatants = choreography.combatants.map(
-    (combatant) => (isAttended: boolean, reward?: ReactNode) => (
-      <View
-        key={combatant.side}
-        ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
-        accessibilityElementsHidden
-        accessible={false}
-        importantForAccessibility="no-hide-descendants"
-        pointerEvents="none"
-        collapsable={false}
-        testID={`battle-combatant-${combatant.side}`}
-        className="size-28 items-center justify-end xl:size-56"
-      >
-        <NativeSeethingSwarmBattleTraveler
-          cue={cue}
-          travel={combatant.valueId === winnerId ? travel : null}
-          shouldReduceMotion={shouldReduceMotion}
-          onApproachComplete={() => setResultCue("strike")}
-        >
-          {reward ? (
-            <View className="absolute bottom-full left-0 z-10 w-full pb-1">
-              {reward}
-            </View>
-          ) : null}
-          {"clips" in combatant ? (
-            <NativeSeethingSwarmCombatant
-              combatant={combatant}
-              isAttended={isAttended}
-              winnerId={winnerId}
+    (combatant) =>
+      function renderCardCombatant(isAttended: boolean, reward?: ReactNode) {
+        return (
+          <View
+            key={combatant.side}
+            ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
+            accessibilityElementsHidden
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+            pointerEvents="none"
+            collapsable={false}
+            testID={`battle-combatant-${combatant.side}`}
+            className="size-28 items-center justify-end xl:size-56"
+          >
+            <NativeSeethingSwarmBattleTraveler
               cue={cue}
+              travel={combatant.valueId === winnerId ? travel : null}
               shouldReduceMotion={shouldReduceMotion}
-              onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
-              onReady={() => handleReady(combatant.side)}
-            />
-          ) : (
-            <NativeSeethingSwarmPlaceholder
-              key={cue}
-              side={combatant.side}
-              role={resolveSeethingSwarmPlaceholderRole(
-                cue,
-                winnerId === combatant.valueId,
+              onApproachComplete={() => setResultCue("strike")}
+            >
+              {reward ? (
+                <View className="absolute bottom-full left-0 z-10 w-full pb-1">
+                  {reward}
+                </View>
+              ) : null}
+              {"clips" in combatant ? (
+                <NativeSeethingSwarmCombatant
+                  combatant={combatant}
+                  isAttended={isAttended}
+                  winnerId={winnerId}
+                  cue={cue}
+                  shouldReduceMotion={shouldReduceMotion}
+                  onPlaybackComplete={() =>
+                    handlePlaybackComplete(combatant.side)
+                  }
+                  onReady={() => handleReady(combatant.side)}
+                />
+              ) : (
+                <NativeSeethingSwarmPlaceholder
+                  key={cue}
+                  side={combatant.side}
+                  role={resolveSeethingSwarmPlaceholderRole(
+                    cue,
+                    winnerId === combatant.valueId,
+                  )}
+                  shouldReduceMotion={shouldReduceMotion}
+                  onPlaybackComplete={() =>
+                    handlePlaybackComplete(combatant.side)
+                  }
+                  onReady={() => handleReady(combatant.side)}
+                />
               )}
-              shouldReduceMotion={shouldReduceMotion}
-              onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
-              onReady={() => handleReady(combatant.side)}
-            />
-          )}
-        </NativeSeethingSwarmBattleTraveler>
-      </View>
-    ),
+            </NativeSeethingSwarmBattleTraveler>
+          </View>
+        )
+      },
   )
   return (
     <View
