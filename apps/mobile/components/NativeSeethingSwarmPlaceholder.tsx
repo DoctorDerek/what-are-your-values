@@ -17,31 +17,35 @@ import { cn } from "@/lib/utils"
 
 export default function NativeSeethingSwarmPlaceholder({
   side,
-  result,
+  role,
   shouldReduceMotion,
   onPlaybackComplete,
+  onReady,
 }: {
   side: SeethingSwarmBattleCombatantSide
-  result: "winner" | "loser" | null
+  role: "rest" | "attack" | "reaction" | "flourish"
   shouldReduceMotion: boolean
   onPlaybackComplete: () => void
+  onReady?: () => void
 }) {
   const progress = useSharedValue(0)
   const playbackCompleteRef = useRef(onPlaybackComplete)
   useEffect(() => {
     playbackCompleteRef.current = onPlaybackComplete
   }, [onPlaybackComplete])
+  useEffect(() => onReady?.(), [onReady])
   const direction = side === "first" ? 1 : -1
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        translateX: result
-          ? progress.get() * direction * (result === "winner" ? 24 : -12)
-          : 0,
+        translateX: role === "reaction" ? progress.get() * direction * -12 : 0,
       },
-      { translateY: result ? 0 : progress.get() * -4 },
       {
-        rotate: `${result === "loser" ? progress.get() * direction * -10 : 0}deg`,
+        translateY:
+          role === "rest" || role === "flourish" ? progress.get() * -4 : 0,
+      },
+      {
+        rotate: `${role === "reaction" ? progress.get() * direction * -10 : 0}deg`,
       },
     ],
   }))
@@ -54,7 +58,7 @@ export default function NativeSeethingSwarmPlaceholder({
     cancelAnimation(progress)
     progress.set(0)
     if (shouldReduceMotion) {
-      if (result) finishPlayback()
+      if (role !== "rest") finishPlayback()
       return
     }
     const timing = {
@@ -62,7 +66,7 @@ export default function NativeSeethingSwarmPlaceholder({
       easing: Easing.inOut(Easing.quad),
       reduceMotion: ReduceMotion.Never,
     }
-    if (!result) {
+    if (role === "rest") {
       progress.set(
         withRepeat(
           withTiming(1, timing),
@@ -77,7 +81,7 @@ export default function NativeSeethingSwarmPlaceholder({
         withSequence(
           ReduceMotion.Never,
           withTiming(1, timing),
-          withTiming(result === "winner" ? 0 : 1, timing, (finished) => {
+          withTiming(role === "reaction" ? 1 : 0, timing, (finished) => {
             if (finished) scheduleOnRN(finishPlayback)
           }),
         ),
@@ -87,7 +91,7 @@ export default function NativeSeethingSwarmPlaceholder({
       isActive = false
       cancelAnimation(progress)
     }
-  }, [progress, result, shouldReduceMotion])
+  }, [progress, role, shouldReduceMotion])
 
   return (
     <View className="h-28 w-28 shrink-0 items-center justify-end">

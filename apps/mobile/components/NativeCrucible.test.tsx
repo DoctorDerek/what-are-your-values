@@ -14,7 +14,7 @@ import {
   screen,
   userEvent,
 } from "@testing-library/react-native"
-import { AccessibilityInfo, AppState } from "react-native"
+import { AccessibilityInfo, AppState, View } from "react-native"
 import NativeCrucible from "@/components/NativeCrucible"
 
 const VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN =
@@ -63,6 +63,17 @@ describe("NativeCrucible", () => {
   it("keeps the resolved pair until both animal motion and durable projection finish", async () => {
     jest.useFakeTimers()
     AppState.currentState = "active"
+    jest.spyOn(View.prototype, "measureInWindow").mockImplementation(function (
+      this: View,
+      callback,
+    ) {
+      callback(
+        0,
+        this.props.testID === "battle-combatant-first" ? 0 : 200,
+        112,
+        112,
+      )
+    })
     jest
       .spyOn(AccessibilityInfo, "sendAccessibilityEvent")
       .mockImplementation(() => undefined)
@@ -110,11 +121,15 @@ describe("NativeCrucible", () => {
         screen.getByText(`“${getValueDisplayDefinition(firstValue)}”`),
       ).toBeOnTheScreen()
       await act(async () => {
-        jest.advanceTimersByTime(300)
+        jest.advanceTimersByTime(200)
       })
       expect(screen.getByRole("button", { name: /Choice 1\.$/ })).toBeDisabled()
       await act(async () => {
-        jest.advanceTimersByTime(300)
+        jest.advanceTimersByTime(550)
+      })
+      expect(screen.getByRole("button", { name: /Choice 1\.$/ })).toBeDisabled()
+      await act(async () => {
+        jest.advanceTimersByTime(550)
       })
       const nextFirst = resultingCycle.activeDeck.values.find(
         ({ id }) => id === nextBattle.pair[0],

@@ -9,6 +9,7 @@ import type {
   SeethingSwarmBattleClipSelection,
   SeethingSwarmLicensedBattleCombatant,
 } from "./SeethingSwarmBattleChoreography"
+import type { SeethingSwarmBattleExchangeCue } from "./SeethingSwarmBattleExchange"
 
 const BATTLE_INTRODUCTION_ROLES = Object.freeze([
   "entry",
@@ -28,16 +29,25 @@ export type SeethingSwarmBattlePlaybackStep<PlatformAsset> =
 export function createSeethingSwarmBattlePlayback<PlatformAsset>({
   combatant,
   winnerId,
+  cue,
 }: {
   readonly combatant: SeethingSwarmLicensedBattleCombatant<PlatformAsset>
   readonly winnerId: ValueId | null
+  readonly cue: SeethingSwarmBattleExchangeCue
 }): readonly SeethingSwarmBattlePlaybackStep<PlatformAsset>[] {
-  const roles: readonly SeethingSwarmBattleClipRole[] = !winnerId
-    ? BATTLE_INTRODUCTION_ROLES
-    : combatant.valueId === winnerId
-      ? BATTLE_WINNER_ROLES
-      : BATTLE_LOSER_ROLES
-  const frameCount = roles.reduce(
+  const isWinner = combatant.valueId === winnerId
+  const roles: readonly SeethingSwarmBattleClipRole[] =
+    cue === "introduction"
+      ? BATTLE_INTRODUCTION_ROLES
+      : cue === "strike" && isWinner
+        ? ["attack"]
+        : cue === "impact"
+          ? isWinner
+            ? ["flourish"]
+            : BATTLE_LOSER_ROLES
+          : ["rest"]
+  const resultRoles = isWinner ? BATTLE_WINNER_ROLES : BATTLE_LOSER_ROLES
+  const frameCount = (winnerId ? resultRoles : roles).reduce(
     (total, role) => total + combatant.clips[role].clip.frameCount,
     0,
   )
@@ -53,7 +63,10 @@ export function createSeethingSwarmBattlePlayback<PlatformAsset>({
       Object.freeze({
         ...combatant.clips[role],
         playbackMode: role === "rest" ? "loop" : "one-shot",
-        frameDurationMs,
+        frameDurationMs:
+          role === "rest"
+            ? SEETHING_SWARM_HUB_FRAME_DURATION_MS
+            : frameDurationMs,
       } satisfies SeethingSwarmBattlePlaybackStep<PlatformAsset>),
     ),
   )

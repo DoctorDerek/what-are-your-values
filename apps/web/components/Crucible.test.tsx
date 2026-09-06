@@ -143,8 +143,7 @@ describe("Crucible Component Integration", () => {
       "min-h-0",
       "flex-1",
       "flex-col",
-      "xl:grid",
-      "xl:grid-cols-2",
+      "xl:flex-row",
     )
   })
 
@@ -184,17 +183,11 @@ describe("Crucible Component Integration", () => {
     if (!identityRail)
       throw new Error("Value heading is missing its identity rail")
 
-    expect(identityRail).toHaveClass(
-      "grid",
-      "grid-cols-[auto_minmax(0,1fr)_auto]",
-      "xl:gap-5",
-    )
+    expect(choice).toContainElement(identityRail)
+    expect(heading).toBeVisible()
     const firstControlHint = within(identityRail).getByText("[1 / A]")
     expect(firstControlHint).toBeVisible()
-    expect(firstControlHint).toHaveClass("text-black")
-    expect(firstControlHint).not.toHaveClass("text-white")
     expect(within(identityRail).getByText(/^LVL \d+$/)).toBeVisible()
-    expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
 
     const secondChoice = screen.getByRole("button", {
       name: getValueChoiceAccessibilityLabel({
@@ -204,8 +197,7 @@ describe("Crucible Component Integration", () => {
       }),
     })
     const secondControlHint = within(secondChoice).getByText("[2 / D]")
-    expect(secondControlHint).toHaveClass("text-white")
-    expect(secondControlHint).not.toHaveClass("text-black")
+    expect(secondControlHint).toBeVisible()
   })
 
   it("changes Auto hints only after intentional keyboard or pointer input without moving the identity rail", async () => {
@@ -405,6 +397,15 @@ describe("Crucible Component Integration", () => {
       />,
     )
     expect(firstChoice).toBeInTheDocument()
+    expect(
+      firstChoice.querySelector('[data-combatant-side="first"]'),
+    ).toHaveAttribute("data-value-id", winner.id)
+    const strike = container.querySelector(
+      '[data-placeholder-playback="one-shot"]',
+    )
+    if (!strike) throw new Error("Selected animal strike is missing")
+    expect(strike).toHaveAttribute("data-battle-role", "attack")
+    fireEvent.animationEnd(strike)
     const resultVisuals = container.querySelectorAll(
       '[data-placeholder-playback="one-shot"]',
     )
@@ -452,7 +453,9 @@ describe("Crucible Component Integration", () => {
       }),
     })
     const stage = container.querySelector("[data-battle-stage-state]")
-    expect(stage).toHaveAttribute("aria-hidden", "true")
+    expect(stage).not.toHaveAttribute("aria-hidden", "true")
+    for (const combatant of container.querySelectorAll("[data-combatant-side]"))
+      expect(combatant).toHaveAttribute("aria-hidden", "true")
     expect(
       container.querySelectorAll('[data-placeholder-playback="static"]'),
     ).toHaveLength(2)
@@ -642,13 +645,8 @@ describe("Crucible Component Integration", () => {
         `“${getValueDisplayDefinition(definition)}”`,
       )
 
-      expect(choice.parentElement).toHaveClass(
-        "min-h-0",
-        "min-w-0",
-        "overflow-x-hidden",
-        "overflow-y-auto",
-        "overscroll-contain",
-      )
+      expect(choice).toContainElement(heading)
+      expect(choice).toContainElement(definitionCopy)
       expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
       expect(definitionCopy).toHaveClass(
         "break-words",

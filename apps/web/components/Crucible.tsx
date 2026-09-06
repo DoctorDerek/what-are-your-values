@@ -19,7 +19,6 @@ import type { ControlHintPreference } from "@game/machines/src/PlayerSettings"
 import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPresentation"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { AnimatePresence } from "motion/react"
 import type { StaticImageData } from "next/image"
 import { useCallback, useEffect, useRef, useState } from "react"
 import MapacheScreen from "@/components/MapacheScreen"
@@ -82,6 +81,9 @@ export default function Crucible({
   const controlHintInputModality = useWebControlHintInputModality()
   const firstChoiceRef = useRef<HTMLButtonElement>(null)
   const secondChoiceRef = useRef<HTMLButtonElement>(null)
+  const revealBattleSurface = useCallback((surface: HTMLElement | null) => {
+    surface?.scrollIntoView({ block: "start", behavior: "instant" })
+  }, [])
   const pendingAccessibilityActionRef =
     useRef<PendingBattleAccessibilityAction | null>(null)
   const nextAccessibilityAnnouncementSequenceRef = useRef(0)
@@ -296,6 +298,7 @@ export default function Crucible({
 
   return (
     <MapacheScreen
+      ref={revealBattleSurface}
       aria-label="Value battle"
       aria-busy={isPersistencePending}
       spacing="safe-area-only"
@@ -337,53 +340,50 @@ export default function Crucible({
         />
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col xl:grid xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)_auto]">
-        <AnimatePresence mode="popLayout">
-          <ValueChoiceCard
-            ref={firstChoiceRef}
-            key={`Card A: ${idA} vs. ${idB}`}
-            position="first"
-            value={valA}
-            level={levelA}
-            focusedId={focusedId}
-            winnerId={winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            controlHint={firstControlHint}
-            shouldReduceMotion={shouldReduceMotion}
-            onActivate={handleSelect}
-            onFocus={handleCardFocus}
-          />
-        </AnimatePresence>
-
-        <SeethingSwarmBattleStage
-          battle={currentBattle}
-          isNextBattleReady={state.context.pendingBattle !== null}
-          isPaused={isMenuOpen}
-          runtimeClipCatalog={runtimeClipCatalog}
-          shouldReduceMotion={shouldReduceMotion}
-          winnerId={winnerId}
-          onResultAnimationComplete={handleResultAnimationComplete}
-        />
-
-        <AnimatePresence mode="popLayout">
-          <ValueChoiceCard
-            ref={secondChoiceRef}
-            key={`Card B: ${idB} vs. ${idA}`}
-            position="second"
-            value={valB}
-            level={levelB}
-            focusedId={focusedId}
-            winnerId={winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            controlHint={secondControlHint}
-            shouldReduceMotion={shouldReduceMotion}
-            onActivate={handleSelect}
-            onFocus={handleCardFocus}
-          />
-        </AnimatePresence>
-      </div>
+      <SeethingSwarmBattleStage
+        battle={currentBattle}
+        isNextBattleReady={state.context.pendingBattle !== null}
+        isPaused={isMenuOpen}
+        runtimeClipCatalog={runtimeClipCatalog}
+        shouldReduceMotion={shouldReduceMotion}
+        winnerId={winnerId}
+        onResultAnimationComplete={handleResultAnimationComplete}
+      >
+        {(combatants) => (
+          <>
+            <ValueChoiceCard
+              ref={firstChoiceRef}
+              key={`Card A: ${idA} vs. ${idB}`}
+              position="first"
+              value={valA}
+              level={levelA}
+              focusedId={focusedId}
+              winnerId={winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              controlHint={firstControlHint}
+              combatant={combatants.first}
+              onActivate={handleSelect}
+              onFocus={handleCardFocus}
+            />
+            <ValueChoiceCard
+              ref={secondChoiceRef}
+              key={`Card B: ${idB} vs. ${idA}`}
+              position="second"
+              value={valB}
+              level={levelB}
+              focusedId={focusedId}
+              winnerId={winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              controlHint={secondControlHint}
+              combatant={combatants.second}
+              onActivate={handleSelect}
+              onFocus={handleCardFocus}
+            />
+          </>
+        )}
+      </SeethingSwarmBattleStage>
     </MapacheScreen>
   )
 }

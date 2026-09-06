@@ -108,16 +108,28 @@ vi.mock("./SeethingSwarmBattleStage", async () => {
       isNextBattleReady,
       winnerId,
       onResultAnimationComplete,
+      children,
     }: {
       readonly isNextBattleReady: boolean
       readonly winnerId: string | null
       readonly onResultAnimationComplete: () => void
+      readonly children: (combatants: {
+        first: ReactNode
+        second: ReactNode
+      }) => ReactNode
     }) {
       useEffect(() => {
         if (winnerId && isNextBattleReady) onResultAnimationComplete()
       }, [isNextBattleReady, onResultAnimationComplete, winnerId])
 
-      return <div aria-hidden="true" data-testid="mock-battle-stage" />
+      return (
+        <div data-testid="mock-battle-stage">
+          {children({
+            first: <span aria-hidden="true" />,
+            second: <span aria-hidden="true" />,
+          })}
+        </div>
+      )
     },
   }
 })
@@ -1212,16 +1224,15 @@ describe("GameClient Integration", () => {
     expect(battleSurface).not.toHaveClass("pb-[min(50dvh,17rem)]")
     expect(presentationRegion).toHaveClass("relative", "shrink-0", "flex-col")
     expect(presentationRegion).not.toHaveClass("absolute")
-    expect(presentationRegion?.nextElementSibling).toHaveClass(
-      "min-h-0",
-      "flex-1",
-      "xl:grid",
-      "xl:grid-cols-2",
-    )
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Undo" })).toBeEnabled(),
     )
     expect(battleSurface).toHaveAttribute("aria-busy", "false")
+    const nextChoices = within(battleSurface).getAllByRole("button", {
+      name: /^Choose /,
+    })
+    expect(nextChoices).toHaveLength(2)
+    for (const choice of nextChoices) expect(choice).toBeEnabled()
 
     fireEvent.click(screen.getByRole("button", { name: "Dismiss achievement" }))
 

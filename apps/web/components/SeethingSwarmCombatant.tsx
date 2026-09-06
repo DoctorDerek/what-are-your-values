@@ -4,6 +4,7 @@ import {
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
 import type { SeethingSwarmLicensedBattleCombatant } from "@game/machines/src/SeethingSwarmBattleChoreography"
+import type { SeethingSwarmBattleExchangeCue } from "@game/machines/src/SeethingSwarmBattleExchange"
 import { createSeethingSwarmBattlePlayback } from "@game/machines/src/SeethingSwarmBattlePlayback"
 import type { StaticImageData } from "next/image"
 import { useMemo, useState } from "react"
@@ -13,19 +14,23 @@ import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
 export default function SeethingSwarmCombatant({
   combatant,
   winnerId,
+  cue,
   shouldReduceMotion,
   onPlaybackComplete,
+  onReady,
 }: {
   combatant: SeethingSwarmLicensedBattleCombatant<StaticImageData>
   winnerId: ValueId | null
+  cue: SeethingSwarmBattleExchangeCue
   shouldReduceMotion: boolean
   onPlaybackComplete: () => void
+  onReady: () => void
 }) {
   const [stepIndex, setStepIndex] = useState(0)
   const [hasLoadError, setHasLoadError] = useState(false)
   const steps = useMemo(
-    () => createSeethingSwarmBattlePlayback({ combatant, winnerId }),
-    [combatant, winnerId],
+    () => createSeethingSwarmBattlePlayback({ combatant, winnerId, cue }),
+    [combatant, winnerId, cue],
   )
   const maximumIntegerScale = useMemo(
     () =>
@@ -50,11 +55,10 @@ export default function SeethingSwarmCombatant({
     return (
       <SeethingSwarmPlaceholder
         side={combatant.side}
-        result={
-          !winnerId ? null : winnerId === combatant.valueId ? "winner" : "loser"
-        }
+        role={role === "entry" || role === "anticipation" ? "rest" : role}
         shouldReduceMotion={shouldReduceMotion}
         onPlaybackComplete={onPlaybackComplete}
+        onReady={onReady}
       />
     )
 
@@ -76,6 +80,7 @@ export default function SeethingSwarmCombatant({
         shouldReduceMotion={shouldReduceMotion}
         tileSize={SEETHING_SWARM_BATTLE_TILE_SIZE}
         onLoadError={() => setHasLoadError(true)}
+        onReady={onReady}
         onPlaybackComplete={() => {
           if (isComplete) return
           setStepIndex(stepIndex + 1)

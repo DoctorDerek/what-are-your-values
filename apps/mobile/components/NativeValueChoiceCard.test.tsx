@@ -55,7 +55,6 @@ describe("NativeValueChoiceCard", () => {
         winnerId: null,
         isEnabled: true,
         isAnimating: false,
-        shouldReduceMotion: true,
         onActivate,
       } satisfies ComponentProps<typeof NativeValueChoiceCard>
       const { unmount } = await render(<NativeValueChoiceCard {...props} />)

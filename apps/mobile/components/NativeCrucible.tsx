@@ -217,46 +217,45 @@ export default function NativeCrucible({
         shouldReduceMotion={shouldReduceMotion}
         onPresented={onAchievementPresented}
       />
-      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-col-reverse">
-        <View className="shrink-0">
-          <NativeSeethingSwarmBattleStage
-            battle={currentBattle}
-            catalog={runtimeClipCatalog}
-            winnerId={state.context.winnerId}
-            isNextBattleReady={state.context.pendingBattle !== null}
-            isPaused={isMenuOpen}
-            shouldReduceMotion={shouldReduceMotion}
-            onResultComplete={handleAnimationComplete}
-          />
-        </View>
-        <View className="min-h-0 flex-1 flex-col gap-2 xl:flex-row">
-          <NativeValueChoiceCard
-            ref={firstChoiceRef}
-            key={`first:${firstValueId}:${secondValueId}`}
-            position="first"
-            value={firstValue}
-            level={getLevelFromXP(firstProgress.totalXp)}
-            controlHint={firstControlHint}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            shouldReduceMotion={shouldReduceMotion}
-            onActivate={handleSelect}
-          />
-          <NativeValueChoiceCard
-            key={`second:${secondValueId}:${firstValueId}`}
-            position="second"
-            value={secondValue}
-            level={getLevelFromXP(secondProgress.totalXp)}
-            controlHint={secondControlHint}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            shouldReduceMotion={shouldReduceMotion}
-            onActivate={handleSelect}
-          />
-        </View>
-      </View>
+      <NativeSeethingSwarmBattleStage
+        battle={currentBattle}
+        catalog={runtimeClipCatalog}
+        winnerId={state.context.winnerId}
+        isNextBattleReady={state.context.pendingBattle !== null}
+        isPaused={isMenuOpen}
+        shouldReduceMotion={shouldReduceMotion}
+        onResultComplete={handleAnimationComplete}
+      >
+        {(combatants) => (
+          <>
+            <NativeValueChoiceCard
+              ref={firstChoiceRef}
+              key={`first:${firstValueId}:${secondValueId}`}
+              position="first"
+              value={firstValue}
+              level={getLevelFromXP(firstProgress.totalXp)}
+              controlHint={firstControlHint}
+              winnerId={state.context.winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              combatant={combatants.first}
+              onActivate={handleSelect}
+            />
+            <NativeValueChoiceCard
+              key={`second:${secondValueId}:${firstValueId}`}
+              position="second"
+              value={secondValue}
+              level={getLevelFromXP(secondProgress.totalXp)}
+              controlHint={secondControlHint}
+              winnerId={state.context.winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              combatant={combatants.second}
+              onActivate={handleSelect}
+            />
+          </>
+        )}
+      </NativeSeethingSwarmBattleStage>
     </MapacheScreen>
   )
 }
