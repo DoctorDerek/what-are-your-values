@@ -358,6 +358,7 @@ export default function Crucible({
         <SeethingSwarmBattleStage
           battle={currentBattle}
           isNextBattleReady={state.context.pendingBattle !== null}
+          isPaused={isMenuOpen}
           runtimeClipCatalog={runtimeClipCatalog}
           shouldReduceMotion={shouldReduceMotion}
           winnerId={winnerId}

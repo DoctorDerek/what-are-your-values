@@ -13,6 +13,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useSyncExternalStore,
   type CSSProperties,
 } from "react"
 import SeethingSwarmCombatant from "@/components/SeethingSwarmCombatant"
@@ -20,6 +21,19 @@ import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
 
 type SeethingSwarmBattleStageStyle = CSSProperties & {
   "--battle-result-duration": string
+}
+
+function subscribeToDocumentVisibility(onChange: () => void) {
+  document.addEventListener("visibilitychange", onChange)
+  return () => document.removeEventListener("visibilitychange", onChange)
+}
+
+function getIsDocumentHidden() {
+  return document.visibilityState === "hidden"
+}
+
+function getServerIsDocumentHidden() {
+  return false
 }
 
 function BattlePlayback({
@@ -90,6 +104,7 @@ function BattlePlayback({
 export default function SeethingSwarmBattleStage({
   battle,
   isNextBattleReady,
+  isPaused = false,
   runtimeClipCatalog,
   shouldReduceMotion,
   winnerId,
@@ -97,11 +112,17 @@ export default function SeethingSwarmBattleStage({
 }: {
   battle: PresentedBattle
   isNextBattleReady: boolean
+  isPaused?: boolean
   runtimeClipCatalog: SeethingSwarmRuntimeClipCatalog<StaticImageData>
   shouldReduceMotion: boolean
   winnerId: ValueId | null
   onResultAnimationComplete: () => void
 }) {
+  const isDocumentHidden = useSyncExternalStore(
+    subscribeToDocumentVisibility,
+    getIsDocumentHidden,
+    getServerIsDocumentHidden,
+  )
   const choreography = useMemo(
     () =>
       createSeethingSwarmBattleChoreography({
@@ -128,7 +149,7 @@ export default function SeethingSwarmBattleStage({
         choreography={choreography}
         winnerId={winnerId}
         isNextBattleReady={isNextBattleReady}
-        shouldReduceMotion={shouldReduceMotion}
+        shouldReduceMotion={shouldReduceMotion || isPaused || isDocumentHidden}
         onResultComplete={onResultAnimationComplete}
       />
       <span className="col-start-2 row-start-1 self-center border-4 border-white bg-black px-2 py-1 text-sm font-black uppercase shadow-[3px_3px_0px_0px_#ffffff] xl:px-3 xl:py-2 xl:text-xl">
