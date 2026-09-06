@@ -1,8 +1,8 @@
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { StaticImageData } from "next/image"
 import { describe, expect, it, vi } from "vitest"
-import SeethingSwarmAnimal from "./SeethingSwarmAnimal"
+import SeethingSwarmAnimal from "@/components/SeethingSwarmAnimal"
 
 const clip = Object.freeze({
   kind: "character",
@@ -64,7 +64,7 @@ describe("SeethingSwarmAnimal", () => {
     })
   })
 
-  it("plays one authored sequence once with custom geometry and reports its completion", () => {
+  it("plays one authored sequence only after loading and reports its completion", async () => {
     const onPlaybackComplete = vi.fn()
     render(
       <SeethingSwarmAnimal
@@ -92,7 +92,14 @@ describe("SeethingSwarmAnimal", () => {
       "--animal-strip-width": "768px",
     })
 
-    image.dispatchEvent(new AnimationEvent("animationend", { bubbles: true }))
+    fireEvent.animationEnd(image)
+    expect(onPlaybackComplete).not.toHaveBeenCalled()
+    expect(tile).toHaveAttribute("data-playback-ready", "false")
+    fireEvent.load(image)
+    await waitFor(() =>
+      expect(tile).toHaveAttribute("data-playback-ready", "true"),
+    )
+    fireEvent.animationEnd(image)
     expect(onPlaybackComplete).toHaveBeenCalledTimes(1)
   })
 
@@ -130,5 +137,62 @@ describe("SeethingSwarmAnimal", () => {
     const image = screen.getByAltText("")
     expect(image.parentElement).toHaveAttribute("data-playback-mode", "static")
     expect(image).toHaveStyle({ "--animal-strip-left": "-36px" })
+  })
+
+  it("keeps the requested scale cap and reloads readiness when the strip changes", async () => {
+    const onPlaybackComplete = vi.fn()
+    const nextClip = {
+      ...clip,
+      asset: { ...clip.asset, src: "/test/next-strip.png" },
+    }
+    const props = {
+      shouldReduceMotion: false,
+      playbackMode: "one-shot",
+      maximumIntegerScale: 2,
+      onPlaybackComplete,
+    } as const
+    const { rerender } = render(<SeethingSwarmAnimal {...props} clip={clip} />)
+    const image = screen.getByAltText("")
+    expect(image).toHaveAttribute("width", "32")
+    expect(image).toHaveAttribute("height", "8")
+    fireEvent.load(image)
+    await waitFor(() =>
+      expect(image.parentElement).toHaveAttribute(
+        "data-playback-ready",
+        "true",
+      ),
+    )
+
+    rerender(<SeethingSwarmAnimal {...props} clip={nextClip} />)
+    expect(image).toHaveAttribute("src", nextClip.asset.src)
+    expect(image.parentElement).toHaveAttribute("data-playback-ready", "false")
+    fireEvent.animationEnd(image)
+    expect(onPlaybackComplete).not.toHaveBeenCalled()
+    fireEvent.load(image)
+    await waitFor(() =>
+      expect(image.parentElement).toHaveAttribute(
+        "data-playback-ready",
+        "true",
+      ),
+    )
+    fireEvent.animationEnd(image)
+    expect(onPlaybackComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports an asset failure without pretending its animation completed", () => {
+    const onLoadError = vi.fn()
+    const onPlaybackComplete = vi.fn()
+    render(
+      <SeethingSwarmAnimal
+        clip={clip}
+        shouldReduceMotion={false}
+        playbackMode="one-shot"
+        onLoadError={onLoadError}
+        onPlaybackComplete={onPlaybackComplete}
+      />,
+    )
+    fireEvent.error(screen.getByAltText(""))
+    expect(onLoadError).toHaveBeenCalledTimes(1)
+    expect(onPlaybackComplete).not.toHaveBeenCalled()
   })
 })
