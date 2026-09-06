@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test"
+import { installVisibleTextBounds } from "./visible-text-bounds"
 
 test.use({ serviceWorkers: "block" })
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(installVisibleTextBounds)
+})
 
 interface ResponsiveStrikeEvidence {
   identity: string | null
@@ -136,31 +141,7 @@ for (const viewport of [
             imageIsLoaded: image.complete && image.naturalWidth > 0,
             overlapsVisibleText: [...stage.querySelectorAll("h2, p")].some(
               (text) => {
-                let { left, right, top, bottom } = text.getBoundingClientRect()
-                for (
-                  let parent = text.parentElement;
-                  parent;
-                  parent = parent.parentElement
-                ) {
-                  const style = getComputedStyle(parent)
-                  const bounds = parent.getBoundingClientRect()
-                  if (
-                    ["auto", "scroll", "hidden", "clip"].includes(
-                      style.overflowX,
-                    )
-                  ) {
-                    left = Math.max(left, bounds.left)
-                    right = Math.min(right, bounds.right)
-                  }
-                  if (
-                    ["auto", "scroll", "hidden", "clip"].includes(
-                      style.overflowY,
-                    )
-                  ) {
-                    top = Math.max(top, bounds.top)
-                    bottom = Math.min(bottom, bounds.bottom)
-                  }
-                }
+                const { left, right, top, bottom } = window.getVisibleTextBounds(text)
                 return (
                   left < right &&
                   top < bottom &&
@@ -183,19 +164,17 @@ for (const viewport of [
     await expect(stage).toHaveAttribute("data-battle-stage-mode", "licensed")
     const cardGeometry = await stage
       .locator("[data-value-card]")
-      .evaluateAll((cards) =>
-        cards.map((card) => ({
-          card: card.getBoundingClientRect().toJSON(),
-          reading: card
-            .querySelector('[role="region"]')!
-            .getBoundingClientRect()
-            .toJSON(),
-          animal: card
-            .querySelector("[data-combatant-side]")!
-            .getBoundingClientRect()
-            .toJSON(),
-        })),
-      )
+      .evaluateAll((cards) => {
+        const measure = (element: Element) => {
+          const { left, right, top, bottom, width } = element.getBoundingClientRect()
+          return { left, right, top, bottom, width }
+        }
+        return cards.map((card) => ({
+          card: measure(card),
+          reading: measure(card.querySelector('[role="region"]')!),
+          animal: measure(card.querySelector("[data-combatant-side]")!),
+        }))
+      })
     const [first, second] = cardGeometry
     if (!first || !second) throw new Error("Both value cards must be present")
     if (viewport.width < 1280) {

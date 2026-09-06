@@ -1,31 +1,10 @@
 import { expect, test, type Locator, type Route } from "@playwright/test"
+import { installVisibleTextBounds } from "./visible-text-bounds"
 
 test.use({ serviceWorkers: "block" })
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    window.getVisibleTextBounds = (text) => {
-      const bounds = text.getBoundingClientRect()
-      let { left, right, top, bottom } = bounds
-      for (
-        let ancestor = text.parentElement;
-        ancestor;
-        ancestor = ancestor.parentElement
-      ) {
-        const style = getComputedStyle(ancestor)
-        const clip = ancestor.getBoundingClientRect()
-        if (["auto", "scroll", "hidden", "clip"].includes(style.overflowX)) {
-          left = Math.max(left, clip.left)
-          right = Math.min(right, clip.right)
-        }
-        if (["auto", "scroll", "hidden", "clip"].includes(style.overflowY)) {
-          top = Math.max(top, clip.top)
-          bottom = Math.min(bottom, clip.bottom)
-        }
-      }
-      return { left, right, top, bottom }
-    }
-  })
+  await page.addInitScript(installVisibleTextBounds)
 })
 
 test("a delayed attack keeps the loaded animal visible without replacing its images", async ({
@@ -130,9 +109,6 @@ interface AnimalPaintAudit {
 
 declare global {
   interface Window {
-    getVisibleTextBounds: (
-      text: Element,
-    ) => Pick<DOMRect, "left" | "right" | "top" | "bottom">
     completedAnimalClips: CompletedAnimalClip[]
     animalStrikes: AnimalStrikeGeometry[]
     animalPaintAudit: AnimalPaintAudit
