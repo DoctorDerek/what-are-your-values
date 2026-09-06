@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "env": ["GHOST_ASSET_KEY_WHAT_ARE_YOUR_VALUES_MAPACHE"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/ghost_assets/seethingswarm-assets.zip",
+        "$TURBO_ROOT$/scripts/decrypt-assets.ts",
+        "$TURBO_ROOT$/scripts/runTypeScript.mjs",
+        "$TURBO_ROOT$/scripts/animal-assets/**",
+        "$TURBO_ROOT$/tsconfig.json"
+      ]
+    }
+  }
+}
