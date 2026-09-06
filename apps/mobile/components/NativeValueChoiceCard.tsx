@@ -5,7 +5,7 @@ import {
   type ValueId,
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
-import { forwardRef, type ForwardedRef, type ReactNode } from "react"
+import { forwardRef, useState, type ForwardedRef, type ReactNode } from "react"
 import { Pressable, ScrollView, View } from "react-native"
 import { Text } from "@/components/ui/text"
 import { cn } from "@/lib/utils"
@@ -18,7 +18,7 @@ type NativeValueChoiceCardProps = {
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
-  combatant?: ReactNode
+  combatant?: (isAttended: boolean) => ReactNode
   onActivate: (valueId: ValueId) => void
 }
 
@@ -37,6 +37,8 @@ function NativeValueChoiceCard(
   ref: ForwardedRef<View>,
 ) {
   const isWinner = isAnimating && winnerId === value.id
+  const [isHovered, setIsHovered] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
 
   const displayName = getValueDisplayName(value)
   const displayDefinition = getValueDisplayDefinition(value)
@@ -64,6 +66,10 @@ function NativeValueChoiceCard(
         className="min-h-0 flex-1 flex-row items-center xl:flex-col"
         disabled={!isEnabled}
         onPress={() => onActivate(value.id)}
+        onHoverIn={() => setIsHovered(true)}
+        onHoverOut={() => setIsHovered(false)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       >
         <ScrollView
           className="h-full min-h-0 min-w-0 flex-1 xl:h-auto xl:w-full"
@@ -107,7 +113,7 @@ function NativeValueChoiceCard(
                 : "justify-end xl:self-start",
             )}
           >
-            {combatant}
+            {combatant(isEnabled && (isHovered || isFocused))}
           </View>
         ) : null}
       </Pressable>

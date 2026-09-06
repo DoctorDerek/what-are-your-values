@@ -7,7 +7,7 @@ import {
   type ValueId,
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
-import { forwardRef, useId, type ReactNode } from "react"
+import { forwardRef, useId, useState, type ReactNode } from "react"
 
 export type ValueChoicePosition = "first" | "second"
 
@@ -20,7 +20,7 @@ type ValueChoiceCardProps = {
   isEnabled: boolean
   isAnimating: boolean
   controlHint: string | null
-  combatant?: ReactNode
+  combatant?: (isAttended: boolean) => ReactNode
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
 }
@@ -45,6 +45,8 @@ export const ValueChoiceCard = forwardRef<
   ref,
 ) {
   const isFirst = position === "first"
+  const [isHovered, setIsHovered] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const displayName = getValueDisplayName(value)
   const isWinner = isAnimating && winnerId === value.id
   const positionClasses = isFirst
@@ -71,7 +73,16 @@ export const ValueChoiceCard = forwardRef<
         aria-describedby={accessibleDefinitionId}
         disabled={!isEnabled}
         onClick={() => onActivate(value.id)}
-        onFocus={() => onFocus(value.id)}
+        onFocus={() => {
+          setIsFocused(true)
+          onFocus(value.id)
+        }}
+        onBlur={() => setIsFocused(false)}
+        onPointerEnter={(event) => {
+          if (event.pointerType !== "touch") setIsHovered(true)
+        }}
+        onPointerLeave={() => setIsHovered(false)}
+        onPointerCancel={() => setIsHovered(false)}
         className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer flex-row items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default xl:flex-col ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
       >
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:h-auto xl:w-full xl:px-8 xl:py-8">
@@ -102,7 +113,7 @@ export const ValueChoiceCard = forwardRef<
           <span
             className={`pointer-events-none relative flex h-full w-1/3 max-w-56 min-w-28 shrink-0 items-center xl:h-28 xl:w-28 ${isFirst ? "justify-start xl:self-end" : "justify-end xl:self-start"}`}
           >
-            {combatant}
+            {combatant(isEnabled && (isHovered || isFocused))}
           </span>
         ) : null}
       </button>

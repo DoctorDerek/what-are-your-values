@@ -38,7 +38,10 @@ function NativeBattlePlayback({
   isNextBattleReady: boolean
   shouldReduceMotion: boolean
   onResultComplete: () => void
-  children: (combatants: { first: ReactNode; second: ReactNode }) => ReactNode
+  children: (combatants: {
+    first: (isAttended: boolean) => ReactNode
+    second: (isAttended: boolean) => ReactNode
+  }) => ReactNode
 }) {
   const [resultCue, setResultCue] =
     useState<SeethingSwarmBattleExchangeCue>("approach")
@@ -118,49 +121,52 @@ function NativeBattlePlayback({
     )
   }
 
-  const combatants = choreography.combatants.map((combatant) => (
-    <View
-      key={combatant.side}
-      ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
-      accessibilityElementsHidden
-      accessible={false}
-      importantForAccessibility="no-hide-descendants"
-      pointerEvents="none"
-      collapsable={false}
-      testID={`battle-combatant-${combatant.side}`}
-      className="size-28 items-center justify-end"
-    >
-      <NativeSeethingSwarmBattleTraveler
-        cue={cue}
-        travel={combatant.valueId === winnerId ? travel : null}
-        shouldReduceMotion={shouldReduceMotion}
-        onApproachComplete={() => setResultCue("strike")}
+  const combatants = choreography.combatants.map(
+    (combatant) => (isAttended: boolean) => (
+      <View
+        key={combatant.side}
+        ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
+        accessibilityElementsHidden
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
+        collapsable={false}
+        testID={`battle-combatant-${combatant.side}`}
+        className="size-28 items-center justify-end"
       >
-        {"clips" in combatant ? (
-          <NativeSeethingSwarmCombatant
-            combatant={combatant}
-            winnerId={winnerId}
-            cue={cue}
-            shouldReduceMotion={shouldReduceMotion}
-            onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
-            onReady={() => handleReady(combatant.side)}
-          />
-        ) : (
-          <NativeSeethingSwarmPlaceholder
-            key={cue}
-            side={combatant.side}
-            role={resolveSeethingSwarmPlaceholderRole(
-              cue,
-              winnerId === combatant.valueId,
-            )}
-            shouldReduceMotion={shouldReduceMotion}
-            onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
-            onReady={() => handleReady(combatant.side)}
-          />
-        )}
-      </NativeSeethingSwarmBattleTraveler>
-    </View>
-  ))
+        <NativeSeethingSwarmBattleTraveler
+          cue={cue}
+          travel={combatant.valueId === winnerId ? travel : null}
+          shouldReduceMotion={shouldReduceMotion}
+          onApproachComplete={() => setResultCue("strike")}
+        >
+          {"clips" in combatant ? (
+            <NativeSeethingSwarmCombatant
+              combatant={combatant}
+              isAttended={isAttended}
+              winnerId={winnerId}
+              cue={cue}
+              shouldReduceMotion={shouldReduceMotion}
+              onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
+              onReady={() => handleReady(combatant.side)}
+            />
+          ) : (
+            <NativeSeethingSwarmPlaceholder
+              key={cue}
+              side={combatant.side}
+              role={resolveSeethingSwarmPlaceholderRole(
+                cue,
+                winnerId === combatant.valueId,
+              )}
+              shouldReduceMotion={shouldReduceMotion}
+              onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
+              onReady={() => handleReady(combatant.side)}
+            />
+          )}
+        </NativeSeethingSwarmBattleTraveler>
+      </View>
+    ),
+  )
   return (
     <View
       testID="seething-swarm-battle-stage"
@@ -189,7 +195,10 @@ export default function NativeSeethingSwarmBattleStage({
   isPaused: boolean
   shouldReduceMotion: boolean
   onResultComplete: () => void
-  children: (combatants: { first: ReactNode; second: ReactNode }) => ReactNode
+  children: (combatants: {
+    first: (isAttended: boolean) => ReactNode
+    second: (isAttended: boolean) => ReactNode
+  }) => ReactNode
 }) {
   const [isForeground, setIsForeground] = useState(
     AppState.currentState === "active",

@@ -17,7 +17,8 @@ import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
 export default function SeethingSwarmCombatant({
   combatant,
   winnerId,
-  cue,
+  cue: exchangeCue,
+  isAttended,
   shouldReduceMotion,
   onPlaybackComplete,
   onReady,
@@ -25,11 +26,20 @@ export default function SeethingSwarmCombatant({
   combatant: SeethingSwarmLicensedBattleCombatant<StaticImageData>
   winnerId: ValueId | null
   cue: SeethingSwarmBattleExchangeCue
+  isAttended: boolean
   shouldReduceMotion: boolean
   onPlaybackComplete: () => void
   onReady: () => void
 }) {
-  const [playback, setPlayback] = useState({ cue, stepIndex: 0 })
+  const [playback, setPlayback] = useState({ cue: exchangeCue, stepIndex: 0 })
+  const cue =
+    exchangeCue !== "introduction"
+      ? exchangeCue
+      : isAttended
+        ? "attention"
+        : playback.cue === "introduction"
+          ? "introduction"
+          : "rest"
   if (playback.cue !== cue) setPlayback({ cue, stepIndex: 0 })
   const stepIndex = playback.cue === cue ? playback.stepIndex : 0
   const [loadedRoles, setLoadedRoles] = useState<

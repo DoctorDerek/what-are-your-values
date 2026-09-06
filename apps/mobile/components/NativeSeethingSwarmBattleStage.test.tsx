@@ -77,10 +77,10 @@ function props(): ComponentProps<typeof NativeSeethingSwarmBattleStage> {
     children: ({ first, second }) => (
       <>
         <Pressable accessibilityRole="button" accessibilityLabel="First value">
-          {first}
+          {first(false)}
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Second value">
-          {second}
+          {second(false)}
         </Pressable>
       </>
     ),

@@ -3,7 +3,7 @@ import { SEETHING_SWARM_BATTLE_TILE_SIZE } from "@game/data/src/SeethingSwarmAni
 export const SEETHING_SWARM_BATTLE_APPROACH_DURATION_MS = 160
 
 export type SeethingSwarmBattleExchangeCue =
-  "introduction" | "approach" | "strike" | "impact"
+  "introduction" | "attention" | "rest" | "approach" | "strike" | "impact"
 
 export type SeethingSwarmBattlePoint = Readonly<{ x: number; y: number }>
 

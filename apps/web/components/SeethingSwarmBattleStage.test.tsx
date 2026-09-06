@@ -30,13 +30,19 @@ function createStageProps(seed: string) {
     shouldReduceMotion: false,
     winnerId: null,
     onResultAnimationComplete: vi.fn(),
-    children: ({ first, second }: { first: ReactNode; second: ReactNode }) => (
+    children: ({
+      first,
+      second,
+    }: {
+      first: (isAttended: boolean) => ReactNode
+      second: (isAttended: boolean) => ReactNode
+    }) => (
       <>
         <button type="button" aria-label="First value">
-          {first}
+          {first(false)}
         </button>
         <button type="button" aria-label="Second value">
-          {second}
+          {second(false)}
         </button>
       </>
     ),
