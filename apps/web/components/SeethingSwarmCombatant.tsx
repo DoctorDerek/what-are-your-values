@@ -10,7 +10,7 @@ import type {
 import type { SeethingSwarmBattleExchangeCue } from "@game/machines/src/SeethingSwarmBattleExchange"
 import { createSeethingSwarmBattlePlayback } from "@game/machines/src/SeethingSwarmBattlePlayback"
 import type { StaticImageData } from "next/image"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import SeethingSwarmAnimal from "@/components/SeethingSwarmAnimal"
 import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
 
@@ -72,21 +72,29 @@ export default function SeethingSwarmCombatant({
   const step = steps[Math.min(stepIndex, steps.length - 1)]
   const isComplete = stepIndex === steps.length
   const role = shouldReduceMotion && !winnerId ? "rest" : step.role
-  const isReady = loadedRoles.has(role)
+  const isReady = loadedRoles.has(role) && !failedRoles.has(role)
   if (isReady && displayedRole !== role) setDisplayedRole(role)
-  const visibleRole = isReady ? role : displayedRole
-  const hasVisibleImage = loadedRoles.has(visibleRole)
+  const retainedRole =
+    loadedRoles.has(displayedRole) && !failedRoles.has(displayedRole)
+      ? displayedRole
+      : [...loadedRoles].find((candidate) => !failedRoles.has(candidate)) ?? "rest"
+  const visibleRole = isReady ? role : retainedRole
+  const hasVisibleImage = loadedRoles.has(visibleRole) && !failedRoles.has(visibleRole)
   const hasLoadError = failedRoles.has(role)
 
   useEffect(() => {
-    if (isReady) onReady()
-  }, [cue, isReady, onReady])
+    if (isReady || (hasLoadError && hasVisibleImage)) onReady()
+  }, [cue, hasLoadError, hasVisibleImage, isReady, onReady])
 
-  const finishStep = () => {
+  const finishStep = useCallback(() => {
     if (isComplete) return
     setPlayback({ cue, stepIndex: stepIndex + 1 })
     if (winnerId && stepIndex + 1 === steps.length) onPlaybackComplete()
-  }
+  }, [cue, isComplete, onPlaybackComplete, stepIndex, steps.length, winnerId])
+
+  useEffect(() => {
+    if (hasLoadError && hasVisibleImage) finishStep()
+  }, [finishStep, hasLoadError, hasVisibleImage])
 
   return (
     <span
@@ -95,7 +103,7 @@ export default function SeethingSwarmCombatant({
     >
       {Object.values(combatant.clips).map((selection) => {
         const isVisible =
-          selection.role === visibleRole && hasVisibleImage && !hasLoadError
+          selection.role === visibleRole && hasVisibleImage
         return (
           <span
             key={selection.role}
@@ -133,7 +141,7 @@ export default function SeethingSwarmCombatant({
           </span>
         )
       })}
-      {!hasVisibleImage || hasLoadError ? (
+      {!hasVisibleImage ? (
         <SeethingSwarmPlaceholder
           side={combatant.side}
           role={role === "entry" || role === "anticipation" ? "rest" : role}
