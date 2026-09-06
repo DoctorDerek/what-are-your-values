@@ -86,7 +86,7 @@ export const ValueChoiceCard = forwardRef<
       }}
       onPointerLeave={() => setIsHovered(false)}
       onPointerCancel={() => setIsHovered(false)}
-      className={`${positionClasses} relative grid min-h-0 min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] grid-rows-[minmax(0,1fr)_auto] items-center focus-within:ring-8 focus-within:ring-white focus-within:ring-inset xl:flex xl:flex-col ${isWinner ? "z-10" : ""} ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
+      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 flex-col items-center focus-within:ring-8 focus-within:ring-white focus-within:ring-inset ${isWinner ? "z-10" : ""} ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
     >
       <div
         role="region"
@@ -101,7 +101,7 @@ export const ValueChoiceCard = forwardRef<
           )
             event.stopPropagation()
         }}
-        className="h-full min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-contain outline-none xl:h-auto"
+        className="min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-contain outline-none"
       >
         <button
           ref={ref}
@@ -114,7 +114,7 @@ export const ValueChoiceCard = forwardRef<
           aria-describedby={accessibleDefinitionId}
           disabled={!isEnabled}
           onClick={() => onActivate(value.id)}
-          className="flex min-h-full w-full min-w-0 cursor-pointer flex-col justify-start px-3 py-3 text-center outline-none after:absolute after:inset-0 disabled:cursor-default xl:px-8 xl:py-8"
+          className="flex min-h-full w-full min-w-0 cursor-pointer flex-col justify-start px-3 py-2 text-center outline-none after:absolute after:inset-0 disabled:cursor-default xl:px-8 xl:py-8"
         >
           <div className="my-auto w-full">
             <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-2 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-5">
@@ -124,7 +124,7 @@ export const ValueChoiceCard = forwardRef<
               >
                 {controlHint ?? reservedControlHint}
               </span>
-              <h2 className="col-span-2 row-start-1 mx-auto w-full max-w-4xl min-w-0 text-[clamp(1rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:col-span-1 xl:col-start-2 xl:text-[clamp(2rem,3.25vw,4rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
+              <h2 className="col-span-2 row-start-1 mx-auto w-full max-w-4xl min-w-0 text-[clamp(1rem,min(5vw,5cqh),2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:col-span-1 xl:col-start-2 xl:text-[clamp(2rem,3.25vw,4rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
                 {displayName}
               </h2>
               <span className="inline-block border-2 border-black bg-white px-2 py-1 text-sm font-black whitespace-nowrap text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[6px_6px_0px_0px_#000000]">
@@ -142,15 +142,15 @@ export const ValueChoiceCard = forwardRef<
       </div>
       {combatant ? (
         <span
-          className={`pointer-events-none relative flex w-full shrink-0 items-end px-4 pb-2 ${isFirst ? "justify-start xl:justify-end" : "justify-end xl:justify-start"}`}
+          className={`pointer-events-none relative flex w-full shrink-0 items-end px-[calc((100%-var(--battle-combatant-size)*2)/4)] pb-2 xl:px-4 ${isFirst ? "justify-start xl:justify-end" : "order-first justify-end xl:order-none xl:justify-start"}`}
         >
-          <span className="flex w-28 flex-col items-center xl:w-56">
-            <span aria-hidden="true" className="block h-10 w-full" />
+          <span className="flex w-(--battle-combatant-size) flex-col items-center">
+            <span aria-hidden="true" className="block h-6 w-full xl:h-10" />
             {combatant(
               isEnabled && (isHovered || isFocused),
               reward ? (
                 <span
-                  className="block border-2 border-black bg-white px-1 text-center text-xs leading-4 font-black text-black xl:text-base"
+                  className="block border-2 border-black bg-white px-1 text-center text-xs leading-4 font-black whitespace-nowrap text-black xl:text-base"
                   title={reward.progressLabel}
                 >
                   {reward.label}

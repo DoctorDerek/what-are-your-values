@@ -112,7 +112,7 @@ export default function SeethingSwarmCombatant({
 
   return (
     <span
-      className="relative block size-28 origin-bottom xl:scale-200"
+      className="relative block size-28 shrink-0"
       data-battle-role={role}
     >
       {Object.values(combatant.clips).map((selection) => {

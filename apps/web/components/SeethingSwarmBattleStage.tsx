@@ -1,4 +1,7 @@
-import { SEETHING_SWARM_BATTLE_RESULT_DURATION_MS } from "@game/data/src/SeethingSwarmAnimalPresentation"
+import {
+  SEETHING_SWARM_BATTLE_RESULT_DURATION_MS,
+  SEETHING_SWARM_BATTLE_TILE_SIZE,
+} from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { SeethingSwarmRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import type { ValueId } from "@game/data/src/Value"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
@@ -19,6 +22,7 @@ import type { StaticImageData } from "next/image"
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -32,6 +36,8 @@ import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
 
 type SeethingSwarmBattleStageStyle = CSSProperties & {
   "--battle-result-duration": string
+  "--battle-compact-combatant-size": string
+  "--battle-compact-combatant-scale": number
 }
 
 function subscribeToDocumentVisibility(onChange: () => void) {
@@ -116,6 +122,8 @@ function BattlePlayback({
     const secondCard = secondAnchorRef.current?.closest("[data-value-card]")
     if (firstCard) layoutObserver.observe(firstCard)
     if (secondCard) layoutObserver.observe(secondCard)
+    if (firstAnchorRef.current) layoutObserver.observe(firstAnchorRef.current)
+    if (secondAnchorRef.current) layoutObserver.observe(secondAnchorRef.current)
     window.addEventListener("resize", measureTravel)
     return () => {
       layoutObserver.disconnect()
@@ -152,14 +160,14 @@ function BattlePlayback({
             aria-hidden="true"
             key={combatant.side}
             ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
-            className="pointer-events-none relative flex size-28 shrink-0 items-end justify-center xl:size-56"
+            className="pointer-events-none relative flex size-(--battle-combatant-size) shrink-0 items-end justify-center"
             data-animal-id={combatant.animalId}
             data-combatant-side={combatant.side}
             data-value-id={combatant.valueId}
             data-battle-cue={cue}
           >
             <motion.div
-              className="relative flex size-28 items-end justify-center xl:size-56"
+              className="relative flex size-(--battle-combatant-size) shrink-0 items-end justify-center"
               data-combatant-traveler={combatant.side}
               initial={false}
               animate={{
@@ -188,10 +196,11 @@ function BattlePlayback({
               }}
             >
               {reward ? (
-                <span className="absolute bottom-full left-0 z-10 w-full pb-1">
+                <span className="absolute bottom-full left-1/2 z-10 w-max -translate-x-1/2 pb-1">
                   {reward}
                 </span>
               ) : null}
+              <span className="relative flex size-28 shrink-0 origin-bottom scale-(--battle-combatant-scale) items-end justify-center">
               {"clips" in combatant ? (
                 <SeethingSwarmCombatant
                   combatant={combatant}
@@ -219,6 +228,7 @@ function BattlePlayback({
                   onReady={() => handleReady(combatant.side)}
                 />
               )}
+              </span>
             </motion.div>
           </div>
         )
@@ -251,6 +261,26 @@ export default function SeethingSwarmBattleStage({
     second: (isAttended: boolean, reward?: ReactNode) => ReactNode
   }) => ReactNode
 }) {
+  const stageRef = useRef<HTMLDivElement>(null)
+  const [compactCombatantSize, setCompactCombatantSize] = useState(
+    SEETHING_SWARM_BATTLE_TILE_SIZE,
+  )
+  useLayoutEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    const measureStage = () => {
+      setCompactCombatantSize(
+        Math.min(
+          SEETHING_SWARM_BATTLE_TILE_SIZE,
+          stage.getBoundingClientRect().height / 5,
+        ),
+      )
+    }
+    measureStage()
+    const observer = new ResizeObserver(measureStage)
+    observer.observe(stage)
+    return () => observer.disconnect()
+  }, [])
   const isDocumentHidden = useSyncExternalStore(
     subscribeToDocumentVisibility,
     getIsDocumentHidden,
@@ -282,11 +312,15 @@ export default function SeethingSwarmBattleStage({
   }, [pendingBattle, runtimeClipCatalog])
   const stageStyle: SeethingSwarmBattleStageStyle = {
     "--battle-result-duration": `${SEETHING_SWARM_BATTLE_RESULT_DURATION_MS}ms`,
+    "--battle-compact-combatant-size": `${compactCombatantSize}px`,
+    "--battle-compact-combatant-scale":
+      compactCombatantSize / SEETHING_SWARM_BATTLE_TILE_SIZE,
   }
 
   return (
     <div
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col xl:flex-row"
+      ref={stageRef}
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col [container-type:size] [--battle-combatant-scale:var(--battle-compact-combatant-scale)] [--battle-combatant-size:var(--battle-compact-combatant-size)] xl:flex-row xl:[--battle-combatant-scale:2] xl:[--battle-combatant-size:14rem]"
       data-battle-stage-mode={choreography.mode}
       data-battle-stage-state={winnerId ? "resolving" : "awaiting-input"}
       data-choreography-identity={choreography.choreographyIdentity}
