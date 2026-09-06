@@ -44,7 +44,9 @@ export default function SeethingSwarmAnimal({
   onLoadError?: () => void
   onPlaybackComplete?: () => void
 }) {
-  const [loadedAssetSource, setLoadedAssetSource] = useState<string | null>(null)
+  const [loadedAssetSource, setLoadedAssetSource] = useState<string | null>(
+    null,
+  )
   const isImageLoaded = loadedAssetSource === clip.asset.src
   const effectivePlaybackMode =
     shouldReduceMotion &&
