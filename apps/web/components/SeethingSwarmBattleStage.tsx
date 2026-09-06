@@ -172,7 +172,6 @@ function BattlePlayback({
       >
         {"clips" in combatant ? (
           <SeethingSwarmCombatant
-            key={cue}
             combatant={combatant}
             winnerId={winnerId}
             cue={cue}
