@@ -84,6 +84,8 @@ function NativeBattlePlayback({
             const nextTravel = createSeethingSwarmBattleTravel({
               attacker: isFirstWinner ? firstPoint : secondPoint,
               defender: isFirstWinner ? secondPoint : firstPoint,
+              attackerSide: isFirstWinner ? "first" : "second",
+              combatantWidth: isFirstWinner ? firstWidth : secondWidth,
             })
             setTravel(nextTravel)
             if (nextTravel.x === 0 && nextTravel.y === 0)

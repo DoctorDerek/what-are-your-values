@@ -102,14 +102,24 @@ function BattlePlayback({
       const nextTravel = createSeethingSwarmBattleTravel({
         attacker: isFirstWinner ? firstPoint : secondPoint,
         defender: isFirstWinner ? secondPoint : firstPoint,
+        attackerSide: isFirstWinner ? "first" : "second",
+        combatantWidth: isFirstWinner ? first.width : second.width,
       })
       setTravel(nextTravel)
       if (nextTravel.x === 0 && nextTravel.y === 0)
         setResultCue((current) => (current === "approach" ? "strike" : current))
     }
     measureTravel()
+    const layoutObserver = new ResizeObserver(measureTravel)
+    const firstCard = firstAnchorRef.current?.closest("button")
+    const secondCard = secondAnchorRef.current?.closest("button")
+    if (firstCard) layoutObserver.observe(firstCard)
+    if (secondCard) layoutObserver.observe(secondCard)
     window.addEventListener("resize", measureTravel)
-    return () => window.removeEventListener("resize", measureTravel)
+    return () => {
+      layoutObserver.disconnect()
+      window.removeEventListener("resize", measureTravel)
+    }
   }, [choreography, readySides, shouldReduceMotion, winnerId])
 
   const handlePlaybackComplete = (side: SeethingSwarmBattleCombatantSide) => {
@@ -151,15 +161,11 @@ function BattlePlayback({
           initial={false}
           animate={{
             x:
-              !shouldReduceMotion &&
-              combatant.valueId === winnerId &&
-              cue !== "impact"
+              !shouldReduceMotion && combatant.valueId === winnerId
                 ? (travel?.x ?? 0)
                 : 0,
             y:
-              !shouldReduceMotion &&
-              combatant.valueId === winnerId &&
-              cue !== "impact"
+              !shouldReduceMotion && combatant.valueId === winnerId
                 ? (travel?.y ?? 0)
                 : 0,
           }}
