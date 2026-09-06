@@ -275,8 +275,14 @@ test("the Zoo of War holds both animals through a committed battle", async ({
   await expect(cards).toHaveCount(2)
   for (const card of await cards.all()) {
     await expect(card.getByRole("button", { name: /^Choose / })).toBeVisible()
-    await expect(card.locator("[data-combatant-side]")).toHaveAttribute("aria-hidden", "true")
-    await expect(card.locator("[data-combatant-side]")).toHaveAttribute("data-value-id", (await card.getAttribute("data-value-card"))!)
+    await expect(card.locator("[data-combatant-side]")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    )
+    await expect(card.locator("[data-combatant-side]")).toHaveAttribute(
+      "data-value-id",
+      (await card.getAttribute("data-value-card"))!,
+    )
   }
   await expect(stage).toHaveAttribute(
     "data-battle-stage-mode",
