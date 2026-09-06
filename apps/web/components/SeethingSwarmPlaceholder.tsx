@@ -33,7 +33,7 @@ export default function SeethingSwarmPlaceholder({
         ? "animate-seething-swarm-placeholder-reaction"
         : role === "flourish"
           ? "animate-seething-swarm-placeholder-rest [animation-duration:var(--battle-result-duration)] [animation-iteration-count:1]"
-        : "animate-seething-swarm-placeholder-rest"
+          : "animate-seething-swarm-placeholder-rest"
 
   return (
     <span

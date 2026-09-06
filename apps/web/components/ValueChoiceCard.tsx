@@ -75,31 +75,33 @@ export const ValueChoiceCard = forwardRef<
         className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer flex-row items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default xl:flex-col ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
       >
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:h-auto xl:w-full xl:px-8 xl:py-8">
-        <div className="my-auto w-full">
-          <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-2 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-5">
-            <span
-              aria-hidden="true"
-              className={`w-16 justify-self-start text-center text-sm font-black whitespace-nowrap uppercase xl:w-28 xl:text-2xl ${controlHintContrastClasses} ${controlHint ? "" : "invisible"}`}
+          <div className="my-auto w-full">
+            <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-2 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-5">
+              <span
+                aria-hidden="true"
+                className={`w-16 justify-self-start text-center text-sm font-black whitespace-nowrap uppercase xl:w-28 xl:text-2xl ${controlHintContrastClasses} ${controlHint ? "" : "invisible"}`}
+              >
+                {controlHint ?? reservedControlHint}
+              </span>
+              <h2 className="col-span-2 row-start-1 mx-auto w-full max-w-4xl min-w-0 text-[clamp(1rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:col-span-1 xl:col-start-2 xl:text-[clamp(2rem,3.25vw,4rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
+                {displayName}
+              </h2>
+              <span className="inline-block border-2 border-black bg-white px-2 py-1 text-sm font-black whitespace-nowrap text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[6px_6px_0px_0px_#000000]">
+                LVL {level}
+              </span>
+            </div>
+            <p
+              id={accessibleDefinitionId}
+              className="mx-auto mt-3 max-w-2xl border-2 border-white/20 bg-black/40 p-3 text-[clamp(1rem,2.8vw,1.5rem)] leading-snug font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-white drop-shadow-[2px_2px_0px_#000000] xl:mt-6 xl:p-6 xl:text-[clamp(1.25rem,2vw,1.875rem)] xl:leading-relaxed"
             >
-              {controlHint ?? reservedControlHint}
-            </span>
-            <h2 className="col-span-2 row-start-1 mx-auto w-full max-w-4xl min-w-0 text-[clamp(1rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:col-span-1 xl:col-start-2 xl:text-[clamp(2rem,3.25vw,4rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
-              {displayName}
-            </h2>
-            <span className="inline-block border-2 border-black bg-white px-2 py-1 text-sm font-black whitespace-nowrap text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[6px_6px_0px_0px_#000000]">
-              LVL {level}
-            </span>
+              “{getValueDisplayDefinition(value)}”
+            </p>
           </div>
-          <p
-            id={accessibleDefinitionId}
-            className="mx-auto mt-3 max-w-2xl border-2 border-white/20 bg-black/40 p-3 text-[clamp(1rem,2.8vw,1.5rem)] leading-snug font-bold [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-white drop-shadow-[2px_2px_0px_#000000] xl:mt-6 xl:p-6 xl:text-[clamp(1.25rem,2vw,1.875rem)] xl:leading-relaxed"
-          >
-            “{getValueDisplayDefinition(value)}”
-          </p>
-        </div>
         </div>
         {combatant ? (
-          <span className={`pointer-events-none relative flex h-full w-1/3 min-w-28 max-w-56 shrink-0 items-center xl:h-28 xl:w-28 ${isFirst ? "justify-start xl:self-end" : "justify-end xl:self-start"}`}>
+          <span
+            className={`pointer-events-none relative flex h-full w-1/3 max-w-56 min-w-28 shrink-0 items-center xl:h-28 xl:w-28 ${isFirst ? "justify-start xl:self-end" : "justify-end xl:self-start"}`}
+          >
             {combatant}
           </span>
         ) : null}

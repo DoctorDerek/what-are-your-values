@@ -4,12 +4,12 @@ import {
   type SeethingSwarmAnimalPlaybackMode,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
-import type { SeethingSwarmBattleExchangeCue } from "./SeethingSwarmBattleExchange"
 import type {
   SeethingSwarmBattleClipRole,
   SeethingSwarmBattleClipSelection,
   SeethingSwarmLicensedBattleCombatant,
 } from "./SeethingSwarmBattleChoreography"
+import type { SeethingSwarmBattleExchangeCue } from "./SeethingSwarmBattleExchange"
 
 const BATTLE_INTRODUCTION_ROLES = Object.freeze([
   "entry",
@@ -36,13 +36,16 @@ export function createSeethingSwarmBattlePlayback<PlatformAsset>({
   readonly cue: SeethingSwarmBattleExchangeCue
 }): readonly SeethingSwarmBattlePlaybackStep<PlatformAsset>[] {
   const isWinner = combatant.valueId === winnerId
-  const roles: readonly SeethingSwarmBattleClipRole[] = cue === "introduction"
-    ? BATTLE_INTRODUCTION_ROLES
-    : cue === "strike" && isWinner
-      ? ["attack"]
-      : cue === "impact"
-        ? isWinner ? ["flourish"] : BATTLE_LOSER_ROLES
-        : ["rest"]
+  const roles: readonly SeethingSwarmBattleClipRole[] =
+    cue === "introduction"
+      ? BATTLE_INTRODUCTION_ROLES
+      : cue === "strike" && isWinner
+        ? ["attack"]
+        : cue === "impact"
+          ? isWinner
+            ? ["flourish"]
+            : BATTLE_LOSER_ROLES
+          : ["rest"]
   const resultRoles = isWinner ? BATTLE_WINNER_ROLES : BATTLE_LOSER_ROLES
   const frameCount = (winnerId ? resultRoles : roles).reduce(
     (total, role) => total + combatant.clips[role].clip.frameCount,
@@ -60,7 +63,10 @@ export function createSeethingSwarmBattlePlayback<PlatformAsset>({
       Object.freeze({
         ...combatant.clips[role],
         playbackMode: role === "rest" ? "loop" : "one-shot",
-        frameDurationMs: role === "rest" ? SEETHING_SWARM_HUB_FRAME_DURATION_MS : frameDurationMs,
+        frameDurationMs:
+          role === "rest"
+            ? SEETHING_SWARM_HUB_FRAME_DURATION_MS
+            : frameDurationMs,
       } satisfies SeethingSwarmBattlePlaybackStep<PlatformAsset>),
     ),
   )

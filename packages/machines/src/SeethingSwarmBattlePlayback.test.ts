@@ -80,7 +80,11 @@ describe("SeethingSwarm battle playback", () => {
   ] as const)(
     "plays $expected for $cue without reacting before the strike",
     ({ cue, winnerId, expected }) => {
-      const steps = createSeethingSwarmBattlePlayback({ combatant, winnerId, cue })
+      const steps = createSeethingSwarmBattlePlayback({
+        combatant,
+        winnerId,
+        cue,
+      })
       expect(steps.map(({ role }) => role)).toEqual(expected)
       expect(steps.map(({ playbackMode }) => playbackMode)).toEqual([
         expected[0] === "rest" ? "loop" : "one-shot",
@@ -92,9 +96,19 @@ describe("SeethingSwarm battle playback", () => {
     const winnerSteps = (["strike", "impact"] as const).flatMap((cue) =>
       createSeethingSwarmBattlePlayback({ combatant, winnerId: pair[0], cue }),
     )
-    const loserSteps = createSeethingSwarmBattlePlayback({ combatant, winnerId: pair[1], cue: "impact" })
+    const loserSteps = createSeethingSwarmBattlePlayback({
+      combatant,
+      winnerId: pair[1],
+      cue: "impact",
+    })
     for (const steps of [winnerSteps, loserSteps]) {
-      expect(steps.reduce((duration, { clip, frameDurationMs }) => duration + clip.frameCount * frameDurationMs, 0)).toBe(480)
+      expect(
+        steps.reduce(
+          (duration, { clip, frameDurationMs }) =>
+            duration + clip.frameCount * frameDurationMs,
+          0,
+        ),
+      ).toBe(480)
     }
   })
 

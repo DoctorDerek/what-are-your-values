@@ -40,7 +40,10 @@ export default function NativeSeethingSwarmPlaceholder({
       {
         translateX: role === "reaction" ? progress.get() * direction * -12 : 0,
       },
-      { translateY: role === "rest" || role === "flourish" ? progress.get() * -4 : 0 },
+      {
+        translateY:
+          role === "rest" || role === "flourish" ? progress.get() * -4 : 0,
+      },
       {
         rotate: `${role === "reaction" ? progress.get() * direction * -10 : 0}deg`,
       },

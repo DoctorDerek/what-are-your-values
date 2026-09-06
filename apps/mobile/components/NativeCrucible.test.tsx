@@ -63,8 +63,16 @@ describe("NativeCrucible", () => {
   it("keeps the resolved pair until both animal motion and durable projection finish", async () => {
     jest.useFakeTimers()
     AppState.currentState = "active"
-    jest.spyOn(View.prototype, "measureInWindow").mockImplementation(function (this: View, callback) {
-      callback(0, this.props.testID === "battle-combatant-first" ? 0 : 200, 112, 112)
+    jest.spyOn(View.prototype, "measureInWindow").mockImplementation(function (
+      this: View,
+      callback,
+    ) {
+      callback(
+        0,
+        this.props.testID === "battle-combatant-first" ? 0 : 200,
+        112,
+        112,
+      )
     })
     jest
       .spyOn(AccessibilityInfo, "sendAccessibilityEvent")

@@ -31,7 +31,14 @@ function createStageProps(seed: string) {
     winnerId: null,
     onResultAnimationComplete: vi.fn(),
     children: ({ first, second }: { first: ReactNode; second: ReactNode }) => (
-      <><button type="button" aria-label="First value">{first}</button><button type="button" aria-label="Second value">{second}</button></>
+      <>
+        <button type="button" aria-label="First value">
+          {first}
+        </button>
+        <button type="button" aria-label="Second value">
+          {second}
+        </button>
+      </>
     ),
   }
 }
@@ -75,10 +82,18 @@ function getRole(
   return getCombatant(container, side).querySelector("[data-battle-role]")
 }
 
-async function beginStrike(container: HTMLElement, winnerSide: SeethingSwarmBattleCombatantSide = "first") {
+async function beginStrike(
+  container: HTMLElement,
+  winnerSide: SeethingSwarmBattleCombatantSide = "first",
+) {
   fireEvent.load(getSprite(container, "first"))
   fireEvent.load(getSprite(container, "second"))
-  await waitFor(() => expect(getRole(container, winnerSide)).toHaveAttribute("data-battle-role", "attack"))
+  await waitFor(() =>
+    expect(getRole(container, winnerSide)).toHaveAttribute(
+      "data-battle-role",
+      "attack",
+    ),
+  )
 }
 
 afterEach(() => vi.restoreAllMocks())
@@ -101,8 +116,16 @@ describe("SeethingSwarmBattleStage", () => {
     expect(container.querySelectorAll("img")).toHaveLength(2)
 
     for (const combatant of choreography.combatants) {
-      expect(getCombatant(container, combatant.side)).toHaveAttribute("aria-hidden", "true")
-      expect(getCombatant(container, combatant.side).closest("button")).toHaveAttribute("aria-label", combatant.side === "first" ? "First value" : "Second value")
+      expect(getCombatant(container, combatant.side)).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      )
+      expect(
+        getCombatant(container, combatant.side).closest("button"),
+      ).toHaveAttribute(
+        "aria-label",
+        combatant.side === "first" ? "First value" : "Second value",
+      )
       expect(getCombatant(container, combatant.side)).toHaveAttribute(
         "data-value-id",
         combatant.valueId,
@@ -175,7 +198,10 @@ describe("SeethingSwarmBattleStage", () => {
         "rest",
       )
       await finishClip(container, winnerSide)
-      expect(getRole(container, loserSide)).toHaveAttribute("data-battle-role", "reaction")
+      expect(getRole(container, loserSide)).toHaveAttribute(
+        "data-battle-role",
+        "reaction",
+      )
       expect(getRole(container, winnerSide)).toHaveAttribute(
         "data-battle-role",
         "flourish",
@@ -338,7 +364,9 @@ describe("SeethingSwarmBattleStage", () => {
     expect(strike).toHaveLength(1)
     expect(strike[0]).toHaveAttribute("data-battle-role", "attack")
     fireEvent.animationEnd(strike[0]!)
-    const placeholders = container.querySelectorAll('[data-placeholder-playback="one-shot"]')
+    const placeholders = container.querySelectorAll(
+      '[data-placeholder-playback="one-shot"]',
+    )
     expect(placeholders).toHaveLength(2)
     fireEvent.animationEnd(placeholders[0]!)
     expect(props.onResultAnimationComplete).not.toHaveBeenCalled()

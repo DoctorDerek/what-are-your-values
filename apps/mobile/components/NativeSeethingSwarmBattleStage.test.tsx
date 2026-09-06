@@ -74,7 +74,16 @@ function props(): ComponentProps<typeof NativeSeethingSwarmBattleStage> {
     isPaused: false,
     shouldReduceMotion: false,
     onResultComplete: jest.fn(),
-    children: ({ first, second }) => <><Pressable accessibilityRole="button" accessibilityLabel="First value">{first}</Pressable><Pressable accessibilityRole="button" accessibilityLabel="Second value">{second}</Pressable></>,
+    children: ({ first, second }) => (
+      <>
+        <Pressable accessibilityRole="button" accessibilityLabel="First value">
+          {first}
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Second value">
+          {second}
+        </Pressable>
+      </>
+    ),
   }
 }
 function image(animal: "raccoonpack" | "wolfpack") {
@@ -95,8 +104,16 @@ let removeAppState: ReturnType<typeof jest.fn>
 beforeEach(() => {
   jest.useFakeTimers()
   AppState.currentState = "active"
-  jest.spyOn(View.prototype, "measureInWindow").mockImplementation(function (this: View, callback) {
-    callback(0, this.props.testID === "battle-combatant-first" ? 0 : 200, 112, 112)
+  jest.spyOn(View.prototype, "measureInWindow").mockImplementation(function (
+    this: View,
+    callback,
+  ) {
+    callback(
+      0,
+      this.props.testID === "battle-combatant-first" ? 0 : 200,
+      112,
+      112,
+    )
   })
   removeAppState = jest.fn()
   jest
@@ -117,8 +134,18 @@ describe("NativeSeethingSwarmBattleStage", () => {
     const stage = screen.getByTestId("seething-swarm-battle-stage", hidden)
     expect(stage).toBeOnTheScreen()
     expect(screen.getAllByRole("button")).toHaveLength(2)
-    expect(within(screen.getByRole("button", { name: "First value" })).getByTestId("battle-combatant-first", hidden)).toHaveProp("accessibilityElementsHidden", true)
-    expect(within(screen.getByRole("button", { name: "Second value" })).getByTestId("battle-combatant-second", hidden)).toHaveProp("accessibilityElementsHidden", true)
+    expect(
+      within(screen.getByRole("button", { name: "First value" })).getByTestId(
+        "battle-combatant-first",
+        hidden,
+      ),
+    ).toHaveProp("accessibilityElementsHidden", true)
+    expect(
+      within(screen.getByRole("button", { name: "Second value" })).getByTestId(
+        "battle-combatant-second",
+        hidden,
+      ),
+    ).toHaveProp("accessibilityElementsHidden", true)
     expect(
       screen.getByTestId("seething-swarm-animal-raccoonpack", hidden),
     ).toHaveStyle({ transform: [{ scaleX: 1 }] })

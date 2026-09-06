@@ -113,13 +113,23 @@ vi.mock("./SeethingSwarmBattleStage", async () => {
       readonly isNextBattleReady: boolean
       readonly winnerId: string | null
       readonly onResultAnimationComplete: () => void
-      readonly children: (combatants: { first: ReactNode; second: ReactNode }) => ReactNode
+      readonly children: (combatants: {
+        first: ReactNode
+        second: ReactNode
+      }) => ReactNode
     }) {
       useEffect(() => {
         if (winnerId && isNextBattleReady) onResultAnimationComplete()
       }, [isNextBattleReady, onResultAnimationComplete, winnerId])
 
-      return <div data-testid="mock-battle-stage">{children({ first: <span aria-hidden="true" />, second: <span aria-hidden="true" /> })}</div>
+      return (
+        <div data-testid="mock-battle-stage">
+          {children({
+            first: <span aria-hidden="true" />,
+            second: <span aria-hidden="true" />,
+          })}
+        </div>
+      )
     },
   }
 })

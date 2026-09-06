@@ -217,42 +217,44 @@ export default function NativeCrucible({
         shouldReduceMotion={shouldReduceMotion}
         onPresented={onAchievementPresented}
       />
-          <NativeSeethingSwarmBattleStage
-            battle={currentBattle}
-            catalog={runtimeClipCatalog}
-            winnerId={state.context.winnerId}
-            isNextBattleReady={state.context.pendingBattle !== null}
-            isPaused={isMenuOpen}
-            shouldReduceMotion={shouldReduceMotion}
-            onResultComplete={handleAnimationComplete}
-          >
-        {(combatants) => <>
-          <NativeValueChoiceCard
-            ref={firstChoiceRef}
-            key={`first:${firstValueId}:${secondValueId}`}
-            position="first"
-            value={firstValue}
-            level={getLevelFromXP(firstProgress.totalXp)}
-            controlHint={firstControlHint}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            combatant={combatants.first}
-            onActivate={handleSelect}
-          />
-          <NativeValueChoiceCard
-            key={`second:${secondValueId}:${firstValueId}`}
-            position="second"
-            value={secondValue}
-            level={getLevelFromXP(secondProgress.totalXp)}
-            controlHint={secondControlHint}
-            winnerId={state.context.winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            combatant={combatants.second}
-            onActivate={handleSelect}
-          />
-        </>}
+      <NativeSeethingSwarmBattleStage
+        battle={currentBattle}
+        catalog={runtimeClipCatalog}
+        winnerId={state.context.winnerId}
+        isNextBattleReady={state.context.pendingBattle !== null}
+        isPaused={isMenuOpen}
+        shouldReduceMotion={shouldReduceMotion}
+        onResultComplete={handleAnimationComplete}
+      >
+        {(combatants) => (
+          <>
+            <NativeValueChoiceCard
+              ref={firstChoiceRef}
+              key={`first:${firstValueId}:${secondValueId}`}
+              position="first"
+              value={firstValue}
+              level={getLevelFromXP(firstProgress.totalXp)}
+              controlHint={firstControlHint}
+              winnerId={state.context.winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              combatant={combatants.first}
+              onActivate={handleSelect}
+            />
+            <NativeValueChoiceCard
+              key={`second:${secondValueId}:${firstValueId}`}
+              position="second"
+              value={secondValue}
+              level={getLevelFromXP(secondProgress.totalXp)}
+              controlHint={secondControlHint}
+              winnerId={state.context.winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              combatant={combatants.second}
+              onActivate={handleSelect}
+            />
+          </>
+        )}
       </NativeSeethingSwarmBattleStage>
     </MapacheScreen>
   )

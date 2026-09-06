@@ -349,38 +349,40 @@ export default function Crucible({
         winnerId={winnerId}
         onResultAnimationComplete={handleResultAnimationComplete}
       >
-        {(combatants) => <>
-          <ValueChoiceCard
-            ref={firstChoiceRef}
-            key={`Card A: ${idA} vs. ${idB}`}
-            position="first"
-            value={valA}
-            level={levelA}
-            focusedId={focusedId}
-            winnerId={winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            controlHint={firstControlHint}
-            combatant={combatants.first}
-            onActivate={handleSelect}
-            onFocus={handleCardFocus}
-          />
-          <ValueChoiceCard
-            ref={secondChoiceRef}
-            key={`Card B: ${idB} vs. ${idA}`}
-            position="second"
-            value={valB}
-            level={levelB}
-            focusedId={focusedId}
-            winnerId={winnerId}
-            isEnabled={isInteractive}
-            isAnimating={isAnimating}
-            controlHint={secondControlHint}
-            combatant={combatants.second}
-            onActivate={handleSelect}
-            onFocus={handleCardFocus}
-          />
-        </>}
+        {(combatants) => (
+          <>
+            <ValueChoiceCard
+              ref={firstChoiceRef}
+              key={`Card A: ${idA} vs. ${idB}`}
+              position="first"
+              value={valA}
+              level={levelA}
+              focusedId={focusedId}
+              winnerId={winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              controlHint={firstControlHint}
+              combatant={combatants.first}
+              onActivate={handleSelect}
+              onFocus={handleCardFocus}
+            />
+            <ValueChoiceCard
+              ref={secondChoiceRef}
+              key={`Card B: ${idB} vs. ${idA}`}
+              position="second"
+              value={valB}
+              level={levelB}
+              focusedId={focusedId}
+              winnerId={winnerId}
+              isEnabled={isInteractive}
+              isAnimating={isAnimating}
+              controlHint={secondControlHint}
+              combatant={combatants.second}
+              onActivate={handleSelect}
+              onFocus={handleCardFocus}
+            />
+          </>
+        )}
       </SeethingSwarmBattleStage>
     </MapacheScreen>
   )

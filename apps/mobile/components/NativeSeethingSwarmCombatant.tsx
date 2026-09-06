@@ -53,7 +53,11 @@ export default function NativeSeethingSwarmCombatant({
     return (
       <NativeSeethingSwarmPlaceholder
         side={combatant.side}
-        role={step.role === "entry" || step.role === "anticipation" ? "rest" : step.role}
+        role={
+          step.role === "entry" || step.role === "anticipation"
+            ? "rest"
+            : step.role
+        }
         shouldReduceMotion={shouldReduceMotion}
         onPlaybackComplete={onPlaybackComplete}
         onReady={onReady}

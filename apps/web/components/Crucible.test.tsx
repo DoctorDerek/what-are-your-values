@@ -397,8 +397,12 @@ describe("Crucible Component Integration", () => {
       />,
     )
     expect(firstChoice).toBeInTheDocument()
-    expect(firstChoice.querySelector('[data-combatant-side="first"]')).toHaveAttribute("data-value-id", winner.id)
-    const strike = container.querySelector('[data-placeholder-playback="one-shot"]')
+    expect(
+      firstChoice.querySelector('[data-combatant-side="first"]'),
+    ).toHaveAttribute("data-value-id", winner.id)
+    const strike = container.querySelector(
+      '[data-placeholder-playback="one-shot"]',
+    )
     if (!strike) throw new Error("Selected animal strike is missing")
     expect(strike).toHaveAttribute("data-battle-role", "attack")
     fireEvent.animationEnd(strike)

@@ -29,7 +29,9 @@ export default function NativeSeethingSwarmBattleTraveler({
 }) {
   const progress = useSharedValue(0)
   const completeRef = useRef(onApproachComplete)
-  useEffect(() => { completeRef.current = onApproachComplete }, [onApproachComplete])
+  useEffect(() => {
+    completeRef.current = onApproachComplete
+  }, [onApproachComplete])
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: progress.get() * (travel?.x ?? 0) },
@@ -47,16 +49,31 @@ export default function NativeSeethingSwarmBattleTraveler({
       progress.set(0)
       return
     }
-    progress.set(withTiming(cue === "impact" ? 0 : 1, {
-      duration: SEETHING_SWARM_BATTLE_APPROACH_DURATION_MS,
-      easing: Easing.out(Easing.quad),
-      reduceMotion: ReduceMotion.Never,
-    }, (finished) => { if (finished) scheduleOnRN(finishApproach) }))
+    progress.set(
+      withTiming(
+        cue === "impact" ? 0 : 1,
+        {
+          duration: SEETHING_SWARM_BATTLE_APPROACH_DURATION_MS,
+          easing: Easing.out(Easing.quad),
+          reduceMotion: ReduceMotion.Never,
+        },
+        (finished) => {
+          if (finished) scheduleOnRN(finishApproach)
+        },
+      ),
+    )
     return () => {
       isActive = false
       cancelAnimation(progress)
     }
   }, [cue, progress, shouldReduceMotion, travel])
 
-  return <Animated.View className="size-28 items-center justify-end" style={animatedStyle}>{children}</Animated.View>
+  return (
+    <Animated.View
+      className="size-28 items-center justify-end"
+      style={animatedStyle}
+    >
+      {children}
+    </Animated.View>
+  )
 }

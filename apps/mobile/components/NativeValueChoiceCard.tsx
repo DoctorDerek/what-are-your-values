@@ -51,21 +51,25 @@ function NativeValueChoiceCard(
           : "bg-mapache-vivid-primary-raspberry",
       )}
     >
-        <Pressable
-          ref={ref}
-          accessibilityHint={displayDefinition}
-          accessibilityLabel={getValueChoiceAccessibilityLabel({
-            position,
-            value,
-            level,
-          })}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !isEnabled, selected: isWinner }}
-          className="min-h-0 flex-1 flex-row items-center xl:flex-col"
-          disabled={!isEnabled}
-          onPress={() => onActivate(value.id)}
+      <Pressable
+        ref={ref}
+        accessibilityHint={displayDefinition}
+        accessibilityLabel={getValueChoiceAccessibilityLabel({
+          position,
+          value,
+          level,
+        })}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !isEnabled, selected: isWinner }}
+        className="min-h-0 flex-1 flex-row items-center xl:flex-col"
+        disabled={!isEnabled}
+        onPress={() => onActivate(value.id)}
+      >
+        <ScrollView
+          className="h-full min-h-0 min-w-0 flex-1 xl:h-auto xl:w-full"
+          contentContainerClassName="grow justify-center px-3 py-3 xl:px-6 xl:py-8"
+          nestedScrollEnabled
         >
-          <ScrollView className="h-full min-h-0 min-w-0 flex-1 xl:h-auto xl:w-full" contentContainerClassName="grow justify-center px-3 py-3 xl:px-6 xl:py-8" nestedScrollEnabled>
           <View className="w-full items-center">
             <Text
               variant="h2"
@@ -93,9 +97,20 @@ function NativeValueChoiceCard(
               “{displayDefinition}”
             </Text>
           </View>
-          </ScrollView>
-          {combatant ? <View className={cn("h-full w-1/3 min-w-28 max-w-56 shrink-0 flex-row items-center xl:h-28 xl:w-28", position === "first" ? "justify-start xl:self-end" : "justify-end xl:self-start")}>{combatant}</View> : null}
-        </Pressable>
+        </ScrollView>
+        {combatant ? (
+          <View
+            className={cn(
+              "h-full w-1/3 max-w-56 min-w-28 shrink-0 flex-row items-center xl:h-28 xl:w-28",
+              position === "first"
+                ? "justify-start xl:self-end"
+                : "justify-end xl:self-start",
+            )}
+          >
+            {combatant}
+          </View>
+        ) : null}
+      </Pressable>
     </View>
   )
 }

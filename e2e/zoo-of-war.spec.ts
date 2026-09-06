@@ -74,28 +74,51 @@ test("the Zoo of War holds both animals through a committed battle", async ({
   await page.addInitScript(() => {
     window.completedAnimalClips = []
     window.animalStrikes = []
-    document.addEventListener("animationstart", (event) => {
-      const image = event.target
-      if (!(image instanceof HTMLImageElement) || image.closest("[data-battle-role]")?.getAttribute("data-battle-role") !== "attack") return
-      const stage = image.closest("[data-choreography-identity]")
-      const anchor = image.closest("[data-combatant-side]")
-      const traveler = image.closest("[data-combatant-traveler]")
-      const defender = stage?.querySelector(`[data-combatant-side="${anchor?.getAttribute("data-combatant-side") === "first" ? "second" : "first"}"]`)
-      if (!stage || !anchor || !traveler || !defender) return
-      const origin = anchor.getBoundingClientRect()
-      const current = traveler.getBoundingClientRect()
-      const target = defender.getBoundingClientRect()
-      const distance = (rectangle: DOMRect) => Math.hypot(rectangle.x + rectangle.width / 2 - target.x - target.width / 2, rectangle.y + rectangle.height / 2 - target.y - target.height / 2)
-      window.animalStrikes.push({
-        choreographyIdentity: stage.getAttribute("data-choreography-identity"),
-        originDistance: distance(origin),
-        contactDistance: distance(current),
-        overlapsText: [...stage.querySelectorAll("h2, p")].some((text) => {
-          const bounds = text.getBoundingClientRect()
-          return current.left < bounds.right && current.right > bounds.left && current.top < bounds.bottom && current.bottom > bounds.top
-        }),
-      })
-    }, true)
+    document.addEventListener(
+      "animationstart",
+      (event) => {
+        const image = event.target
+        if (
+          !(image instanceof HTMLImageElement) ||
+          image
+            .closest("[data-battle-role]")
+            ?.getAttribute("data-battle-role") !== "attack"
+        )
+          return
+        const stage = image.closest("[data-choreography-identity]")
+        const anchor = image.closest("[data-combatant-side]")
+        const traveler = image.closest("[data-combatant-traveler]")
+        const defender = stage?.querySelector(
+          `[data-combatant-side="${anchor?.getAttribute("data-combatant-side") === "first" ? "second" : "first"}"]`,
+        )
+        if (!stage || !anchor || !traveler || !defender) return
+        const origin = anchor.getBoundingClientRect()
+        const current = traveler.getBoundingClientRect()
+        const target = defender.getBoundingClientRect()
+        const distance = (rectangle: DOMRect) =>
+          Math.hypot(
+            rectangle.x + rectangle.width / 2 - target.x - target.width / 2,
+            rectangle.y + rectangle.height / 2 - target.y - target.height / 2,
+          )
+        window.animalStrikes.push({
+          choreographyIdentity: stage.getAttribute(
+            "data-choreography-identity",
+          ),
+          originDistance: distance(origin),
+          contactDistance: distance(current),
+          overlapsText: [...stage.querySelectorAll("h2, p")].some((text) => {
+            const bounds = text.getBoundingClientRect()
+            return (
+              current.left < bounds.right &&
+              current.right > bounds.left &&
+              current.top < bounds.bottom &&
+              current.bottom > bounds.top
+            )
+          }),
+        })
+      },
+      true,
+    )
     document.addEventListener(
       "animationend",
       (event) => {
@@ -134,8 +157,12 @@ test("the Zoo of War holds both animals through a committed battle", async ({
 
   await expect(battle).toBeVisible()
   await expect(stage).not.toHaveAttribute("aria-hidden", "true")
-  await expect(choices.first().locator('[data-combatant-side="first"]')).toHaveAttribute("aria-hidden", "true")
-  await expect(choices.last().locator('[data-combatant-side="second"]')).toHaveAttribute("aria-hidden", "true")
+  await expect(
+    choices.first().locator('[data-combatant-side="first"]'),
+  ).toHaveAttribute("aria-hidden", "true")
+  await expect(
+    choices.last().locator('[data-combatant-side="second"]'),
+  ).toHaveAttribute("aria-hidden", "true")
   await expect(stage).toHaveAttribute(
     "data-battle-stage-mode",
     /^(licensed|placeholder)$/,
@@ -194,7 +221,9 @@ test("the Zoo of War holds both animals through a committed battle", async ({
   await expect(choices.last()).toBeEnabled()
 
   if (mode === "licensed") {
-    const strikes = (await page.evaluate(() => window.animalStrikes)).filter((strike) => strike.choreographyIdentity === initialChoreographyIdentity)
+    const strikes = (await page.evaluate(() => window.animalStrikes)).filter(
+      (strike) => strike.choreographyIdentity === initialChoreographyIdentity,
+    )
     expect(strikes).toHaveLength(1)
     expect(strikes[0]!.contactDistance).toBeLessThan(strikes[0]!.originDistance)
     expect(strikes[0]!.contactDistance).toBeLessThanOrEqual(57)
@@ -217,7 +246,11 @@ test("the Zoo of War holds both animals through a committed battle", async ({
     expect(
       completedClips.every((clip) => clip.isLoaded && clip.source.length > 0),
     ).toBe(true)
-    expect(completedClips.findIndex((clip) => clip.role === "reaction")).toBeGreaterThan(completedClips.findIndex((clip) => clip.role === "attack"))
+    expect(
+      completedClips.findIndex((clip) => clip.role === "reaction"),
+    ).toBeGreaterThan(
+      completedClips.findIndex((clip) => clip.role === "attack"),
+    )
   }
 })
 
@@ -254,7 +287,13 @@ test("introductions do not lock choices and reading panels stop animal motion", 
   await expect(choices.last()).toBeEnabled()
 })
 
-for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1279, height: 800 }, { width: 1280, height: 844 }]) {
+for (const { width, height } of [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
+  { width: 844, height: 390 },
+  { width: 1279, height: 800 },
+  { width: 1280, height: 844 },
+]) {
   test(`Reduced Motion keeps card-owned animals and readable choices at ${width}x${height}`, async ({
     page,
   }) => {
@@ -288,15 +327,24 @@ for (const { width, height } of [{ width: 320, height: 568 }, { width: 390, heig
       const animal = choice.locator("[data-combatant-side]")
       await expect(animal).toBeInViewport()
       const textDoesNotOverlapAnimal = await choice.evaluate((button) => {
-        const animal = button.querySelector("[data-combatant-side]")!.getBoundingClientRect()
+        const animal = button
+          .querySelector("[data-combatant-side]")!
+          .getBoundingClientRect()
         return [...button.querySelectorAll("h2, p")].every((text) => {
           const bounds = text.getBoundingClientRect()
-          return bounds.right <= animal.left || bounds.left >= animal.right || bounds.bottom <= animal.top || bounds.top >= animal.bottom
+          return (
+            bounds.right <= animal.left ||
+            bounds.left >= animal.right ||
+            bounds.bottom <= animal.top ||
+            bounds.top >= animal.bottom
+          )
         })
       })
       expect(textDoesNotOverlapAnimal).toBe(true)
     }
-    await expect(page.getByRole("button", { name: "Menu", exact: true })).toBeInViewport()
+    await expect(
+      page.getByRole("button", { name: "Menu", exact: true }),
+    ).toBeInViewport()
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width)
