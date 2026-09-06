@@ -21,7 +21,7 @@ import {
   within,
 } from "@testing-library/react-native"
 import type { ComponentProps } from "react"
-import { AppState, type AppStateStatus } from "react-native"
+import { AppState, Pressable, View, type AppStateStatus } from "react-native"
 import { getAnimatedStyle } from "react-native-reanimated"
 import NativeSeethingSwarmBattleStage from "@/components/NativeSeethingSwarmBattleStage"
 
@@ -74,6 +74,7 @@ function props(): ComponentProps<typeof NativeSeethingSwarmBattleStage> {
     isPaused: false,
     shouldReduceMotion: false,
     onResultComplete: jest.fn(),
+    children: ({ first, second }) => <><Pressable accessibilityRole="button" accessibilityLabel="First value">{first}</Pressable><Pressable accessibilityRole="button" accessibilityLabel="Second value">{second}</Pressable></>,
   }
 }
 function image(animal: "raccoonpack" | "wolfpack") {
@@ -94,6 +95,9 @@ let removeAppState: ReturnType<typeof jest.fn>
 beforeEach(() => {
   jest.useFakeTimers()
   AppState.currentState = "active"
+  jest.spyOn(View.prototype, "measureInWindow").mockImplementation(function (this: View, callback) {
+    callback(0, this.props.testID === "battle-combatant-first" ? 0 : 200, 112, 112)
+  })
   removeAppState = jest.fn()
   jest
     .spyOn(AppState, "addEventListener")
@@ -111,10 +115,10 @@ describe("NativeSeethingSwarmBattleStage", () => {
     const initial = props()
     await render(<NativeSeethingSwarmBattleStage {...initial} />)
     const stage = screen.getByTestId("seething-swarm-battle-stage", hidden)
-    expect(stage).toHaveProp("pointerEvents", "none")
-    expect(stage).toHaveProp("accessibilityElementsHidden", true)
-    expect(screen.queryAllByRole("button")).toHaveLength(0)
-    expect(screen.queryByTestId("seething-swarm-battle-stage")).toBeNull()
+    expect(stage).toBeOnTheScreen()
+    expect(screen.getAllByRole("button")).toHaveLength(2)
+    expect(within(screen.getByRole("button", { name: "First value" })).getByTestId("battle-combatant-first", hidden)).toHaveProp("accessibilityElementsHidden", true)
+    expect(within(screen.getByRole("button", { name: "Second value" })).getByTestId("battle-combatant-second", hidden)).toHaveProp("accessibilityElementsHidden", true)
     expect(
       screen.getByTestId("seething-swarm-animal-raccoonpack", hidden),
     ).toHaveStyle({ transform: [{ scaleX: 1 }] })
@@ -152,13 +156,17 @@ describe("NativeSeethingSwarmBattleStage", () => {
       await loadImages()
       await advance(100)
       await rerender(<NativeSeethingSwarmBattleStage {...selected} />)
+      expect(image("raccoonpack")).toHaveProp("source", 3)
+      expect(image("wolfpack")).toHaveProp("source", 103)
+      await loadImages()
+      await advance(200)
       expect(image("raccoonpack")).toHaveProp(
         "source",
-        winnerIndex === 0 ? 4 : 5,
+        winnerIndex === 0 ? 4 : 3,
       )
       expect(image("wolfpack")).toHaveProp(
         "source",
-        winnerIndex === 1 ? 104 : 105,
+        winnerIndex === 1 ? 104 : 103,
       )
       await loadImages()
       await advance(300)
@@ -168,8 +176,8 @@ describe("NativeSeethingSwarmBattleStage", () => {
         winnerIndex === 0 ? 6 : 106,
       )
       expect(initial.onResultComplete).not.toHaveBeenCalled()
-      await fireEvent(image(winnerAnimal), "load")
-      await advance(300)
+      await loadImages()
+      await advance(500)
       expect(initial.onResultComplete).not.toHaveBeenCalled()
       await rerender(
         <NativeSeethingSwarmBattleStage {...selected} isNextBattleReady />,
@@ -188,6 +196,12 @@ describe("NativeSeethingSwarmBattleStage", () => {
     const { unmount } = await render(
       <NativeSeethingSwarmBattleStage {...initial} />,
     )
+    await fireEvent(image("raccoonpack"), "load")
+    await advance(300)
+    expect(image("raccoonpack")).toHaveProp("source", 3)
+    expect(initial.onResultComplete).not.toHaveBeenCalled()
+    await fireEvent(image("wolfpack"), "load")
+    await advance(200)
     await fireEvent(image("raccoonpack"), "load")
     await advance(300)
     await fireEvent(image("raccoonpack"), "load")
@@ -267,13 +281,16 @@ describe("NativeSeethingSwarmBattleStage", () => {
   it("replaces failed licensed art with a battling placeholder rather than blocking play", async () => {
     const initial = { ...props(), winnerId: pair[0], isNextBattleReady: true }
     await render(<NativeSeethingSwarmBattleStage {...initial} />)
+    await loadImages()
+    await advance(200)
     await fireEvent(image("raccoonpack"), "error", {
       nativeEvent: { error: "decode failed" },
     })
     expect(
       screen.getByTestId("battle-placeholder-first", hidden),
     ).toBeOnTheScreen()
-    await fireEvent(image("wolfpack"), "load")
+    await advance(550)
+    await loadImages()
     await advance(550)
     expect(initial.onResultComplete).toHaveBeenCalledTimes(1)
   })
@@ -325,7 +342,9 @@ describe("NativeSeethingSwarmBattleStage", () => {
     )
     await advance(300)
     expect(initial.onResultComplete).not.toHaveBeenCalled()
-    await advance(250)
+    await advance(550)
+    expect(initial.onResultComplete).not.toHaveBeenCalled()
+    await advance(550)
     expect(initial.onResultComplete).toHaveBeenCalledTimes(1)
     await unmount()
     await advance(1000)

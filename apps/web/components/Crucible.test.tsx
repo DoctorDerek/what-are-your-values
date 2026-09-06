@@ -143,8 +143,7 @@ describe("Crucible Component Integration", () => {
       "min-h-0",
       "flex-1",
       "flex-col",
-      "xl:grid",
-      "xl:grid-cols-2",
+      "xl:flex-row",
     )
   })
 
@@ -405,6 +404,11 @@ describe("Crucible Component Integration", () => {
       />,
     )
     expect(firstChoice).toBeInTheDocument()
+    expect(firstChoice.querySelector('[data-combatant-side="first"]')).toHaveAttribute("data-value-id", winner.id)
+    const strike = container.querySelector('[data-placeholder-playback="one-shot"]')
+    if (!strike) throw new Error("Selected animal strike is missing")
+    expect(strike).toHaveAttribute("data-battle-role", "attack")
+    fireEvent.animationEnd(strike)
     const resultVisuals = container.querySelectorAll(
       '[data-placeholder-playback="one-shot"]',
     )
@@ -452,7 +456,9 @@ describe("Crucible Component Integration", () => {
       }),
     })
     const stage = container.querySelector("[data-battle-stage-state]")
-    expect(stage).toHaveAttribute("aria-hidden", "true")
+    expect(stage).not.toHaveAttribute("aria-hidden", "true")
+    for (const combatant of container.querySelectorAll("[data-combatant-side]"))
+      expect(combatant).toHaveAttribute("aria-hidden", "true")
     expect(
       container.querySelectorAll('[data-placeholder-playback="static"]'),
     ).toHaveLength(2)
@@ -642,13 +648,8 @@ describe("Crucible Component Integration", () => {
         `“${getValueDisplayDefinition(definition)}”`,
       )
 
-      expect(choice.parentElement).toHaveClass(
-        "min-h-0",
-        "min-w-0",
-        "overflow-x-hidden",
-        "overflow-y-auto",
-        "overscroll-contain",
-      )
+      expect(choice).toContainElement(heading)
+      expect(choice).toContainElement(definitionCopy)
       expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
       expect(definitionCopy).toHaveClass(
         "break-words",

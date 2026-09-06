@@ -56,6 +56,7 @@ describe("SeethingSwarm battle playback", () => {
     const steps = createSeethingSwarmBattlePlayback({
       combatant,
       winnerId: null,
+      cue: "introduction",
     })
     expect(steps.map(({ role, playbackMode }) => [role, playbackMode])).toEqual(
       [
@@ -70,25 +71,32 @@ describe("SeethingSwarm battle playback", () => {
   })
 
   it.each([
-    { winnerId: pair[0], expected: ["attack", "flourish"] },
-    { winnerId: pair[1], expected: ["reaction"] },
-  ])(
-    "fits the $expected result sequence inside one shared presentation budget",
-    ({ winnerId, expected }) => {
-      const steps = createSeethingSwarmBattlePlayback({ combatant, winnerId })
+    { cue: "approach", winnerId: pair[0], expected: ["rest"] },
+    { cue: "approach", winnerId: pair[1], expected: ["rest"] },
+    { cue: "strike", winnerId: pair[0], expected: ["attack"] },
+    { cue: "strike", winnerId: pair[1], expected: ["rest"] },
+    { cue: "impact", winnerId: pair[0], expected: ["flourish"] },
+    { cue: "impact", winnerId: pair[1], expected: ["reaction"] },
+  ] as const)(
+    "plays $expected for $cue without reacting before the strike",
+    ({ cue, winnerId, expected }) => {
+      const steps = createSeethingSwarmBattlePlayback({ combatant, winnerId, cue })
       expect(steps.map(({ role }) => role)).toEqual(expected)
-      expect(
-        steps.every(({ playbackMode }) => playbackMode === "one-shot"),
-      ).toBe(true)
-      expect(
-        steps.reduce(
-          (duration, { clip, frameDurationMs }) =>
-            duration + clip.frameCount * frameDurationMs,
-          0,
-        ),
-      ).toBe(480)
+      expect(steps.map(({ playbackMode }) => playbackMode)).toEqual([
+        expected[0] === "rest" ? "loop" : "one-shot",
+      ])
     },
   )
+
+  it("preserves each side's clip budget across the directed exchange", () => {
+    const winnerSteps = (["strike", "impact"] as const).flatMap((cue) =>
+      createSeethingSwarmBattlePlayback({ combatant, winnerId: pair[0], cue }),
+    )
+    const loserSteps = createSeethingSwarmBattlePlayback({ combatant, winnerId: pair[1], cue: "impact" })
+    for (const steps of [winnerSteps, loserSteps]) {
+      expect(steps.reduce((duration, { clip, frameDurationMs }) => duration + clip.frameCount * frameDurationMs, 0)).toBe(480)
+    }
+  })
 
   it("caps integer geometry consistently and rejects an invalid scale", () => {
     const bounds = { left: 1, top: 1, width: 2, height: 2 }
