@@ -361,7 +361,6 @@ export default function Crucible({
             isEnabled={isInteractive}
             isAnimating={isAnimating}
             controlHint={firstControlHint}
-            shouldReduceMotion={shouldReduceMotion}
             combatant={combatants.first}
             onActivate={handleSelect}
             onFocus={handleCardFocus}
@@ -377,7 +376,6 @@ export default function Crucible({
             isEnabled={isInteractive}
             isAnimating={isAnimating}
             controlHint={secondControlHint}
-            shouldReduceMotion={shouldReduceMotion}
             combatant={combatants.second}
             onActivate={handleSelect}
             onFocus={handleCardFocus}

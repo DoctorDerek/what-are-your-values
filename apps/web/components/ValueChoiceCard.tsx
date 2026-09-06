@@ -7,9 +7,7 @@ import {
   type ValueId,
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
-import { motion } from "motion/react"
 import { forwardRef, useId, type ReactNode } from "react"
-import { createValueChoiceMotion } from "@/components/ValueChoiceMotion"
 
 export type ValueChoicePosition = "first" | "second"
 
@@ -22,7 +20,6 @@ type ValueChoiceCardProps = {
   isEnabled: boolean
   isAnimating: boolean
   controlHint: string | null
-  shouldReduceMotion: boolean
   combatant?: ReactNode
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
@@ -41,7 +38,6 @@ export const ValueChoiceCard = forwardRef<
     isEnabled,
     isAnimating,
     controlHint,
-    shouldReduceMotion,
     combatant,
     onActivate,
     onFocus,
@@ -59,16 +55,9 @@ export const ValueChoiceCard = forwardRef<
     : "text-white drop-shadow-[1px_1px_0px_#000000]"
   const reservedControlHint = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
-  const valueChoiceMotion = createValueChoiceMotion({
-    shouldReduceMotion,
-  })
 
   return (
-    <motion.div
-      initial={valueChoiceMotion.initial}
-      animate={valueChoiceMotion.animate}
-      exit={valueChoiceMotion.exit}
-      transition={valueChoiceMotion.transition}
+    <div
       className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 flex-col ${isWinner ? "z-10" : ""}`}
     >
       <button
@@ -87,14 +76,14 @@ export const ValueChoiceCard = forwardRef<
       >
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:h-auto xl:w-full xl:px-8 xl:py-8">
         <div className="my-auto w-full">
-          <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-5">
+          <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-2 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-5">
             <span
               aria-hidden="true"
               className={`w-16 justify-self-start text-center text-sm font-black whitespace-nowrap uppercase xl:w-28 xl:text-2xl ${controlHintContrastClasses} ${controlHint ? "" : "invisible"}`}
             >
               {controlHint ?? reservedControlHint}
             </span>
-            <h2 className="mx-auto w-full max-w-4xl min-w-0 text-[clamp(1rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:text-[clamp(2rem,3.25vw,4rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
+            <h2 className="col-span-2 row-start-1 mx-auto w-full max-w-4xl min-w-0 text-[clamp(1rem,5vw,2.5rem)] leading-tight font-black [overflow-wrap:anywhere] break-words text-white uppercase drop-shadow-[4px_4px_0px_#000000] xl:col-span-1 xl:col-start-2 xl:text-[clamp(2rem,3.25vw,4rem)] xl:drop-shadow-[6px_6px_0px_#000000]">
               {displayName}
             </h2>
             <span className="inline-block border-2 border-black bg-white px-2 py-1 text-sm font-black whitespace-nowrap text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[6px_6px_0px_0px_#000000]">
@@ -115,6 +104,6 @@ export const ValueChoiceCard = forwardRef<
           </span>
         ) : null}
       </button>
-    </motion.div>
+    </div>
   )
 })

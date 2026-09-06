@@ -67,7 +67,15 @@ function NativeValueChoiceCard(
         >
           <ScrollView className="h-full min-h-0 min-w-0 flex-1 xl:h-auto xl:w-full" contentContainerClassName="grow justify-center px-3 py-3 xl:px-6 xl:py-8" nestedScrollEnabled>
           <View className="w-full items-center">
-            <View className="w-full min-w-0 flex-row items-center gap-2 xl:gap-5">
+            <Text
+              variant="h2"
+              className="w-full min-w-0 border-0 pb-0 text-center text-2xl leading-8 text-white uppercase xl:text-5xl xl:leading-[56px]"
+              lineBreakStrategyIOS="push-out"
+              textBreakStrategy="balanced"
+            >
+              {displayName}
+            </Text>
+            <View className="mt-2 w-full min-w-0 flex-row items-center justify-between gap-2 xl:gap-5">
               <Text
                 aria-hidden
                 className={cn(
@@ -76,14 +84,6 @@ function NativeValueChoiceCard(
                 )}
               >
                 {controlHint}
-              </Text>
-              <Text
-                variant="h2"
-                className="min-w-0 flex-1 border-0 pb-0 text-center text-2xl leading-8 text-white uppercase xl:text-5xl xl:leading-[56px]"
-                lineBreakStrategyIOS="push-out"
-                textBreakStrategy="balanced"
-              >
-                {displayName}
               </Text>
               <Text className="shrink-0 border-2 border-black bg-white px-2 py-1 text-sm font-black text-black uppercase shadow-[3px_3px_0px_0px_#000000] xl:border-4 xl:px-4 xl:py-2 xl:text-2xl xl:shadow-[5px_5px_0px_0px_#000000]">
                 LVL {level}
