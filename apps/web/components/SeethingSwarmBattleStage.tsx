@@ -1,3 +1,7 @@
+import {
+  SEETHING_SWARM_BATTLE_RESULT_DURATION_MS,
+  SEETHING_SWARM_BATTLE_TILE_SIZE,
+} from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { SeethingSwarmRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import type { ValueId } from "@game/data/src/Value"
 import type { PresentedBattle } from "@game/machines/src/CombatMachine"
@@ -15,9 +19,6 @@ import {
   type CSSProperties,
 } from "react"
 import SeethingSwarmAnimal from "./SeethingSwarmAnimal"
-
-const SEETHING_SWARM_BATTLE_RESULT_DURATION_MS = 480
-const SEETHING_SWARM_BATTLE_TILE_SIZE = 112
 
 type SeethingSwarmBattleStageStyle = CSSProperties & {
   "--battle-result-duration": string

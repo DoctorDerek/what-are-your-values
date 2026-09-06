@@ -1,9 +1,20 @@
+import { createSeethingSwarmTypographyOnlyRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { getValueDisplayDefinition } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
-import { createInitialBattleCycle } from "@game/machines/src/BattleCycle"
+import {
+  createBattleCycleCandidate,
+  createInitialBattleCycle,
+} from "@game/machines/src/BattleCycle"
 import { projectBattlePair } from "@game/machines/src/BattleScheduler"
 import { describe, expect, it, jest } from "@jest/globals"
-import { render, screen, userEvent } from "@testing-library/react-native"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from "@testing-library/react-native"
+import { AccessibilityInfo, AppState } from "react-native"
 import NativeCrucible from "@/components/NativeCrucible"
 
 const VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN =
@@ -30,6 +41,7 @@ function createCrucibleProps(isPersistencePending: boolean) {
     activeDeck: battleCycle.activeDeck,
     achievement: null,
     battle,
+    runtimeClipCatalog: createSeethingSwarmTypographyOnlyRuntimeClipCatalog(),
     progressById: battleCycle.progressById,
     canUndo: true,
     canRedo: true,
@@ -48,6 +60,82 @@ function createCrucibleProps(isPersistencePending: boolean) {
 }
 
 describe("NativeCrucible", () => {
+  it("keeps the resolved pair until both animal motion and durable projection finish", async () => {
+    jest.useFakeTimers()
+    AppState.currentState = "active"
+    jest
+      .spyOn(AccessibilityInfo, "sendAccessibilityEvent")
+      .mockImplementation(() => undefined)
+    jest
+      .spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions")
+      .mockImplementation(() => undefined)
+    const props = createCrucibleProps(false)
+    const resultingCycle = createBattleCycleCandidate({
+      battleCycle,
+      winnerId: firstValueId,
+      expectedScheduler: battleCycle.scheduler,
+    })
+    const nextBattle = {
+      pair: projectBattlePair(
+        resultingCycle.activeDeck,
+        resultingCycle.scheduler,
+      ),
+      scheduler: resultingCycle.scheduler,
+    }
+    const { rerender, unmount } = await render(<NativeCrucible {...props} />)
+    try {
+      const firstName = getValueChoiceAccessibilityLabel({
+        position: "first",
+        value: firstValue,
+        level: 1,
+      })
+      const choice = screen.getByRole("button", { name: firstName })
+      await fireEvent.press(choice)
+      await fireEvent.press(choice)
+      expect(props.onWinnerSelected).toHaveBeenCalledTimes(1)
+      await rerender(
+        <NativeCrucible
+          {...props}
+          battle={nextBattle}
+          progressById={resultingCycle.progressById}
+        />,
+      )
+      expect(
+        screen.getAllByRole("button", {
+          name: VALUE_CHOICE_ACCESSIBLE_NAME_PATTERN,
+        }),
+      ).toHaveLength(2)
+      expect(screen.getByRole("button", { name: /Choice 1\.$/ })).toBeDisabled()
+      expect(
+        screen.getByText(`“${getValueDisplayDefinition(firstValue)}”`),
+      ).toBeOnTheScreen()
+      await act(async () => {
+        jest.advanceTimersByTime(300)
+      })
+      expect(screen.getByRole("button", { name: /Choice 1\.$/ })).toBeDisabled()
+      await act(async () => {
+        jest.advanceTimersByTime(300)
+      })
+      const nextFirst = resultingCycle.activeDeck.values.find(
+        ({ id }) => id === nextBattle.pair[0],
+      )
+      if (!nextFirst) throw new Error("Missing projected test value")
+      expect(
+        screen.getByRole("button", {
+          name: getValueChoiceAccessibilityLabel({
+            position: "first",
+            value: nextFirst,
+            level: 1,
+          }),
+        }),
+      ).toBeEnabled()
+      expect(props.onWinnerSelected).toHaveBeenCalledTimes(1)
+    } finally {
+      await unmount()
+      jest.useRealTimers()
+    }
+  })
+
   it("renders complete value choices and commits exactly one presented winner", async () => {
     const props = createCrucibleProps(false)
     const user = userEvent.setup()

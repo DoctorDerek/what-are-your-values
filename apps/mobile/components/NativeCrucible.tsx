@@ -1,4 +1,5 @@
 import type { ActiveDeck } from "@game/data/src/ActiveDeck"
+import type { SeethingSwarmRuntimeClipCatalog } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import type { ValueId } from "@game/data/src/Value"
 import type { ValueProgressById } from "@game/data/src/ValueProgress"
 import type { AchievementPresentation } from "@game/machines/src/AchievementPresentation"
@@ -21,6 +22,7 @@ import { AccessibilityInfo, View } from "react-native"
 import MapacheScreen from "@/components/MapacheScreen"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
 import NativeBattleActionBar from "@/components/NativeBattleActionBar"
+import NativeSeethingSwarmBattleStage from "@/components/NativeSeethingSwarmBattleStage"
 import NativeValueChoiceCard from "@/components/NativeValueChoiceCard"
 import { Text } from "@/components/ui/text"
 
@@ -30,6 +32,7 @@ export default function NativeCrucible({
   activeDeck,
   achievement,
   battle,
+  runtimeClipCatalog,
   progressById,
   canUndo,
   canRedo,
@@ -48,6 +51,7 @@ export default function NativeCrucible({
   activeDeck: ActiveDeck
   achievement: AchievementPresentation | null
   battle: PresentedBattle
+  runtimeClipCatalog: SeethingSwarmRuntimeClipCatalog<number>
   progressById: ValueProgressById
   canUndo: boolean
   canRedo: boolean
@@ -157,7 +161,7 @@ export default function NativeCrucible({
     progressById,
   ])
 
-  if (!currentPair) {
+  if (!currentBattle || !currentPair) {
     return (
       <MapacheScreen className="items-center justify-center px-6">
         <Text
@@ -213,36 +217,45 @@ export default function NativeCrucible({
         shouldReduceMotion={shouldReduceMotion}
         onPresented={onAchievementPresented}
       />
-      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-row">
-        <NativeValueChoiceCard
-          ref={firstChoiceRef}
-          key={`first:${firstValueId}:${secondValueId}`}
-          position="first"
-          value={firstValue}
-          level={getLevelFromXP(firstProgress.totalXp)}
-          controlHint={firstControlHint}
-          winnerId={state.context.winnerId}
-          isEnabled={isInteractive}
-          isAnimating={isAnimating}
-          reportsAnimationCompletion
-          shouldReduceMotion={shouldReduceMotion}
-          onActivate={handleSelect}
-          onAnimationComplete={handleAnimationComplete}
-        />
-        <NativeValueChoiceCard
-          key={`second:${secondValueId}:${firstValueId}`}
-          position="second"
-          value={secondValue}
-          level={getLevelFromXP(secondProgress.totalXp)}
-          controlHint={secondControlHint}
-          winnerId={state.context.winnerId}
-          isEnabled={isInteractive}
-          isAnimating={isAnimating}
-          reportsAnimationCompletion={false}
-          shouldReduceMotion={shouldReduceMotion}
-          onActivate={handleSelect}
-          onAnimationComplete={handleAnimationComplete}
-        />
+      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-col-reverse">
+        <View className="shrink-0">
+          <NativeSeethingSwarmBattleStage
+            battle={currentBattle}
+            catalog={runtimeClipCatalog}
+            winnerId={state.context.winnerId}
+            isNextBattleReady={state.context.pendingBattle !== null}
+            isPaused={isMenuOpen}
+            shouldReduceMotion={shouldReduceMotion}
+            onResultComplete={handleAnimationComplete}
+          />
+        </View>
+        <View className="min-h-0 flex-1 flex-col gap-2 xl:flex-row">
+          <NativeValueChoiceCard
+            ref={firstChoiceRef}
+            key={`first:${firstValueId}:${secondValueId}`}
+            position="first"
+            value={firstValue}
+            level={getLevelFromXP(firstProgress.totalXp)}
+            controlHint={firstControlHint}
+            winnerId={state.context.winnerId}
+            isEnabled={isInteractive}
+            isAnimating={isAnimating}
+            shouldReduceMotion={shouldReduceMotion}
+            onActivate={handleSelect}
+          />
+          <NativeValueChoiceCard
+            key={`second:${secondValueId}:${firstValueId}`}
+            position="second"
+            value={secondValue}
+            level={getLevelFromXP(secondProgress.totalXp)}
+            controlHint={secondControlHint}
+            winnerId={state.context.winnerId}
+            isEnabled={isInteractive}
+            isAnimating={isAnimating}
+            shouldReduceMotion={shouldReduceMotion}
+            onActivate={handleSelect}
+          />
+        </View>
       </View>
     </MapacheScreen>
   )

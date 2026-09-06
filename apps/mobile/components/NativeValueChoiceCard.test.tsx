@@ -55,10 +55,8 @@ describe("NativeValueChoiceCard", () => {
         winnerId: null,
         isEnabled: true,
         isAnimating: false,
-        reportsAnimationCompletion: false,
         shouldReduceMotion: true,
         onActivate,
-        onAnimationComplete: jest.fn(),
       } satisfies ComponentProps<typeof NativeValueChoiceCard>
       const { unmount } = await render(<NativeValueChoiceCard {...props} />)
       const displayName = getValueDisplayName(choiceCase.value)
