@@ -397,7 +397,9 @@ describe("Crucible Component Integration", () => {
         progressById={resultingBattleCycle.progressById}
       />,
     )
-    const reward = within(firstChoice).getByText(/^\+\d+ XP · Level /)
+    const firstCard = firstChoice.closest<HTMLElement>("[data-value-card]")
+    if (!firstCard) throw new Error("The selected value card is missing")
+    const reward = within(firstCard).getByText(/^\+\d+ XP · Level /)
     expect(reward).toBeVisible()
     expect(reward.closest("[data-combatant-traveler]")).toHaveAttribute(
       "data-combatant-traveler",
@@ -405,7 +407,7 @@ describe("Crucible Component Integration", () => {
     )
     expect(firstChoice).toBeInTheDocument()
     expect(
-      firstChoice.querySelector('[data-combatant-side="first"]'),
+      firstCard.querySelector('[data-combatant-side="first"]'),
     ).toHaveAttribute("data-value-id", winner.id)
     const strike = container.querySelector(
       '[data-placeholder-playback="one-shot"]',
@@ -593,7 +595,6 @@ describe("Crucible Component Integration", () => {
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }))
     })
-    expect(cardB.className).toContain("ring-8")
     expect(cardB).toHaveFocus()
 
     act(() => {

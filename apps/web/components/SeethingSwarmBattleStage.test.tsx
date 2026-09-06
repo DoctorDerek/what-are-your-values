@@ -38,12 +38,14 @@ function createStageProps(seed: string) {
       second: (isAttended: boolean) => ReactNode
     }) => (
       <>
-        <button type="button" aria-label="First value">
+        <div data-value-card={battle.pair[0]}>
+          <button type="button" aria-label="First value" />
           {first(false)}
-        </button>
-        <button type="button" aria-label="Second value">
+        </div>
+        <div data-value-card={battle.pair[1]}>
+          <button type="button" aria-label="Second value" />
           {second(false)}
-        </button>
+        </div>
       </>
     ),
   }
@@ -172,7 +174,9 @@ describe("SeethingSwarmBattleStage", () => {
         "true",
       )
       expect(
-        getCombatant(container, combatant.side).closest("button"),
+        getCombatant(container, combatant.side)
+          .closest("[data-value-card]")
+          ?.querySelector("button"),
       ).toHaveAttribute(
         "aria-label",
         combatant.side === "first" ? "First value" : "Second value",

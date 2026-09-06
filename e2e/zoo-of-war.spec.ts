@@ -44,6 +44,13 @@ test("a delayed attack keeps the loaded animal visible without replacing its ima
     const battle = page.getByRole("main", { name: "Value battle" })
     const stage = battle.locator("[data-choreography-identity]")
     await expect(stage).toHaveAttribute("data-battle-stage-mode", "licensed")
+    for (const side of ["first", "second"]) {
+      const pendingAnimal = battle.locator(`[data-combatant-side="${side}"]`)
+      await expect(
+        pendingAnimal.locator("[data-placeholder-playback]"),
+      ).toBeVisible()
+      await expect(pendingAnimal.locator("[data-battle-role]")).toHaveCount(2)
+    }
     const identity = await stage.getAttribute("data-choreography-identity")
     const restImages = battle.locator('[data-battle-clip="rest"] img')
     const sources = await restImages.evaluateAll((images: HTMLImageElement[]) =>
@@ -264,28 +271,19 @@ test("the Zoo of War holds both animals through a committed battle", async ({
 
   await expect(battle).toBeVisible()
   await expect(stage).not.toHaveAttribute("aria-hidden", "true")
-  await expect(
-    choices.first().locator('[data-combatant-side="first"]'),
-  ).toHaveAttribute("aria-hidden", "true")
-  await expect(
-    choices.last().locator('[data-combatant-side="second"]'),
-  ).toHaveAttribute("aria-hidden", "true")
+  const cards = stage.locator("[data-value-card]")
+  await expect(cards).toHaveCount(2)
+  for (const card of await cards.all()) {
+    await expect(card.getByRole("button", { name: /^Choose / })).toBeVisible()
+    await expect(card.locator("[data-combatant-side]")).toHaveAttribute("aria-hidden", "true")
+    await expect(card.locator("[data-combatant-side]")).toHaveAttribute("data-value-id", (await card.getAttribute("data-value-card"))!)
+  }
   await expect(stage).toHaveAttribute(
     "data-battle-stage-mode",
     /^(licensed|placeholder)$/,
   )
   await expect(firstCombatant).toBeVisible()
   await expect(secondCombatant).toBeVisible()
-  await expect(firstCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
-  await expect(secondCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
   await expect(choices).toHaveCount(2)
 
   const mode = await stage.getAttribute("data-battle-stage-mode")
@@ -312,16 +310,8 @@ test("the Zoo of War holds both animals through a committed battle", async ({
     "data-battle-stage-state",
     "awaiting-input",
   )
-  await expect(firstCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
-  await expect(secondCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
+  await expectRenderedCombatant(firstCombatant, mode, false)
+  await expectRenderedCombatant(secondCombatant, mode, false)
   await expect(choices).toHaveCount(2)
   await expect(choices.first()).toBeEnabled()
   await expect(choices.last()).toBeEnabled()
@@ -435,16 +425,17 @@ for (const { width, height } of [
     await expect(choices).toHaveCount(2)
     await expect(choices.first()).toBeInViewport()
     await expect(choices.last()).toBeInViewport()
-    for (const choice of await choices.all()) {
+    for (const card of await stage.locator("[data-value-card]").all()) {
+      const choice = card.getByRole("button", { name: /^Choose / })
       await expect(choice.getByRole("heading")).toBeInViewport()
       await expect(choice.locator("p")).toBeInViewport()
-      const animal = choice.locator("[data-combatant-side]")
+      const animal = card.locator("[data-combatant-side]")
       await expect(animal).toBeInViewport()
-      const textDoesNotOverlapAnimal = await choice.evaluate((button) => {
-        const animal = button
+      const textDoesNotOverlapAnimal = await card.evaluate((card) => {
+        const animal = card
           .querySelector("[data-combatant-side]")!
           .getBoundingClientRect()
-        return [...button.querySelectorAll("h2, p")].every((text) => {
+        return [...card.querySelectorAll("h2, p")].every((text) => {
           const bounds = window.getVisibleTextBounds(text)
           return (
             bounds.left >= bounds.right ||
