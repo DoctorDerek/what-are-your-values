@@ -44,6 +44,13 @@ test("a delayed attack keeps the loaded animal visible without replacing its ima
     const battle = page.getByRole("main", { name: "Value battle" })
     const stage = battle.locator("[data-choreography-identity]")
     await expect(stage).toHaveAttribute("data-battle-stage-mode", "licensed")
+    for (const side of ["first", "second"]) {
+      const pendingAnimal = battle.locator(`[data-combatant-side="${side}"]`)
+      await expect(
+        pendingAnimal.locator("[data-placeholder-playback]"),
+      ).toBeVisible()
+      await expect(pendingAnimal.locator("[data-battle-role]")).toHaveCount(2)
+    }
     const identity = await stage.getAttribute("data-choreography-identity")
     const restImages = battle.locator('[data-battle-clip="rest"] img')
     const sources = await restImages.evaluateAll((images: HTMLImageElement[]) =>
@@ -114,6 +121,13 @@ interface AnimalStrikeGeometry {
   overlapsText: boolean
 }
 
+interface AnimalPaintAudit {
+  cachedPlaceholderFrames: number
+  imageLayoutChanges: number
+  sampledFrames: number
+  isRunning: boolean
+}
+
 declare global {
   interface Window {
     getVisibleTextBounds: (
@@ -121,8 +135,116 @@ declare global {
     ) => Pick<DOMRect, "left" | "right" | "top" | "bottom">
     completedAnimalClips: CompletedAnimalClip[]
     animalStrikes: AnimalStrikeGeometry[]
+    animalPaintAudit: AnimalPaintAudit
   }
 }
+
+test("cached matchup changes preserve animal pixels without layout-position jumps", async ({
+  page,
+}) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" })
+  await page.getByRole("button", { name: "Start", exact: true }).click()
+  await page.getByRole("button", { name: "Battle", exact: true }).click()
+  const battle = page.getByRole("main", { name: "Value battle" })
+  const stage = battle.locator("[data-choreography-identity]")
+  await expect(stage).toHaveAttribute("data-battle-stage-mode", "licensed")
+  const initialIdentity = await stage.getAttribute("data-choreography-identity")
+  if (!initialIdentity) throw new Error("Initial battle identity is missing")
+  const waitForLoadedImages = async () => {
+    await expect
+      .poll(() =>
+        battle
+          .locator("img")
+          .evaluateAll(
+            (images: HTMLImageElement[]) =>
+              images.length > 0 &&
+              images.every((image) => image.complete && image.naturalWidth > 0),
+          ),
+      )
+      .toBe(true)
+  }
+  await waitForLoadedImages()
+  await page.evaluate(() => {
+    window.animalPaintAudit = {
+      cachedPlaceholderFrames: 0,
+      imageLayoutChanges: 0,
+      sampledFrames: 0,
+      isRunning: true,
+    }
+    const previousImagePositions = new WeakMap<HTMLImageElement, string>()
+    const sample = () => {
+      if (!window.animalPaintAudit.isRunning) return
+      window.animalPaintAudit.sampledFrames += 1
+      for (const animal of document.querySelectorAll("[data-combatant-side]")) {
+        const images = [...animal.querySelectorAll("img")]
+        if (
+          images.length > 0 &&
+          images.every((image) => image.complete && image.naturalWidth > 0) &&
+          animal.querySelector("[data-placeholder-playback]")
+        ) {
+          window.animalPaintAudit.cachedPlaceholderFrames += 1
+        }
+        for (const image of images) {
+          const left = getComputedStyle(image).left
+          const previous = previousImagePositions.get(image)
+          if (previous !== undefined && previous !== left)
+            window.animalPaintAudit.imageLayoutChanges += 1
+          previousImagePositions.set(image, left)
+        }
+      }
+      requestAnimationFrame(sample)
+    }
+    requestAnimationFrame(sample)
+  })
+  try {
+    await page.keyboard.press("1")
+    await expect
+      .poll(() => stage.getAttribute("data-choreography-identity"))
+      .not.toBe(initialIdentity)
+    await expect(stage).toHaveAttribute(
+      "data-battle-stage-state",
+      "awaiting-input",
+    )
+    await waitForLoadedImages()
+    const nextIdentity = await stage.getAttribute("data-choreography-identity")
+    if (!nextIdentity) throw new Error("Next battle identity is missing")
+    for (let replay = 0; replay < 3; replay += 1) {
+      await battle.getByRole("button", { name: /^Undo/ }).click()
+      await expect(stage).toHaveAttribute(
+        "data-choreography-identity",
+        initialIdentity,
+      )
+      await waitForLoadedImages()
+      await battle.getByRole("button", { name: /^Redo/ }).click()
+      await expect(stage).toHaveAttribute(
+        "data-choreography-identity",
+        nextIdentity,
+      )
+      await waitForLoadedImages()
+    }
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    )
+    const audit = await page.evaluate(() => window.animalPaintAudit)
+    expect(audit.sampledFrames).toBeGreaterThan(0)
+    expect(audit.cachedPlaceholderFrames).toBe(0)
+    expect(audit.imageLayoutChanges).toBe(0)
+    for (const side of ["first", "second"]) {
+      await expect(
+        battle.locator(
+          `[data-combatant-side="${side}"] [data-battle-active-clip="true"] img`,
+        ),
+      ).toBeVisible()
+    }
+  } finally {
+    await page.evaluate(() => {
+      window.animalPaintAudit.isRunning = false
+    })
+  }
+})
 
 async function expectRenderedCombatant(
   combatant: Locator,
@@ -264,28 +386,25 @@ test("the Zoo of War holds both animals through a committed battle", async ({
 
   await expect(battle).toBeVisible()
   await expect(stage).not.toHaveAttribute("aria-hidden", "true")
-  await expect(
-    choices.first().locator('[data-combatant-side="first"]'),
-  ).toHaveAttribute("aria-hidden", "true")
-  await expect(
-    choices.last().locator('[data-combatant-side="second"]'),
-  ).toHaveAttribute("aria-hidden", "true")
+  const cards = stage.locator("[data-value-card]")
+  await expect(cards).toHaveCount(2)
+  for (const card of await cards.all()) {
+    await expect(card.getByRole("button", { name: /^Choose / })).toBeVisible()
+    await expect(card.locator("[data-combatant-side]")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    )
+    await expect(card.locator("[data-combatant-side]")).toHaveAttribute(
+      "data-value-id",
+      (await card.getAttribute("data-value-card"))!,
+    )
+  }
   await expect(stage).toHaveAttribute(
     "data-battle-stage-mode",
     /^(licensed|placeholder)$/,
   )
   await expect(firstCombatant).toBeVisible()
   await expect(secondCombatant).toBeVisible()
-  await expect(firstCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
-  await expect(secondCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
   await expect(choices).toHaveCount(2)
 
   const mode = await stage.getAttribute("data-battle-stage-mode")
@@ -312,16 +431,8 @@ test("the Zoo of War holds both animals through a committed battle", async ({
     "data-battle-stage-state",
     "awaiting-input",
   )
-  await expect(firstCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
-  await expect(secondCombatant.locator("[data-battle-role]")).toHaveAttribute(
-    "data-battle-role",
-    "rest",
-    { timeout: 15000 },
-  )
+  await expectRenderedCombatant(firstCombatant, mode, false)
+  await expectRenderedCombatant(secondCombatant, mode, false)
   await expect(choices).toHaveCount(2)
   await expect(choices.first()).toBeEnabled()
   await expect(choices.last()).toBeEnabled()
@@ -435,16 +546,17 @@ for (const { width, height } of [
     await expect(choices).toHaveCount(2)
     await expect(choices.first()).toBeInViewport()
     await expect(choices.last()).toBeInViewport()
-    for (const choice of await choices.all()) {
+    for (const card of await stage.locator("[data-value-card]").all()) {
+      const choice = card.getByRole("button", { name: /^Choose / })
       await expect(choice.getByRole("heading")).toBeInViewport()
       await expect(choice.locator("p")).toBeInViewport()
-      const animal = choice.locator("[data-combatant-side]")
+      const animal = card.locator("[data-combatant-side]")
       await expect(animal).toBeInViewport()
-      const textDoesNotOverlapAnimal = await choice.evaluate((button) => {
-        const animal = button
+      const textDoesNotOverlapAnimal = await card.evaluate((card) => {
+        const animal = card
           .querySelector("[data-combatant-side]")!
           .getBoundingClientRect()
-        return [...button.querySelectorAll("h2, p")].every((text) => {
+        return [...card.querySelectorAll("h2, p")].every((text) => {
           const bounds = window.getVisibleTextBounds(text)
           return (
             bounds.left >= bounds.right ||

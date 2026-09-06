@@ -7,12 +7,19 @@ import {
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import Image, { type StaticImageData } from "next/image"
-import { useState, type CSSProperties } from "react"
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react"
 
 type SeethingSwarmAnimalStyle = CSSProperties & {
   "--animal-animation-duration": string
   "--animal-frame-count": number
   "--animal-strip-height": string
+  "--animal-strip-final-offset": string
   "--animal-strip-left": string
   "--animal-strip-top": string
   "--animal-strip-travel": string
@@ -52,6 +59,17 @@ export default function SeethingSwarmAnimal({
     null,
   )
   const isImageLoaded = loadedAssetSource === clip.asset.src
+  const imageRef = useRef<HTMLImageElement>(null)
+  const handleImageReady = useCallback(() => {
+    setLoadedAssetSource(clip.asset.src)
+    onReady?.()
+  }, [clip.asset.src, onReady])
+  useLayoutEffect(() => {
+    const image = imageRef.current
+    if (!isImageLoaded && image?.complete && image.naturalWidth > 0) {
+      handleImageReady()
+    }
+  }, [clip.asset.src, handleImageReady, isImageLoaded])
   const effectivePlaybackMode =
     shouldReduceMotion &&
     (playbackMode === "loop" || playbackMode === "one-shot")
@@ -67,15 +85,12 @@ export default function SeethingSwarmAnimal({
   const scaledFrameWidth = clip.frameWidth * geometry.integerScale
   const scaledFrameHeight = clip.frameHeight * geometry.integerScale
   const scaledStripWidth = scaledFrameWidth * clip.frameCount
-  const stripLeft =
-    effectivePlaybackMode === "hold-final-frame"
-      ? geometry.frameOffsetX - scaledFrameWidth * (clip.frameCount - 1)
-      : geometry.frameOffsetX
   const stripStyle: SeethingSwarmAnimalStyle = {
     "--animal-animation-duration": `${clip.frameCount * frameDurationMs}ms`,
     "--animal-frame-count": clip.frameCount,
     "--animal-strip-height": `${scaledFrameHeight}px`,
-    "--animal-strip-left": `${stripLeft}px`,
+    "--animal-strip-final-offset": `${-scaledFrameWidth * (clip.frameCount - 1)}px`,
+    "--animal-strip-left": `${geometry.frameOffsetX}px`,
     "--animal-strip-top": `${geometry.frameOffsetY}px`,
     "--animal-strip-travel": `${-scaledStripWidth}px`,
     "--animal-strip-width": `${scaledStripWidth}px`,
@@ -88,7 +103,9 @@ export default function SeethingSwarmAnimal({
       ? "animate-seething-swarm-strip [animation-iteration-count:infinite]"
       : effectivePlaybackMode === "one-shot"
         ? "animate-seething-swarm-strip"
-        : "animate-none"
+        : effectivePlaybackMode === "hold-final-frame"
+          ? "animate-none [transform:translate3d(var(--animal-strip-final-offset),0,0)]"
+          : "animate-none"
 
   return (
     <span
@@ -103,9 +120,11 @@ export default function SeethingSwarmAnimal({
       style={tileStyle}
     >
       <Image
+        ref={imageRef}
         alt=""
         className={`absolute top-(--animal-strip-top) left-(--animal-strip-left) h-(--animal-strip-height) w-(--animal-strip-width) max-w-none [image-rendering:pixelated] ${playbackClassName} ${isImageLoaded ? "" : "[animation-play-state:paused]"}`}
         draggable={false}
+        decoding="sync"
         height={scaledFrameHeight}
         loading={preload || playbackMode === "one-shot" ? "eager" : undefined}
         onAnimationEnd={
@@ -114,10 +133,7 @@ export default function SeethingSwarmAnimal({
             : undefined
         }
         onError={onLoadError}
-        onLoad={() => {
-          setLoadedAssetSource(clip.asset.src)
-          onReady?.()
-        }}
+        onLoad={handleImageReady}
         src={clip.asset}
         style={stripStyle}
         unoptimized

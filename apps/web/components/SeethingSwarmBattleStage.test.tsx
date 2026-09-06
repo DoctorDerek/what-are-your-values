@@ -38,12 +38,14 @@ function createStageProps(seed: string) {
       second: (isAttended: boolean) => ReactNode
     }) => (
       <>
-        <button type="button" aria-label="First value">
+        <div data-value-card={battle.pair[0]}>
+          <button type="button" aria-label="First value" />
           {first(false)}
-        </button>
-        <button type="button" aria-label="Second value">
+        </div>
+        <div data-value-card={battle.pair[1]}>
+          <button type="button" aria-label="Second value" />
           {second(false)}
-        </button>
+        </div>
       </>
     ),
   }
@@ -172,7 +174,9 @@ describe("SeethingSwarmBattleStage", () => {
         "true",
       )
       expect(
-        getCombatant(container, combatant.side).closest("button"),
+        getCombatant(container, combatant.side)
+          .closest("[data-value-card]")
+          ?.querySelector("button"),
       ).toHaveAttribute(
         "aria-label",
         combatant.side === "first" ? "First value" : "Second value",
@@ -367,7 +371,7 @@ describe("SeethingSwarmBattleStage", () => {
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })
 
-  it("keeps failed images playable through the existing placeholder result", async () => {
+  it("keeps loaded art visible when a requested result clip fails", async () => {
     const props = createStageProps("failed-result-image")
     const { container } = render(
       <SeethingSwarmBattleStage
@@ -380,18 +384,49 @@ describe("SeethingSwarmBattleStage", () => {
     fireEvent.error(getSprite(container, "first"))
     expect(
       getCombatant(container, "first").querySelector(
-        '[data-battle-active-clip="true"]',
+        '[data-battle-active-clip="true"] img',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      getCombatant(container, "first").querySelector(
+        "[data-placeholder-playback]",
       ),
     ).toBeNull()
-    const placeholder = getCombatant(container, "first").querySelector(
-      "[data-placeholder-playback]",
-    )
-    if (!placeholder) throw new Error("Failed image placeholder is missing")
-    expect(placeholder).toHaveAttribute("data-battle-role", "attack")
-    fireEvent.animationEnd(placeholder)
     await finishClip(container, "first")
     expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
     await finishClip(container, "second")
+    expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps genuine all-image failures playable through the fallback", async () => {
+    const props = createStageProps("all-result-images-failed")
+    const { container } = render(
+      <SeethingSwarmBattleStage
+        {...props}
+        winnerId={props.battle.pair[0]}
+        isNextBattleReady
+      />,
+    )
+    for (const image of container.querySelectorAll("img"))
+      fireEvent.error(image)
+    await waitFor(() =>
+      expect(getRole(container, "first")).toHaveAttribute(
+        "data-battle-role",
+        "attack",
+      ),
+    )
+    const firstPlaceholder = getCombatant(container, "first").querySelector(
+      "[data-placeholder-playback]",
+    )
+    const secondPlaceholder = getCombatant(container, "second").querySelector(
+      "[data-placeholder-playback]",
+    )
+    if (!firstPlaceholder || !secondPlaceholder)
+      throw new Error("Both failed animals need visible fallback combatants")
+    fireEvent.animationEnd(firstPlaceholder)
+    fireEvent.animationEnd(firstPlaceholder)
+    expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
+    fireEvent.animationEnd(secondPlaceholder)
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })
 

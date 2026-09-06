@@ -171,3 +171,58 @@ test("battle and achievement feedback meet automated accessibility rules", async
   await expect(achievementBanner).toHaveCSS("opacity", "1")
   await expectNoAccessibilityViolations(page, "battle achievement feedback")
 })
+
+test("overflowing value cards remain keyboard-readable beside achievement feedback", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 600 })
+  await startAtHub(page)
+  await page.getByRole("button", { name: "Battle", exact: true }).click()
+  const battle = page.getByRole("main", { name: "Value battle" })
+  const stage = battle.locator("[data-battle-stage-state]")
+  const firstAnimal = battle.locator('[data-combatant-side="first"]')
+  const animalBounds = await firstAnimal.boundingBox()
+  if (!animalBounds) throw new Error("The first card animal is not visible")
+  await page.mouse.click(
+    animalBounds.x + animalBounds.width / 2,
+    animalBounds.y + animalBounds.height / 2,
+  )
+  const achievementBanner = page.getByLabel("Achievement unlocked")
+  await expect(achievementBanner).toBeVisible()
+  await expect(achievementBanner).toHaveCSS("opacity", "1")
+  await expectNoAccessibilityViolations(
+    page,
+    "constrained battle achievement feedback",
+  )
+  await expect(stage).toHaveAttribute(
+    "data-battle-stage-state",
+    "awaiting-input",
+  )
+  const identity = await stage.getAttribute("data-choreography-identity")
+  const readingRegion = battle.getByRole("region").first()
+  await expect
+    .poll(() =>
+      readingRegion.evaluate(
+        (element) => element.scrollHeight - element.clientHeight,
+      ),
+    )
+    .toBeGreaterThan(0)
+  await readingRegion.focus()
+  await page.keyboard.press("PageDown")
+  await expect
+    .poll(() => readingRegion.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0)
+  await page.keyboard.press("ArrowDown")
+  await page.keyboard.press(" ")
+  await page.keyboard.press("Enter")
+  await expect(readingRegion).toBeFocused()
+  await expect(stage).toHaveAttribute("data-choreography-identity", identity!)
+  await page.keyboard.press("Tab")
+  await expect(
+    readingRegion.getByRole("button", { name: /^Choose / }),
+  ).toBeFocused()
+  await page.keyboard.press("Enter")
+  await expect
+    .poll(() => stage.getAttribute("data-choreography-identity"))
+    .not.toBe(identity)
+})

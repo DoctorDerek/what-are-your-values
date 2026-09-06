@@ -41,7 +41,7 @@ export default function SeethingSwarmCombatant({
           ? "introduction"
           : "rest"
   if (playback.cue !== cue) setPlayback({ cue, stepIndex: 0 })
-  const stepIndex = playback.cue === cue ? playback.stepIndex : 0
+  const requestedStepIndex = playback.cue === cue ? playback.stepIndex : 0
   const [loadedRoles, setLoadedRoles] = useState<
     ReadonlySet<SeethingSwarmBattleClipRole>
   >(() => new Set())
@@ -69,18 +69,35 @@ export default function SeethingSwarmCombatant({
       ),
     [combatant],
   )
+  const retainedRole =
+    loadedRoles.has(displayedRole) && !failedRoles.has(displayedRole)
+      ? displayedRole
+      : ([...loadedRoles].find((candidate) => !failedRoles.has(candidate)) ??
+        "rest")
+  const hasRetainedImage =
+    loadedRoles.has(retainedRole) && !failedRoles.has(retainedRole)
+  const nextAvailableStepIndex = steps.findIndex(
+    (candidate, index) =>
+      index >= requestedStepIndex && !failedRoles.has(candidate.role),
+  )
+  const stepIndex = hasRetainedImage
+    ? nextAvailableStepIndex === -1
+      ? steps.length
+      : nextAvailableStepIndex
+    : requestedStepIndex
   const step = steps[Math.min(stepIndex, steps.length - 1)]
   const isComplete = stepIndex === steps.length
   const role = shouldReduceMotion && !winnerId ? "rest" : step.role
-  const isReady = loadedRoles.has(role)
+  const isReady = loadedRoles.has(role) && !failedRoles.has(role)
   if (isReady && displayedRole !== role) setDisplayedRole(role)
-  const visibleRole = isReady ? role : displayedRole
-  const hasVisibleImage = loadedRoles.has(visibleRole)
+  const visibleRole = isReady ? role : retainedRole
+  const hasVisibleImage =
+    loadedRoles.has(visibleRole) && !failedRoles.has(visibleRole)
   const hasLoadError = failedRoles.has(role)
 
   useEffect(() => {
-    if (isReady) onReady()
-  }, [cue, isReady, onReady])
+    if (isReady || (hasLoadError && hasVisibleImage)) onReady()
+  }, [cue, hasLoadError, hasVisibleImage, isReady, onReady])
 
   const finishStep = () => {
     if (isComplete) return
@@ -88,14 +105,18 @@ export default function SeethingSwarmCombatant({
     if (winnerId && stepIndex + 1 === steps.length) onPlaybackComplete()
   }
 
+  useEffect(() => {
+    if (hasLoadError && hasVisibleImage && isComplete && winnerId)
+      onPlaybackComplete()
+  }, [hasLoadError, hasVisibleImage, isComplete, onPlaybackComplete, winnerId])
+
   return (
     <span
       className="relative block size-28 origin-bottom xl:scale-200"
       data-battle-role={role}
     >
       {Object.values(combatant.clips).map((selection) => {
-        const isVisible =
-          selection.role === visibleRole && hasVisibleImage && !hasLoadError
+        const isVisible = selection.role === visibleRole && hasVisibleImage
         return (
           <span
             key={selection.role}
@@ -133,7 +154,7 @@ export default function SeethingSwarmCombatant({
           </span>
         )
       })}
-      {!hasVisibleImage || hasLoadError ? (
+      {!hasVisibleImage ? (
         <SeethingSwarmPlaceholder
           side={combatant.side}
           role={role === "entry" || role === "anticipation" ? "rest" : role}

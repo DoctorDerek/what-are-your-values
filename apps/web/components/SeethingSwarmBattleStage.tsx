@@ -26,6 +26,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react"
+import { preload } from "react-dom"
 import SeethingSwarmCombatant from "@/components/SeethingSwarmCombatant"
 import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
 
@@ -111,8 +112,8 @@ function BattlePlayback({
     }
     measureTravel()
     const layoutObserver = new ResizeObserver(measureTravel)
-    const firstCard = firstAnchorRef.current?.closest("button")
-    const secondCard = secondAnchorRef.current?.closest("button")
+    const firstCard = firstAnchorRef.current?.closest("[data-value-card]")
+    const secondCard = secondAnchorRef.current?.closest("[data-value-card]")
     if (firstCard) layoutObserver.observe(firstCard)
     if (secondCard) layoutObserver.observe(secondCard)
     window.addEventListener("resize", measureTravel)
@@ -228,6 +229,7 @@ function BattlePlayback({
 
 export default function SeethingSwarmBattleStage({
   battle,
+  pendingBattle = null,
   isNextBattleReady,
   isPaused = false,
   runtimeClipCatalog,
@@ -237,6 +239,7 @@ export default function SeethingSwarmBattleStage({
   children,
 }: {
   battle: PresentedBattle
+  pendingBattle?: PresentedBattle | null
   isNextBattleReady: boolean
   isPaused?: boolean
   runtimeClipCatalog: SeethingSwarmRuntimeClipCatalog<StaticImageData>
@@ -261,6 +264,22 @@ export default function SeethingSwarmBattleStage({
       }),
     [battle, runtimeClipCatalog],
   )
+  useEffect(() => {
+    if (!pendingBattle) return
+    const pendingChoreography = createSeethingSwarmBattleChoreography({
+      battle: pendingBattle,
+      catalog: runtimeClipCatalog,
+    })
+    if (pendingChoreography.mode !== "licensed") return
+    for (const combatant of pendingChoreography.combatants) {
+      for (const { role, clip } of Object.values(combatant.clips)) {
+        preload(clip.asset.src, {
+          as: "image",
+          fetchPriority: role === "entry" || role === "rest" ? "high" : "low",
+        })
+      }
+    }
+  }, [pendingBattle, runtimeClipCatalog])
   const stageStyle: SeethingSwarmBattleStageStyle = {
     "--battle-result-duration": `${SEETHING_SWARM_BATTLE_RESULT_DURATION_MS}ms`,
   }
