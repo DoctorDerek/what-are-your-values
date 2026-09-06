@@ -4,6 +4,7 @@ import {
   type SeethingSwarmAnimalPlaybackMode,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
+import type { SeethingSwarmBattleExchangeCue } from "./SeethingSwarmBattleExchange"
 import type {
   SeethingSwarmBattleClipRole,
   SeethingSwarmBattleClipSelection,
@@ -28,16 +29,26 @@ export type SeethingSwarmBattlePlaybackStep<PlatformAsset> =
 export function createSeethingSwarmBattlePlayback<PlatformAsset>({
   combatant,
   winnerId,
+  cue,
 }: {
   readonly combatant: SeethingSwarmLicensedBattleCombatant<PlatformAsset>
   readonly winnerId: ValueId | null
+  readonly cue?: SeethingSwarmBattleExchangeCue
 }): readonly SeethingSwarmBattlePlaybackStep<PlatformAsset>[] {
-  const roles: readonly SeethingSwarmBattleClipRole[] = !winnerId
+  const isWinner = combatant.valueId === winnerId
+  const roles: readonly SeethingSwarmBattleClipRole[] = cue === "approach" || (cue === "strike" && !isWinner)
+    ? ["rest"]
+    : cue === "strike"
+      ? ["attack"]
+      : cue === "impact"
+        ? isWinner ? ["flourish"] : BATTLE_LOSER_ROLES
+        : !winnerId
     ? BATTLE_INTRODUCTION_ROLES
-    : combatant.valueId === winnerId
+    : isWinner
       ? BATTLE_WINNER_ROLES
       : BATTLE_LOSER_ROLES
-  const frameCount = roles.reduce(
+  const resultRoles = isWinner ? BATTLE_WINNER_ROLES : BATTLE_LOSER_ROLES
+  const frameCount = (winnerId ? resultRoles : roles).reduce(
     (total, role) => total + combatant.clips[role].clip.frameCount,
     0,
   )

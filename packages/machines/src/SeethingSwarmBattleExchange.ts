@@ -10,6 +10,15 @@ export type SeethingSwarmBattleExchangeCue =
 
 export type SeethingSwarmBattlePoint = Readonly<{ x: number; y: number }>
 
+export function resolveSeethingSwarmPlaceholderRole(
+  cue: SeethingSwarmBattleExchangeCue,
+  isWinner: boolean,
+) {
+  if (cue === "strike" && isWinner) return "attack"
+  if (cue === "impact") return isWinner ? "flourish" : "reaction"
+  return "rest"
+}
+
 export function createSeethingSwarmBattleTravel({
   attacker,
   defender,

@@ -25,7 +25,7 @@
 
   @keyframes seething-swarm-placeholder-attack {
     45% {
-      transform: translateX(var(--battle-travel)) scale(1.08);
+      transform: scale(1.08);
     }
   }
 

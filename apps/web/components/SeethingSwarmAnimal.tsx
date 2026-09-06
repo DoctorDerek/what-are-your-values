@@ -32,6 +32,7 @@ export default function SeethingSwarmAnimal({
   shouldReduceMotion,
   tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
   onLoadError,
+  onReady,
   onPlaybackComplete,
 }: {
   clip: SeethingSwarmRuntimeCharacterClip<StaticImageData>
@@ -42,6 +43,7 @@ export default function SeethingSwarmAnimal({
   shouldReduceMotion: boolean
   tileSize?: number
   onLoadError?: () => void
+  onReady?: () => void
   onPlaybackComplete?: () => void
 }) {
   const [loadedAssetSource, setLoadedAssetSource] = useState<string | null>(
@@ -110,7 +112,10 @@ export default function SeethingSwarmAnimal({
             : undefined
         }
         onError={onLoadError}
-        onLoad={() => setLoadedAssetSource(clip.asset.src)}
+        onLoad={() => {
+          setLoadedAssetSource(clip.asset.src)
+          onReady?.()
+        }}
         src={clip.asset}
         style={stripStyle}
         unoptimized
