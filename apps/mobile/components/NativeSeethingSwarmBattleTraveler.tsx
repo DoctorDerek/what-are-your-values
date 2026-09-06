@@ -70,7 +70,7 @@ export default function NativeSeethingSwarmBattleTraveler({
 
   return (
     <Animated.View
-      className="size-28 items-center justify-end"
+      className="size-28 items-center justify-end xl:size-56"
       style={animatedStyle}
     >
       {children}

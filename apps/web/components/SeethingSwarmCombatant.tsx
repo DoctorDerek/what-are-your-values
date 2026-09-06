@@ -89,7 +89,10 @@ export default function SeethingSwarmCombatant({
   }
 
   return (
-    <span className="relative block size-28" data-battle-role={role}>
+    <span
+      className="relative block size-28 origin-bottom xl:scale-200"
+      data-battle-role={role}
+    >
       {Object.values(combatant.clips).map((selection) => {
         const isVisible =
           selection.role === visibleRole && hasVisibleImage && !hasLoadError

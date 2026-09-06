@@ -1,5 +1,5 @@
 import { SEETHING_SWARM_BATTLE_TILE_SIZE } from "@game/data/src/SeethingSwarmAnimalPresentation"
-import type { SeethingSwarmBattleCombatantSide } from "@game/machines/src/SeethingSwarmBattleChoreography"
+import type { SeethingSwarmBattleCombatantSide } from "./SeethingSwarmBattleChoreography"
 
 export const SEETHING_SWARM_BATTLE_APPROACH_DURATION_MS = 160
 

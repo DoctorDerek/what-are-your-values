@@ -5,6 +5,7 @@ import {
   type ValueId,
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
+import type { BattleRewardPresentation } from "@game/machines/src/BattleRewardPresentation"
 import { forwardRef, useState, type ForwardedRef, type ReactNode } from "react"
 import { Pressable, ScrollView, View } from "react-native"
 import { Text } from "@/components/ui/text"
@@ -19,6 +20,7 @@ type NativeValueChoiceCardProps = {
   isEnabled: boolean
   isAnimating: boolean
   combatant?: (isAttended: boolean) => ReactNode
+  reward?: BattleRewardPresentation | null
   onActivate: (valueId: ValueId) => void
 }
 
@@ -32,6 +34,7 @@ function NativeValueChoiceCard(
     isEnabled,
     isAnimating,
     combatant,
+    reward,
     onActivate,
   }: NativeValueChoiceCardProps,
   ref: ForwardedRef<View>,
@@ -63,7 +66,7 @@ function NativeValueChoiceCard(
         })}
         accessibilityRole="button"
         accessibilityState={{ disabled: !isEnabled, selected: isWinner }}
-        className="min-h-0 flex-1 flex-row items-center xl:flex-col"
+        className="min-h-0 flex-1 flex-col items-center"
         disabled={!isEnabled}
         onPress={() => onActivate(value.id)}
         onHoverIn={() => setIsHovered(true)}
@@ -72,7 +75,7 @@ function NativeValueChoiceCard(
         onBlur={() => setIsFocused(false)}
       >
         <ScrollView
-          className="h-full min-h-0 min-w-0 flex-1 xl:h-auto xl:w-full"
+          className="min-h-0 w-full min-w-0 flex-1"
           contentContainerClassName="grow justify-center px-3 py-3 xl:px-6 xl:py-8"
           nestedScrollEnabled
         >
@@ -107,13 +110,34 @@ function NativeValueChoiceCard(
         {combatant ? (
           <View
             className={cn(
-              "h-full w-1/3 max-w-56 min-w-28 shrink-0 flex-row items-center xl:h-28 xl:w-28",
+              "w-full shrink-0 flex-row items-end px-4 pb-2",
               position === "first"
-                ? "justify-start xl:self-end"
-                : "justify-end xl:self-start",
+                ? "justify-start xl:justify-end"
+                : "justify-end xl:justify-start",
             )}
           >
-            {combatant(isEnabled && (isHovered || isFocused))}
+            <View className="w-28 items-center xl:w-56">
+              <View
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                className="z-10 h-10 w-full justify-end pb-1"
+              >
+                {reward ? (
+                  <View className="border-2 border-black bg-white px-1">
+                    <Text className="text-center text-xs leading-4 font-black text-black xl:text-base">
+                      {reward.label}
+                    </Text>
+                    <View className="h-1 overflow-hidden bg-black/15">
+                      <View
+                        className="bg-mapache-vivid-primary-raspberry h-full"
+                        style={{ width: `${reward.progressPercentage}%` }}
+                      />
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+              {combatant(isEnabled && (isHovered || isFocused))}
+            </View>
           </View>
         ) : null}
       </Pressable>

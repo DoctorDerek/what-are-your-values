@@ -7,7 +7,14 @@ import {
   type ValueId,
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
-import { forwardRef, useId, useState, type ReactNode } from "react"
+import type { BattleRewardPresentation } from "@game/machines/src/BattleRewardPresentation"
+import {
+  forwardRef,
+  useId,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react"
 
 export type ValueChoicePosition = "first" | "second"
 
@@ -21,6 +28,7 @@ type ValueChoiceCardProps = {
   isAnimating: boolean
   controlHint: string | null
   combatant?: (isAttended: boolean) => ReactNode
+  reward?: BattleRewardPresentation | null
   onActivate: (valueId: ValueId) => void
   onFocus: (valueId: ValueId) => void
 }
@@ -39,6 +47,7 @@ export const ValueChoiceCard = forwardRef<
     isAnimating,
     controlHint,
     combatant,
+    reward,
     onActivate,
     onFocus,
   },
@@ -57,6 +66,9 @@ export const ValueChoiceCard = forwardRef<
     : "text-white drop-shadow-[1px_1px_0px_#000000]"
   const reservedControlHint = isFirst ? "[1 / A]" : "[2 / D]"
   const accessibleDefinitionId = useId()
+  const rewardStyle: CSSProperties & { "--reward-progress": string } = {
+    "--reward-progress": `${reward?.progressPercentage ?? 0}%`,
+  }
 
   return (
     <div
@@ -83,9 +95,9 @@ export const ValueChoiceCard = forwardRef<
         }}
         onPointerLeave={() => setIsHovered(false)}
         onPointerCancel={() => setIsHovered(false)}
-        className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer flex-row items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default xl:flex-col ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
+        className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer flex-col items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
       >
-        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:h-auto xl:w-full xl:px-8 xl:py-8">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:px-8 xl:py-8">
           <div className="my-auto w-full">
             <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-2 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-5">
               <span
@@ -111,9 +123,30 @@ export const ValueChoiceCard = forwardRef<
         </div>
         {combatant ? (
           <span
-            className={`pointer-events-none relative flex h-full w-1/3 max-w-56 min-w-28 shrink-0 items-center xl:h-28 xl:w-28 ${isFirst ? "justify-start xl:self-end" : "justify-end xl:self-start"}`}
+            className={`pointer-events-none relative flex w-full shrink-0 items-end px-4 pb-2 ${isFirst ? "justify-start xl:justify-end" : "justify-end xl:justify-start"}`}
           >
-            {combatant(isEnabled && (isHovered || isFocused))}
+            <span className="flex w-28 flex-col items-center xl:w-56">
+              <span
+                aria-hidden="true"
+                className="relative z-10 flex h-10 w-full flex-col justify-end pb-1 text-center text-xs leading-4 font-black text-black xl:text-base"
+              >
+                {reward ? (
+                  <span
+                    className="block border-2 border-black bg-white px-1"
+                    title={reward.progressLabel}
+                  >
+                    {reward.label}
+                    <span className="block h-1 overflow-hidden bg-black/15">
+                      <span
+                        className="bg-mapache-vivid-primary-raspberry block h-full w-(--reward-progress)"
+                        style={rewardStyle}
+                      />
+                    </span>
+                  </span>
+                ) : null}
+              </span>
+              {combatant(isEnabled && (isHovered || isFocused))}
+            </span>
           </span>
         ) : null}
       </button>

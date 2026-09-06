@@ -134,7 +134,7 @@ function NativeBattlePlayback({
         pointerEvents="none"
         collapsable={false}
         testID={`battle-combatant-${combatant.side}`}
-        className="size-28 items-center justify-end"
+        className="size-28 items-center justify-end xl:size-56"
       >
         <NativeSeethingSwarmBattleTraveler
           cue={cue}

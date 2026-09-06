@@ -149,14 +149,14 @@ function BattlePlayback({
         aria-hidden="true"
         key={combatant.side}
         ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
-        className="pointer-events-none relative flex size-28 shrink-0 items-end justify-center"
+        className="pointer-events-none relative flex size-28 shrink-0 items-end justify-center xl:size-56"
         data-animal-id={combatant.animalId}
         data-combatant-side={combatant.side}
         data-value-id={combatant.valueId}
         data-battle-cue={cue}
       >
         <motion.div
-          className="relative flex size-28 items-end justify-center"
+          className="relative flex size-28 items-end justify-center xl:size-56"
           data-combatant-traveler={combatant.side}
           initial={false}
           animate={{

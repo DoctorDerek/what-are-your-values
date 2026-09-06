@@ -89,7 +89,7 @@ export default function NativeSeethingSwarmCombatant({
   }
 
   return (
-    <View className="relative size-28">
+    <View className="relative size-28 origin-bottom xl:scale-200">
       {Object.values(combatant.clips).map((selection) => {
         const isVisible =
           selection.role === visibleRole && hasVisibleImage && !hasLoadError
