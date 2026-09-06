@@ -83,9 +83,9 @@ export const ValueChoiceCard = forwardRef<
         disabled={!isEnabled}
         onClick={() => onActivate(value.id)}
         onFocus={() => onFocus(value.id)}
-        className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default ${isFirst ? "flex-col" : "flex-col-reverse xl:flex-col"} ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
+        className={`relative flex min-h-0 w-full min-w-0 flex-1 cursor-pointer flex-row items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default xl:flex-col ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
       >
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:px-8 xl:py-8">
+        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:h-auto xl:w-full xl:px-8 xl:py-8">
         <div className="my-auto w-full">
           <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 xl:gap-5">
             <span
@@ -110,7 +110,7 @@ export const ValueChoiceCard = forwardRef<
         </div>
         </div>
         {combatant ? (
-          <span className={`pointer-events-none relative flex h-28 w-28 shrink-0 items-end justify-center ${isFirst ? "-translate-x-14 xl:translate-x-0 xl:self-end" : "translate-x-14 xl:translate-x-0 xl:self-start"}`}>
+          <span className={`pointer-events-none relative flex h-full w-1/3 min-w-28 max-w-56 shrink-0 items-center xl:h-28 xl:w-28 ${isFirst ? "justify-start xl:self-end" : "justify-end xl:self-start"}`}>
             {combatant}
           </span>
         ) : null}

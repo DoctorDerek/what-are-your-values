@@ -81,6 +81,9 @@ export default function Crucible({
   const controlHintInputModality = useWebControlHintInputModality()
   const firstChoiceRef = useRef<HTMLButtonElement>(null)
   const secondChoiceRef = useRef<HTMLButtonElement>(null)
+  const revealBattleSurface = useCallback((surface: HTMLElement | null) => {
+    surface?.scrollIntoView({ block: "start", behavior: "instant" })
+  }, [])
   const pendingAccessibilityActionRef =
     useRef<PendingBattleAccessibilityAction | null>(null)
   const nextAccessibilityAnnouncementSequenceRef = useRef(0)
@@ -295,6 +298,7 @@ export default function Crucible({
 
   return (
     <MapacheScreen
+      ref={revealBattleSurface}
       aria-label="Value battle"
       aria-busy={isPersistencePending}
       spacing="safe-area-only"
