@@ -4,6 +4,7 @@ import {
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
 import type { SeethingSwarmLicensedBattleCombatant } from "@game/machines/src/SeethingSwarmBattleChoreography"
+import type { SeethingSwarmBattleExchangeCue } from "@game/machines/src/SeethingSwarmBattleExchange"
 import { createSeethingSwarmBattlePlayback } from "@game/machines/src/SeethingSwarmBattlePlayback"
 import { useMemo, useState } from "react"
 import NativeSeethingSwarmAnimal from "@/components/NativeSeethingSwarmAnimal"
@@ -12,19 +13,23 @@ import NativeSeethingSwarmPlaceholder from "@/components/NativeSeethingSwarmPlac
 export default function NativeSeethingSwarmCombatant({
   combatant,
   winnerId,
+  cue,
   shouldReduceMotion,
   onPlaybackComplete,
+  onReady,
 }: {
   combatant: SeethingSwarmLicensedBattleCombatant<number>
   winnerId: ValueId | null
+  cue: SeethingSwarmBattleExchangeCue
   shouldReduceMotion: boolean
   onPlaybackComplete: () => void
+  onReady: () => void
 }) {
   const [stepIndex, setStepIndex] = useState(0)
   const [hasLoadError, setHasLoadError] = useState(false)
   const steps = useMemo(
-    () => createSeethingSwarmBattlePlayback({ combatant, winnerId }),
-    [combatant, winnerId],
+    () => createSeethingSwarmBattlePlayback({ combatant, winnerId, cue }),
+    [combatant, winnerId, cue],
   )
   const maximumIntegerScale = useMemo(
     () =>
@@ -48,11 +53,10 @@ export default function NativeSeethingSwarmCombatant({
     return (
       <NativeSeethingSwarmPlaceholder
         side={combatant.side}
-        result={
-          !winnerId ? null : winnerId === combatant.valueId ? "winner" : "loser"
-        }
+        role={step.role === "entry" || step.role === "anticipation" ? "rest" : step.role}
         shouldReduceMotion={shouldReduceMotion}
         onPlaybackComplete={onPlaybackComplete}
+        onReady={onReady}
       />
     )
 
@@ -75,7 +79,9 @@ export default function NativeSeethingSwarmCombatant({
       shouldReduceMotion={shouldReduceMotion}
       tileSize={SEETHING_SWARM_BATTLE_TILE_SIZE}
       onLoadError={() => setHasLoadError(true)}
+      onReady={onReady}
       onPlaybackComplete={() => {
+        if (isComplete) return
         setStepIndex(stepIndex + 1)
         if (winnerId && stepIndex + 1 === steps.length) onPlaybackComplete()
       }}

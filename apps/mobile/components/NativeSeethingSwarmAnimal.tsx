@@ -29,6 +29,7 @@ export default function NativeSeethingSwarmAnimal({
   tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
   onPlaybackComplete,
   onLoadError,
+  onReady,
 }: {
   clip: SeethingSwarmRuntimeCharacterClip<number>
   facing?: SeethingSwarmAnimalFacingDirection
@@ -39,6 +40,7 @@ export default function NativeSeethingSwarmAnimal({
   tileSize?: number
   onPlaybackComplete?: () => void
   onLoadError?: () => void
+  onReady?: () => void
 }) {
   const frameProgress = useSharedValue(0)
   const [loadedAsset, setLoadedAsset] = useState<number | null>(null)
@@ -150,7 +152,10 @@ export default function NativeSeethingSwarmAnimal({
           accessible={false}
           alt=""
           fadeDuration={0}
-          onLoad={() => setLoadedAsset(clip.asset)}
+          onLoad={() => {
+            setLoadedAsset(clip.asset)
+            onReady?.()
+          }}
           onError={onLoadError}
           resizeMode="stretch"
           source={clip.asset}

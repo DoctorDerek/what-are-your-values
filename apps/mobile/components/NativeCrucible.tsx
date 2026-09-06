@@ -217,8 +217,6 @@ export default function NativeCrucible({
         shouldReduceMotion={shouldReduceMotion}
         onPresented={onAchievementPresented}
       />
-      <View className="min-h-0 flex-1 flex-col gap-2 px-3 pb-3 xl:flex-col-reverse">
-        <View className="shrink-0">
           <NativeSeethingSwarmBattleStage
             battle={currentBattle}
             catalog={runtimeClipCatalog}
@@ -227,9 +225,8 @@ export default function NativeCrucible({
             isPaused={isMenuOpen}
             shouldReduceMotion={shouldReduceMotion}
             onResultComplete={handleAnimationComplete}
-          />
-        </View>
-        <View className="min-h-0 flex-1 flex-col gap-2 xl:flex-row">
+          >
+        {(combatants) => <>
           <NativeValueChoiceCard
             ref={firstChoiceRef}
             key={`first:${firstValueId}:${secondValueId}`}
@@ -240,7 +237,7 @@ export default function NativeCrucible({
             winnerId={state.context.winnerId}
             isEnabled={isInteractive}
             isAnimating={isAnimating}
-            shouldReduceMotion={shouldReduceMotion}
+            combatant={combatants.first}
             onActivate={handleSelect}
           />
           <NativeValueChoiceCard
@@ -252,11 +249,11 @@ export default function NativeCrucible({
             winnerId={state.context.winnerId}
             isEnabled={isInteractive}
             isAnimating={isAnimating}
-            shouldReduceMotion={shouldReduceMotion}
+            combatant={combatants.second}
             onActivate={handleSelect}
           />
-        </View>
-      </View>
+        </>}
+      </NativeSeethingSwarmBattleStage>
     </MapacheScreen>
   )
 }
