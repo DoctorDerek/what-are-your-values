@@ -138,7 +138,6 @@ function NativeBattlePlayback({
       >
         {"clips" in combatant ? (
           <NativeSeethingSwarmCombatant
-            key={cue}
             combatant={combatant}
             winnerId={winnerId}
             cue={cue}
