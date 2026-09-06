@@ -354,6 +354,7 @@ export default function Crucible({
 
       <SeethingSwarmBattleStage
         battle={currentBattle}
+        pendingBattle={state.context.pendingBattle}
         isNextBattleReady={state.context.pendingBattle !== null}
         isPaused={isMenuOpen}
         runtimeClipCatalog={runtimeClipCatalog}
