@@ -24,10 +24,20 @@ afterEach(() => vi.restoreAllMocks())
 
 describe("SeethingSwarmAnimal", () => {
   it("recognizes a valid cached image before painting a loading state", () => {
-    vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true)
-    vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(16)
+    vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(
+      true,
+    )
+    vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(
+      16,
+    )
     const onReady = vi.fn()
-    render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion={false} onReady={onReady} />)
+    render(
+      <SeethingSwarmAnimal
+        clip={clip}
+        shouldReduceMotion={false}
+        onReady={onReady}
+      />,
+    )
 
     const image = screen.getByAltText("")
     expect(image.parentElement).toHaveAttribute("data-playback-ready", "true")
@@ -36,12 +46,25 @@ describe("SeethingSwarmAnimal", () => {
   })
 
   it("does not mistake a completed broken image for usable cached pixels", () => {
-    vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true)
-    vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(0)
+    vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(
+      true,
+    )
+    vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(
+      0,
+    )
     const onReady = vi.fn()
-    render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion={false} onReady={onReady} />)
+    render(
+      <SeethingSwarmAnimal
+        clip={clip}
+        shouldReduceMotion={false}
+        onReady={onReady}
+      />,
+    )
 
-    expect(screen.getByAltText("").parentElement).toHaveAttribute("data-playback-ready", "false")
+    expect(screen.getByAltText("").parentElement).toHaveAttribute(
+      "data-playback-ready",
+      "false",
+    )
     expect(onReady).not.toHaveBeenCalled()
   })
 

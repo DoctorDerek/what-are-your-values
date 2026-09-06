@@ -7,7 +7,13 @@ import {
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import Image, { type StaticImageData } from "next/image"
-import { useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from "react"
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react"
 
 type SeethingSwarmAnimalStyle = CSSProperties & {
   "--animal-animation-duration": string
@@ -99,7 +105,7 @@ export default function SeethingSwarmAnimal({
         ? "animate-seething-swarm-strip"
         : effectivePlaybackMode === "hold-final-frame"
           ? "animate-none [transform:translate3d(var(--animal-strip-final-offset),0,0)]"
-        : "animate-none"
+          : "animate-none"
 
   return (
     <span

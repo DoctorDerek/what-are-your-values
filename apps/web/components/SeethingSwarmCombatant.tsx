@@ -77,9 +77,11 @@ export default function SeethingSwarmCombatant({
   const retainedRole =
     loadedRoles.has(displayedRole) && !failedRoles.has(displayedRole)
       ? displayedRole
-      : [...loadedRoles].find((candidate) => !failedRoles.has(candidate)) ?? "rest"
+      : ([...loadedRoles].find((candidate) => !failedRoles.has(candidate)) ??
+        "rest")
   const visibleRole = isReady ? role : retainedRole
-  const hasVisibleImage = loadedRoles.has(visibleRole) && !failedRoles.has(visibleRole)
+  const hasVisibleImage =
+    loadedRoles.has(visibleRole) && !failedRoles.has(visibleRole)
   const hasLoadError = failedRoles.has(role)
 
   useEffect(() => {
@@ -102,8 +104,7 @@ export default function SeethingSwarmCombatant({
       data-battle-role={role}
     >
       {Object.values(combatant.clips).map((selection) => {
-        const isVisible =
-          selection.role === visibleRole && hasVisibleImage
+        const isVisible = selection.role === visibleRole && hasVisibleImage
         return (
           <span
             key={selection.role}
