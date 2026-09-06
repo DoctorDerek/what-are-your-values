@@ -59,7 +59,10 @@ function BattlePlayback({
   isNextBattleReady: boolean
   shouldReduceMotion: boolean
   onResultComplete: () => void
-  children: (combatants: { first: ReactNode; second: ReactNode }) => ReactNode
+  children: (combatants: {
+    first: (isAttended: boolean, reward?: ReactNode) => ReactNode
+    second: (isAttended: boolean, reward?: ReactNode) => ReactNode
+  }) => ReactNode
 }) {
   const [resultCue, setResultCue] =
     useState<SeethingSwarmBattleExchangeCue>("approach")
@@ -99,14 +102,24 @@ function BattlePlayback({
       const nextTravel = createSeethingSwarmBattleTravel({
         attacker: isFirstWinner ? firstPoint : secondPoint,
         defender: isFirstWinner ? secondPoint : firstPoint,
+        attackerSide: isFirstWinner ? "first" : "second",
+        combatantWidth: isFirstWinner ? first.width : second.width,
       })
       setTravel(nextTravel)
       if (nextTravel.x === 0 && nextTravel.y === 0)
         setResultCue((current) => (current === "approach" ? "strike" : current))
     }
     measureTravel()
+    const layoutObserver = new ResizeObserver(measureTravel)
+    const firstCard = firstAnchorRef.current?.closest("button")
+    const secondCard = secondAnchorRef.current?.closest("button")
+    if (firstCard) layoutObserver.observe(firstCard)
+    if (secondCard) layoutObserver.observe(secondCard)
     window.addEventListener("resize", measureTravel)
-    return () => window.removeEventListener("resize", measureTravel)
+    return () => {
+      layoutObserver.disconnect()
+      window.removeEventListener("resize", measureTravel)
+    }
   }, [choreography, readySides, shouldReduceMotion, winnerId])
 
   const handlePlaybackComplete = (side: SeethingSwarmBattleCombatantSide) => {
@@ -130,72 +143,86 @@ function BattlePlayback({
     )
   }
 
-  const combatants = choreography.combatants.map((combatant) => (
-    <div
-      aria-hidden="true"
-      key={combatant.side}
-      ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
-      className="pointer-events-none relative flex size-28 shrink-0 items-end justify-center"
-      data-animal-id={combatant.animalId}
-      data-combatant-side={combatant.side}
-      data-value-id={combatant.valueId}
-      data-battle-cue={cue}
-    >
-      <motion.div
-        className="relative flex size-28 items-end justify-center"
-        data-combatant-traveler={combatant.side}
-        initial={false}
-        animate={{
-          x:
-            !shouldReduceMotion &&
-            combatant.valueId === winnerId &&
-            cue !== "impact"
-              ? (travel?.x ?? 0)
-              : 0,
-          y:
-            !shouldReduceMotion &&
-            combatant.valueId === winnerId &&
-            cue !== "impact"
-              ? (travel?.y ?? 0)
-              : 0,
-        }}
-        transition={{
-          duration: shouldReduceMotion
-            ? 0
-            : SEETHING_SWARM_BATTLE_APPROACH_DURATION_MS / 1000,
-          ease: "easeOut",
-        }}
-        onAnimationComplete={() => {
-          if (cue === "approach" && travel && combatant.valueId === winnerId)
-            setResultCue("strike")
-        }}
-      >
-        {"clips" in combatant ? (
-          <SeethingSwarmCombatant
-            key={cue}
-            combatant={combatant}
-            winnerId={winnerId}
-            cue={cue}
-            shouldReduceMotion={shouldReduceMotion}
-            onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
-            onReady={() => handleReady(combatant.side)}
-          />
-        ) : (
-          <SeethingSwarmPlaceholder
-            key={cue}
-            side={combatant.side}
-            role={resolveSeethingSwarmPlaceholderRole(
-              cue,
-              winnerId === combatant.valueId,
-            )}
-            shouldReduceMotion={shouldReduceMotion}
-            onPlaybackComplete={() => handlePlaybackComplete(combatant.side)}
-            onReady={() => handleReady(combatant.side)}
-          />
-        )}
-      </motion.div>
-    </div>
-  ))
+  const combatants = choreography.combatants.map(
+    (combatant) =>
+      function renderCardCombatant(isAttended: boolean, reward?: ReactNode) {
+        return (
+          <div
+            aria-hidden="true"
+            key={combatant.side}
+            ref={combatant.side === "first" ? firstAnchorRef : secondAnchorRef}
+            className="pointer-events-none relative flex size-28 shrink-0 items-end justify-center xl:size-56"
+            data-animal-id={combatant.animalId}
+            data-combatant-side={combatant.side}
+            data-value-id={combatant.valueId}
+            data-battle-cue={cue}
+          >
+            <motion.div
+              className="relative flex size-28 items-end justify-center xl:size-56"
+              data-combatant-traveler={combatant.side}
+              initial={false}
+              animate={{
+                x:
+                  !shouldReduceMotion && combatant.valueId === winnerId
+                    ? (travel?.x ?? 0)
+                    : 0,
+                y:
+                  !shouldReduceMotion && combatant.valueId === winnerId
+                    ? (travel?.y ?? 0)
+                    : 0,
+              }}
+              transition={{
+                duration: shouldReduceMotion
+                  ? 0
+                  : SEETHING_SWARM_BATTLE_APPROACH_DURATION_MS / 1000,
+                ease: "easeOut",
+              }}
+              onAnimationComplete={() => {
+                if (
+                  cue === "approach" &&
+                  travel &&
+                  combatant.valueId === winnerId
+                )
+                  setResultCue("strike")
+              }}
+            >
+              {reward ? (
+                <span className="absolute bottom-full left-0 z-10 w-full pb-1">
+                  {reward}
+                </span>
+              ) : null}
+              {"clips" in combatant ? (
+                <SeethingSwarmCombatant
+                  combatant={combatant}
+                  isAttended={isAttended}
+                  winnerId={winnerId}
+                  cue={cue}
+                  shouldReduceMotion={shouldReduceMotion}
+                  onPlaybackComplete={() =>
+                    handlePlaybackComplete(combatant.side)
+                  }
+                  onReady={() => handleReady(combatant.side)}
+                />
+              ) : (
+                <SeethingSwarmPlaceholder
+                  key={cue}
+                  side={combatant.side}
+                  role={resolveSeethingSwarmPlaceholderRole(
+                    cue,
+                    winnerId === combatant.valueId,
+                  )}
+                  shouldReduceMotion={shouldReduceMotion}
+                  onPlaybackComplete={() =>
+                    handlePlaybackComplete(combatant.side)
+                  }
+                  onReady={() => handleReady(combatant.side)}
+                />
+              )}
+            </motion.div>
+          </div>
+        )
+      },
+  )
   return children({ first: combatants[0], second: combatants[1] })
 }
 
@@ -216,7 +243,10 @@ export default function SeethingSwarmBattleStage({
   shouldReduceMotion: boolean
   winnerId: ValueId | null
   onResultAnimationComplete: () => void
-  children: (combatants: { first: ReactNode; second: ReactNode }) => ReactNode
+  children: (combatants: {
+    first: (isAttended: boolean, reward?: ReactNode) => ReactNode
+    second: (isAttended: boolean, reward?: ReactNode) => ReactNode
+  }) => ReactNode
 }) {
   const isDocumentHidden = useSyncExternalStore(
     subscribeToDocumentVisibility,

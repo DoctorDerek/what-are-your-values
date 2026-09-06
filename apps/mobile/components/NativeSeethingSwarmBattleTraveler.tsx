@@ -51,7 +51,7 @@ export default function NativeSeethingSwarmBattleTraveler({
     }
     progress.set(
       withTiming(
-        cue === "impact" ? 0 : 1,
+        1,
         {
           duration: SEETHING_SWARM_BATTLE_APPROACH_DURATION_MS,
           easing: Easing.out(Easing.quad),
@@ -70,7 +70,7 @@ export default function NativeSeethingSwarmBattleTraveler({
 
   return (
     <Animated.View
-      className="size-28 items-center justify-end"
+      className="size-28 items-center justify-end xl:size-56"
       style={animatedStyle}
     >
       {children}

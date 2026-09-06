@@ -3,33 +3,47 @@ import { createSeethingSwarmBattleTravel } from "./SeethingSwarmBattleExchange"
 
 describe("directed animal battle travel", () => {
   it.each([
-    { attacker: { x: 0, y: 0 }, defender: { x: 200, y: 0 } },
-    { attacker: { x: 200, y: 0 }, defender: { x: 0, y: 0 } },
-    { attacker: { x: 50, y: 0 }, defender: { x: 100, y: 200 } },
-    { attacker: { x: 100, y: 200 }, defender: { x: 50, y: 0 } },
-  ])(
-    "approaches the opponent without crossing its center: $attacker -> $defender",
-    ({ attacker, defender }) => {
-      const travel = createSeethingSwarmBattleTravel({ attacker, defender })
-      const remainingDistance = Math.hypot(
-        defender.x - attacker.x - travel.x,
-        defender.y - attacker.y - travel.y,
+    {
+      attackerSide: "first",
+      attacker: { x: 0, y: 0 },
+      defender: { x: 300, y: 0 },
+      combatantWidth: 224,
+    },
+    {
+      attackerSide: "second",
+      attacker: { x: 300, y: 0 },
+      defender: { x: 0, y: 0 },
+      combatantWidth: 224,
+    },
+    {
+      attackerSide: "first",
+      attacker: { x: 70, y: 0 },
+      defender: { x: 290, y: 400 },
+      combatantWidth: 112,
+    },
+    {
+      attackerSide: "second",
+      attacker: { x: 290, y: 400 },
+      defender: { x: 70, y: 0 },
+      combatantWidth: 112,
+    },
+    {
+      attackerSide: "first",
+      attacker: { x: 0, y: 0 },
+      defender: { x: 0, y: 0 },
+      combatantWidth: 112,
+    },
+  ] as const)(
+    "ends on the opponent baseline with room for both animals: $attackerSide",
+    (input) => {
+      const travel = createSeethingSwarmBattleTravel(input)
+      expect(input.attacker.y + travel.y).toBe(input.defender.y)
+      expect(input.defender.x - input.attacker.x - travel.x).toBe(
+        ((input.combatantWidth * 3) / 4) *
+          (input.attackerSide === "first" ? 1 : -1),
       )
-      expect(remainingDistance).toBeCloseTo(56, 0)
       expect(Number.isInteger(travel.x)).toBe(true)
       expect(Number.isInteger(travel.y)).toBe(true)
-    },
-  )
-
-  it.each([
-    { x: 0, y: 0 },
-    { x: 20, y: 10 },
-  ])(
-    "does not invent travel when animals are already in contact",
-    (defender) => {
-      expect(
-        createSeethingSwarmBattleTravel({ attacker: { x: 0, y: 0 }, defender }),
-      ).toEqual({ x: 0, y: 0 })
     },
   )
 })

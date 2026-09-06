@@ -28,6 +28,7 @@ export default function SeethingSwarmAnimal({
   facing = "right",
   frameDurationMs = SEETHING_SWARM_HUB_FRAME_DURATION_MS,
   maximumIntegerScale,
+  preload = false,
   playbackMode = "loop",
   shouldReduceMotion,
   tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
@@ -39,6 +40,7 @@ export default function SeethingSwarmAnimal({
   facing?: SeethingSwarmAnimalFacingDirection
   frameDurationMs?: number
   maximumIntegerScale?: number
+  preload?: boolean
   playbackMode?: SeethingSwarmAnimalPlaybackMode
   shouldReduceMotion: boolean
   tileSize?: number
@@ -105,7 +107,7 @@ export default function SeethingSwarmAnimal({
         className={`absolute top-(--animal-strip-top) left-(--animal-strip-left) h-(--animal-strip-height) w-(--animal-strip-width) max-w-none [image-rendering:pixelated] ${playbackClassName} ${isImageLoaded ? "" : "[animation-play-state:paused]"}`}
         draggable={false}
         height={scaledFrameHeight}
-        loading={playbackMode === "one-shot" ? "eager" : undefined}
+        loading={preload || playbackMode === "one-shot" ? "eager" : undefined}
         onAnimationEnd={
           effectivePlaybackMode === "one-shot" && isImageLoaded
             ? onPlaybackComplete

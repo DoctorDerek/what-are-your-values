@@ -389,12 +389,19 @@ describe("Crucible Component Integration", () => {
     fireEvent.keyDown(window, { key: "2" })
     expect(onWinnerSelected).toHaveBeenCalledTimes(1)
 
+    expect(screen.queryByText(/^\+\d+ XP · Level /)).not.toBeInTheDocument()
     rerender(
       <Crucible
         {...props}
         battle={resultingBattle}
         progressById={resultingBattleCycle.progressById}
       />,
+    )
+    const reward = within(firstChoice).getByText(/^\+\d+ XP · Level /)
+    expect(reward).toBeVisible()
+    expect(reward.closest("[data-combatant-traveler]")).toHaveAttribute(
+      "data-combatant-traveler",
+      "first",
     )
     expect(firstChoice).toBeInTheDocument()
     expect(

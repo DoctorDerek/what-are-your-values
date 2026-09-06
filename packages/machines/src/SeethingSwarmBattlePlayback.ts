@@ -39,13 +39,15 @@ export function createSeethingSwarmBattlePlayback<PlatformAsset>({
   const roles: readonly SeethingSwarmBattleClipRole[] =
     cue === "introduction"
       ? BATTLE_INTRODUCTION_ROLES
-      : cue === "strike" && isWinner
-        ? ["attack"]
-        : cue === "impact"
-          ? isWinner
-            ? ["flourish"]
-            : BATTLE_LOSER_ROLES
-          : ["rest"]
+      : cue === "attention"
+        ? ["anticipation", "rest"]
+        : cue === "strike" && isWinner
+          ? ["attack"]
+          : cue === "impact"
+            ? isWinner
+              ? ["flourish"]
+              : BATTLE_LOSER_ROLES
+            : ["rest"]
   const resultRoles = isWinner ? BATTLE_WINNER_ROLES : BATTLE_LOSER_ROLES
   const frameCount = (winnerId ? resultRoles : roles).reduce(
     (total, role) => total + combatant.clips[role].clip.frameCount,

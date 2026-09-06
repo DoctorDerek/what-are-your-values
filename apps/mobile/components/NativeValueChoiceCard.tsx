@@ -5,7 +5,8 @@ import {
   type ValueId,
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
-import { forwardRef, type ForwardedRef, type ReactNode } from "react"
+import type { BattleRewardPresentation } from "@game/machines/src/BattleRewardPresentation"
+import { forwardRef, useState, type ForwardedRef, type ReactNode } from "react"
 import { Pressable, ScrollView, View } from "react-native"
 import { Text } from "@/components/ui/text"
 import { cn } from "@/lib/utils"
@@ -18,7 +19,8 @@ type NativeValueChoiceCardProps = {
   winnerId: ValueId | null
   isEnabled: boolean
   isAnimating: boolean
-  combatant?: ReactNode
+  combatant?: (isAttended: boolean, reward?: ReactNode) => ReactNode
+  reward?: BattleRewardPresentation | null
   onActivate: (valueId: ValueId) => void
 }
 
@@ -32,11 +34,14 @@ function NativeValueChoiceCard(
     isEnabled,
     isAnimating,
     combatant,
+    reward,
     onActivate,
   }: NativeValueChoiceCardProps,
   ref: ForwardedRef<View>,
 ) {
   const isWinner = isAnimating && winnerId === value.id
+  const [isHovered, setIsHovered] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
 
   const displayName = getValueDisplayName(value)
   const displayDefinition = getValueDisplayDefinition(value)
@@ -61,12 +66,16 @@ function NativeValueChoiceCard(
         })}
         accessibilityRole="button"
         accessibilityState={{ disabled: !isEnabled, selected: isWinner }}
-        className="min-h-0 flex-1 flex-row items-center xl:flex-col"
+        className="min-h-0 flex-1 flex-row flex-wrap items-center xl:flex-col xl:flex-nowrap"
         disabled={!isEnabled}
         onPress={() => onActivate(value.id)}
+        onHoverIn={() => setIsHovered(true)}
+        onHoverOut={() => setIsHovered(false)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       >
         <ScrollView
-          className="h-full min-h-0 min-w-0 flex-1 xl:h-auto xl:w-full"
+          className="max-h-full min-h-0 min-w-0 grow basis-80 xl:w-full xl:flex-1 xl:basis-auto"
           contentContainerClassName="grow justify-center px-3 py-3 xl:px-6 xl:py-8"
           nestedScrollEnabled
         >
@@ -101,13 +110,35 @@ function NativeValueChoiceCard(
         {combatant ? (
           <View
             className={cn(
-              "h-full w-1/3 max-w-56 min-w-28 shrink-0 flex-row items-center xl:h-28 xl:w-28",
+              "w-40 grow flex-row items-end px-4 pb-2 xl:w-full xl:grow-0",
               position === "first"
-                ? "justify-start xl:self-end"
-                : "justify-end xl:self-start",
+                ? "justify-start xl:justify-end"
+                : "justify-end xl:justify-start",
             )}
           >
-            {combatant}
+            <View className="w-28 items-center xl:w-56">
+              <View
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                className="h-10 w-full"
+              />
+              {combatant(
+                isEnabled && (isHovered || isFocused),
+                reward ? (
+                  <View className="border-2 border-black bg-white px-1">
+                    <Text className="text-center text-xs leading-4 font-black text-black xl:text-base">
+                      {reward.label}
+                    </Text>
+                    <View className="h-1 overflow-hidden bg-black/15">
+                      <View
+                        className="bg-mapache-vivid-primary-raspberry h-full"
+                        style={{ width: `${reward.progressPercentage}%` }}
+                      />
+                    </View>
+                  </View>
+                ) : null,
+              )}
+            </View>
           </View>
         ) : null}
       </Pressable>

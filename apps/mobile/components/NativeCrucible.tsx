@@ -8,6 +8,7 @@ import {
   getBattleAccessibilityAnnouncement,
   type PendingBattleAccessibilityAction,
 } from "@game/machines/src/BattleAccessibilityPresentation"
+import { getBattleRewardPresentation } from "@game/machines/src/BattleRewardPresentation"
 import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
@@ -17,7 +18,7 @@ import type { ControlHintPreference } from "@game/machines/src/PlayerSettings"
 import { getValueChoiceControlHint } from "@game/machines/src/PlayerSettingsPresentation"
 import { getLevelFromXP } from "@game/utils/src/LevelMath"
 import { useMachine } from "@xstate/react"
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { AccessibilityInfo, View } from "react-native"
 import MapacheScreen from "@/components/MapacheScreen"
 import NativeAchievementBanner from "@/components/NativeAchievementBanner"
@@ -76,6 +77,8 @@ export default function NativeCrucible({
   const firstChoiceRef = useRef<View>(null)
   const pendingAccessibilityActionRef =
     useRef<PendingBattleAccessibilityAction | null>(null)
+  const [rewardAction, setRewardAction] =
+    useState<PendingBattleAccessibilityAction | null>(null)
 
   useEffect(() => {
     send({ type: "BATTLE.PROJECTED", battle })
@@ -95,6 +98,7 @@ export default function NativeCrucible({
           action: { kind: "selection", selectedValueId: winnerId },
           progressById,
         })
+      setRewardAction(pendingAccessibilityActionRef.current)
       send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
     },
     [isInteractive, progressById, send],
@@ -194,6 +198,14 @@ export default function NativeCrucible({
     inputModality: NATIVE_CONTROL_HINT_INPUT_MODALITY,
     position: "second",
   })
+  const reward =
+    isAnimating && state.context.pendingBattle && !isPersistencePending
+      ? getBattleRewardPresentation({
+          pendingAction: rewardAction,
+          activeDeck,
+          progressById,
+        })
+      : null
 
   return (
     <MapacheScreen
@@ -239,6 +251,7 @@ export default function NativeCrucible({
               isEnabled={isInteractive}
               isAnimating={isAnimating}
               combatant={combatants.first}
+              reward={reward?.valueId === firstValueId ? reward : null}
               onActivate={handleSelect}
             />
             <NativeValueChoiceCard
@@ -251,6 +264,7 @@ export default function NativeCrucible({
               isEnabled={isInteractive}
               isAnimating={isAnimating}
               combatant={combatants.second}
+              reward={reward?.valueId === secondValueId ? reward : null}
               onActivate={handleSelect}
             />
           </>

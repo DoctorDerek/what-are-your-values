@@ -88,7 +88,7 @@ function getActiveValueDisplayName(activeDeck: ActiveDeck, valueId: ValueId) {
   return getValueDisplayName(value)
 }
 
-function getCompletedXpChange({
+export function getCompletedBattleXpChange({
   pendingAction,
   activeDeck,
   progressById,
@@ -170,7 +170,7 @@ export function getBattleAccessibilityAnnouncement({
   readonly progressById: ValueProgressById
   readonly pair: ValuePair
 }) {
-  const completedXpChange = getCompletedXpChange({
+  const completedXpChange = getCompletedBattleXpChange({
     pendingAction,
     activeDeck,
     progressById,

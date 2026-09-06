@@ -1,4 +1,101 @@
-import { expect, test, type Locator } from "@playwright/test"
+import { expect, test, type Locator, type Route } from "@playwright/test"
+
+test.use({ serviceWorkers: "block" })
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.getVisibleTextBounds = (text) => {
+      const bounds = text.getBoundingClientRect()
+      let { left, right, top, bottom } = bounds
+      for (
+        let ancestor = text.parentElement;
+        ancestor;
+        ancestor = ancestor.parentElement
+      ) {
+        const style = getComputedStyle(ancestor)
+        const clip = ancestor.getBoundingClientRect()
+        if (["auto", "scroll", "hidden", "clip"].includes(style.overflowX)) {
+          left = Math.max(left, clip.left)
+          right = Math.min(right, clip.right)
+        }
+        if (["auto", "scroll", "hidden", "clip"].includes(style.overflowY)) {
+          top = Math.max(top, clip.top)
+          bottom = Math.min(bottom, clip.bottom)
+        }
+      }
+      return { left, right, top, bottom }
+    }
+  })
+})
+
+test("a delayed attack keeps the loaded animal visible without replacing its images", async ({
+  page,
+}) => {
+  const heldRoutes: Route[] = []
+  let releaseAll = false
+  await page.route(/\.png(?:\?|$)/, (route) => {
+    if (releaseAll) return route.continue()
+    heldRoutes.push(route)
+  })
+  try {
+    await page.goto("/", { waitUntil: "domcontentloaded" })
+    await page.getByRole("button", { name: "Start", exact: true }).click()
+    await page.getByRole("button", { name: "Battle", exact: true }).click()
+    const battle = page.getByRole("main", { name: "Value battle" })
+    const stage = battle.locator("[data-choreography-identity]")
+    await expect(stage).toHaveAttribute("data-battle-stage-mode", "licensed")
+    const identity = await stage.getAttribute("data-choreography-identity")
+    const restImages = battle.locator('[data-battle-clip="rest"] img')
+    const sources = await restImages.evaluateAll((images: HTMLImageElement[]) =>
+      images.map((image) => image.src),
+    )
+    for (const source of new Set(sources)) {
+      await expect
+        .poll(() =>
+          heldRoutes.some((route) => route.request().url() === source),
+        )
+        .toBe(true)
+      const index = heldRoutes.findIndex(
+        (route) => route.request().url() === source,
+      )
+      const [heldRoute] = heldRoutes.splice(index, 1)
+      if (!heldRoute)
+        throw new Error("Expected the animal image request to remain pending")
+      await heldRoute.continue()
+    }
+    const first = battle.locator('[data-combatant-side="first"]')
+    const rest = first.locator('[data-battle-clip="rest"] img')
+    await expect(rest).toBeVisible()
+    const retainedImage = await rest.elementHandle()
+    if (!retainedImage)
+      throw new Error("Expected the loaded animal image to remain mounted")
+    await page.keyboard.press("1")
+    await expect(first).toHaveAttribute("data-battle-cue", "strike")
+    await expect(rest).toBeVisible()
+    expect(
+      await retainedImage.evaluate(
+        (image) =>
+          image.isConnected && image.complete && image.naturalWidth > 0,
+      ),
+    ).toBe(true)
+    await expect(
+      first.locator('[data-battle-clip="attack"] img'),
+    ).not.toBeVisible()
+    await expect(battle.locator("img")).toHaveCount(12)
+    releaseAll = true
+    await Promise.all(heldRoutes.splice(0).map((route) => route.continue()))
+    await expect
+      .poll(() => stage.getAttribute("data-choreography-identity"))
+      .not.toBe(identity)
+    await expect(stage).toHaveAttribute(
+      "data-battle-stage-state",
+      "awaiting-input",
+    )
+  } finally {
+    releaseAll = true
+    await Promise.all(heldRoutes.splice(0).map((route) => route.continue()))
+  }
+})
 
 interface CompletedAnimalClip {
   choreographyIdentity: string | null
@@ -12,11 +109,16 @@ interface AnimalStrikeGeometry {
   choreographyIdentity: string | null
   originDistance: number
   contactDistance: number
+  expectedContactDistance: number
+  baselineDifference: number
   overlapsText: boolean
 }
 
 declare global {
   interface Window {
+    getVisibleTextBounds: (
+      text: Element,
+    ) => Pick<DOMRect, "left" | "right" | "top" | "bottom">
     completedAnimalClips: CompletedAnimalClip[]
     animalStrikes: AnimalStrikeGeometry[]
   }
@@ -29,16 +131,17 @@ async function expectRenderedCombatant(
 ) {
   const animatedElement =
     mode === "licensed"
-      ? combatant.locator("img")
+      ? combatant.locator('[data-battle-active-clip="true"] img')
       : combatant.locator("[data-placeholder-playback]")
 
   await expect(animatedElement).toBeVisible()
   if (mode === "licensed") {
     await expect(animatedElement).toHaveCSS("image-rendering", "pixelated")
-    await expect(combatant.locator("[data-playback-mode]")).toHaveCSS(
-      "overflow",
-      "hidden",
-    )
+    await expect(
+      combatant.locator(
+        '[data-battle-active-clip="true"] [data-playback-mode]',
+      ),
+    ).toHaveCSS("overflow", "hidden")
     await expect
       .poll(() =>
         animatedElement.evaluate(
@@ -106,9 +209,13 @@ test("the Zoo of War holds both animals through a committed battle", async ({
           ),
           originDistance: distance(origin),
           contactDistance: distance(current),
+          expectedContactDistance: (current.width * 3) / 4,
+          baselineDifference: Math.abs(current.bottom - target.bottom),
           overlapsText: [...stage.querySelectorAll("h2, p")].some((text) => {
-            const bounds = text.getBoundingClientRect()
+            const bounds = window.getVisibleTextBounds(text)
             return (
+              bounds.left < bounds.right &&
+              bounds.top < bounds.bottom &&
               current.left < bounds.right &&
               current.right > bounds.left &&
               current.top < bounds.bottom &&
@@ -185,10 +292,9 @@ test("the Zoo of War holds both animals through a committed battle", async ({
   await expectRenderedCombatant(firstCombatant, mode, false)
   await expectRenderedCombatant(secondCombatant, mode, false)
   if (mode === "licensed")
-    await expect(secondCombatant.locator("[data-facing]")).toHaveCSS(
-      "scale",
-      "-1 1",
-    )
+    await expect(
+      secondCombatant.locator('[data-battle-active-clip="true"] [data-facing]'),
+    ).toHaveCSS("scale", "-1 1")
 
   const initialChoreographyIdentity = await stage.getAttribute(
     "data-choreography-identity",
@@ -226,7 +332,11 @@ test("the Zoo of War holds both animals through a committed battle", async ({
     )
     expect(strikes).toHaveLength(1)
     expect(strikes[0]!.contactDistance).toBeLessThan(strikes[0]!.originDistance)
-    expect(strikes[0]!.contactDistance).toBeLessThanOrEqual(57)
+    expect(strikes[0]!.contactDistance).toBeCloseTo(
+      strikes[0]!.expectedContactDistance,
+      0,
+    )
+    expect(strikes[0]!.baselineDifference).toBeLessThanOrEqual(1)
     expect(strikes[0]!.overlapsText).toBe(false)
     const completedClips = (
       await page.evaluate(() => window.completedAnimalClips)
@@ -235,14 +345,18 @@ test("the Zoo of War holds both animals through a committed battle", async ({
     )
     expect(
       completedClips
-        .filter((clip) => clip.side === "first")
+        .filter(
+          (clip) =>
+            clip.side === "first" &&
+            ["attack", "flourish"].includes(clip.role ?? ""),
+        )
         .map((clip) => clip.role),
-    ).toEqual(["entry", "anticipation", "attack", "flourish"])
+    ).toEqual(["attack", "flourish"])
     expect(
       completedClips
-        .filter((clip) => clip.side === "second")
+        .filter((clip) => clip.side === "second" && clip.role === "reaction")
         .map((clip) => clip.role),
-    ).toEqual(["entry", "anticipation", "reaction"])
+    ).toEqual(["reaction"])
     expect(
       completedClips.every((clip) => clip.isLoaded && clip.source.length > 0),
     ).toBe(true)
@@ -331,8 +445,10 @@ for (const { width, height } of [
           .querySelector("[data-combatant-side]")!
           .getBoundingClientRect()
         return [...button.querySelectorAll("h2, p")].every((text) => {
-          const bounds = text.getBoundingClientRect()
+          const bounds = window.getVisibleTextBounds(text)
           return (
+            bounds.left >= bounds.right ||
+            bounds.top >= bounds.bottom ||
             bounds.right <= animal.left ||
             bounds.left >= animal.right ||
             bounds.bottom <= animal.top ||

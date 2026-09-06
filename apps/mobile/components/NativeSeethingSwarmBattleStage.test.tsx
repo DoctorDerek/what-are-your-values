@@ -77,21 +77,35 @@ function props(): ComponentProps<typeof NativeSeethingSwarmBattleStage> {
     children: ({ first, second }) => (
       <>
         <Pressable accessibilityRole="button" accessibilityLabel="First value">
-          {first}
+          {first(false)}
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Second value">
-          {second}
+          {second(false)}
         </Pressable>
       </>
     ),
   }
 }
 function image(animal: "raccoonpack" | "wolfpack") {
-  return screen.getByTestId(`seething-swarm-animal-${animal}-image`, hidden)
+  const side = animal === "raccoonpack" ? "first" : "second"
+  const clips = screen.getAllByTestId(
+    new RegExp(`^battle-clip-${side}-`),
+    hidden,
+  )
+  const visibleClip =
+    clips.find((clip) => clip.props.className.includes("opacity-100")) ??
+    clips[0]
+  return within(visibleClip).getByTestId(
+    `seething-swarm-animal-${animal}-image`,
+    hidden,
+  )
 }
 async function loadImages() {
-  await fireEvent(image("raccoonpack"), "load")
-  await fireEvent(image("wolfpack"), "load")
+  for (const node of screen.getAllByTestId(
+    /^seething-swarm-animal-.+-image$/,
+    hidden,
+  ))
+    await fireEvent(node, "load")
 }
 async function advance(milliseconds: number) {
   await act(async () => {
@@ -147,10 +161,10 @@ describe("NativeSeethingSwarmBattleStage", () => {
       ),
     ).toHaveProp("accessibilityElementsHidden", true)
     expect(
-      screen.getByTestId("seething-swarm-animal-raccoonpack", hidden),
+      screen.getAllByTestId("seething-swarm-animal-raccoonpack", hidden)[0],
     ).toHaveStyle({ transform: [{ scaleX: 1 }] })
     expect(
-      screen.getByTestId("seething-swarm-animal-wolfpack", hidden),
+      screen.getAllByTestId("seething-swarm-animal-wolfpack", hidden)[0],
     ).toHaveStyle({ transform: [{ scaleX: -1 }] })
     expect(image("raccoonpack")).toHaveProp("source", 1)
     expect(image("wolfpack")).toHaveProp("source", 101)
@@ -166,7 +180,9 @@ describe("NativeSeethingSwarmBattleStage", () => {
     await advance(350)
     expect(
       getAnimatedStyle(
-        screen.getByTestId("seething-swarm-animal-raccoonpack-strip", hidden),
+        within(
+          screen.getByTestId("battle-clip-first-rest", hidden),
+        ).getByTestId("seething-swarm-animal-raccoonpack-strip", hidden),
       ),
     ).toMatchObject({ transform: [{ translateX: -256 }] })
     expect(initial.onResultComplete).not.toHaveBeenCalled()
@@ -223,18 +239,22 @@ describe("NativeSeethingSwarmBattleStage", () => {
     const { unmount } = await render(
       <NativeSeethingSwarmBattleStage {...initial} />,
     )
-    await fireEvent(image("raccoonpack"), "load")
+    const loadRole = async (side: "first" | "second", role: string) => {
+      const clip = screen.getByTestId(`battle-clip-${side}-${role}`, hidden)
+      await fireEvent(within(clip).getByTestId(/-image$/, hidden), "load")
+    }
+    await loadRole("first", "rest")
     await advance(300)
     expect(image("raccoonpack")).toHaveProp("source", 3)
     expect(initial.onResultComplete).not.toHaveBeenCalled()
-    await fireEvent(image("wolfpack"), "load")
+    await loadRole("second", "rest")
     await advance(200)
-    await fireEvent(image("raccoonpack"), "load")
+    await loadRole("first", "attack")
     await advance(300)
-    await fireEvent(image("raccoonpack"), "load")
+    await loadRole("first", "flourish")
     await advance(300)
     expect(initial.onResultComplete).not.toHaveBeenCalled()
-    await fireEvent(image("wolfpack"), "load")
+    await loadRole("second", "reaction")
     await advance(500)
     expect(initial.onResultComplete).toHaveBeenCalledTimes(1)
     await unmount()
@@ -246,6 +266,7 @@ describe("NativeSeethingSwarmBattleStage", () => {
     const { rerender } = await render(
       <NativeSeethingSwarmBattleStage {...initial} />,
     )
+    await loadImages()
     expect(image("raccoonpack")).toHaveProp("source", 3)
     await rerender(
       <NativeSeethingSwarmBattleStage {...initial} winnerId={pair[0]} />,
@@ -298,6 +319,7 @@ describe("NativeSeethingSwarmBattleStage", () => {
         isPaused
       />,
     )
+    await loadImages()
     expect(image("raccoonpack")).toHaveProp("source", 3)
     await rerender(
       <NativeSeethingSwarmBattleStage {...initial} battle={restored} />,

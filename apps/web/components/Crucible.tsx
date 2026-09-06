@@ -10,6 +10,7 @@ import {
   getBattleAccessibilityAnnouncement,
   type PendingBattleAccessibilityAction,
 } from "@game/machines/src/BattleAccessibilityPresentation"
+import { getBattleRewardPresentation } from "@game/machines/src/BattleRewardPresentation"
 import type { BattleSchedulerRestorePoint } from "@game/machines/src/BattleScheduler"
 import {
   combatMachine,
@@ -86,6 +87,8 @@ export default function Crucible({
   }, [])
   const pendingAccessibilityActionRef =
     useRef<PendingBattleAccessibilityAction | null>(null)
+  const [rewardAction, setRewardAction] =
+    useState<PendingBattleAccessibilityAction | null>(null)
   const nextAccessibilityAnnouncementSequenceRef = useRef(0)
   const [accessibilityAnnouncement, setAccessibilityAnnouncement] =
     useState<BattleAccessibilityAnnouncement | null>(null)
@@ -106,6 +109,7 @@ export default function Crucible({
           action: { kind: "selection", selectedValueId: winnerId },
           progressById,
         })
+      setRewardAction(pendingAccessibilityActionRef.current)
       send({ type: "VALUE.WINNER_SELECTED", valueId: winnerId })
     },
     [isInteractive, isMenuOpen, progressById, send],
@@ -295,6 +299,14 @@ export default function Crucible({
   const showKeyboardControlHints =
     controlHintInputModality === "keyboard" && firstControlHint !== null
   const winnerId = state.context.winnerId
+  const reward =
+    isAnimating && state.context.pendingBattle && !isPersistencePending
+      ? getBattleRewardPresentation({
+          pendingAction: rewardAction,
+          activeDeck,
+          progressById,
+        })
+      : null
 
   return (
     <MapacheScreen
@@ -363,6 +375,7 @@ export default function Crucible({
               isAnimating={isAnimating}
               controlHint={firstControlHint}
               combatant={combatants.first}
+              reward={reward?.valueId === idA ? reward : null}
               onActivate={handleSelect}
               onFocus={handleCardFocus}
             />
@@ -378,6 +391,7 @@ export default function Crucible({
               isAnimating={isAnimating}
               controlHint={secondControlHint}
               combatant={combatants.second}
+              reward={reward?.valueId === idB ? reward : null}
               onActivate={handleSelect}
               onFocus={handleCardFocus}
             />
