@@ -1,7 +1,7 @@
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { StaticImageData } from "next/image"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import SeethingSwarmAnimal from "@/components/SeethingSwarmAnimal"
 
 const clip = Object.freeze({
@@ -20,7 +20,31 @@ const clip = Object.freeze({
   }),
 }) satisfies SeethingSwarmRuntimeCharacterClip<StaticImageData>
 
+afterEach(() => vi.restoreAllMocks())
+
 describe("SeethingSwarmAnimal", () => {
+  it("recognizes a valid cached image before painting a loading state", () => {
+    vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true)
+    vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(16)
+    const onReady = vi.fn()
+    render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion={false} onReady={onReady} />)
+
+    const image = screen.getByAltText("")
+    expect(image.parentElement).toHaveAttribute("data-playback-ready", "true")
+    expect(image).toHaveAttribute("decoding", "sync")
+    expect(onReady).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not mistake a completed broken image for usable cached pixels", () => {
+    vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(true)
+    vi.spyOn(HTMLImageElement.prototype, "naturalWidth", "get").mockReturnValue(0)
+    const onReady = vi.fn()
+    render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion={false} onReady={onReady} />)
+
+    expect(screen.getByAltText("").parentElement).toHaveAttribute("data-playback-ready", "false")
+    expect(onReady).not.toHaveBeenCalled()
+  })
+
   it("reserves fixed geometry and animates source pixels in discrete authored frames", () => {
     render(<SeethingSwarmAnimal clip={clip} shouldReduceMotion={false} />)
 
@@ -119,7 +143,10 @@ describe("SeethingSwarmAnimal", () => {
       "data-playback-mode",
       "hold-final-frame",
     )
-    expect(image).toHaveStyle({ "--animal-strip-left": "-468px" })
+    expect(image).toHaveStyle({
+      "--animal-strip-left": "-36px",
+      "--animal-strip-final-offset": "-432px",
+    })
 
     image.dispatchEvent(new AnimationEvent("animationend", { bubbles: true }))
     expect(onPlaybackComplete).not.toHaveBeenCalled()

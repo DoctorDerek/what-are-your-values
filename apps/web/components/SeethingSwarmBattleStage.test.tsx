@@ -371,7 +371,7 @@ describe("SeethingSwarmBattleStage", () => {
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })
 
-  it("keeps failed images playable through the existing placeholder result", async () => {
+  it("keeps loaded art visible when a requested result clip fails", async () => {
     const props = createStageProps("failed-result-image")
     const { container } = render(
       <SeethingSwarmBattleStage
@@ -382,20 +382,28 @@ describe("SeethingSwarmBattleStage", () => {
     )
     await beginStrike(container)
     fireEvent.error(getSprite(container, "first"))
-    expect(
-      getCombatant(container, "first").querySelector(
-        '[data-battle-active-clip="true"]',
-      ),
-    ).toBeNull()
-    const placeholder = getCombatant(container, "first").querySelector(
-      "[data-placeholder-playback]",
-    )
-    if (!placeholder) throw new Error("Failed image placeholder is missing")
-    expect(placeholder).toHaveAttribute("data-battle-role", "attack")
-    fireEvent.animationEnd(placeholder)
+    expect(getCombatant(container, "first").querySelector('[data-battle-active-clip="true"] img')).toBeInTheDocument()
+    expect(getCombatant(container, "first").querySelector("[data-placeholder-playback]")).toBeNull()
     await finishClip(container, "first")
     expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
     await finishClip(container, "second")
+    expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps genuine all-image failures playable through the fallback", async () => {
+    const props = createStageProps("all-result-images-failed")
+    const { container } = render(
+      <SeethingSwarmBattleStage {...props} winnerId={props.battle.pair[0]} isNextBattleReady />,
+    )
+    for (const image of container.querySelectorAll("img")) fireEvent.error(image)
+    await waitFor(() => expect(getRole(container, "first")).toHaveAttribute("data-battle-role", "attack"))
+    const firstPlaceholder = getCombatant(container, "first").querySelector("[data-placeholder-playback]")
+    const secondPlaceholder = getCombatant(container, "second").querySelector("[data-placeholder-playback]")
+    if (!firstPlaceholder || !secondPlaceholder) throw new Error("Both failed animals need visible fallback combatants")
+    fireEvent.animationEnd(firstPlaceholder)
+    fireEvent.animationEnd(firstPlaceholder)
+    expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
+    fireEvent.animationEnd(secondPlaceholder)
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })
 
