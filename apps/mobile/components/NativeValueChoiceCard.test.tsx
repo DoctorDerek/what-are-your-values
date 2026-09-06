@@ -8,8 +8,14 @@ import {
 } from "@game/data/src/Value"
 import { getValueChoiceAccessibilityLabel } from "@game/machines/src/BattleAccessibilityPresentation"
 import { describe, expect, it, jest } from "@jest/globals"
-import { render, screen, userEvent } from "@testing-library/react-native"
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from "@testing-library/react-native"
 import type { ComponentProps } from "react"
+import { Text } from "react-native"
 import NativeValueChoiceCard from "@/components/NativeValueChoiceCard"
 
 const selfAcceptance = CANONICAL_VALUES.find(
@@ -31,6 +37,36 @@ const maximumWidthCustomValue = Object.freeze({
 }) satisfies CustomValueDefinition
 
 describe("NativeValueChoiceCard", () => {
+  it("combines supported hover and focus responses without requiring an extra press", async () => {
+    const onActivate = jest.fn()
+    await render(
+      <NativeValueChoiceCard
+        position="first"
+        value={selfAcceptance}
+        level={1}
+        controlHint={null}
+        winnerId={null}
+        isEnabled
+        isAnimating={false}
+        onActivate={onActivate}
+        combatant={(isAttended) => (
+          <Text>{isAttended ? "Animal alert" : "Animal resting"}</Text>
+        )}
+      />,
+    )
+    const choice = screen.getByRole("button", { name: /^Choose / })
+    await fireEvent(choice, "hoverIn")
+    expect(screen.getByText("Animal alert")).toBeOnTheScreen()
+    await fireEvent(choice, "focus")
+    await fireEvent(choice, "hoverOut")
+    expect(screen.getByText("Animal alert")).toBeOnTheScreen()
+    expect(onActivate).not.toHaveBeenCalled()
+    await fireEvent(choice, "blur")
+    expect(screen.getByText("Animal resting")).toBeOnTheScreen()
+    await fireEvent.press(choice)
+    expect(onActivate).toHaveBeenCalledTimes(1)
+    expect(onActivate).toHaveBeenCalledWith(selfAcceptance.id)
+  })
   it("preserves complete canonical and maximum-length Custom Value names", async () => {
     const user = userEvent.setup()
     const cases = Object.freeze([

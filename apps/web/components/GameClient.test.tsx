@@ -114,8 +114,8 @@ vi.mock("./SeethingSwarmBattleStage", async () => {
       readonly winnerId: string | null
       readonly onResultAnimationComplete: () => void
       readonly children: (combatants: {
-        first: ReactNode
-        second: ReactNode
+        first: (isAttended: boolean, reward?: ReactNode) => ReactNode
+        second: (isAttended: boolean, reward?: ReactNode) => ReactNode
       }) => ReactNode
     }) {
       useEffect(() => {
@@ -125,8 +125,12 @@ vi.mock("./SeethingSwarmBattleStage", async () => {
       return (
         <div data-testid="mock-battle-stage">
           {children({
-            first: <span aria-hidden="true" />,
-            second: <span aria-hidden="true" />,
+            first: (_isAttended, reward) => (
+              <span aria-hidden="true">{reward}</span>
+            ),
+            second: (_isAttended, reward) => (
+              <span aria-hidden="true">{reward}</span>
+            ),
           })}
         </div>
       )

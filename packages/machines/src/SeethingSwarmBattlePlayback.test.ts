@@ -52,6 +52,20 @@ if (choreography.mode !== "licensed")
 const combatant = choreography.combatants[0]
 
 describe("SeethingSwarm battle playback", () => {
+  it("acknowledges attention with the selected anticipation clip then returns to rest", () => {
+    const steps = createSeethingSwarmBattlePlayback({
+      combatant,
+      winnerId: null,
+      cue: "attention",
+    })
+    expect(steps.map(({ role, playbackMode }) => [role, playbackMode])).toEqual(
+      [
+        ["anticipation", "one-shot"],
+        ["rest", "loop"],
+      ],
+    )
+    expect(steps[0].clip).toBe(combatant.clips.anticipation.clip)
+  })
   it("plays every introductory role before resting without mutating its source", () => {
     const steps = createSeethingSwarmBattlePlayback({
       combatant,
