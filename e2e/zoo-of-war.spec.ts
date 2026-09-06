@@ -7,7 +7,11 @@ test.beforeEach(async ({ page }) => {
     window.getVisibleTextBounds = (text) => {
       const bounds = text.getBoundingClientRect()
       let { left, right, top, bottom } = bounds
-      for (let ancestor = text.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      for (
+        let ancestor = text.parentElement;
+        ancestor;
+        ancestor = ancestor.parentElement
+      ) {
         const style = getComputedStyle(ancestor)
         const clip = ancestor.getBoundingClientRect()
         if (["auto", "scroll", "hidden", "clip"].includes(style.overflowX)) {
@@ -112,7 +116,9 @@ interface AnimalStrikeGeometry {
 
 declare global {
   interface Window {
-    getVisibleTextBounds: (text: Element) => Pick<DOMRect, "left" | "right" | "top" | "bottom">
+    getVisibleTextBounds: (
+      text: Element,
+    ) => Pick<DOMRect, "left" | "right" | "top" | "bottom">
     completedAnimalClips: CompletedAnimalClip[]
     animalStrikes: AnimalStrikeGeometry[]
   }
