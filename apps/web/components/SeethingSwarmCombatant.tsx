@@ -10,7 +10,7 @@ import type {
 import type { SeethingSwarmBattleExchangeCue } from "@game/machines/src/SeethingSwarmBattleExchange"
 import { createSeethingSwarmBattlePlayback } from "@game/machines/src/SeethingSwarmBattlePlayback"
 import type { StaticImageData } from "next/image"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import SeethingSwarmAnimal from "@/components/SeethingSwarmAnimal"
 import SeethingSwarmPlaceholder from "@/components/SeethingSwarmPlaceholder"
 
@@ -41,7 +41,7 @@ export default function SeethingSwarmCombatant({
           ? "introduction"
           : "rest"
   if (playback.cue !== cue) setPlayback({ cue, stepIndex: 0 })
-  const stepIndex = playback.cue === cue ? playback.stepIndex : 0
+  const requestedStepIndex = playback.cue === cue ? playback.stepIndex : 0
   const [loadedRoles, setLoadedRoles] = useState<
     ReadonlySet<SeethingSwarmBattleClipRole>
   >(() => new Set())
@@ -69,16 +69,27 @@ export default function SeethingSwarmCombatant({
       ),
     [combatant],
   )
-  const step = steps[Math.min(stepIndex, steps.length - 1)]
-  const isComplete = stepIndex === steps.length
-  const role = shouldReduceMotion && !winnerId ? "rest" : step.role
-  const isReady = loadedRoles.has(role) && !failedRoles.has(role)
-  if (isReady && displayedRole !== role) setDisplayedRole(role)
   const retainedRole =
     loadedRoles.has(displayedRole) && !failedRoles.has(displayedRole)
       ? displayedRole
       : ([...loadedRoles].find((candidate) => !failedRoles.has(candidate)) ??
         "rest")
+  const hasRetainedImage =
+    loadedRoles.has(retainedRole) && !failedRoles.has(retainedRole)
+  const nextAvailableStepIndex = steps.findIndex(
+    (candidate, index) =>
+      index >= requestedStepIndex && !failedRoles.has(candidate.role),
+  )
+  const stepIndex = hasRetainedImage
+    ? nextAvailableStepIndex === -1
+      ? steps.length
+      : nextAvailableStepIndex
+    : requestedStepIndex
+  const step = steps[Math.min(stepIndex, steps.length - 1)]
+  const isComplete = stepIndex === steps.length
+  const role = shouldReduceMotion && !winnerId ? "rest" : step.role
+  const isReady = loadedRoles.has(role) && !failedRoles.has(role)
+  if (isReady && displayedRole !== role) setDisplayedRole(role)
   const visibleRole = isReady ? role : retainedRole
   const hasVisibleImage =
     loadedRoles.has(visibleRole) && !failedRoles.has(visibleRole)
@@ -88,15 +99,16 @@ export default function SeethingSwarmCombatant({
     if (isReady || (hasLoadError && hasVisibleImage)) onReady()
   }, [cue, hasLoadError, hasVisibleImage, isReady, onReady])
 
-  const finishStep = useCallback(() => {
+  const finishStep = () => {
     if (isComplete) return
     setPlayback({ cue, stepIndex: stepIndex + 1 })
     if (winnerId && stepIndex + 1 === steps.length) onPlaybackComplete()
-  }, [cue, isComplete, onPlaybackComplete, stepIndex, steps.length, winnerId])
+  }
 
   useEffect(() => {
-    if (hasLoadError && hasVisibleImage) finishStep()
-  }, [finishStep, hasLoadError, hasVisibleImage])
+    if (hasLoadError && hasVisibleImage && isComplete && winnerId)
+      onPlaybackComplete()
+  }, [hasLoadError, hasVisibleImage, isComplete, onPlaybackComplete, winnerId])
 
   return (
     <span
