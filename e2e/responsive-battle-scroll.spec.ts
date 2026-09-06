@@ -141,7 +141,8 @@ for (const viewport of [
             imageIsLoaded: image.complete && image.naturalWidth > 0,
             overlapsVisibleText: [...stage.querySelectorAll("h2, p")].some(
               (text) => {
-                const { left, right, top, bottom } = window.getVisibleTextBounds(text)
+                const { left, right, top, bottom } =
+                  window.getVisibleTextBounds(text)
                 return (
                   left < right &&
                   top < bottom &&
@@ -166,7 +167,8 @@ for (const viewport of [
       .locator("[data-value-card]")
       .evaluateAll((cards) => {
         const measure = (element: Element) => {
-          const { left, right, top, bottom, width } = element.getBoundingClientRect()
+          const { left, right, top, bottom, width } =
+            element.getBoundingClientRect()
           return { left, right, top, bottom, width }
         }
         return cards.map((card) => ({
