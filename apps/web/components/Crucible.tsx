@@ -155,7 +155,8 @@ export default function Crucible({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isInteractive || !currentPair || isMenuOpen) return
+      if (e.defaultPrevented || !isInteractive || !currentPair || isMenuOpen)
+        return
 
       const normalizedKey = e.key.toLowerCase()
       const isUndoCommand = normalizedKey === "z" && !e.shiftKey
