@@ -111,10 +111,7 @@ export default function SeethingSwarmCombatant({
   }, [hasLoadError, hasVisibleImage, isComplete, onPlaybackComplete, winnerId])
 
   return (
-    <span
-      className="relative block size-28 shrink-0"
-      data-battle-role={role}
-    >
+    <span className="relative block size-28 shrink-0" data-battle-role={role}>
       {Object.values(combatant.clips).map((selection) => {
         const isVisible = selection.role === visibleRole && hasVisibleImage
         return (

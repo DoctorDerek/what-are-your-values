@@ -201,33 +201,33 @@ function BattlePlayback({
                 </span>
               ) : null}
               <span className="relative flex size-28 shrink-0 origin-bottom scale-(--battle-combatant-scale) items-end justify-center">
-              {"clips" in combatant ? (
-                <SeethingSwarmCombatant
-                  combatant={combatant}
-                  isAttended={isAttended}
-                  winnerId={winnerId}
-                  cue={cue}
-                  shouldReduceMotion={shouldReduceMotion}
-                  onPlaybackComplete={() =>
-                    handlePlaybackComplete(combatant.side)
-                  }
-                  onReady={() => handleReady(combatant.side)}
-                />
-              ) : (
-                <SeethingSwarmPlaceholder
-                  key={cue}
-                  side={combatant.side}
-                  role={resolveSeethingSwarmPlaceholderRole(
-                    cue,
-                    winnerId === combatant.valueId,
-                  )}
-                  shouldReduceMotion={shouldReduceMotion}
-                  onPlaybackComplete={() =>
-                    handlePlaybackComplete(combatant.side)
-                  }
-                  onReady={() => handleReady(combatant.side)}
-                />
-              )}
+                {"clips" in combatant ? (
+                  <SeethingSwarmCombatant
+                    combatant={combatant}
+                    isAttended={isAttended}
+                    winnerId={winnerId}
+                    cue={cue}
+                    shouldReduceMotion={shouldReduceMotion}
+                    onPlaybackComplete={() =>
+                      handlePlaybackComplete(combatant.side)
+                    }
+                    onReady={() => handleReady(combatant.side)}
+                  />
+                ) : (
+                  <SeethingSwarmPlaceholder
+                    key={cue}
+                    side={combatant.side}
+                    role={resolveSeethingSwarmPlaceholderRole(
+                      cue,
+                      winnerId === combatant.valueId,
+                    )}
+                    shouldReduceMotion={shouldReduceMotion}
+                    onPlaybackComplete={() =>
+                      handlePlaybackComplete(combatant.side)
+                    }
+                    onReady={() => handleReady(combatant.side)}
+                  />
+                )}
               </span>
             </motion.div>
           </div>
@@ -320,7 +320,7 @@ export default function SeethingSwarmBattleStage({
   return (
     <div
       ref={stageRef}
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col [container-type:size] [--battle-combatant-scale:var(--battle-compact-combatant-scale)] [--battle-combatant-size:var(--battle-compact-combatant-size)] xl:flex-row xl:[--battle-combatant-scale:2] xl:[--battle-combatant-size:14rem]"
+      className="[container-type:size] relative flex min-h-0 min-w-0 flex-1 flex-col [--battle-combatant-scale:var(--battle-compact-combatant-scale)] [--battle-combatant-size:var(--battle-compact-combatant-size)] xl:flex-row xl:[--battle-combatant-scale:2] xl:[--battle-combatant-size:14rem]"
       data-battle-stage-mode={choreography.mode}
       data-battle-stage-state={winnerId ? "resolving" : "awaiting-input"}
       data-choreography-identity={choreography.choreographyIdentity}

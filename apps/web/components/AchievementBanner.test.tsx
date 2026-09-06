@@ -108,7 +108,9 @@ describe("AchievementBanner Integration", () => {
     )
     expect(screen.getByText("Compare your first pair of values.")).toBeVisible()
     expect(screen.getByRole("heading", { name: "First Battle" })).toBeVisible()
-    expect(screen.getByRole("button", { name: "Dismiss achievement" })).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Dismiss achievement" }),
+    ).toBeEnabled()
   })
 
   it("anchors dismissal at the top-right without dividing milestone copy", () => {
