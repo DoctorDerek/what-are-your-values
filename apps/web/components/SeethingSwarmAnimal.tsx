@@ -7,7 +7,7 @@ import {
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import Image, { type StaticImageData } from "next/image"
-import type { CSSProperties } from "react"
+import { useState, type CSSProperties } from "react"
 
 type SeethingSwarmAnimalStyle = CSSProperties & {
   "--animal-animation-duration": string
@@ -27,19 +27,25 @@ export default function SeethingSwarmAnimal({
   clip,
   facing = "right",
   frameDurationMs = SEETHING_SWARM_HUB_FRAME_DURATION_MS,
+  maximumIntegerScale,
   playbackMode = "loop",
   shouldReduceMotion,
   tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
+  onLoadError,
   onPlaybackComplete,
 }: {
   clip: SeethingSwarmRuntimeCharacterClip<StaticImageData>
   facing?: SeethingSwarmAnimalFacingDirection
   frameDurationMs?: number
+  maximumIntegerScale?: number
   playbackMode?: SeethingSwarmAnimalPlaybackMode
   shouldReduceMotion: boolean
   tileSize?: number
+  onLoadError?: () => void
   onPlaybackComplete?: () => void
 }) {
+  const [loadedAssetSource, setLoadedAssetSource] = useState<string | null>(null)
+  const isImageLoaded = loadedAssetSource === clip.asset.src
   const effectivePlaybackMode =
     shouldReduceMotion &&
     (playbackMode === "loop" || playbackMode === "one-shot")
@@ -50,6 +56,7 @@ export default function SeethingSwarmAnimal({
     clip.frameHeight,
     clip.visibleBounds,
     tileSize,
+    maximumIntegerScale,
   )
   const scaledFrameWidth = clip.frameWidth * geometry.integerScale
   const scaledFrameHeight = clip.frameHeight * geometry.integerScale
@@ -85,17 +92,23 @@ export default function SeethingSwarmAnimal({
       data-facing={facing}
       data-frame-count={clip.frameCount}
       data-playback-mode={effectivePlaybackMode}
+      data-playback-ready={isImageLoaded}
       data-reduced-motion={shouldReduceMotion}
       style={tileStyle}
     >
       <Image
         alt=""
-        className={`absolute top-(--animal-strip-top) left-(--animal-strip-left) h-(--animal-strip-height) w-(--animal-strip-width) max-w-none [image-rendering:pixelated] ${playbackClassName}`}
+        className={`absolute top-(--animal-strip-top) left-(--animal-strip-left) h-(--animal-strip-height) w-(--animal-strip-width) max-w-none [image-rendering:pixelated] ${playbackClassName} ${isImageLoaded ? "" : "[animation-play-state:paused]"}`}
         draggable={false}
         height={scaledFrameHeight}
+        loading={playbackMode === "one-shot" ? "eager" : undefined}
         onAnimationEnd={
-          effectivePlaybackMode === "one-shot" ? onPlaybackComplete : undefined
+          effectivePlaybackMode === "one-shot" && isImageLoaded
+            ? onPlaybackComplete
+            : undefined
         }
+        onError={onLoadError}
+        onLoad={() => setLoadedAssetSource(clip.asset.src)}
         src={clip.asset}
         style={stripStyle}
         unoptimized
