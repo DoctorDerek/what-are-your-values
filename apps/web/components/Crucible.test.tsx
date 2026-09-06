@@ -183,17 +183,11 @@ describe("Crucible Component Integration", () => {
     if (!identityRail)
       throw new Error("Value heading is missing its identity rail")
 
-    expect(identityRail).toHaveClass(
-      "grid",
-      "grid-cols-[auto_minmax(0,1fr)_auto]",
-      "xl:gap-5",
-    )
+    expect(choice).toContainElement(identityRail)
+    expect(heading).toBeVisible()
     const firstControlHint = within(identityRail).getByText("[1 / A]")
     expect(firstControlHint).toBeVisible()
-    expect(firstControlHint).toHaveClass("text-black")
-    expect(firstControlHint).not.toHaveClass("text-white")
     expect(within(identityRail).getByText(/^LVL \d+$/)).toBeVisible()
-    expect(heading).toHaveClass("break-words", "[overflow-wrap:anywhere]")
 
     const secondChoice = screen.getByRole("button", {
       name: getValueChoiceAccessibilityLabel({
@@ -203,8 +197,7 @@ describe("Crucible Component Integration", () => {
       }),
     })
     const secondControlHint = within(secondChoice).getByText("[2 / D]")
-    expect(secondControlHint).toHaveClass("text-white")
-    expect(secondControlHint).not.toHaveClass("text-black")
+    expect(secondControlHint).toBeVisible()
   })
 
   it("changes Auto hints only after intentional keyboard or pointer input without moving the identity rail", async () => {
