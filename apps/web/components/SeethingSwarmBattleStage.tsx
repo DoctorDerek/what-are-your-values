@@ -111,8 +111,8 @@ function BattlePlayback({
     }
     measureTravel()
     const layoutObserver = new ResizeObserver(measureTravel)
-    const firstCard = firstAnchorRef.current?.closest("button")
-    const secondCard = secondAnchorRef.current?.closest("button")
+    const firstCard = firstAnchorRef.current?.closest("[data-value-card]")
+    const secondCard = secondAnchorRef.current?.closest("[data-value-card]")
     if (firstCard) layoutObserver.observe(firstCard)
     if (secondCard) layoutObserver.observe(secondCard)
     window.addEventListener("resize", measureTravel)

@@ -72,32 +72,50 @@ export const ValueChoiceCard = forwardRef<
 
   return (
     <div
-      className={`${positionClasses} relative flex min-h-0 min-w-0 flex-1 flex-col ${isWinner ? "z-10" : ""}`}
+      data-value-card={value.id}
+      onFocus={() => {
+        setIsFocused(true)
+        onFocus(value.id)
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget))
+          setIsFocused(false)
+      }}
+      onPointerEnter={(event) => {
+        if (event.pointerType !== "touch") setIsHovered(true)
+      }}
+      onPointerLeave={() => setIsHovered(false)}
+      onPointerCancel={() => setIsHovered(false)}
+      className={`${positionClasses} relative grid min-h-0 min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] grid-rows-[minmax(0,1fr)_auto] items-center focus-within:ring-8 focus-within:ring-white focus-within:ring-inset xl:flex xl:flex-col ${isWinner ? "z-10" : ""} ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
     >
-      <button
-        ref={ref}
-        type="button"
-        aria-label={getValueChoiceAccessibilityLabel({
-          position,
-          value,
-          level,
-        })}
-        aria-describedby={accessibleDefinitionId}
-        disabled={!isEnabled}
-        onClick={() => onActivate(value.id)}
-        onFocus={() => {
-          setIsFocused(true)
-          onFocus(value.id)
+      <div
+        role="region"
+        aria-label={displayName}
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            (event.key === " " ||
+              event.key === "Enter" ||
+              event.key.startsWith("Arrow"))
+          )
+            event.stopPropagation()
         }}
-        onBlur={() => setIsFocused(false)}
-        onPointerEnter={(event) => {
-          if (event.pointerType !== "touch") setIsHovered(true)
-        }}
-        onPointerLeave={() => setIsHovered(false)}
-        onPointerCancel={() => setIsHovered(false)}
-        className={`relative grid min-h-0 w-full min-w-0 flex-1 cursor-pointer grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] grid-rows-[minmax(0,1fr)_auto] items-center focus-visible:ring-8 focus-visible:ring-white focus-visible:ring-inset disabled:cursor-default xl:flex xl:flex-col ${focusedId === value.id || isWinner ? "ring-8 ring-white ring-inset" : ""}`}
+        className="h-full min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-contain outline-none xl:h-auto"
       >
-        <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col justify-start overflow-y-auto overscroll-contain px-3 py-3 text-center xl:h-auto xl:px-8 xl:py-8">
+        <button
+          ref={ref}
+          type="button"
+          aria-label={getValueChoiceAccessibilityLabel({
+            position,
+            value,
+            level,
+          })}
+          aria-describedby={accessibleDefinitionId}
+          disabled={!isEnabled}
+          onClick={() => onActivate(value.id)}
+          className="flex min-h-full w-full min-w-0 cursor-pointer flex-col justify-start px-3 py-3 text-center outline-none after:absolute after:inset-0 disabled:cursor-default xl:px-8 xl:py-8"
+        >
           <div className="my-auto w-full">
             <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-2 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-5">
               <span
@@ -120,34 +138,34 @@ export const ValueChoiceCard = forwardRef<
               “{getValueDisplayDefinition(value)}”
             </p>
           </div>
-        </div>
-        {combatant ? (
-          <span
-            className={`pointer-events-none relative flex w-full shrink-0 items-end px-4 pb-2 ${isFirst ? "justify-start xl:justify-end" : "justify-end xl:justify-start"}`}
-          >
-            <span className="flex w-28 flex-col items-center xl:w-56">
-              <span aria-hidden="true" className="block h-10 w-full" />
-              {combatant(
-                isEnabled && (isHovered || isFocused),
-                reward ? (
-                  <span
-                    className="block border-2 border-black bg-white px-1 text-center text-xs leading-4 font-black text-black xl:text-base"
-                    title={reward.progressLabel}
-                  >
-                    {reward.label}
-                    <span className="block h-1 overflow-hidden bg-black/15">
-                      <span
-                        className="bg-mapache-vivid-primary-raspberry block h-full w-(--reward-progress)"
-                        style={rewardStyle}
-                      />
-                    </span>
+        </button>
+      </div>
+      {combatant ? (
+        <span
+          className={`pointer-events-none relative flex w-full shrink-0 items-end px-4 pb-2 ${isFirst ? "justify-start xl:justify-end" : "justify-end xl:justify-start"}`}
+        >
+          <span className="flex w-28 flex-col items-center xl:w-56">
+            <span aria-hidden="true" className="block h-10 w-full" />
+            {combatant(
+              isEnabled && (isHovered || isFocused),
+              reward ? (
+                <span
+                  className="block border-2 border-black bg-white px-1 text-center text-xs leading-4 font-black text-black xl:text-base"
+                  title={reward.progressLabel}
+                >
+                  {reward.label}
+                  <span className="block h-1 overflow-hidden bg-black/15">
+                    <span
+                      className="bg-mapache-vivid-primary-raspberry block h-full w-(--reward-progress)"
+                      style={rewardStyle}
+                    />
                   </span>
-                ) : null,
-              )}
-            </span>
+                </span>
+              ) : null,
+            )}
           </span>
-        ) : null}
-      </button>
+        </span>
+      ) : null}
     </div>
   )
 })
