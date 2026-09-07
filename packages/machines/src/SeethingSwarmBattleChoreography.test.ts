@@ -176,7 +176,7 @@ function getBattleEligibleAnimationIds() {
 
 describe("SeethingSwarm battle choreography", () => {
   it("freezes the complete semantic role and side contract", () => {
-    expect(SEETHING_SWARM_BATTLE_CHOREOGRAPHY_VERSION).toBe(1)
+    expect(SEETHING_SWARM_BATTLE_CHOREOGRAPHY_VERSION).toBe(2)
     expect(SEETHING_SWARM_BATTLE_COMBATANT_SIDES).toEqual(["first", "second"])
     expect(
       SEETHING_SWARM_BATTLE_CLIP_ROLE_POLICIES.map(
@@ -274,6 +274,43 @@ describe("SeethingSwarm battle choreography", () => {
           ),
       ),
     ).toBe(true)
+  })
+
+  it("keeps Frog attacks aimed at horizontal opponents across battle identities", () => {
+    const catalog = createTestLicensedCatalog([
+      [
+        "frogpack",
+        [
+          "attackup",
+          "attackdiagonal",
+          "attackforward",
+          "idle",
+          "hurt",
+          "croak",
+          "dash",
+        ],
+      ],
+      ["wolfpack", COMPLETE_ROLE_ANIMATION_IDS],
+    ])
+    for (
+      let cycleIndex = 0;
+      cycleIndex < SEETHING_SWARM_BATTLE_ANIMATION_POLICIES.length;
+      cycleIndex += 1
+    ) {
+      const [frog] = getSelectedAnimationIds(
+        catalog,
+        createTestBattle({
+          pair: Object.freeze([
+            createCanonicalValueId("pvcs-2011:flexibility"),
+            WOLF_VALUE_ID,
+          ]),
+          cycleIndex,
+        }),
+      )
+      expect(frog.attack).toBe("attackforward")
+      expect(Object.values(frog)).not.toContain("attackup")
+      expect(Object.values(frog)).not.toContain("attackdiagonal")
+    }
   })
 
   it("preserves two mapped placeholder combatants without licensed art", () => {

@@ -181,7 +181,7 @@ describe("NativeSeethingSwarmBattleStage", () => {
     expect(
       getAnimatedStyle(
         within(
-          screen.getByTestId("battle-clip-first-rest", hidden),
+          screen.getByTestId("battle-clip-first-idle", hidden),
         ).getByTestId("seething-swarm-animal-raccoonpack-strip", hidden),
       ),
     ).toMatchObject({ transform: [{ translateX: -256 }] })
@@ -243,18 +243,16 @@ describe("NativeSeethingSwarmBattleStage", () => {
       const clip = screen.getByTestId(`battle-clip-${side}-${role}`, hidden)
       await fireEvent(within(clip).getByTestId(/-image$/, hidden), "load")
     }
-    await loadRole("first", "rest")
+    await loadRole("first", "idle")
     await advance(300)
     expect(image("raccoonpack")).toHaveProp("source", 3)
     expect(initial.onResultComplete).not.toHaveBeenCalled()
-    await loadRole("second", "rest")
+    await loadRole("second", "idle")
     await advance(200)
     await loadRole("first", "attack")
     await advance(300)
-    await loadRole("first", "flourish")
-    await advance(300)
     expect(initial.onResultComplete).not.toHaveBeenCalled()
-    await loadRole("second", "reaction")
+    await loadRole("second", "hurt")
     await advance(500)
     expect(initial.onResultComplete).toHaveBeenCalledTimes(1)
     await unmount()
@@ -327,7 +325,7 @@ describe("NativeSeethingSwarmBattleStage", () => {
     expect(image("raccoonpack")).toHaveProp("source", 1)
   })
 
-  it("replaces failed licensed art with a battling placeholder rather than blocking play", async () => {
+  it("retains another loaded pose after a clip failure without blocking the result", async () => {
     const initial = { ...props(), winnerId: pair[0], isNextBattleReady: true }
     await render(<NativeSeethingSwarmBattleStage {...initial} />)
     await loadImages()
@@ -335,12 +333,49 @@ describe("NativeSeethingSwarmBattleStage", () => {
     await fireEvent(image("raccoonpack"), "error", {
       nativeEvent: { error: "decode failed" },
     })
-    expect(
-      screen.getByTestId("battle-placeholder-first", hidden),
-    ).toBeOnTheScreen()
+    expect(screen.queryByTestId("battle-placeholder-first", hidden)).toBeNull()
+    expect(image("raccoonpack")).toHaveProp("source", 6)
     await advance(550)
     await loadImages()
     await advance(550)
+    expect(initial.onResultComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it("plays a complete aerial attack and waits for its landing after the opponent reacts", async () => {
+    const catalog = {
+      ...licensedCatalog,
+      animals: licensedCatalog.animals.map((animal) => ({
+        ...animal,
+        characterClips: animal.characterClips.flatMap((clip) =>
+          clip.animationId !== "attack"
+            ? [clip]
+            : ["takeoff", "attack_air", "land"].map((animationId, index) => ({
+                ...clip,
+                animationId,
+                frameCount: animationId === "land" ? 8 : 4,
+                asset: 201 + index,
+              })),
+        ),
+      })),
+    }
+    const initial = {
+      ...props(),
+      catalog,
+      winnerId: pair[0],
+      isNextBattleReady: true,
+    }
+    await render(<NativeSeethingSwarmBattleStage {...initial} />)
+    await loadImages()
+    await advance(200)
+    expect(image("raccoonpack")).toHaveProp("source", 201)
+    await advance(300)
+    expect(image("raccoonpack")).toHaveProp("source", 202)
+    await advance(300)
+    expect(image("raccoonpack")).toHaveProp("source", 203)
+    expect(image("wolfpack")).toHaveProp("source", 105)
+    await advance(300)
+    expect(initial.onResultComplete).not.toHaveBeenCalled()
+    await advance(300)
     expect(initial.onResultComplete).toHaveBeenCalledTimes(1)
   })
 

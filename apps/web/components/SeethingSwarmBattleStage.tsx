@@ -17,6 +17,7 @@ import {
   type SeethingSwarmBattleExchangeCue,
   type SeethingSwarmBattlePoint,
 } from "@game/machines/src/SeethingSwarmBattleExchange"
+import { getSeethingSwarmBattleClips } from "@game/machines/src/SeethingSwarmBattlePlayback"
 import { motion } from "motion/react"
 import type { StaticImageData } from "next/image"
 import {
@@ -302,10 +303,16 @@ export default function SeethingSwarmBattleStage({
     })
     if (pendingChoreography.mode !== "licensed") return
     for (const combatant of pendingChoreography.combatants) {
-      for (const { role, clip } of Object.values(combatant.clips)) {
+      const initialClips = new Set(
+        [
+          ...combatant.clips.entry.sequence,
+          ...combatant.clips.rest.sequence,
+        ].map((clip) => clip.animationId),
+      )
+      for (const clip of getSeethingSwarmBattleClips(combatant)) {
         preload(clip.asset.src, {
           as: "image",
-          fetchPriority: role === "entry" || role === "rest" ? "high" : "low",
+          fetchPriority: initialClips.has(clip.animationId) ? "high" : "low",
         })
       }
     }

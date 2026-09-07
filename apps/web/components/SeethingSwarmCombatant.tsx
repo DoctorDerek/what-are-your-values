@@ -3,12 +3,12 @@ import {
   SEETHING_SWARM_BATTLE_TILE_SIZE,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
-import type {
-  SeethingSwarmBattleClipRole,
-  SeethingSwarmLicensedBattleCombatant,
-} from "@game/machines/src/SeethingSwarmBattleChoreography"
+import type { SeethingSwarmLicensedBattleCombatant } from "@game/machines/src/SeethingSwarmBattleChoreography"
 import type { SeethingSwarmBattleExchangeCue } from "@game/machines/src/SeethingSwarmBattleExchange"
-import { createSeethingSwarmBattlePlayback } from "@game/machines/src/SeethingSwarmBattlePlayback"
+import {
+  createSeethingSwarmBattlePlayback,
+  getSeethingSwarmBattleClips,
+} from "@game/machines/src/SeethingSwarmBattlePlayback"
 import type { StaticImageData } from "next/image"
 import { useEffect, useMemo, useState } from "react"
 import SeethingSwarmAnimal from "@/components/SeethingSwarmAnimal"
@@ -42,14 +42,19 @@ export default function SeethingSwarmCombatant({
           : "rest"
   if (playback.cue !== cue) setPlayback({ cue, stepIndex: 0 })
   const requestedStepIndex = playback.cue === cue ? playback.stepIndex : 0
-  const [loadedRoles, setLoadedRoles] = useState<
-    ReadonlySet<SeethingSwarmBattleClipRole>
-  >(() => new Set())
-  const [failedRoles, setFailedRoles] = useState<
-    ReadonlySet<SeethingSwarmBattleClipRole>
-  >(() => new Set())
-  const [displayedRole, setDisplayedRole] =
-    useState<SeethingSwarmBattleClipRole>("rest")
+  const [loadedClips, setLoadedClips] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const [failedClips, setFailedClips] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const [displayedClipId, setDisplayedClipId] = useState(
+    combatant.clips.rest.clip.animationId,
+  )
+  const residentClips = useMemo(
+    () => getSeethingSwarmBattleClips(combatant),
+    [combatant],
+  )
   const steps = useMemo(
     () => createSeethingSwarmBattlePlayback({ combatant, winnerId, cue }),
     [combatant, winnerId, cue],
@@ -57,8 +62,8 @@ export default function SeethingSwarmCombatant({
   const maximumIntegerScale = useMemo(
     () =>
       Math.min(
-        ...Object.values(combatant.clips).map(
-          ({ clip }) =>
+        ...residentClips.map(
+          (clip) =>
             createSeethingSwarmAnimalPresentationGeometry(
               clip.frameWidth,
               clip.frameHeight,
@@ -67,18 +72,19 @@ export default function SeethingSwarmCombatant({
             ).integerScale,
         ),
       ),
-    [combatant],
+    [residentClips],
   )
-  const retainedRole =
-    loadedRoles.has(displayedRole) && !failedRoles.has(displayedRole)
-      ? displayedRole
-      : ([...loadedRoles].find((candidate) => !failedRoles.has(candidate)) ??
-        "rest")
+  const retainedClipId =
+    loadedClips.has(displayedClipId) && !failedClips.has(displayedClipId)
+      ? displayedClipId
+      : ([...loadedClips].find((candidate) => !failedClips.has(candidate)) ??
+        combatant.clips.rest.clip.animationId)
   const hasRetainedImage =
-    loadedRoles.has(retainedRole) && !failedRoles.has(retainedRole)
+    loadedClips.has(retainedClipId) && !failedClips.has(retainedClipId)
   const nextAvailableStepIndex = steps.findIndex(
     (candidate, index) =>
-      index >= requestedStepIndex && !failedRoles.has(candidate.role),
+      index >= requestedStepIndex &&
+      !failedClips.has(candidate.clip.animationId),
   )
   const stepIndex = hasRetainedImage
     ? nextAvailableStepIndex === -1
@@ -88,12 +94,18 @@ export default function SeethingSwarmCombatant({
   const step = steps[Math.min(stepIndex, steps.length - 1)]
   const isComplete = stepIndex === steps.length
   const role = shouldReduceMotion && !winnerId ? "rest" : step.role
-  const isReady = loadedRoles.has(role) && !failedRoles.has(role)
-  if (isReady && displayedRole !== role) setDisplayedRole(role)
-  const visibleRole = isReady ? role : retainedRole
+  const requestedClipId =
+    shouldReduceMotion && !winnerId
+      ? combatant.clips.rest.clip.animationId
+      : step.clip.animationId
+  const isReady =
+    loadedClips.has(requestedClipId) && !failedClips.has(requestedClipId)
+  if (isReady && displayedClipId !== requestedClipId)
+    setDisplayedClipId(requestedClipId)
+  const visibleClipId = isReady ? requestedClipId : retainedClipId
   const hasVisibleImage =
-    loadedRoles.has(visibleRole) && !failedRoles.has(visibleRole)
-  const hasLoadError = failedRoles.has(role)
+    loadedClips.has(visibleClipId) && !failedClips.has(visibleClipId)
+  const hasLoadError = failedClips.has(requestedClipId)
 
   useEffect(() => {
     if (isReady || (hasLoadError && hasVisibleImage)) onReady()
@@ -110,19 +122,32 @@ export default function SeethingSwarmCombatant({
       onPlaybackComplete()
   }, [hasLoadError, hasVisibleImage, isComplete, onPlaybackComplete, winnerId])
 
+  const hasBlockingSteps = steps
+    .slice(stepIndex)
+    .some((candidate) => candidate.blocksResult)
+  useEffect(() => {
+    if (winnerId && (cue === "strike" || cue === "impact") && !hasBlockingSteps)
+      onPlaybackComplete()
+  }, [cue, hasBlockingSteps, onPlaybackComplete, winnerId])
+
   return (
-    <span className="relative block size-28 shrink-0" data-battle-role={role}>
-      {Object.values(combatant.clips).map((selection) => {
-        const isVisible = selection.role === visibleRole && hasVisibleImage
+    <span
+      className="relative block size-28 shrink-0"
+      data-battle-role={role}
+      data-battle-requested-clip={requestedClipId}
+    >
+      {residentClips.map((clip) => {
+        const isVisible = clip.animationId === visibleClipId && hasVisibleImage
         return (
           <span
-            key={selection.role}
+            key={clip.animationId}
             className={`absolute inset-0 ${isVisible ? "visible" : "invisible"}`}
             data-battle-active-clip={isVisible}
-            data-battle-clip={selection.role}
+            data-battle-clip={clip.animationId}
           >
             <SeethingSwarmAnimal
-              clip={selection.clip}
+              clip={clip}
+              playbackIdentity={`${cue}:${stepIndex}`}
               facing={combatant.side === "first" ? "right" : "left"}
               frameDurationMs={step.frameDurationMs}
               maximumIntegerScale={maximumIntegerScale}
@@ -137,13 +162,13 @@ export default function SeethingSwarmCombatant({
               shouldReduceMotion={shouldReduceMotion}
               tileSize={SEETHING_SWARM_BATTLE_TILE_SIZE}
               onLoadError={() =>
-                setFailedRoles(
-                  (previous) => new Set([...previous, selection.role]),
+                setFailedClips(
+                  (previous) => new Set([...previous, clip.animationId]),
                 )
               }
               onReady={() =>
-                setLoadedRoles(
-                  (previous) => new Set([...previous, selection.role]),
+                setLoadedClips(
+                  (previous) => new Set([...previous, clip.animationId]),
                 )
               }
               onPlaybackComplete={isVisible && isReady ? finishStep : undefined}

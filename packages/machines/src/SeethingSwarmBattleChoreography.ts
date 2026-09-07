@@ -3,6 +3,7 @@ import {
   type SeethingSwarmBattleEligibleAnimationPolicy,
   type SeethingSwarmBattleSemanticFamily,
 } from "@game/data/src/SeethingSwarmBattleAnimationPolicy"
+import { resolveSeethingSwarmBattleSequence } from "@game/data/src/SeethingSwarmBattleSequencePolicy"
 import type {
   SeethingSwarmLicensedRuntimeClipCatalog,
   SeethingSwarmRuntimeAnimalClips,
@@ -19,7 +20,7 @@ import {
   type SeethingSwarmBattleCombatant,
 } from "./SeethingSwarmBattleCombatant"
 
-export const SEETHING_SWARM_BATTLE_CHOREOGRAPHY_VERSION = 1
+export const SEETHING_SWARM_BATTLE_CHOREOGRAPHY_VERSION = 2
 
 export const SEETHING_SWARM_BATTLE_COMBATANT_SIDES = Object.freeze([
   "first",
@@ -61,6 +62,7 @@ export type SeethingSwarmBattleClipSelection<PlatformAsset> = Readonly<{
   role: SeethingSwarmBattleClipRole
   semanticFamily: SeethingSwarmBattleSemanticFamily
   clip: SeethingSwarmRuntimeCharacterClip<PlatformAsset>
+  sequence: readonly SeethingSwarmRuntimeCharacterClip<PlatformAsset>[]
 }>
 
 export type SeethingSwarmBattleClipSelections<PlatformAsset> = Readonly<{
@@ -203,12 +205,14 @@ function createStableSelectionOffset({
 
 function selectBattleClip<PlatformAsset>({
   battleEligibleClips,
+  availableClips,
   combatant,
   scheduler,
   side,
   role,
 }: {
   readonly battleEligibleClips: readonly ClassifiedBattleEligibleClip<PlatformAsset>[]
+  readonly availableClips: readonly SeethingSwarmRuntimeCharacterClip<PlatformAsset>[]
   readonly combatant: SeethingSwarmBattleCombatant
   readonly scheduler: BattleSchedulerRestorePoint
   readonly side: SeethingSwarmBattleCombatantSide
@@ -218,6 +222,14 @@ function selectBattleClip<PlatformAsset>({
   for (const semanticFamily of rolePolicy.semanticFamilyPriorities) {
     const candidates = battleEligibleClips
       .filter(({ policy }) => policy.semanticFamilies.includes(semanticFamily))
+      .flatMap(({ clip }) => {
+        const sequence = resolveSeethingSwarmBattleSequence(
+          clip,
+          availableClips,
+          role === "rest",
+        )
+        return sequence ? [{ clip, sequence }] : []
+      })
       .toSorted((first, second) =>
         compareText(first.clip.animationId, second.clip.animationId),
       )
@@ -239,6 +251,7 @@ function selectBattleClip<PlatformAsset>({
       role,
       semanticFamily,
       clip: candidates[selectedIndex]!.clip,
+      sequence: candidates[selectedIndex]!.sequence,
     }) satisfies SeethingSwarmBattleClipSelection<PlatformAsset>
   }
 
@@ -258,12 +271,12 @@ function createLicensedBattleCombatant<PlatformAsset>({
   readonly scheduler: BattleSchedulerRestorePoint
   readonly side: SeethingSwarmBattleCombatantSide
 }) {
-  const battleEligibleClips = classifyBattleEligibleClips(
-    resolveRuntimeAnimalClips(catalog, combatant.animalId),
-  )
+  const animal = resolveRuntimeAnimalClips(catalog, combatant.animalId)
+  const battleEligibleClips = classifyBattleEligibleClips(animal)
   const selectClip = (role: SeethingSwarmBattleClipRole) =>
     selectBattleClip({
       battleEligibleClips,
+      availableClips: animal.characterClips,
       combatant,
       scheduler,
       side,

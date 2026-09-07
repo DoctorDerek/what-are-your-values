@@ -25,6 +25,7 @@ export default function NativeSeethingSwarmAnimal({
   frameDurationMs = SEETHING_SWARM_HUB_FRAME_DURATION_MS,
   maximumIntegerScale,
   playbackMode = "loop",
+  playbackIdentity,
   shouldReduceMotion,
   tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
   onPlaybackComplete,
@@ -36,6 +37,7 @@ export default function NativeSeethingSwarmAnimal({
   frameDurationMs?: number
   maximumIntegerScale?: number
   playbackMode?: SeethingSwarmAnimalPlaybackMode
+  playbackIdentity?: string
   shouldReduceMotion: boolean
   tileSize?: number
   onPlaybackComplete?: () => void
@@ -128,6 +130,7 @@ export default function NativeSeethingSwarmAnimal({
     frameProgress,
     loadedAsset,
     playbackMode,
+    playbackIdentity,
     shouldReduceMotion,
   ])
 
