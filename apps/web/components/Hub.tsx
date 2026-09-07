@@ -232,7 +232,7 @@ export default function Hub({
         ) : null}
 
         {hasComparisons ? (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2">
+          <div className="min-h-0 flex-1 overflow-y-auto pr-2">
             <section aria-labelledby="top-five-heading">
               <h3
                 id="top-five-heading"
@@ -290,7 +290,7 @@ export default function Hub({
               onAddCustomValue={onAddCustomValue}
               onStartBattle={onStartBattle}
             />
-            <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-2">
+            <ol className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2">
               {visibleValues.map((rankedValue) => (
                 <ValueRow
                   key={rankedValue.definition.id}

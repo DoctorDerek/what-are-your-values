@@ -5,7 +5,10 @@ import { motion } from "motion/react"
 
 const ACHIEVEMENT_BANNER_DURATION_SECONDS = 8
 
-function createAchievementBannerMotion(shouldReduceMotion: boolean) {
+function createAchievementBannerMotion(
+  shouldReduceMotion: boolean,
+  isBattlePlacement: boolean,
+) {
   return shouldReduceMotion
     ? Object.freeze({
         initial: { opacity: 1 },
@@ -13,8 +16,8 @@ function createAchievementBannerMotion(shouldReduceMotion: boolean) {
         transition: { duration: ACHIEVEMENT_BANNER_DURATION_SECONDS },
       })
     : Object.freeze({
-        initial: { opacity: 0, y: 24 },
-        animate: { opacity: [0, 1, 1], y: [24, 0, 0] },
+        initial: { opacity: 0, y: isBattlePlacement ? 0 : 24 },
+        animate: { opacity: [0, 1, 1], y: [isBattlePlacement ? 0 : 24, 0, 0] },
         transition: {
           duration: ACHIEVEMENT_BANNER_DURATION_SECONDS,
           times: [0, 0.08, 1],
@@ -36,9 +39,11 @@ export default function AchievementBanner({
   shouldReduceMotion: boolean
   onPresented: (achievementId: AchievementPresentation["id"]) => void
 }) {
-  const achievementBannerMotion =
-    createAchievementBannerMotion(shouldReduceMotion)
   const isBattlePlacement = placement === "battle"
+  const achievementBannerMotion = createAchievementBannerMotion(
+    shouldReduceMotion,
+    isBattlePlacement,
+  )
 
   if (!achievement) return null
 
@@ -65,16 +70,22 @@ export default function AchievementBanner({
         Achievement unlocked: {achievement.title}.
       </p>
       <div
-        className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto relative overflow-y-auto border-4 border-black p-3 shadow-[8px_8px_0px_0px_#000000] xl:p-5 ${isBattlePlacement ? "max-h-[min(38dvh,12rem)] xl:grid xl:max-h-[min(50dvh,16rem)] xl:grid-cols-2 xl:items-center xl:gap-5" : "max-h-[min(50dvh,16rem)]"}`}
+        className={`bg-mapache-vivid-white text-mapache-vivid-black pointer-events-auto relative overflow-y-auto border-4 border-black shadow-[8px_8px_0px_0px_#000000] xl:p-5 ${isBattlePlacement ? "max-h-[min(38dvh,12rem)] p-2 xl:grid xl:max-h-[min(50dvh,16rem)] xl:grid-cols-2 xl:items-center xl:gap-5" : "max-h-[min(50dvh,16rem)] p-3"}`}
       >
         <div className={`min-w-0 pr-16 ${isBattlePlacement ? "xl:pr-0" : ""}`}>
-          <p className="text-sm font-black uppercase">Achievement Unlocked</p>
-          <h2 className="mt-1 text-2xl font-black [overflow-wrap:anywhere] uppercase xl:text-3xl">
+          <p
+            className={`text-sm font-black uppercase ${isBattlePlacement ? "mr-2 inline xl:mr-0 xl:block" : ""}`}
+          >
+            Achievement Unlocked
+          </p>
+          <h2
+            className={`font-black [overflow-wrap:anywhere] uppercase xl:mt-1 xl:text-3xl ${isBattlePlacement ? "inline text-lg xl:block" : "mt-1 text-2xl"}`}
+          >
             {achievement.title}
           </h2>
         </div>
         <p
-          className={`mt-3 text-lg font-bold [overflow-wrap:anywhere] ${isBattlePlacement ? "xl:mt-0 xl:min-w-0 xl:pr-16" : ""}`}
+          className={`text-lg font-bold [overflow-wrap:anywhere] ${isBattlePlacement ? "mt-1 pr-16 xl:mt-0 xl:min-w-0" : "mt-3"}`}
         >
           {achievement.requirement}
         </p>
