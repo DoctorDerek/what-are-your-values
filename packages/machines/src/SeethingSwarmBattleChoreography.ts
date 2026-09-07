@@ -61,6 +61,7 @@ export type SeethingSwarmBattleClipSelection<PlatformAsset> = Readonly<{
   role: SeethingSwarmBattleClipRole
   semanticFamily: SeethingSwarmBattleSemanticFamily
   clip: SeethingSwarmRuntimeCharacterClip<PlatformAsset>
+  sequence: readonly SeethingSwarmRuntimeCharacterClip<PlatformAsset>[]
 }>
 
 export type SeethingSwarmBattleClipSelections<PlatformAsset> = Readonly<{
@@ -239,6 +240,7 @@ function selectBattleClip<PlatformAsset>({
       role,
       semanticFamily,
       clip: candidates[selectedIndex]!.clip,
+      sequence: Object.freeze([candidates[selectedIndex]!.clip]),
     }) satisfies SeethingSwarmBattleClipSelection<PlatformAsset>
   }
 

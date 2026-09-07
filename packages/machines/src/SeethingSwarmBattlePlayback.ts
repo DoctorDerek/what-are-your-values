@@ -20,7 +20,7 @@ const BATTLE_WINNER_ROLES = Object.freeze(["attack", "flourish"] as const)
 const BATTLE_LOSER_ROLES = Object.freeze(["reaction"] as const)
 
 export type SeethingSwarmBattlePlaybackStep<PlatformAsset> =
-  SeethingSwarmBattleClipSelection<PlatformAsset> &
+  Omit<SeethingSwarmBattleClipSelection<PlatformAsset>, "sequence"> &
     Readonly<{
       playbackMode: SeethingSwarmAnimalPlaybackMode
       frameDurationMs: number
@@ -50,7 +50,12 @@ export function createSeethingSwarmBattlePlayback<PlatformAsset>({
             : ["rest"]
   const resultRoles = isWinner ? BATTLE_WINNER_ROLES : BATTLE_LOSER_ROLES
   const frameCount = (winnerId ? resultRoles : roles).reduce(
-    (total, role) => total + combatant.clips[role].clip.frameCount,
+    (total, role) =>
+      total +
+      combatant.clips[role].sequence.reduce(
+        (sequenceFrames, clip) => sequenceFrames + clip.frameCount,
+        0,
+      ),
     0,
   )
   const frameDurationMs = winnerId
@@ -61,15 +66,23 @@ export function createSeethingSwarmBattlePlayback<PlatformAsset>({
     : SEETHING_SWARM_HUB_FRAME_DURATION_MS
 
   return Object.freeze(
-    roles.map((role) =>
-      Object.freeze({
-        ...combatant.clips[role],
-        playbackMode: role === "rest" ? "loop" : "one-shot",
-        frameDurationMs:
-          role === "rest"
-            ? SEETHING_SWARM_HUB_FRAME_DURATION_MS
-            : frameDurationMs,
-      } satisfies SeethingSwarmBattlePlaybackStep<PlatformAsset>),
-    ),
+    roles.flatMap((role) => {
+      const selection = combatant.clips[role]
+      return selection.sequence.map((clip, index) =>
+        Object.freeze({
+          role,
+          semanticFamily: selection.semanticFamily,
+          clip,
+          playbackMode:
+            role === "rest" && index === selection.sequence.length - 1
+              ? "loop"
+              : "one-shot",
+          frameDurationMs:
+            role === "rest"
+              ? SEETHING_SWARM_HUB_FRAME_DURATION_MS
+              : frameDurationMs,
+        } satisfies SeethingSwarmBattlePlaybackStep<PlatformAsset>),
+      )
+    }),
   )
 }
