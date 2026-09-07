@@ -37,6 +37,7 @@ export default function SeethingSwarmAnimal({
   maximumIntegerScale,
   preload = false,
   playbackMode = "loop",
+  playbackIdentity,
   shouldReduceMotion,
   tileSize = SEETHING_SWARM_HUB_TILE_SIZE,
   onLoadError,
@@ -49,6 +50,7 @@ export default function SeethingSwarmAnimal({
   maximumIntegerScale?: number
   preload?: boolean
   playbackMode?: SeethingSwarmAnimalPlaybackMode
+  playbackIdentity?: string
   shouldReduceMotion: boolean
   tileSize?: number
   onLoadError?: () => void
@@ -75,6 +77,14 @@ export default function SeethingSwarmAnimal({
     (playbackMode === "loop" || playbackMode === "one-shot")
       ? "static"
       : playbackMode
+  useLayoutEffect(() => {
+    if (!playbackIdentity || !isImageLoaded ||
+      (effectivePlaybackMode !== "loop" && effectivePlaybackMode !== "one-shot")) return
+    for (const animation of imageRef.current?.getAnimations?.() ?? []) {
+      animation.currentTime = 0
+      animation.play()
+    }
+  }, [effectivePlaybackMode, frameDurationMs, isImageLoaded, playbackIdentity])
   const geometry = createSeethingSwarmAnimalPresentationGeometry(
     clip.frameWidth,
     clip.frameHeight,

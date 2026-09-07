@@ -4,6 +4,7 @@ import {
   type SeethingSwarmAnimalPlaybackMode,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
+import type { SeethingSwarmRuntimeCharacterClip } from "@game/data/src/SeethingSwarmRuntimeClipCatalog"
 import type {
   SeethingSwarmBattleClipRole,
   SeethingSwarmBattleClipSelection,
@@ -18,6 +19,19 @@ const BATTLE_INTRODUCTION_ROLES = Object.freeze([
 ] as const)
 const BATTLE_WINNER_ROLES = Object.freeze(["attack", "flourish"] as const)
 const BATTLE_LOSER_ROLES = Object.freeze(["reaction"] as const)
+
+export function getSeethingSwarmBattleClips<PlatformAsset>(
+  combatant: SeethingSwarmLicensedBattleCombatant<PlatformAsset>,
+) {
+  const clipsById = new Map<
+    string,
+    SeethingSwarmRuntimeCharacterClip<PlatformAsset>
+  >()
+  for (const selection of Object.values(combatant.clips)) {
+    for (const clip of selection.sequence) clipsById.set(clip.animationId, clip)
+  }
+  return Object.freeze([...clipsById.values()])
+}
 
 export type SeethingSwarmBattlePlaybackStep<PlatformAsset> =
   Omit<SeethingSwarmBattleClipSelection<PlatformAsset>, "sequence"> &
