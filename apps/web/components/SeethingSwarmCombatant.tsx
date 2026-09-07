@@ -116,7 +116,7 @@ export default function SeethingSwarmCombatant({
   }, [cue, hasBlockingSteps, onPlaybackComplete, winnerId])
 
   return (
-    <span className="relative block size-28 shrink-0" data-battle-role={role}>
+    <span className="relative block size-28 shrink-0" data-battle-role={role} data-battle-requested-clip={requestedClipId}>
       {residentClips.map((clip) => {
         const isVisible = clip.animationId === visibleClipId && hasVisibleImage
         return (
