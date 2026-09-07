@@ -267,10 +267,6 @@ async function expectRenderedCombatant(
     return
   }
 
-  await expect(animatedElement).toHaveCSS(
-    "animation-iteration-count",
-    "infinite",
-  )
   await expect
     .poll(() =>
       animatedElement.evaluate((element) =>
@@ -280,6 +276,18 @@ async function expectRenderedCombatant(
       ),
     )
     .toBe(true)
+  const firstFrame = await animatedElement.evaluate((element) => ({
+    source: element.getAttribute("src"),
+    transform: getComputedStyle(element).transform,
+  }))
+  await expect
+    .poll(() =>
+      animatedElement.evaluate((element) => ({
+        source: element.getAttribute("src"),
+        transform: getComputedStyle(element).transform,
+      })),
+    )
+    .not.toEqual(firstFrame)
 }
 
 test("the Zoo of War holds both animals through a committed battle", async ({
