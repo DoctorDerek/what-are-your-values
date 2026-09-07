@@ -42,10 +42,19 @@ export default function NativeSeethingSwarmCombatant({
           : "rest"
   if (playback.cue !== cue) setPlayback({ cue, stepIndex: 0 })
   const requestedStepIndex = playback.cue === cue ? playback.stepIndex : 0
-  const [loadedClips, setLoadedClips] = useState<ReadonlySet<string>>(() => new Set())
-  const [failedClips, setFailedClips] = useState<ReadonlySet<string>>(() => new Set())
-  const [displayedClipId, setDisplayedClipId] = useState(combatant.clips.rest.clip.animationId)
-  const residentClips = useMemo(() => getSeethingSwarmBattleClips(combatant), [combatant])
+  const [loadedClips, setLoadedClips] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const [failedClips, setFailedClips] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const [displayedClipId, setDisplayedClipId] = useState(
+    combatant.clips.rest.clip.animationId,
+  )
+  const residentClips = useMemo(
+    () => getSeethingSwarmBattleClips(combatant),
+    [combatant],
+  )
   const steps = useMemo(
     () => createSeethingSwarmBattlePlayback({ combatant, winnerId, cue }),
     [combatant, winnerId, cue],
@@ -74,7 +83,8 @@ export default function NativeSeethingSwarmCombatant({
     loadedClips.has(retainedClipId) && !failedClips.has(retainedClipId)
   const nextAvailableStepIndex = steps.findIndex(
     (candidate, index) =>
-      index >= requestedStepIndex && !failedClips.has(candidate.clip.animationId),
+      index >= requestedStepIndex &&
+      !failedClips.has(candidate.clip.animationId),
   )
   const stepIndex = hasRetainedImage
     ? nextAvailableStepIndex === -1
@@ -84,11 +94,14 @@ export default function NativeSeethingSwarmCombatant({
   const step = steps[Math.min(stepIndex, steps.length - 1)]
   const isComplete = stepIndex === steps.length
   const role = shouldReduceMotion && !winnerId ? "rest" : step.role
-  const requestedClipId = shouldReduceMotion && !winnerId
-    ? combatant.clips.rest.clip.animationId
-    : step.clip.animationId
-  const isReady = loadedClips.has(requestedClipId) && !failedClips.has(requestedClipId)
-  if (isReady && displayedClipId !== requestedClipId) setDisplayedClipId(requestedClipId)
+  const requestedClipId =
+    shouldReduceMotion && !winnerId
+      ? combatant.clips.rest.clip.animationId
+      : step.clip.animationId
+  const isReady =
+    loadedClips.has(requestedClipId) && !failedClips.has(requestedClipId)
+  if (isReady && displayedClipId !== requestedClipId)
+    setDisplayedClipId(requestedClipId)
   const visibleClipId = isReady ? requestedClipId : retainedClipId
   const hasVisibleImage =
     loadedClips.has(visibleClipId) && !failedClips.has(visibleClipId)
@@ -109,7 +122,9 @@ export default function NativeSeethingSwarmCombatant({
       onPlaybackComplete()
   }, [hasLoadError, hasVisibleImage, isComplete, onPlaybackComplete, winnerId])
 
-  const hasBlockingSteps = steps.slice(stepIndex).some((candidate) => candidate.blocksResult)
+  const hasBlockingSteps = steps
+    .slice(stepIndex)
+    .some((candidate) => candidate.blocksResult)
   useEffect(() => {
     if (winnerId && (cue === "strike" || cue === "impact") && !hasBlockingSteps)
       onPlaybackComplete()
@@ -118,8 +133,7 @@ export default function NativeSeethingSwarmCombatant({
   return (
     <View className="relative size-28 origin-bottom xl:scale-200">
       {residentClips.map((clip) => {
-        const isVisible =
-          clip.animationId === visibleClipId && hasVisibleImage
+        const isVisible = clip.animationId === visibleClipId && hasVisibleImage
         return (
           <View
             key={clip.animationId}

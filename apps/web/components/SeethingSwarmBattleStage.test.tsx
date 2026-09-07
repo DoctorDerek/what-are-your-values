@@ -66,7 +66,9 @@ function getSprite(
   container: HTMLElement,
   side: SeethingSwarmBattleCombatantSide,
 ) {
-  const animationId = getRole(container, side)?.getAttribute("data-battle-requested-clip")
+  const animationId = getRole(container, side)?.getAttribute(
+    "data-battle-requested-clip",
+  )
   const image = getCombatant(container, side).querySelector<HTMLImageElement>(
     `[data-battle-clip="${animationId}"] img`,
   )
@@ -296,7 +298,10 @@ describe("SeethingSwarmBattleStage", () => {
     expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
     await finishClip(container, "second")
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
-    expect(getSprite(container, "first").parentElement).toHaveAttribute("data-playback-mode", "one-shot")
+    expect(getSprite(container, "first").parentElement).toHaveAttribute(
+      "data-playback-mode",
+      "one-shot",
+    )
     await finishClip(container, "first")
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })
@@ -343,25 +348,47 @@ describe("SeethingSwarmBattleStage", () => {
       ...props.runtimeClipCatalog,
       animals: props.runtimeClipCatalog.animals.map((animal) => ({
         ...animal,
-        characterClips: animal.characterClips.flatMap((clip) => clip.animationId !== "attack" ? [clip]
-          : ["takeoff", "attack_air", "land"].map((animationId) => ({
-            ...clip, animationId, asset: { ...clip.asset, src: `/test-assets/${animal.animalId}/${animationId}.png` },
-          }))),
+        characterClips: animal.characterClips.flatMap((clip) =>
+          clip.animationId !== "attack"
+            ? [clip]
+            : ["takeoff", "attack_air", "land"].map((animationId) => ({
+                ...clip,
+                animationId,
+                asset: {
+                  ...clip.asset,
+                  src: `/test-assets/${animal.animalId}/${animationId}.png`,
+                },
+              })),
+        ),
       })),
     }
-    const { container } = render(<SeethingSwarmBattleStage {...props}
-      runtimeClipCatalog={runtimeClipCatalog} winnerId={props.battle.pair[0]} isNextBattleReady />)
+    const { container } = render(
+      <SeethingSwarmBattleStage
+        {...props}
+        runtimeClipCatalog={runtimeClipCatalog}
+        winnerId={props.battle.pair[0]}
+        isNextBattleReady
+      />,
+    )
     await beginStrike(container)
     const sourceImage = (animationId: string) => {
-      const image = getCombatant(container, "first").querySelector<HTMLImageElement>(`[data-battle-clip="${animationId}"] img`)
+      const image = getCombatant(
+        container,
+        "first",
+      ).querySelector<HTMLImageElement>(
+        `[data-battle-clip="${animationId}"] img`,
+      )
       if (!image) throw new Error(`Missing ${animationId} source`)
       return image
     }
     const takeoff = sourceImage("takeoff")
     const attack = sourceImage("attack_air")
     const land = sourceImage("land")
-    const expectVisible = (image: HTMLImageElement) => expect(image.closest("[data-battle-active-clip]"))
-      .toHaveAttribute("data-battle-active-clip", "true")
+    const expectVisible = (image: HTMLImageElement) =>
+      expect(image.closest("[data-battle-active-clip]")).toHaveAttribute(
+        "data-battle-active-clip",
+        "true",
+      )
     expectVisible(takeoff)
     fireEvent.animationEnd(takeoff)
     expectVisible(attack)
@@ -370,7 +397,9 @@ describe("SeethingSwarmBattleStage", () => {
     await finishClip(container, "second")
     expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
     expect(sourceImage("attack_air")).toBe(attack)
-    expect(container.querySelectorAll("[data-placeholder-playback]")).toHaveLength(0)
+    expect(
+      container.querySelectorAll("[data-placeholder-playback]"),
+    ).toHaveLength(0)
     fireEvent.animationEnd(land)
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })

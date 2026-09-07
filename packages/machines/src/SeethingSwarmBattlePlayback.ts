@@ -12,21 +12,34 @@ import type {
 } from "./SeethingSwarmBattleChoreography"
 import type { SeethingSwarmBattleExchangeCue } from "./SeethingSwarmBattleExchange"
 
-const BATTLE_INTRODUCTION_ROLES = Object.freeze(["entry", "anticipation", "rest"] as const)
-const BATTLE_ATTENTION_ROLES = Object.freeze(["anticipation", "flourish", "rest"] as const)
+const BATTLE_INTRODUCTION_ROLES = Object.freeze([
+  "entry",
+  "anticipation",
+  "rest",
+] as const)
+const BATTLE_ATTENTION_ROLES = Object.freeze([
+  "anticipation",
+  "flourish",
+  "rest",
+] as const)
 
-export type SeethingSwarmBattlePlaybackStep<PlatformAsset> =
-  Omit<SeethingSwarmBattleClipSelection<PlatformAsset>, "sequence"> &
-    Readonly<{
-      playbackMode: SeethingSwarmAnimalPlaybackMode
-      frameDurationMs: number
-      blocksResult: boolean
-    }>
+export type SeethingSwarmBattlePlaybackStep<PlatformAsset> = Omit<
+  SeethingSwarmBattleClipSelection<PlatformAsset>,
+  "sequence"
+> &
+  Readonly<{
+    playbackMode: SeethingSwarmAnimalPlaybackMode
+    frameDurationMs: number
+    blocksResult: boolean
+  }>
 
 export function getSeethingSwarmBattleClips<PlatformAsset>(
   combatant: SeethingSwarmLicensedBattleCombatant<PlatformAsset>,
 ) {
-  const clipsById = new Map<string, SeethingSwarmRuntimeCharacterClip<PlatformAsset>>()
+  const clipsById = new Map<
+    string,
+    SeethingSwarmRuntimeCharacterClip<PlatformAsset>
+  >()
   for (const selection of Object.values(combatant.clips)) {
     for (const clip of selection.sequence) clipsById.set(clip.animationId, clip)
   }
@@ -44,32 +57,54 @@ export function createSeethingSwarmBattlePlayback<PlatformAsset>({
 }): readonly SeethingSwarmBattlePlaybackStep<PlatformAsset>[] {
   const isWinner = combatant.valueId === winnerId
   const roles: readonly SeethingSwarmBattleClipRole[] =
-    cue === "introduction" ? BATTLE_INTRODUCTION_ROLES
-      : cue === "attention" ? BATTLE_ATTENTION_ROLES
-      : cue === "strike" && isWinner ? ["attack"]
-      : cue === "impact" ? isWinner ? ["attack", "flourish"] : ["reaction"]
-      : ["rest"]
+    cue === "introduction"
+      ? BATTLE_INTRODUCTION_ROLES
+      : cue === "attention"
+        ? BATTLE_ATTENTION_ROLES
+        : cue === "strike" && isWinner
+          ? ["attack"]
+          : cue === "impact"
+            ? isWinner
+              ? ["attack", "flourish"]
+              : ["reaction"]
+            : ["rest"]
 
   const steps: SeethingSwarmBattlePlaybackStep<PlatformAsset>[] = []
   for (const role of roles) {
     const selection = combatant.clips[role]
-    const contactIndex = selection.sequence.findIndex((clip) => clip.animationId === selection.clip.animationId)
-    const sequence = role === "attack"
-      ? cue === "impact" ? selection.sequence.slice(contactIndex + 1) : selection.sequence.slice(0, contactIndex + 1)
-      : selection.sequence
-    const blocksResult = role === "attack" || (cue === "impact" && role === "reaction")
+    const contactIndex = selection.sequence.findIndex(
+      (clip) => clip.animationId === selection.clip.animationId,
+    )
+    const sequence =
+      role === "attack"
+        ? cue === "impact"
+          ? selection.sequence.slice(contactIndex + 1)
+          : selection.sequence.slice(0, contactIndex + 1)
+        : selection.sequence
+    const blocksResult =
+      role === "attack" || (cue === "impact" && role === "reaction")
     sequence.forEach((clip, index) => {
-      const playbackMode = role === "rest" && index === sequence.length - 1 ? "loop" : "one-shot"
+      const playbackMode =
+        role === "rest" && index === sequence.length - 1 ? "loop" : "one-shot"
       const previous = steps.at(-1)
-      if (previous?.clip.animationId === clip.animationId && previous.playbackMode === playbackMode && previous.blocksResult === blocksResult) return
-      steps.push(Object.freeze({
-        role,
-        semanticFamily: selection.semanticFamily,
-        clip,
-        playbackMode,
-        frameDurationMs: blocksResult ? SEETHING_SWARM_BATTLE_FRAME_DURATION_MS : SEETHING_SWARM_HUB_FRAME_DURATION_MS,
-        blocksResult,
-      }))
+      if (
+        previous?.clip.animationId === clip.animationId &&
+        previous.playbackMode === playbackMode &&
+        previous.blocksResult === blocksResult
+      )
+        return
+      steps.push(
+        Object.freeze({
+          role,
+          semanticFamily: selection.semanticFamily,
+          clip,
+          playbackMode,
+          frameDurationMs: blocksResult
+            ? SEETHING_SWARM_BATTLE_FRAME_DURATION_MS
+            : SEETHING_SWARM_HUB_FRAME_DURATION_MS,
+          blocksResult,
+        }),
+      )
     })
   }
   return Object.freeze(steps)

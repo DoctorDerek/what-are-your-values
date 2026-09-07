@@ -78,8 +78,12 @@ export default function SeethingSwarmAnimal({
       ? "static"
       : playbackMode
   useLayoutEffect(() => {
-    if (!playbackIdentity || !isImageLoaded ||
-      (effectivePlaybackMode !== "loop" && effectivePlaybackMode !== "one-shot")) return
+    if (
+      !playbackIdentity ||
+      !isImageLoaded ||
+      (effectivePlaybackMode !== "loop" && effectivePlaybackMode !== "one-shot")
+    )
+      return
     for (const animation of imageRef.current?.getAnimations?.() ?? []) {
       animation.currentTime = 0
       animation.play()

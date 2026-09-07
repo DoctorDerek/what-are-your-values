@@ -346,13 +346,24 @@ describe("NativeSeethingSwarmBattleStage", () => {
       ...licensedCatalog,
       animals: licensedCatalog.animals.map((animal) => ({
         ...animal,
-        characterClips: animal.characterClips.flatMap((clip) => clip.animationId !== "attack" ? [clip]
-          : ["takeoff", "attack_air", "land"].map((animationId, index) => ({
-            ...clip, animationId, frameCount: animationId === "land" ? 8 : 4, asset: 201 + index,
-          }))),
+        characterClips: animal.characterClips.flatMap((clip) =>
+          clip.animationId !== "attack"
+            ? [clip]
+            : ["takeoff", "attack_air", "land"].map((animationId, index) => ({
+                ...clip,
+                animationId,
+                frameCount: animationId === "land" ? 8 : 4,
+                asset: 201 + index,
+              })),
+        ),
       })),
     }
-    const initial = { ...props(), catalog, winnerId: pair[0], isNextBattleReady: true }
+    const initial = {
+      ...props(),
+      catalog,
+      winnerId: pair[0],
+      isNextBattleReady: true,
+    }
     await render(<NativeSeethingSwarmBattleStage {...initial} />)
     await loadImages()
     await advance(200)

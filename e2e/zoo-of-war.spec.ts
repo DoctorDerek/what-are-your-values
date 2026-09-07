@@ -37,8 +37,14 @@ test("a delayed attack keeps the loaded animal visible without replacing its ima
     for (const side of ["first", "second"]) {
       const combatant = battle.locator(`[data-combatant-side="${side}"]`)
       await expect(combatant).toHaveAttribute("data-battle-cue", "approach")
-      const requestedClip = await combatant.locator("[data-battle-requested-clip]").getAttribute("data-battle-requested-clip")
-      sources.push(await combatant.locator(`[data-battle-clip="${requestedClip}"] img`).evaluate((image: HTMLImageElement) => image.src))
+      const requestedClip = await combatant
+        .locator("[data-battle-requested-clip]")
+        .getAttribute("data-battle-requested-clip")
+      sources.push(
+        await combatant
+          .locator(`[data-battle-clip="${requestedClip}"] img`)
+          .evaluate((image: HTMLImageElement) => image.src),
+      )
     }
     for (const source of new Set(sources)) {
       await expect
@@ -68,8 +74,12 @@ test("a delayed attack keeps the loaded animal visible without replacing its ima
           image.isConnected && image.complete && image.naturalWidth > 0,
       ),
     ).toBe(true)
-    const requestedAttack = await first.locator("[data-battle-requested-clip]").getAttribute("data-battle-requested-clip")
-    await expect(first.locator(`[data-battle-clip="${requestedAttack}"] img`)).not.toBeVisible()
+    const requestedAttack = await first
+      .locator("[data-battle-requested-clip]")
+      .getAttribute("data-battle-requested-clip")
+    await expect(
+      first.locator(`[data-battle-clip="${requestedAttack}"] img`),
+    ).not.toBeVisible()
     await expect(battle.locator("img")).toHaveCount(initialImageCount)
     releaseAll = true
     await Promise.all(heldRoutes.splice(0).map((route) => route.continue()))
@@ -423,7 +433,10 @@ test("the Zoo of War holds both animals through a committed battle", async ({
     expect(strikes.length).toBeGreaterThanOrEqual(1)
     for (const strike of strikes) {
       expect(strike.contactDistance).toBeLessThan(strike.originDistance)
-      expect(strike.contactDistance).toBeCloseTo(strike.expectedContactDistance, 0)
+      expect(strike.contactDistance).toBeCloseTo(
+        strike.expectedContactDistance,
+        0,
+      )
       expect(strike.baselineDifference).toBeLessThanOrEqual(1)
       expect(strike.overlapsText).toBe(false)
     }
@@ -432,7 +445,11 @@ test("the Zoo of War holds both animals through a committed battle", async ({
     ).filter(
       (clip) => clip.choreographyIdentity === initialChoreographyIdentity,
     )
-    expect(completedClips.filter((clip) => clip.side === "first" && clip.role === "attack").length).toBeGreaterThanOrEqual(1)
+    expect(
+      completedClips.filter(
+        (clip) => clip.side === "first" && clip.role === "attack",
+      ).length,
+    ).toBeGreaterThanOrEqual(1)
     expect(
       completedClips
         .filter((clip) => clip.side === "second" && clip.role === "reaction")

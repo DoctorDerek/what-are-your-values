@@ -223,7 +223,11 @@ function selectBattleClip<PlatformAsset>({
     const candidates = battleEligibleClips
       .filter(({ policy }) => policy.semanticFamilies.includes(semanticFamily))
       .flatMap(({ clip }) => {
-        const sequence = resolveSeethingSwarmBattleSequence(clip, availableClips, role === "rest")
+        const sequence = resolveSeethingSwarmBattleSequence(
+          clip,
+          availableClips,
+          role === "rest",
+        )
         return sequence ? [{ clip, sequence }] : []
       })
       .toSorted((first, second) =>

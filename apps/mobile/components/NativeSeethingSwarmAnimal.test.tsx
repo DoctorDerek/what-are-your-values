@@ -43,14 +43,25 @@ afterEach(() => {
 describe("NativeSeethingSwarmAnimal", () => {
   it("restarts a resident strip for a new cue and cancels its previous completion", async () => {
     const complete = jest.fn()
-    const props = { clip, shouldReduceMotion: false, playbackMode: "one-shot" as const, onPlaybackComplete: complete }
-    const { rerender } = await render(<NativeSeethingSwarmAnimal {...props} playbackIdentity="attention:0" />)
+    const props = {
+      clip,
+      shouldReduceMotion: false,
+      playbackMode: "one-shot" as const,
+      onPlaybackComplete: complete,
+    }
+    const { rerender } = await render(
+      <NativeSeethingSwarmAnimal {...props} playbackIdentity="attention:0" />,
+    )
     await fireEvent(getImage(), "load")
     const residentImage = getImage()
     await advance(360)
-    await rerender(<NativeSeethingSwarmAnimal {...props} playbackIdentity="strike:0" />)
+    await rerender(
+      <NativeSeethingSwarmAnimal {...props} playbackIdentity="strike:0" />,
+    )
     expect(getImage()).toBe(residentImage)
-    expect(getAnimatedStyle(getStrip())).toMatchObject({ transform: [{ translateX: -0 }] })
+    expect(getAnimatedStyle(getStrip())).toMatchObject({
+      transform: [{ translateX: -0 }],
+    })
     await advance(360)
     expect(complete).not.toHaveBeenCalled()
     await advance(400)

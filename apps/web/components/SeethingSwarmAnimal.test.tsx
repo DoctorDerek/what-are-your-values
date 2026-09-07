@@ -24,8 +24,14 @@ afterEach(() => vi.restoreAllMocks())
 
 describe("SeethingSwarmAnimal", () => {
   it("replays a resident strip on a new cue without replacing or reloading its image", async () => {
-    const props = { clip, shouldReduceMotion: false, playbackMode: "one-shot" as const }
-    const { rerender } = render(<SeethingSwarmAnimal {...props} playbackIdentity="attention:0" />)
+    const props = {
+      clip,
+      shouldReduceMotion: false,
+      playbackMode: "one-shot" as const,
+    }
+    const { rerender } = render(
+      <SeethingSwarmAnimal {...props} playbackIdentity="attention:0" />,
+    )
     const image = screen.getByAltText("")
     const animation = { currentTime: 480, play: vi.fn() }
     Object.defineProperty(image, "getAnimations", { value: () => [animation] })

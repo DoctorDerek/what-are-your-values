@@ -5,7 +5,10 @@ import { createCanonicalValueId } from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { createSchedulerRestorePoint } from "./PairScheduler"
 import { createSeethingSwarmBattleChoreography } from "./SeethingSwarmBattleChoreography"
-import { createSeethingSwarmBattlePlayback, getSeethingSwarmBattleClips } from "./SeethingSwarmBattlePlayback"
+import {
+  createSeethingSwarmBattlePlayback,
+  getSeethingSwarmBattleClips,
+} from "./SeethingSwarmBattlePlayback"
 
 const pair = [
   createCanonicalValueId("pvcs-2011:mastery"),
@@ -121,9 +124,15 @@ describe("SeethingSwarm battle playback", () => {
       const required = steps.filter((step) => step.blocksResult)
       expect(required).toHaveLength(1)
       expect(required[0].frameDurationMs).toBe(60)
-      expect(required[0].clip.frameCount * required[0].frameDurationMs).toBe(240)
+      expect(required[0].clip.frameCount * required[0].frameDurationMs).toBe(
+        240,
+      )
     }
-    expect(winnerSteps.at(-1)).toMatchObject({ role: "flourish", blocksResult: false, frameDurationMs: 160 })
+    expect(winnerSteps.at(-1)).toMatchObject({
+      role: "flourish",
+      blocksResult: false,
+      frameDurationMs: 160,
+    })
   })
 
   it("plays complete aerial preparation before contact and requires landing after impact", () => {
@@ -131,18 +140,48 @@ describe("SeethingSwarm battle playback", () => {
     const takeoff = { ...source, animationId: "takeoff", frameCount: 8 }
     const attack = { ...source, animationId: "attack_air", frameCount: 12 }
     const land = { ...source, animationId: "land", frameCount: 6 }
-    const airborne = { ...combatant, clips: { ...combatant.clips, attack: {
-      ...combatant.clips.attack, clip: attack, sequence: [takeoff, attack, land],
-    } } }
-    const strike = createSeethingSwarmBattlePlayback({ combatant: airborne, winnerId: pair[0], cue: "strike" })
-    const impact = createSeethingSwarmBattlePlayback({ combatant: airborne, winnerId: pair[0], cue: "impact" })
-    expect(strike.map((step) => step.clip.animationId)).toEqual(["takeoff", "attack_air"])
-    expect(impact.map((step) => step.clip.animationId)).toEqual(["land", "dance"])
-    expect([...strike, impact[0]].every((step) => step.blocksResult && step.frameDurationMs === 60)).toBe(true)
+    const airborne = {
+      ...combatant,
+      clips: {
+        ...combatant.clips,
+        attack: {
+          ...combatant.clips.attack,
+          clip: attack,
+          sequence: [takeoff, attack, land],
+        },
+      },
+    }
+    const strike = createSeethingSwarmBattlePlayback({
+      combatant: airborne,
+      winnerId: pair[0],
+      cue: "strike",
+    })
+    const impact = createSeethingSwarmBattlePlayback({
+      combatant: airborne,
+      winnerId: pair[0],
+      cue: "impact",
+    })
+    expect(strike.map((step) => step.clip.animationId)).toEqual([
+      "takeoff",
+      "attack_air",
+    ])
+    expect(impact.map((step) => step.clip.animationId)).toEqual([
+      "land",
+      "dance",
+    ])
+    expect(
+      [...strike, impact[0]].every(
+        (step) => step.blocksResult && step.frameDurationMs === 60,
+      ),
+    ).toBe(true)
     expect(impact[1].blocksResult).toBe(false)
     const resources = getSeethingSwarmBattleClips(airborne)
-    expect(resources.map((clip) => clip.animationId)).toEqual(expect.arrayContaining(["takeoff", "attack_air", "land"]))
-    expect(new Set(resources.map((clip) => clip.animationId)).size).toBe(resources.length)
+    expect(resources.map((clip) => clip.animationId)).toEqual(
+      expect.arrayContaining(["takeoff", "attack_air", "land"]),
+    )
+    expect(new Set(resources.map((clip) => clip.animationId)).size).toBe(
+      resources.length,
+    )
     expect(Object.isFrozen(resources)).toBe(true)
   })
 

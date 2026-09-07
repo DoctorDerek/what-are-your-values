@@ -303,10 +303,12 @@ export default function SeethingSwarmBattleStage({
     })
     if (pendingChoreography.mode !== "licensed") return
     for (const combatant of pendingChoreography.combatants) {
-      const initialClips = new Set([
-        ...combatant.clips.entry.sequence,
-        ...combatant.clips.rest.sequence,
-      ].map((clip) => clip.animationId))
+      const initialClips = new Set(
+        [
+          ...combatant.clips.entry.sequence,
+          ...combatant.clips.rest.sequence,
+        ].map((clip) => clip.animationId),
+      )
       for (const clip of getSeethingSwarmBattleClips(combatant)) {
         preload(clip.asset.src, {
           as: "image",
