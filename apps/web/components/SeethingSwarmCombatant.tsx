@@ -109,6 +109,12 @@ export default function SeethingSwarmCombatant({
       onPlaybackComplete()
   }, [hasLoadError, hasVisibleImage, isComplete, onPlaybackComplete, winnerId])
 
+  const hasBlockingSteps = steps.slice(stepIndex).some((candidate) => candidate.blocksResult)
+  useEffect(() => {
+    if (winnerId && (cue === "strike" || cue === "impact") && !hasBlockingSteps)
+      onPlaybackComplete()
+  }, [cue, hasBlockingSteps, onPlaybackComplete, winnerId])
+
   return (
     <span className="relative block size-28 shrink-0" data-battle-role={role}>
       {residentClips.map((clip) => {
