@@ -176,7 +176,7 @@ function getBattleEligibleAnimationIds() {
 
 describe("SeethingSwarm battle choreography", () => {
   it("freezes the complete semantic role and side contract", () => {
-    expect(SEETHING_SWARM_BATTLE_CHOREOGRAPHY_VERSION).toBe(1)
+    expect(SEETHING_SWARM_BATTLE_CHOREOGRAPHY_VERSION).toBe(2)
     expect(SEETHING_SWARM_BATTLE_COMBATANT_SIDES).toEqual(["first", "second"])
     expect(
       SEETHING_SWARM_BATTLE_CLIP_ROLE_POLICIES.map(

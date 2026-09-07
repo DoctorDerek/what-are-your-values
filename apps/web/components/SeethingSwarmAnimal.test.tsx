@@ -23,6 +23,23 @@ const clip = Object.freeze({
 afterEach(() => vi.restoreAllMocks())
 
 describe("SeethingSwarmAnimal", () => {
+  it("replays a resident strip on a new cue without replacing or reloading its image", async () => {
+    const props = { clip, shouldReduceMotion: false, playbackMode: "one-shot" as const }
+    const { rerender } = render(<SeethingSwarmAnimal {...props} playbackIdentity="attention:0" />)
+    const image = screen.getByAltText("")
+    const animation = { currentTime: 480, play: vi.fn() }
+    Object.defineProperty(image, "getAnimations", { value: () => [animation] })
+    fireEvent.load(image)
+    await waitFor(() => expect(animation.currentTime).toBe(0))
+    animation.currentTime = 480
+    rerender(<SeethingSwarmAnimal {...props} playbackIdentity="attention:0" />)
+    expect(animation.currentTime).toBe(480)
+    rerender(<SeethingSwarmAnimal {...props} playbackIdentity="strike:0" />)
+    expect(screen.getByAltText("")).toBe(image)
+    expect(image.parentElement).toHaveAttribute("data-playback-ready", "true")
+    expect(animation.currentTime).toBe(0)
+    expect(animation.play).toHaveBeenCalledTimes(2)
+  })
   it("recognizes a valid cached image before painting a loading state", () => {
     vi.spyOn(HTMLImageElement.prototype, "complete", "get").mockReturnValue(
       true,

@@ -217,17 +217,18 @@ for (const viewport of [
           ),
         identity,
       )
-      expect(strikes).toHaveLength(1)
-      const strike = strikes[0]!
-      expect(strike.side).toBe(side)
-      expect(strike.imageIsLoaded).toBe(true)
-      expect(strike.inViewport).toBe(true)
-      expect(strike.overlapsVisibleText).toBe(false)
-      expect(strike.contactDistance).toBeLessThan(strike.originDistance)
-      expect(
-        Math.abs(strike.contactDistance - strike.expectedContactDistance),
-      ).toBeLessThanOrEqual(1)
-      expect(strike.baselineDifference).toBeLessThanOrEqual(1)
+      expect(strikes.length).toBeGreaterThanOrEqual(1)
+      for (const strike of strikes) {
+        expect(strike.side).toBe(side)
+        expect(strike.imageIsLoaded).toBe(true)
+        expect(strike.inViewport).toBe(true)
+        expect(strike.overlapsVisibleText).toBe(false)
+        expect(strike.contactDistance).toBeLessThan(strike.originDistance)
+        expect(
+          Math.abs(strike.contactDistance - strike.expectedContactDistance),
+        ).toBeLessThanOrEqual(1)
+        expect(strike.baselineDifference).toBeLessThanOrEqual(1)
+      }
       await expect(
         page.getByRole("button", { name: /^Choose / }).first(),
       ).toBeEnabled()

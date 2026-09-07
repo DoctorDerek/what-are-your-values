@@ -66,9 +66,9 @@ function getSprite(
   container: HTMLElement,
   side: SeethingSwarmBattleCombatantSide,
 ) {
-  const role = getRole(container, side)?.getAttribute("data-battle-role")
+  const animationId = getRole(container, side)?.getAttribute("data-battle-requested-clip")
   const image = getCombatant(container, side).querySelector<HTMLImageElement>(
-    `[data-battle-clip="${role}"] img`,
+    `[data-battle-clip="${animationId}"] img`,
   )
   if (!image) throw new Error(`${side} animal image is missing`)
   return image
@@ -231,7 +231,7 @@ describe("SeethingSwarmBattleStage", () => {
   })
 
   it.each([0, 1] as const)(
-    "interrupts introductions for winner %i and waits for flourish, reaction and the durable pair",
+    "interrupts introductions for winner %i and waits for attack, reaction and the durable pair",
     async (winnerIndex) => {
       const props = createStageProps(`licensed-result-${winnerIndex}`)
       const winnerSide = winnerIndex === 0 ? "first" : "second"
@@ -282,7 +282,7 @@ describe("SeethingSwarmBattleStage", () => {
     },
   )
 
-  it("does not advance a durable next pair until the winner's flourish ends", async () => {
+  it("advances after the required attack and reaction without waiting for optional flourish", async () => {
     const props = createStageProps("early-durable-pair")
     const { container } = render(
       <SeethingSwarmBattleStage
@@ -293,8 +293,10 @@ describe("SeethingSwarmBattleStage", () => {
     )
     await beginStrike(container)
     await finishClip(container, "first")
-    await finishClip(container, "second")
     expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
+    await finishClip(container, "second")
+    expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
+    expect(getSprite(container, "first").parentElement).toHaveAttribute("data-playback-mode", "one-shot")
     await finishClip(container, "first")
     expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })
@@ -333,6 +335,44 @@ describe("SeethingSwarmBattleStage", () => {
     expect(getSprite(container, "first").width).toBe(initialWidth)
     await finishClip(container, "first")
     expect(getSprite(container, "first").width).toBe(initialWidth)
+  })
+
+  it("retains every aerial strip and waits for landing as well as the opposing reaction", async () => {
+    const props = createStageProps("complete-airborne-attack")
+    const runtimeClipCatalog = {
+      ...props.runtimeClipCatalog,
+      animals: props.runtimeClipCatalog.animals.map((animal) => ({
+        ...animal,
+        characterClips: animal.characterClips.flatMap((clip) => clip.animationId !== "attack" ? [clip]
+          : ["takeoff", "attack_air", "land"].map((animationId) => ({
+            ...clip, animationId, asset: { ...clip.asset, src: `/test-assets/${animal.animalId}/${animationId}.png` },
+          }))),
+      })),
+    }
+    const { container } = render(<SeethingSwarmBattleStage {...props}
+      runtimeClipCatalog={runtimeClipCatalog} winnerId={props.battle.pair[0]} isNextBattleReady />)
+    await beginStrike(container)
+    const sourceImage = (animationId: string) => {
+      const image = getCombatant(container, "first").querySelector<HTMLImageElement>(`[data-battle-clip="${animationId}"] img`)
+      if (!image) throw new Error(`Missing ${animationId} source`)
+      return image
+    }
+    const takeoff = sourceImage("takeoff")
+    const attack = sourceImage("attack_air")
+    const land = sourceImage("land")
+    const expectVisible = (image: HTMLImageElement) => expect(image.closest("[data-battle-active-clip]"))
+      .toHaveAttribute("data-battle-active-clip", "true")
+    expectVisible(takeoff)
+    fireEvent.animationEnd(takeoff)
+    expectVisible(attack)
+    fireEvent.animationEnd(attack)
+    expectVisible(land)
+    await finishClip(container, "second")
+    expect(props.onResultAnimationComplete).not.toHaveBeenCalled()
+    expect(sourceImage("attack_air")).toBe(attack)
+    expect(container.querySelectorAll("[data-placeholder-playback]")).toHaveLength(0)
+    fireEvent.animationEnd(land)
+    expect(props.onResultAnimationComplete).toHaveBeenCalledTimes(1)
   })
 
   it("does not reuse completed sides when a different battle replaces the result", async () => {

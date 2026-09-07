@@ -5,7 +5,7 @@ import { createCanonicalValueId } from "@game/data/src/Value"
 import { describe, expect, it } from "vitest"
 import { createSchedulerRestorePoint } from "./PairScheduler"
 import { createSeethingSwarmBattleChoreography } from "./SeethingSwarmBattleChoreography"
-import { createSeethingSwarmBattlePlayback } from "./SeethingSwarmBattlePlayback"
+import { createSeethingSwarmBattlePlayback, getSeethingSwarmBattleClips } from "./SeethingSwarmBattlePlayback"
 
 const pair = [
   createCanonicalValueId("pvcs-2011:mastery"),
@@ -52,7 +52,7 @@ if (choreography.mode !== "licensed")
 const combatant = choreography.combatants[0]
 
 describe("SeethingSwarm battle playback", () => {
-  it("acknowledges attention with the selected anticipation clip then returns to rest", () => {
+  it("acknowledges attention with anticipation and expression without blocking a choice", () => {
     const steps = createSeethingSwarmBattlePlayback({
       combatant,
       winnerId: null,
@@ -61,10 +61,12 @@ describe("SeethingSwarm battle playback", () => {
     expect(steps.map(({ role, playbackMode }) => [role, playbackMode])).toEqual(
       [
         ["anticipation", "one-shot"],
+        ["flourish", "one-shot"],
         ["rest", "loop"],
       ],
     )
     expect(steps[0].clip).toBe(combatant.clips.anticipation.clip)
+    expect(steps.every((step) => !step.blocksResult)).toBe(true)
   })
   it("plays every introductory role before resting without mutating its source", () => {
     const steps = createSeethingSwarmBattlePlayback({
@@ -106,7 +108,7 @@ describe("SeethingSwarm battle playback", () => {
     },
   )
 
-  it("preserves each side's clip budget across the directed exchange", () => {
+  it("preserves readable battle frames without charging optional expression to the result", () => {
     const winnerSteps = (["strike", "impact"] as const).flatMap((cue) =>
       createSeethingSwarmBattlePlayback({ combatant, winnerId: pair[0], cue }),
     )
@@ -116,14 +118,32 @@ describe("SeethingSwarm battle playback", () => {
       cue: "impact",
     })
     for (const steps of [winnerSteps, loserSteps]) {
-      expect(
-        steps.reduce(
-          (duration, { clip, frameDurationMs }) =>
-            duration + clip.frameCount * frameDurationMs,
-          0,
-        ),
-      ).toBe(480)
+      const required = steps.filter((step) => step.blocksResult)
+      expect(required).toHaveLength(1)
+      expect(required[0].frameDurationMs).toBe(60)
+      expect(required[0].clip.frameCount * required[0].frameDurationMs).toBe(240)
     }
+    expect(winnerSteps.at(-1)).toMatchObject({ role: "flourish", blocksResult: false, frameDurationMs: 160 })
+  })
+
+  it("plays complete aerial preparation before contact and requires landing after impact", () => {
+    const source = combatant.clips.attack.clip
+    const takeoff = { ...source, animationId: "takeoff", frameCount: 8 }
+    const attack = { ...source, animationId: "attack_air", frameCount: 12 }
+    const land = { ...source, animationId: "land", frameCount: 6 }
+    const airborne = { ...combatant, clips: { ...combatant.clips, attack: {
+      ...combatant.clips.attack, clip: attack, sequence: [takeoff, attack, land],
+    } } }
+    const strike = createSeethingSwarmBattlePlayback({ combatant: airborne, winnerId: pair[0], cue: "strike" })
+    const impact = createSeethingSwarmBattlePlayback({ combatant: airborne, winnerId: pair[0], cue: "impact" })
+    expect(strike.map((step) => step.clip.animationId)).toEqual(["takeoff", "attack_air"])
+    expect(impact.map((step) => step.clip.animationId)).toEqual(["land", "dance"])
+    expect([...strike, impact[0]].every((step) => step.blocksResult && step.frameDurationMs === 60)).toBe(true)
+    expect(impact[1].blocksResult).toBe(false)
+    const resources = getSeethingSwarmBattleClips(airborne)
+    expect(resources.map((clip) => clip.animationId)).toEqual(expect.arrayContaining(["takeoff", "attack_air", "land"]))
+    expect(new Set(resources.map((clip) => clip.animationId)).size).toBe(resources.length)
+    expect(Object.isFrozen(resources)).toBe(true)
   })
 
   it("caps integer geometry consistently and rejects an invalid scale", () => {
