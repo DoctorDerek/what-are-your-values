@@ -3,12 +3,12 @@ import {
   SEETHING_SWARM_BATTLE_TILE_SIZE,
 } from "@game/data/src/SeethingSwarmAnimalPresentation"
 import type { ValueId } from "@game/data/src/Value"
-import type {
-  SeethingSwarmBattleClipRole,
-  SeethingSwarmLicensedBattleCombatant,
-} from "@game/machines/src/SeethingSwarmBattleChoreography"
+import type { SeethingSwarmLicensedBattleCombatant } from "@game/machines/src/SeethingSwarmBattleChoreography"
 import type { SeethingSwarmBattleExchangeCue } from "@game/machines/src/SeethingSwarmBattleExchange"
-import { createSeethingSwarmBattlePlayback } from "@game/machines/src/SeethingSwarmBattlePlayback"
+import {
+  createSeethingSwarmBattlePlayback,
+  getSeethingSwarmBattleClips,
+} from "@game/machines/src/SeethingSwarmBattlePlayback"
 import { useEffect, useMemo, useState } from "react"
 import { View } from "react-native"
 import NativeSeethingSwarmAnimal from "@/components/NativeSeethingSwarmAnimal"
@@ -41,15 +41,11 @@ export default function NativeSeethingSwarmCombatant({
           ? "introduction"
           : "rest"
   if (playback.cue !== cue) setPlayback({ cue, stepIndex: 0 })
-  const stepIndex = playback.cue === cue ? playback.stepIndex : 0
-  const [loadedRoles, setLoadedRoles] = useState<
-    ReadonlySet<SeethingSwarmBattleClipRole>
-  >(() => new Set())
-  const [failedRoles, setFailedRoles] = useState<
-    ReadonlySet<SeethingSwarmBattleClipRole>
-  >(() => new Set())
-  const [displayedRole, setDisplayedRole] =
-    useState<SeethingSwarmBattleClipRole>("rest")
+  const requestedStepIndex = playback.cue === cue ? playback.stepIndex : 0
+  const [loadedClips, setLoadedClips] = useState<ReadonlySet<string>>(() => new Set())
+  const [failedClips, setFailedClips] = useState<ReadonlySet<string>>(() => new Set())
+  const [displayedClipId, setDisplayedClipId] = useState(combatant.clips.rest.clip.animationId)
+  const residentClips = useMemo(() => getSeethingSwarmBattleClips(combatant), [combatant])
   const steps = useMemo(
     () => createSeethingSwarmBattlePlayback({ combatant, winnerId, cue }),
     [combatant, winnerId, cue],
@@ -57,8 +53,8 @@ export default function NativeSeethingSwarmCombatant({
   const maximumIntegerScale = useMemo(
     () =>
       Math.min(
-        ...Object.values(combatant.clips).map(
-          ({ clip }) =>
+        ...residentClips.map(
+          (clip) =>
             createSeethingSwarmAnimalPresentationGeometry(
               clip.frameWidth,
               clip.frameHeight,
@@ -67,20 +63,40 @@ export default function NativeSeethingSwarmCombatant({
             ).integerScale,
         ),
       ),
-    [combatant],
+    [residentClips],
   )
+  const retainedClipId =
+    loadedClips.has(displayedClipId) && !failedClips.has(displayedClipId)
+      ? displayedClipId
+      : ([...loadedClips].find((candidate) => !failedClips.has(candidate)) ??
+        combatant.clips.rest.clip.animationId)
+  const hasRetainedImage =
+    loadedClips.has(retainedClipId) && !failedClips.has(retainedClipId)
+  const nextAvailableStepIndex = steps.findIndex(
+    (candidate, index) =>
+      index >= requestedStepIndex && !failedClips.has(candidate.clip.animationId),
+  )
+  const stepIndex = hasRetainedImage
+    ? nextAvailableStepIndex === -1
+      ? steps.length
+      : nextAvailableStepIndex
+    : requestedStepIndex
   const step = steps[Math.min(stepIndex, steps.length - 1)]
   const isComplete = stepIndex === steps.length
   const role = shouldReduceMotion && !winnerId ? "rest" : step.role
-  const isReady = loadedRoles.has(role)
-  if (isReady && displayedRole !== role) setDisplayedRole(role)
-  const visibleRole = isReady ? role : displayedRole
-  const hasVisibleImage = loadedRoles.has(visibleRole)
-  const hasLoadError = failedRoles.has(role)
+  const requestedClipId = shouldReduceMotion && !winnerId
+    ? combatant.clips.rest.clip.animationId
+    : step.clip.animationId
+  const isReady = loadedClips.has(requestedClipId) && !failedClips.has(requestedClipId)
+  if (isReady && displayedClipId !== requestedClipId) setDisplayedClipId(requestedClipId)
+  const visibleClipId = isReady ? requestedClipId : retainedClipId
+  const hasVisibleImage =
+    loadedClips.has(visibleClipId) && !failedClips.has(visibleClipId)
+  const hasLoadError = failedClips.has(requestedClipId)
 
   useEffect(() => {
-    if (isReady) onReady()
-  }, [cue, isReady, onReady])
+    if (isReady || (hasLoadError && hasVisibleImage)) onReady()
+  }, [cue, hasLoadError, hasVisibleImage, isReady, onReady])
 
   const finishStep = () => {
     if (isComplete) return
@@ -88,19 +104,25 @@ export default function NativeSeethingSwarmCombatant({
     if (winnerId && stepIndex + 1 === steps.length) onPlaybackComplete()
   }
 
+  useEffect(() => {
+    if (hasLoadError && hasVisibleImage && isComplete && winnerId)
+      onPlaybackComplete()
+  }, [hasLoadError, hasVisibleImage, isComplete, onPlaybackComplete, winnerId])
+
   return (
     <View className="relative size-28 origin-bottom xl:scale-200">
-      {Object.values(combatant.clips).map((selection) => {
+      {residentClips.map((clip) => {
         const isVisible =
-          selection.role === visibleRole && hasVisibleImage && !hasLoadError
+          clip.animationId === visibleClipId && hasVisibleImage
         return (
           <View
-            key={selection.role}
+            key={clip.animationId}
             className={`absolute inset-0 ${isVisible ? "opacity-100" : "opacity-0"}`}
-            testID={`battle-clip-${combatant.side}-${selection.role}`}
+            testID={`battle-clip-${combatant.side}-${clip.animationId}`}
           >
             <NativeSeethingSwarmAnimal
-              clip={selection.clip}
+              clip={clip}
+              playbackIdentity={`${cue}:${stepIndex}`}
               facing={combatant.side === "first" ? "right" : "left"}
               frameDurationMs={step.frameDurationMs}
               maximumIntegerScale={maximumIntegerScale}
@@ -114,13 +136,13 @@ export default function NativeSeethingSwarmCombatant({
               shouldReduceMotion={shouldReduceMotion}
               tileSize={SEETHING_SWARM_BATTLE_TILE_SIZE}
               onLoadError={() =>
-                setFailedRoles(
-                  (previous) => new Set([...previous, selection.role]),
+                setFailedClips(
+                  (previous) => new Set([...previous, clip.animationId]),
                 )
               }
               onReady={() =>
-                setLoadedRoles(
-                  (previous) => new Set([...previous, selection.role]),
+                setLoadedClips(
+                  (previous) => new Set([...previous, clip.animationId]),
                 )
               }
               onPlaybackComplete={isVisible && isReady ? finishStep : undefined}
@@ -128,7 +150,7 @@ export default function NativeSeethingSwarmCombatant({
           </View>
         )
       })}
-      {!hasVisibleImage || hasLoadError ? (
+      {!hasVisibleImage ? (
         <NativeSeethingSwarmPlaceholder
           side={combatant.side}
           role={role === "entry" || role === "anticipation" ? "rest" : role}
